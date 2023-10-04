@@ -1,21 +1,20 @@
-import React from 'react'
+import React from "react";
 import { X } from "lucide-react";
 import {
-	Provider,
-	Viewport,
-	Root,
-	Close,
-	Title,
-	Description
+  Provider,
+  Viewport,
+  Root,
+  Close,
+  Title,
+  Description,
 } from "@radix-ui/react-toast";
-import cn from '@/lib/cn';
-
+import cn from "@/lib/cn";
 
 const ToastProvider = Provider;
 
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof Viewport>,
-  React.ComponentPropsWithoutRef<Viewport>
+  React.ComponentPropsWithoutRef<typeof Viewport>
 >(({ className, ...props }, ref) => (
   <Viewport
     ref={ref}
@@ -25,33 +24,35 @@ const ToastViewport = React.forwardRef<
     )}
     {...props}
   />
-))
-ToastViewport.displayName = Viewport.displayName
+));
+ToastViewport.displayName = Viewport.displayName;
 
 enum variantStyles {
-	default= "border bg-background",
-	error= "group border-red bg-red",
-	success= "border-green bg-green",
+  default = "border bg-background",
+  error = "group border-red bg-red",
+  success = "border-green bg-green",
 }
 
-interface Props extends React.ComponentPropsWithoutRef<Root> {
-	variant: keyof typeof variantStyles;
+interface Props extends React.ComponentPropsWithoutRef<typeof Root> {
+  variant: keyof typeof variantStyles;
 }
 
-const Toast = React.forwardRef<
-  React.ElementRef<typeof Root>,
-  Props
->(({ className, variant="default", ...props }, ref) => {
-  return (
-    <Root
-      ref={ref}
-      className={cn("group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
-	  variantStyles[variant], className)}
-      {...props}
-    />
-  )
-})
-Toast.displayName = Root.displayName
+const Toast = React.forwardRef<React.ElementRef<typeof Root>, Props>(
+  ({ className, variant = "default", ...props }, ref) => {
+    return (
+      <Root
+        ref={ref}
+        className={cn(
+          "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+          variantStyles[variant],
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+Toast.displayName = Root.displayName;
 
 const ToastClose = React.forwardRef<
   React.ElementRef<typeof Close>,
@@ -68,8 +69,8 @@ const ToastClose = React.forwardRef<
   >
     <X className="h-4 w-4" />
   </Close>
-))
-ToastClose.displayName = Close.displayName
+));
+ToastClose.displayName = Close.displayName;
 
 const ToastTitle = React.forwardRef<
   React.ElementRef<typeof Title>,
@@ -80,8 +81,8 @@ const ToastTitle = React.forwardRef<
     className={cn("text-sm font-semibold", className)}
     {...props}
   />
-))
-ToastTitle.displayName = Title.displayName
+));
+ToastTitle.displayName = Title.displayName;
 
 const ToastDescription = React.forwardRef<
   React.ElementRef<typeof Description>,
@@ -92,8 +93,8 @@ const ToastDescription = React.forwardRef<
     className={cn("text-sm opacity-90", className)}
     {...props}
   />
-))
-ToastDescription.displayName = Description.displayName
+));
+ToastDescription.displayName = Description.displayName;
 
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;
 
@@ -105,4 +106,4 @@ export {
   ToastTitle,
   ToastDescription,
   ToastClose,
-}
+};
