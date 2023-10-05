@@ -13,7 +13,7 @@ const NextImage = ({ width, height, alt, className, ...props }: Props) => {
     <>
       {loading === false && (
         <Skeleton
-          className={cn("absolute z-auto rounded-md", className)}
+          className={cn("absolute z-10 rounded-md", className)}
           style={{
             width: width,
             height: height,

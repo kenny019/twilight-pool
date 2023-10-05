@@ -7,6 +7,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useWalletDialog } from "../connect-wallet.client";
 import { getBTCDepositAddress } from "@/lib/rest";
+import { useToast } from "@/lib/hooks/useToast";
 
 type Wallet = {
   id: string;
@@ -26,27 +27,35 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
   const { hasInit, setHasInit } = useTwilight();
   const { setOpen } = useWalletDialog();
 
+  const { toast } = useToast();
+
   async function connectWallet(
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-
-    await chainWallet?.connect(true);
 
     if (!hasInit) {
       setHasInit("true");
     }
 
     if (!chainWallet) {
-      // todo: implement toast/feedback for invalid states
-      return;
+      return toast({
+        title: "Error getting wallet",
+        description: `Please install ${wallet.name} before connecting!`,
+        variant: "error",
+      });
     }
+
+    await chainWallet.connect(true);
 
     const depositAddress = chainWallet.address || "";
 
     if (!depositAddress) {
-      // todo: implement toast/feedback for invalid states
-      return;
+      return toast({
+        title: "Error getting wallet address",
+        description: "Please allow this website to connect to your wallet",
+        variant: "error",
+      });
     }
 
     const { success } = await getBTCDepositAddress(depositAddress);
