@@ -25,6 +25,7 @@ const ToastViewport = React.forwardRef<
     {...props}
   />
 ));
+
 ToastViewport.displayName = Viewport.displayName;
 
 enum variantStyles {
@@ -34,7 +35,7 @@ enum variantStyles {
 }
 
 interface Props extends React.ComponentPropsWithoutRef<typeof Root> {
-  variant: keyof typeof variantStyles;
+  variant?: keyof typeof variantStyles;
 }
 
 const Toast = React.forwardRef<React.ElementRef<typeof Root>, Props>(
