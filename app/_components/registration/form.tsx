@@ -2,21 +2,30 @@
 import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
+import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
 import React, { useState } from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
 
-const depositAddressSchema = z.string();
+const depositAddressSchema = z.string(); // todo: add bitcoin address regex
 
 const WalletRegistrationForm = () => {
-  const { mainWallet } = useWallet();
+  const { toast, toasts } = useToast();
 
-  // const [depositAddressError, setDepositAddressError] = useState(false);
+  console.log(toasts);
+  const { mainWallet } = useWallet();
 
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!mainWallet) return;
+    if (!mainWallet) {
+      console.log("no mainWallet");
+      return toast({
+        title: "No wallet",
+        description: "Please connect your wallet before registration",
+        variant: "error",
+      });
+    }
 
     const chainWallet = mainWallet.getChainWallet("nyks");
 
@@ -30,10 +39,21 @@ const WalletRegistrationForm = () => {
       depositAddressSchema.safeParse(formDepositAddress);
 
     const twilightDepositAddress = chainWallet.address;
+    if (!twilightDepositAddress) {
+      return toast({
+        title: "Invalid Twilight address",
+        description:
+          "Unable to detect Twilight address, try to reconnect your wallet.",
+        variant: "error",
+      });
+    }
 
-    if (!parseDepositAddressRes.success || !twilightDepositAddress) {
-      // setDepositAddressError(true)
-      return;
+    if (!parseDepositAddressRes.success) {
+      return toast({
+        title: "Invalid Bitcoin address",
+        description: "Please enter a valid Bitcoin address",
+        variant: "error",
+      });
     }
 
     const depositAddress = parseDepositAddressRes.data;
