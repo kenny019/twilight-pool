@@ -13,9 +13,9 @@ const Page = () => {
     <div className="flex h-full w-full flex-col">
       <div className="mx-auto my-16 grid h-full w-full max-w-5xl grid-cols-2 gap-16">
         <WalletRegistrationForm />
-        <div className="border p-4">
+        <div className="rounded-md border p-4">
           <Text heading="h3">Important:</Text>
-          <Text className="text-primary opacity-70">{importantNotice}</Text>
+          <Text className="text-primary opacity-80">{importantNotice}</Text>
         </div>
       </div>
     </div>

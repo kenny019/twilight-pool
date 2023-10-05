@@ -4,18 +4,19 @@ import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
 
 const depositAddressSchema = z
   .string()
-  .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g); // todo: add bitcoin address regex
+  .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g);
 
 const WalletRegistrationForm = () => {
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
+  const router = useRouter();
 
-  console.log(toasts);
   const { mainWallet } = useWallet();
 
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
@@ -69,12 +70,23 @@ const WalletRegistrationForm = () => {
       twilightDepositAddress,
     });
 
-    await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
+    try {
+      await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
 
-    toast({
-      title: "Submitted Bitcoin address",
-      description: "Your Bitcoin address has been successfully submitted",
-    });
+      toast({
+        title: "Submitted Bitcoin address",
+        description: "Your Bitcoin address has been successfully submitted",
+      });
+      router.push("/verification");
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error submitting address",
+        description:
+          "There was a problem with submitting your Bitcoin address, please try again later",
+        variant: "error",
+      });
+    }
   }
 
   return (
