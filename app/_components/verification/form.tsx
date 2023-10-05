@@ -11,7 +11,7 @@ import { twilightproject } from "twilightjs";
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 
 const WalletVerificationForm = () => {
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
 
   const { mainWallet } = useWallet();
 
