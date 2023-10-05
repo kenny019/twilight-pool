@@ -8,7 +8,9 @@ import React, { useState } from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
 
-const depositAddressSchema = z.string(); // todo: add bitcoin address regex
+const depositAddressSchema = z
+  .string()
+  .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g); // todo: add bitcoin address regex
 
 const WalletRegistrationForm = () => {
   const { toast, toasts } = useToast();
@@ -68,6 +70,11 @@ const WalletRegistrationForm = () => {
     });
 
     await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
+
+    toast({
+      title: "Submitted Bitcoin address",
+      description: "Your Bitcoin address has been successfully submitted",
+    });
   }
 
   return (
