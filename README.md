@@ -1,4 +1,4 @@
-# Twilight Exchange Frontend
+# Twilight Pool Frontend
 
 ## Usage
 
