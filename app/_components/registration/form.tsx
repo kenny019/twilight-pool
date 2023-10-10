@@ -9,9 +9,32 @@ import React from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
 
+function validateZeros(value: string) {
+  return (
+    value[value.length - 1] === "0" ||
+    value[value.length - 2] === "0" ||
+    value[value.length - 3] === "0"
+  );
+}
+
+function validateDepositValue(deposit: number): string {
+  if (Number.isSafeInteger(deposit))
+    return "The deposit value must be a decimal number.";
+
+  const stringRepresentation = deposit.toString();
+
+  const endsWithZeros = validateZeros(stringRepresentation);
+  if (endsWithZeros)
+    return "The last 1, 2 or 3 digits of the deposit value can not end with zero. ";
+
+  return "";
+}
+
 const depositAddressSchema = z
   .string()
   .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g);
+
+const depositValueSchema = z.number();
 
 const WalletRegistrationForm = () => {
   const { toast } = useToast();
@@ -22,7 +45,7 @@ const WalletRegistrationForm = () => {
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!mainWallet) {
-      console.log("no mainWallet");
+      console.error("no mainWallet");
       return toast({
         title: "No wallet",
         description: "Please connect your wallet before registration",
@@ -38,8 +61,12 @@ const WalletRegistrationForm = () => {
     const formData = new FormData(form);
 
     const formDepositAddress = formData.get("depositAddress");
+    const formDepositValue = parseFloat(formData.get("depositValue") as string);
+
     const parseDepositAddressRes =
       depositAddressSchema.safeParse(formDepositAddress);
+
+    const parseDepositValueRes = depositValueSchema.safeParse(formDepositValue);
 
     const twilightDepositAddress = chainWallet.address;
     if (!twilightDepositAddress) {
@@ -59,7 +86,26 @@ const WalletRegistrationForm = () => {
       });
     }
 
+    if (!parseDepositValueRes.success) {
+      return toast({
+        title: "Invalid deposit value",
+        description: "Deposit value needs to be a number",
+        variant: "error",
+      });
+    }
+
+    const depositValue = parseDepositValueRes.data;
     const depositAddress = parseDepositAddressRes.data;
+
+    const depositValueError = validateDepositValue(depositValue);
+
+    if (depositValueError) {
+      return toast({
+        title: "Invalid deposit value",
+        description: depositValueError,
+        variant: "error",
+      });
+    }
 
     const stargateClient = await chainWallet.getSigningStargateClient();
     const { registerBtcDepositAddress } =
@@ -105,6 +151,19 @@ const WalletRegistrationForm = () => {
           name="depositAddress"
           id="input-btc-address"
           placeholder="..."
+        />
+      </div>
+      <div className="space-y-1">
+        <Text asChild>
+          <label className="text-primary-accent" htmlFor="input-btc-amount">
+            Deposit Amount
+          </label>
+        </Text>
+        <Input
+          required
+          name="depositValue"
+          id="input-btc-amount"
+          placeholder="0.1"
         />
       </div>
       <Button type="submit" className="w-full justify-center">
