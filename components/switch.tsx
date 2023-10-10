@@ -2,7 +2,6 @@
 import React from "react";
 import { Root, Thumb } from "@radix-ui/react-switch";
 import cn from "@/lib/cn";
-import { Text } from "./typography";
 
 const Switch = React.forwardRef<
   React.ElementRef<typeof Root>,
