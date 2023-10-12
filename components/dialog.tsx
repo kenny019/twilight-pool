@@ -18,9 +18,7 @@ import { X } from "lucide-react";
 const Dialog = Root;
 const DialogTrigger = Trigger;
 
-const DialogPortal = ({ className, ...props }: DialogPortalProps) => (
-  <Portal className={cn(className)} {...props} />
-);
+const DialogPortal = ({ ...props }: DialogPortalProps) => <Portal {...props} />;
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof Overlay>,
