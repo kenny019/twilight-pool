@@ -101,4 +101,7 @@ export const signerOptions: SignerOptions = {
       gasPrice: GasPrice.fromString("0.0001nyks"),
     };
   },
+  preferredSignType: () => {
+    return "amino";
+  },
 };

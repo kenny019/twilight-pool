@@ -80,6 +80,9 @@ dependencies:
   eslint-config-next:
     specifier: 13.4.16
     version: 13.4.16(eslint@8.47.0)(typescript@5.1.6)
+  long:
+    specifier: ^5.2.3
+    version: 5.2.3
   lucide-react:
     specifier: ^0.274.0
     version: 0.274.0(react@18.2.0)
@@ -105,8 +108,8 @@ dependencies:
     specifier: 3.3.3
     version: 3.3.3
   twilightjs:
-    specifier: ^0.0.3
-    version: 0.0.3
+    specifier: ^0.0.5
+    version: 0.0.5
   typescript:
     specifier: 5.1.6
     version: 5.1.6
@@ -4442,8 +4445,8 @@ packages:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
     dev: false
 
-  /twilightjs@0.0.3:
-    resolution: {integrity: sha512-75RGS/e1Q+oeSpBVyq1+OIhHNyMYCn694aDn7/0a8pyvnGrZJW8X/ixeTyeIjKKgiXkX/3W+FKxh+Htvy6JbhA==}
+  /twilightjs@0.0.5:
+    resolution: {integrity: sha512-SnDLCeTTe7IyByis8m/tbbo6n13xkerFFadUQy0zIJFeHhsVhAfKI6hxuJR6s923qHCzKTKxbXVENjIr5Nr42Q==}
     dependencies:
       '@cosmjs/amino': 0.29.4
       '@cosmjs/proto-signing': 0.29.4

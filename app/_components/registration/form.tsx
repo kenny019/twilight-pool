@@ -5,9 +5,11 @@ import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
+import Long from "long";
+import { Loader2 } from "lucide-react";
 
 function validateZeros(value: string) {
   return (
@@ -40,12 +42,17 @@ const WalletRegistrationForm = () => {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const { mainWallet } = useWallet();
 
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setIsLoading(true);
+
     if (!mainWallet) {
       console.error("no mainWallet");
+      setIsLoading(false);
       return toast({
         title: "No wallet",
         description: "Please connect your wallet before registration",
@@ -70,6 +77,7 @@ const WalletRegistrationForm = () => {
 
     const twilightDepositAddress = chainWallet.address;
     if (!twilightDepositAddress) {
+      setIsLoading(false);
       return toast({
         title: "Invalid Twilight address",
         description:
@@ -79,6 +87,7 @@ const WalletRegistrationForm = () => {
     }
 
     if (!parseDepositAddressRes.success) {
+      setIsLoading(false);
       return toast({
         title: "Invalid Bitcoin address",
         description: "Please enter a valid Bitcoin address",
@@ -87,6 +96,7 @@ const WalletRegistrationForm = () => {
     }
 
     if (!parseDepositValueRes.success) {
+      setIsLoading(false);
       return toast({
         title: "Invalid deposit value",
         description: "Deposit value needs to be a number",
@@ -100,6 +110,7 @@ const WalletRegistrationForm = () => {
     const depositValueError = validateDepositValue(depositValue);
 
     if (depositValueError) {
+      setIsLoading(false);
       return toast({
         title: "Invalid deposit value",
         description: depositValueError,
@@ -107,17 +118,30 @@ const WalletRegistrationForm = () => {
       });
     }
 
+    const offlineSigner = chainWallet.offlineSigner;
+
+    console.log(offlineSigner);
+
     const stargateClient = await chainWallet.getSigningStargateClient();
+
     const { registerBtcDepositAddress } =
       twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
 
     const msg = registerBtcDepositAddress({
-      depositAddress: depositAddress,
-      twilightDepositAddress,
+      btcDepositAddress: depositAddress,
+      twilightAddress: twilightDepositAddress,
+      btcSatoshiTestAmount: Long.fromNumber(10000),
+      twilightStakingAmount: Long.fromNumber(10000),
     });
 
     try {
-      await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
+      await stargateClient.signAndBroadcast(
+        twilightDepositAddress,
+        [msg],
+        1000
+      );
+
+      setIsLoading(false);
 
       toast({
         title: "Submitted Bitcoin address",
@@ -125,6 +149,7 @@ const WalletRegistrationForm = () => {
       });
       router.push("/verification");
     } catch (err) {
+      setIsLoading(false);
       console.error(err);
       toast({
         title: "Error submitting address",
@@ -167,7 +192,7 @@ const WalletRegistrationForm = () => {
         />
       </div>
       <Button type="submit" className="w-full justify-center">
-        Register
+        {isLoading ? <Loader2 className="animate-spin" /> : "Register"}
       </Button>
     </form>
   );
