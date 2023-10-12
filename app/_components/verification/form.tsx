@@ -3,6 +3,7 @@ import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
+import { generateSignMessage } from "@/lib/twilight";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { CopyIcon, HelpCircle } from "lucide-react";
 import React from "react";
@@ -86,6 +87,21 @@ const WalletVerificationForm = () => {
         </div>
       </div>
       <Button className="w-full justify-center">Verify Deposit</Button>
+      <Button
+        onClick={async () => {
+          if (!mainWallet) return;
+          const chainWallet = mainWallet.getChainWallet("nyks");
+          if (!chainWallet) return;
+          const [pubKey, signature] = await generateSignMessage(
+            chainWallet,
+            chainWallet.address || "",
+            "Hello Twilight"
+          );
+          console.log(pubKey, signature);
+        }}
+      >
+        Test Sign
+      </Button>
     </div>
   );
 };

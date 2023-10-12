@@ -1,7 +1,7 @@
 import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import React from "react";
-import { ChevronRight, Loader, Plus } from "lucide-react";
+import { ChevronRight, Loader2, Plus } from "lucide-react";
 
 const ButtonComponentPage = () => {
   return (
@@ -54,7 +54,7 @@ const ButtonComponentPage = () => {
       <section>
         <Text>Loading</Text>
         <Button disabled>
-          <Loader className="h-5 w-5 animate-spin-slow" /> Processing
+          <Loader2 className="h-5 w-5 animate-spin" /> Processing
         </Button>
       </section>
     </div>
