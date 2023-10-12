@@ -23,7 +23,7 @@ const LayoutMountWrapper = ({ children }: { children: React.ReactNode }) => {
       if (success || process.env.NEXT_PUBLIC_ENVIRONMENT === "dev") return;
 
       // redirect user to /registration
-      router.push("/registration");
+      // router.push("/registration");
     }
 
     autoConnect();
