@@ -11,27 +11,6 @@ import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";
 
-function validateZeros(value: string) {
-  return (
-    value[value.length - 1] === "0" ||
-    value[value.length - 2] === "0" ||
-    value[value.length - 3] === "0"
-  );
-}
-
-function validateDepositValue(deposit: number): string {
-  if (Number.isSafeInteger(deposit))
-    return "The deposit value must be a decimal number.";
-
-  const stringRepresentation = deposit.toString();
-
-  const endsWithZeros = validateZeros(stringRepresentation);
-  if (endsWithZeros)
-    return "The last 1, 2 or 3 digits of the deposit value can not end with zero. ";
-
-  return "";
-}
-
 const depositAddressSchema = z
   .string()
   .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g);
@@ -107,17 +86,6 @@ const WalletRegistrationForm = () => {
     const depositValue = parseDepositValueRes.data;
     const depositAddress = parseDepositAddressRes.data;
 
-    const depositValueError = validateDepositValue(depositValue);
-
-    if (depositValueError) {
-      setIsLoading(false);
-      return toast({
-        title: "Invalid deposit value",
-        description: depositValueError,
-        variant: "error",
-      });
-    }
-
     const offlineSigner = chainWallet.offlineSigner;
 
     console.log(offlineSigner);
@@ -127,6 +95,7 @@ const WalletRegistrationForm = () => {
     const { registerBtcDepositAddress } =
       twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
 
+    console.log(twilightDepositAddress);
     const msg = registerBtcDepositAddress({
       btcDepositAddress: depositAddress,
       twilightAddress: twilightDepositAddress,
@@ -135,11 +104,7 @@ const WalletRegistrationForm = () => {
     });
 
     try {
-      await stargateClient.signAndBroadcast(
-        twilightDepositAddress,
-        [msg],
-        1000
-      );
+      await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
 
       setIsLoading(false);
 

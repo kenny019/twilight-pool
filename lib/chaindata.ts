@@ -102,6 +102,6 @@ export const signerOptions: SignerOptions = {
     };
   },
   preferredSignType: () => {
-    return "amino";
+    return "direct";
   },
 };
