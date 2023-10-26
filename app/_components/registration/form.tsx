@@ -1,6 +1,6 @@
 "use client";
 import Button from "@/components/button";
-import { Input } from "@/components/input";
+import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
@@ -22,6 +22,7 @@ const WalletRegistrationForm = () => {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [depositDenom, setDepositDenom] = useState("BTC");
 
   const { mainWallet } = useWallet();
 
@@ -95,7 +96,6 @@ const WalletRegistrationForm = () => {
     const { registerBtcDepositAddress } =
       twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
 
-    console.log(twilightDepositAddress);
     const msg = registerBtcDepositAddress({
       btcDepositAddress: depositAddress,
       twilightAddress: twilightDepositAddress,
@@ -149,13 +149,27 @@ const WalletRegistrationForm = () => {
             Deposit Amount
           </label>
         </Text>
-        <Input
+        {/* <Input
           required
           name="depositValue"
           id="input-btc-amount"
           placeholder="0.1"
+        /> */}
+        <PopoverInput
+          id="input-btc-amount"
+          name="depositValue"
+          onClickPopover={(e) => {
+            e.preventDefault();
+            e.currentTarget.value;
+            console.log(e);
+          }}
+          placeholder="1"
+          options={["BTC", "sats"]}
+          setSelected={setDepositDenom}
+          selected={depositDenom}
         />
       </div>
+
       <Button type="submit" className="w-full justify-center">
         {isLoading ? <Loader2 className="animate-spin" /> : "Register"}
       </Button>

@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useLocalStorage } from "./hooks";
 
 interface UseTwilightProps {
