@@ -132,15 +132,19 @@ const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
               sideOffset={4}
               side={"bottom"}
               align={"end"}
-              className="flex w-full flex-col items-start justify-start space-y-2 rounded-md px-1 py-1 font-ui text-xs text-primary"
+              className="flex w-full flex-col items-start justify-start rounded-md px-0.5 py-1 font-ui text-xs text-primary"
             >
               {options.map((option, index) => (
                 <button
-                  className="w-full rounded-md px-1 py-0.5 hover:bg-green hover:text-black"
+                  className={cn(
+                    option === selected ? "hidden" : "",
+                    " w-full rounded-md px-1 py-1 text-start hover:bg-green hover:text-black"
+                  )}
                   key={index}
+                  value={option}
                   onClick={(e) => {
-                    setSelected(option);
                     onClickPopover(e);
+                    setSelected(option);
                     setPopoverOpen(false);
                   }}
                 >

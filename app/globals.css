@@ -161,4 +161,52 @@
   .btn-primary[data-state="open"]::after {
     opacity: 0;
   }
+
+  .react-grid-layout {
+    position: relative;
+    transition: height 200ms ease;
+  }
+
+  .react-grid-layout > .react-grid-item {
+    transition: all 200ms ease;
+    transition-property: left, top;
+  }
+
+  .react-grid-layout > .react-grid-item.cssTransforms {
+    transition-property: transform;
+  }
+
+  .react-grid-layout > .react-grid-item.resizing {
+    z-index: 1;
+  }
+
+  .react-grid-layout > .react-grid-item.react-draggable-dragging {
+    transition: none;
+    z-index: 3;
+  }
+
+  .react-grid-layout > .react-grid-item.react-grid-placeholder {
+    background: var(--primary);
+    opacity: 0.1;
+    transition-duration: 100ms;
+    z-index: 2;
+    border-radius: 4px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+  .react-grid-layout > .react-grid-item > .react-resizable-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    bottom: 0;
+    right: 0;
+    padding: 0 5px 5px 0;
+    cursor: se-resize;
+    border-right: 1px solid var(--primary-accent);
+    border-bottom: 1px solid var(--primary-accent);
+  }
 }

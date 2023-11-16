@@ -44,14 +44,13 @@ const offerSubLinks = [
 const Header = () => {
   return (
     <nav className="border-b">
-      <div className="mx-auto max-w-7xl py-6">
+      <div className="mx-auto px-4 py-4">
         <div className="relative flex items-center justify-between">
-          <div className="flex flex-shrink-0 items-center px-4">
+          <div className="flex items-center space-x-4">
             <Link href="/">
               <Logo className="hover:opacity-80" />
             </Link>
-          </div>
-          <div className="flex items-center space-x-6">
+
             <div className="flex items-center space-x-1">
               <MultiLink title="Marketplace" subLinks={marketSubLinks} />
               <MultiLink title="What We Offer" subLinks={offerSubLinks} />
@@ -65,12 +64,15 @@ const Header = () => {
               >
                 Docs <ArrowUpRight className="h-4 w-4" />
               </Link>
-              <ThemeSwitch
-                className="mt-2 before:mt-[7px]"
-                align="center"
-                side="bottom"
-              />
             </div>
+          </div>
+
+          <div className="flex flex-row space-x-4">
+            <ThemeSwitch
+              className="mt-2 before:mt-[7px]"
+              align="center"
+              side="bottom"
+            />
             <ConnectWallet />
           </div>
         </div>

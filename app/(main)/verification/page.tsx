@@ -1,6 +1,10 @@
-import React from "react";
+"use client";
+import React, { useEffect } from "react";
 import WalletVerificationForm from "@/app/_components/verification/form";
 import { Text } from "@/components/typography";
+import { useWallet } from "@cosmos-kit/react-lite";
+import { redirect } from "next/navigation";
+import useGetRegisteredBtcAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 const noticeData = [
@@ -10,10 +14,41 @@ const noticeData = [
 ];
 
 const Page = () => {
+  const { mainWallet } = useWallet();
+  const chainWallet = mainWallet?.getChainWallet("nyks");
+
+  const registeredBtcResponse = useGetRegisteredBtcAddress(
+    mainWallet,
+    chainWallet
+  );
+
+  if (!registeredBtcResponse) {
+    console.log("wallet ext has not mounted");
+    // todo: make skeleton layout till wallet has mounted
+    return <></>;
+  }
+
+  const { data, error, success } = registeredBtcResponse;
+
+  if (!success) {
+    console.error(error);
+    redirect("/registration");
+  }
+
+  const {
+    btcDepositAddress,
+    // CreationTwilightBlockHeight // todo: calculate expiry time
+    btcSatoshiTestAmount,
+    // isConfirmed // todo: create dialog to show use has already verified
+  } = data;
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="mx-auto my-16 grid h-full w-full max-w-5xl grid-cols-2 gap-16">
-        <WalletVerificationForm />
+        <WalletVerificationForm
+          btcDepositAddress={btcDepositAddress}
+          btcSatoshiTestAmount={btcSatoshiTestAmount}
+        />
         <div className="rounded-md border p-4">
           <Text heading="h3">Important:</Text>
           <div className="space-y-2">

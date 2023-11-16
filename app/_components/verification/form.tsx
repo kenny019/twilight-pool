@@ -3,15 +3,21 @@ import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
-import { generateSignMessage } from "@/lib/twilight";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { CopyIcon, HelpCircle } from "lucide-react";
 import React from "react";
-import { twilightproject } from "twilightjs";
 
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 
-const WalletVerificationForm = () => {
+type Props = {
+  btcDepositAddress: string;
+  btcSatoshiTestAmount: string;
+};
+
+const WalletVerificationForm = ({
+  btcDepositAddress,
+  btcSatoshiTestAmount,
+}: Props) => {
   const { toast } = useToast();
 
   const { mainWallet } = useWallet();
@@ -32,11 +38,10 @@ const WalletVerificationForm = () => {
         </Text>
         <div className="relative flex items-center justify-center">
           <Input
-            required
             id="input-btc-deposit-address"
             className="select-all"
             readOnly={true}
-            defaultValue={address}
+            defaultValue={btcDepositAddress}
             onClick={(e) => {
               if (e.currentTarget) {
                 e.currentTarget.select();
@@ -74,7 +79,7 @@ const WalletVerificationForm = () => {
             id="input-deposit-amount"
             className="select-all"
             readOnly={true}
-            defaultValue="0.00389181"
+            defaultValue={btcSatoshiTestAmount}
             onClick={(e) => {
               if (e.currentTarget) {
                 e.currentTarget.select();
@@ -82,26 +87,11 @@ const WalletVerificationForm = () => {
             }}
           />
           <p className="absolute right-4 my-auto cursor-default font-ui text-xs">
-            BTC
+            SATS
           </p>
         </div>
       </div>
       <Button className="w-full justify-center">Verify Deposit</Button>
-      <Button
-        onClick={async () => {
-          if (!mainWallet) return;
-          const chainWallet = mainWallet.getChainWallet("nyks");
-          if (!chainWallet) return;
-          const [pubKey, signature] = await generateSignMessage(
-            chainWallet,
-            chainWallet.address || "",
-            "Hello Twilight"
-          );
-          console.log(pubKey, signature);
-        }}
-      >
-        Test Sign
-      </Button>
     </div>
   );
 };

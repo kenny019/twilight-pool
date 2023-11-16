@@ -1,28 +1,26 @@
 "use client";
+import React, { useRef, useState } from "react";
 import Button from "@/components/button";
 import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
 import { twilightproject } from "twilightjs";
 import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";
-
-const depositAddressSchema = z
-  .string()
-  .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g);
-
-const depositValueSchema = z.number();
+import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import Big from "big.js";
+import { btcAddressSchema } from "@/lib/types";
 
 const WalletRegistrationForm = () => {
   const { toast } = useToast();
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [depositDenom, setDepositDenom] = useState("BTC");
+  const [depositDenom, setDepositDenom] = useState<string>("BTC");
+  const depositRef = useRef<HTMLInputElement>(null);
 
   const { mainWallet } = useWallet();
 
@@ -51,9 +49,9 @@ const WalletRegistrationForm = () => {
     const formDepositValue = parseFloat(formData.get("depositValue") as string);
 
     const parseDepositAddressRes =
-      depositAddressSchema.safeParse(formDepositAddress);
+      btcAddressSchema.safeParse(formDepositAddress);
 
-    const parseDepositValueRes = depositValueSchema.safeParse(formDepositValue);
+    const parseDepositValueRes = z.number().safeParse(formDepositValue);
 
     const twilightDepositAddress = chainWallet.address;
     if (!twilightDepositAddress) {
@@ -87,9 +85,8 @@ const WalletRegistrationForm = () => {
     const depositValue = parseDepositValueRes.data;
     const depositAddress = parseDepositAddressRes.data;
 
-    const offlineSigner = chainWallet.offlineSigner;
-
-    console.log(offlineSigner);
+    const deposit = new BTC(depositDenom as BTCDenoms, Big(depositValue));
+    const depositSats = deposit.convert("sats") as number; // sats will always be number todo: type narrowing
 
     const stargateClient = await chainWallet.getSigningStargateClient();
 
@@ -99,20 +96,27 @@ const WalletRegistrationForm = () => {
     const msg = registerBtcDepositAddress({
       btcDepositAddress: depositAddress,
       twilightAddress: twilightDepositAddress,
-      btcSatoshiTestAmount: Long.fromNumber(10000),
-      twilightStakingAmount: Long.fromNumber(10000),
+      btcSatoshiTestAmount: Long.fromNumber(depositSats),
+      twilightStakingAmount: Long.fromNumber(10000), // todo: determine amount for twilightStakingAmount
     });
 
     try {
       await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
-
-      setIsLoading(false);
-
       toast({
-        title: "Submitted Bitcoin address",
-        description: "Your Bitcoin address has been successfully submitted",
+        title: "Submitting Bitcoin address",
+        description:
+          "Please wait while your Bitcoin address is being submitted...",
       });
-      router.push("/verification");
+
+      setTimeout(() => {
+        // since we have to wait for chain to update info, in the future lets add a loop here to check if the chain has done it
+        setIsLoading(false);
+        toast({
+          title: "Submitted Bitcoin address",
+          description: "Your Bitcoin address has been successfully submitted",
+        });
+        router.push("/verification");
+      }, 5000);
     } catch (err) {
       setIsLoading(false);
       console.error(err);
@@ -149,29 +153,37 @@ const WalletRegistrationForm = () => {
             Deposit Amount
           </label>
         </Text>
-        {/* <Input
-          required
-          name="depositValue"
-          id="input-btc-amount"
-          placeholder="0.1"
-        /> */}
         <PopoverInput
           id="input-btc-amount"
           name="depositValue"
           onClickPopover={(e) => {
             e.preventDefault();
-            e.currentTarget.value;
-            console.log(e);
+            if (!depositRef.current?.value) return;
+
+            const toDenom = e.currentTarget.value as BTCDenoms;
+
+            const currentValue = new BTC(
+              depositDenom as BTCDenoms,
+              Big(depositRef.current.value)
+            );
+
+            depositRef.current.value = currentValue.convert(toDenom).toString();
           }}
-          placeholder="1"
-          options={["BTC", "sats"]}
+          type="number"
+          placeholder="1.00"
+          options={["BTC", "mBTC", "sats"]}
           setSelected={setDepositDenom}
           selected={depositDenom}
+          ref={depositRef}
         />
       </div>
 
       <Button type="submit" className="w-full justify-center">
-        {isLoading ? <Loader2 className="animate-spin" /> : "Register"}
+        {isLoading ? (
+          <Loader2 className="animate-spin text-primary opacity-60" />
+        ) : (
+          "Register"
+        )}
       </Button>
     </form>
   );

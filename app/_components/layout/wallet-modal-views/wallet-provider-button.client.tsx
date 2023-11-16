@@ -48,23 +48,23 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
 
     await chainWallet.connect(true);
 
-    const depositAddress = chainWallet.address || "";
+    // const depositAddress = chainWallet.address || "";
 
-    if (!depositAddress) {
-      return toast({
-        title: "Error getting wallet address",
-        description: "Please allow this website to connect to your wallet",
-        variant: "error",
-      });
-    }
+    // if (!depositAddress) {
+    //   return toast({
+    //     title: "Error getting wallet address",
+    //     description: "Please allow this website to connect to your wallet",
+    //     variant: "error",
+    //   });
+    // }
 
-    const { success } = await getBTCDepositAddress(depositAddress);
+    // const { success } = await getBTCDepositAddress(depositAddress);
 
     setOpen(false);
 
-    if (!success) {
-      router.push("/registration");
-    }
+    // if (!success) {
+    //   router.push("/registration");
+    // }
   }
 
   return (

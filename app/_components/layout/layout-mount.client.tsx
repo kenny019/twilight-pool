@@ -1,11 +1,12 @@
 "use client";
 import { getBTCDepositAddress } from "@/lib/rest";
 import { useWallet } from "@cosmos-kit/react-lite";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import React, { useEffect } from "react";
 
+const toDisplayRoutes = ["/registration", "/verification"];
+
 const LayoutMountWrapper = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
   const path = usePathname();
 
   const { mainWallet, status } = useWallet();
@@ -16,14 +17,7 @@ const LayoutMountWrapper = ({ children }: { children: React.ReactNode }) => {
       const chainWallet = mainWallet.getChainWallet("nyks");
       const address = chainWallet?.address || "";
 
-      if (path === "/registration" || !address) return;
-
-      const { success } = await getBTCDepositAddress(address);
-
-      if (success || process.env.NEXT_PUBLIC_ENVIRONMENT === "dev") return;
-
-      // redirect user to /registration
-      // router.push("/registration");
+      if (!toDisplayRoutes.includes(path) || !address) return;
     }
 
     autoConnect();

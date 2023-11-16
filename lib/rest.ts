@@ -12,6 +12,7 @@ async function getBTCDepositAddress(depositAddress: string) {
 
   if (!success) {
     console.error("getBTCDepositAddress", error);
+
     return {
       success,
       error,

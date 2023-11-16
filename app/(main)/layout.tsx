@@ -1,5 +1,4 @@
 import "@/app/globals.css";
-import type { Metadata } from "next";
 import { Providers } from "../providers";
 import { instrumentSerif, inter, robotoMono } from "@/lib/fonts";
 import Header from "../_components/layout/header";
@@ -23,9 +22,7 @@ export default function RootLayout({
         <Providers>
           <Header />
           <div className="mb-20 flex flex-1 flex-col overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-7xl px-4">
-              <LayoutMountWrapper>{children}</LayoutMountWrapper>
-            </div>
+            <LayoutMountWrapper>{children}</LayoutMountWrapper>
           </div>
         </Providers>
       </body>
