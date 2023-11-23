@@ -21,7 +21,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <Header />
-          <div className="mb-20 flex flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-1 flex-col overflow-y-auto">
             <LayoutMountWrapper>{children}</LayoutMountWrapper>
           </div>
         </Providers>

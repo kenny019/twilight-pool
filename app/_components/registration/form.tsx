@@ -120,10 +120,15 @@ const WalletRegistrationForm = () => {
     } catch (err) {
       setIsLoading(false);
       console.error(err);
+      const shouldInitialize =
+        typeof err === "string"
+          ? (err as string).includes("does not exist on chain")
+          : false;
       toast({
         title: "Error submitting address",
-        description:
-          "There was a problem with submitting your Bitcoin address, please try again later",
+        description: shouldInitialize
+          ? "Your twilight address does not exist on the chain, send some tokens there and try again"
+          : "There was a problem with submitting your Bitcoin address, please try again later",
         variant: "error",
       });
     }
@@ -170,6 +175,7 @@ const WalletRegistrationForm = () => {
             depositRef.current.value = currentValue.convert(toDenom).toString();
           }}
           type="number"
+          step="any"
           placeholder="1.00"
           options={["BTC", "mBTC", "sats"]}
           setSelected={setDepositDenom}
