@@ -21,9 +21,9 @@ function DragWrapper({
   );
 }
 const layout = [
-  { i: "order", x: 0, y: 0, w: 2, h: 10 },
+  { i: "order", x: 10, y: 0, w: 2, h: 10 },
   { i: "chart", x: 2, y: 0, w: 8, h: 10 },
-  { i: "orderbook", x: 10, y: 0, w: 2, h: 10 },
+  { i: "orderbook", x: 0, y: 0, w: 2, h: 10 },
 ];
 
 const TradeWrapper = () => {

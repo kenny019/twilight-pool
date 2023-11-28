@@ -19,7 +19,7 @@ type OrderTabs = "limit" | "market";
 const Order = () => {
   const [currentTab, setCurrentTab] = useState<OrderTabs>("limit");
 
-  const { status, mainWallet } = useWallet();
+  const { status } = useWallet();
 
   function OrderViews() {
     switch (currentTab) {
@@ -28,7 +28,7 @@ const Order = () => {
         return (
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex flex-col space-y-4 px-3"
+            className="flex flex-col space-y-3 px-3"
           >
             <div>
               <Text className="mb-1 text-sm opacity-80" asChild>
@@ -36,21 +36,35 @@ const Order = () => {
               </Text>
               <div className="flex flex-row space-x-2">
                 <NumberInput id="input-order-price" />
-                <Button className="" variant="ui" size="small">
+                <Button variant="ui" size="small">
                   BBO
                 </Button>
               </div>
             </div>
             <div>
-              <Text
-                className="mb-1 flex cursor-pointer    items-center gap-1 text-sm opacity-80"
-                asChild
-              >
-                <label htmlFor="input-order-amount">
-                  Amount (Cont) <ChevronDown className="h-3 w-3" />
-                </label>
-              </Text>
-              <Input placeholder="Single Contract value 0.01 BTC" />
+              <DropdownMenu>
+                <DropdownTrigger>
+                  <Text className="mb-1 flex cursor-pointer items-center gap-1 text-sm opacity-80">
+                    Amount (Cont) <ChevronDown className="h-3 w-3" />
+                  </Text>
+                </DropdownTrigger>
+                <DropdownContent className="mt-1 before:mt-[3px]">
+                  <DropdownGroup>
+                    <DropdownItem className="hover:bg-primary hover:text-button-secondary">
+                      Stop Limit
+                    </DropdownItem>
+                    <DropdownItem className="hover:bg-primary hover:text-button-secondary">
+                      Stop Market
+                    </DropdownItem>
+                  </DropdownGroup>
+                </DropdownContent>
+              </DropdownMenu>
+
+              <Input
+                id="input-order-amount"
+                type="number"
+                placeholder="Single Contract value 0.01 BTC"
+              />
             </div>
             <div className="space-y-1">
               <div className="tracking-tigther">
@@ -89,7 +103,45 @@ const Order = () => {
         );
       }
       case "market": {
-        return <form className="flex"></form>;
+        return (
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="flex flex-col space-y-3 px-3"
+          >
+            <div className="flex justify-between space-x-4">
+              <div>
+                <Text className="mb-1 text-sm opacity-80" asChild>
+                  <label htmlFor="input-amount-btc">Amount (BTC)</label>
+                </Text>
+                <Input id="input-amount-btc" placeholder="0.000" />
+              </div>
+              <div>
+                <Text className="mb-1 text-sm opacity-80" asChild>
+                  <label htmlFor="input-amount-usd">Amount (USD)</label>
+                </Text>
+                <Input id="input-amount-usd" placeholder="$0.00" />
+              </div>
+            </div>
+            {status === "Connected" ? (
+              <div className="flex justify-between space-x-4">
+                <Button
+                  className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
+                  variant="ui"
+                >
+                  Buy
+                </Button>
+                <Button
+                  variant="ui"
+                  className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100"
+                >
+                  Sell
+                </Button>
+              </div>
+            ) : (
+              <ConnectWallet />
+            )}
+          </form>
+        );
       }
     }
   }
@@ -116,7 +168,6 @@ const Order = () => {
             {/* note this should actually be a button with dropdown */}
           </TabsList>
         </Tabs>
-
         <DropdownMenu>
           <DropdownTrigger asChild>
             <button className="mb-[2px] ml-4 flex items-center gap-1">
@@ -125,16 +176,16 @@ const Order = () => {
           </DropdownTrigger>
           <DropdownContent className="mt-2 before:mt-[7px]">
             <DropdownGroup>
-              <DropdownItem className="hover:bg-green hover:text-black">
+              <DropdownItem className="hover:bg-primary hover:text-button-secondary">
                 Stop Limit
               </DropdownItem>
-              <DropdownItem className="hover:bg-green hover:text-black">
+              <DropdownItem className="hover:bg-primary hover:text-button-secondary">
                 Stop Market
               </DropdownItem>
-              <DropdownItem className="hover:bg-green hover:text-black">
+              <DropdownItem className="hover:bg-primary hover:text-button-secondary">
                 Take Profit Limit
               </DropdownItem>
-              <DropdownItem className="hover:bg-green hover:text-black">
+              <DropdownItem className="hover:bg-primary hover:text-button-secondary">
                 Take Profit Market
               </DropdownItem>
             </DropdownGroup>
