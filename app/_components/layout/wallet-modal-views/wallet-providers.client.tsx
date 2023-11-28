@@ -38,8 +38,10 @@ const WalletProvidersView = ({}: WalletViewProps) => {
           {availableWallets.map((wallet, index) => (
             <WalletProviderButton
               className={cn(
+                index === 0 && "rounded-t-md",
                 index % 2 === 0 && "border-b-0",
-                index === availableWallets.length - 1 && "border-b border-t-0"
+                index === availableWallets.length - 1 &&
+                  "rounded-b-md border-b border-t-0"
               )}
               wallet={wallet}
               key={index}

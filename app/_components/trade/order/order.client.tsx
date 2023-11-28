@@ -5,11 +5,21 @@ import { Text } from "@/components/typography";
 import { ChevronDown } from "lucide-react";
 import React, { useState } from "react";
 import ConnectWallet from "../../layout/connect-wallet.client";
+import {
+  DropdownContent,
+  DropdownGroup,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from "@/components/dropdown";
+import { useWallet } from "@cosmos-kit/react-lite";
 
-type OrderTabs = "limit" | "market" | "stop";
+type OrderTabs = "limit" | "market";
 
 const Order = () => {
   const [currentTab, setCurrentTab] = useState<OrderTabs>("limit");
+
+  const { status, mainWallet } = useWallet();
 
   function OrderViews() {
     switch (currentTab) {
@@ -57,7 +67,24 @@ const Order = () => {
                 </p>
               </div>
             </div>
-            <ConnectWallet />
+            {status === "Connected" ? (
+              <div className="flex justify-between space-x-4">
+                <Button
+                  className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
+                  variant="ui"
+                >
+                  Buy
+                </Button>
+                <Button
+                  variant="ui"
+                  className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100"
+                >
+                  Sell
+                </Button>
+              </div>
+            ) : (
+              <ConnectWallet />
+            )}
           </form>
         );
       }
@@ -69,7 +96,7 @@ const Order = () => {
 
   return (
     <div className="w-full space-y-2 py-2">
-      <div className="w-full border-b pl-3">
+      <div className="flex w-full items-center border-b pl-3 ">
         <Tabs defaultValue={currentTab}>
           <TabsList variant="underline">
             <TabsTrigger
@@ -86,16 +113,33 @@ const Order = () => {
             >
               Market
             </TabsTrigger>
-            <TabsTrigger
-              onClick={() => setCurrentTab("stop")}
-              value={"stop"}
-              variant="underline"
-            >
-              {/* note this should actually be a button with dropdown */}
-              Stop
-            </TabsTrigger>
+            {/* note this should actually be a button with dropdown */}
           </TabsList>
         </Tabs>
+
+        <DropdownMenu>
+          <DropdownTrigger asChild>
+            <button className="mb-[2px] ml-4 flex items-center gap-1">
+              Stop <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownTrigger>
+          <DropdownContent className="mt-2 before:mt-[7px]">
+            <DropdownGroup>
+              <DropdownItem className="hover:bg-green hover:text-black">
+                Stop Limit
+              </DropdownItem>
+              <DropdownItem className="hover:bg-green hover:text-black">
+                Stop Market
+              </DropdownItem>
+              <DropdownItem className="hover:bg-green hover:text-black">
+                Take Profit Limit
+              </DropdownItem>
+              <DropdownItem className="hover:bg-green hover:text-black">
+                Take Profit Market
+              </DropdownItem>
+            </DropdownGroup>
+          </DropdownContent>
+        </DropdownMenu>
       </div>
 
       <OrderViews />

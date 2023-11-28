@@ -40,7 +40,7 @@ const WalletExplainView = ({
         className="space-y-4 duration-300 animate-in fade-in"
       >
         <div>
-          <Text className="text-primary-accent">{`Start trading on the world's most private
+          <Text className="leading-5 text-primary-accent">{`Start trading on the world's most private
         Bitcoin inverse perpetual exchange.`}</Text>
           <ItemRow
             title="Add Twilight Chain"

@@ -44,7 +44,7 @@ const WalletWelcomeView = ({
       <DialogTitle>Welcome to Twilight</DialogTitle>
       <DialogDescription asChild className="space-y-4">
         <div>
-          <Text className="text-primary-accent">{`Start trading on the world's most private
+          <Text className="leading-5 text-primary-accent">{`Start trading on the world's most private
         Bitcoin inverse perpetual exchange.`}</Text>
           <ItemRow
             title="Liquid"

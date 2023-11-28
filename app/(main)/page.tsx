@@ -8,7 +8,7 @@ export default function Home() {
     <main>
       <TickerWrapper />
       <Separator orientation="horizontal" />
-      <div className="m-1">
+      <div>
         <TradeWrapper />
       </div>
     </main>

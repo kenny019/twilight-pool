@@ -70,7 +70,7 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
   return (
     <div className={cn("flex cursor-pointer flex-col border p-1", className)}>
       <button
-        className="flex h-full flex-col items-center justify-center rounded-md py-2 transition-colors duration-300 hover:bg-primary hover:text-background"
+        className="flex h-full flex-col items-center justify-center rounded-lg py-2 transition-colors duration-300 hover:bg-primary hover:text-background"
         onClick={connectWallet}
       >
         <NextImage
