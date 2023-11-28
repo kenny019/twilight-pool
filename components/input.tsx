@@ -3,6 +3,7 @@ import cn from "@/lib/cn";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import Big from "big.js";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {}
@@ -26,54 +27,84 @@ Input.displayName = "Input";
 
 interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   step?: number;
+  minValue?: number;
+  maxValue?: number;
 }
 
 const NumberInput = ({
   className,
   step = 1,
   defaultValue,
+  minValue = 0,
+  maxValue = Number.MAX_SAFE_INTEGER,
   ...props
 }: NumberInputProps) => {
   const id = useId();
-  const ref = useRef<HTMLInputElement>(null);
+
+  const [inputValue, setInputValue] = useState(0);
+
+  const inputRef = useCallback(
+    (node: HTMLInputElement) => {
+      if (node === null) return null;
+
+      node.value = inputValue.toString();
+      return node;
+    },
+    [inputValue]
+  );
+
+  const currentValue = Big(inputValue);
+  const canIncrement = currentValue.minus(step).lte(maxValue);
+  const canDecrement = currentValue.minus(step).gte(minValue);
 
   function modifyValueByStep(
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     event.preventDefault();
-    if (!ref || !ref.current) return;
+    const currentValue = Big(inputValue);
 
-    // todo: get library to handle floats and large ints
-    if (event.currentTarget.id.includes("increment")) {
-      ref.current.value = (parseFloat(ref.current.value) + step).toString();
+    const action = event.currentTarget.id.includes("increment")
+      ? "increment"
+      : "decrement";
+
+    if (action === "increment" && canIncrement) {
+      const newValue = currentValue.plus(step);
+      setInputValue(newValue.toNumber());
       return;
     }
 
-    ref.current.value = (parseFloat(ref.current.value) - step).toString();
+    if (action === "decrement" && canDecrement) {
+      const newValue = currentValue.minus(step);
+      setInputValue(newValue.toNumber());
+      return;
+    }
   }
 
   return (
-    <div className="relative">
+    <div className="relative flex w-full">
       <Input
         id={id}
         defaultValue={defaultValue || 0}
         type="number"
         className={className}
-        ref={ref}
+        ref={inputRef}
+        onChange={(e) => setInputValue(Big(e.target.value || 0).toNumber())}
         {...props}
       />
       <div className="absolute inset-y-0 right-0 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center border-l">
         <button
           id={`${id}-increment`}
           onClick={modifyValueByStep}
-          className="z-10 flex h-full items-center justify-center border-b px-1.5 text-sm text-primary-accent hover:text-primary"
+          className="z-10 flex h-full items-center justify-center border-b px-1.5 text-sm text-primary-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:text-primary-accent"
+          disabled={!canIncrement}
         >
           <ChevronUp className="h-4 w-4" />
         </button>
         <button
           id={`${id}-decrement`}
           onClick={modifyValueByStep}
-          className="z-10 flex h-full items-center justify-center px-1.5 text-sm text-primary-accent hover:text-primary"
+          className="z-10 flex h-full items-center justify-center px-1.5 text-sm text-primary-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:text-primary-accent"
+          disabled={!canDecrement}
         >
           <ChevronDown className="h-4 w-4" />
         </button>

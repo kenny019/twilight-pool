@@ -18,6 +18,7 @@ const variantStyles = {
   icon: `border border-primary bg-transparent rounded-full hover:border-transparent hover:bg-accent-200 dark:hover:bg-button-secondary
     disabled:bg-button-primary disabled:border-gray-500 disabled:hover:bg-button-primary dark:disabled:hover:bg-button-primary
   `,
+  ui: `border hover:border-primary rounded-md py-0`,
 } as const;
 
 const sizeStyles = {
@@ -42,7 +43,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       asChild ? Slot : "button",
       {
         className: cn(
-          "flex relative items-center flex-shrink-0 disabled:text-gray-500 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+          "flex relative justify-center items-center flex-shrink-0 disabled:text-gray-500 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
           sizeStyles[size],
           variantStyles[variant],
           className
