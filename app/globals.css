@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --pink: hsl(314, 81%, 63%);
-  --green: hsl(130, 97%, 89%);
-  --orange: hsl(28, 94%, 61%);
-  --purple: hsl(281, 93%, 63%);
-  --green-medium: hsl(123, 64%, 62%);
-  --red: hsl(357, 93%, 63%);
-  --black: hsl(240, 56%, 7%);
-  --white: hsl(0, 0%, 100%);
-  --gradient-blue: hsl(211.2, 52%, 81%);
-  --gradient-white: hsl(212.727, 65%, 93%);
+  --pink: 314 81% 63%;
+  --green: 130 97% 89%;
+  --orange: 28 94% 61%;
+  --purple: 281 93% 63%;
+  --green-medium: 123 64% 62%;
+  --red: 357 93% 63%;
+  --black: 240 56% 7%;
+  --white: 0 0% 100%;
+  --gradient-blue: 211.2 52% 81%;
+  --gradient-white: 212.727 65% 93%;
 
-  background-color: var(--background);
+  background-color: hsl(var(--background));
 }
 
 @layer base {
@@ -28,32 +28,32 @@
   }
 
   html.light {
-    --background: hsl(0, 0%, 100%);
-    --primary: hsl(240, 56%, 7%);
-    --primary-accent: hsl(190, 11%, 39%);
+    --background: 0 0% 100%;
+    --primary: 240 56% 7%;
+    --primary-accent: 190 11% 39%;
 
     --outline: hsla(240, 56%, 7%, 0.21);
 
-    --btn-secondary: hsl(240, 4%, 91%);
+    --btn-secondary: 240 4% 91%;
 
-    --tabs-background: hsl(0, 0%, 87%);
+    --tabs-background: 0 0% 87%;
     --tabs-accent: var(--primary);
 
-    color: var(--primary);
+    color: hsl(var(--primary));
   }
   html.dark {
-    --background: hsl(0, 0%, 0%);
-    --primary: hsl(0, 0%, 100%);
-    --primary-accent: hsl(240, 5%, 60%);
+    --background: 0 0% 0%;
+    --primary: 0 0% 100%;
+    --primary-accent: 240 5% 60%;
 
     --outline: hsla(255, 100%, 100%, 0.2);
 
-    --btn-secondary: hsl(240, 6%, 10%);
+    --btn-secondary: 240 6% 10%;
 
-    --tabs-background: hsl(218, 14%, 11%);
+    --tabs-background: 218 14% 11%;
     --tabs-accent: var(--primary);
 
-    color: var(--primary);
+    color: hsl(var(--primary));
   }
 
   * {
@@ -61,7 +61,7 @@
   }
 
   .btn-primary::after {
-    background: var(--primary);
+    background: hsl(var(--primary));
     position: absolute;
     content: "";
     opacity: 1;
@@ -100,10 +100,10 @@
   .btn-secondary::before {
     background: linear-gradient(
       to right,
-      var(--red),
-      var(--pink),
-      var(--gradient-blue),
-      var(--gradient-blue)
+      hsl(var(--red)),
+      hsl(var(--pink)),
+      hsl(var(--gradient-blue)),
+      hsl(var(--gradient-blue))
     );
     position: absolute;
     content: "";
@@ -128,10 +128,10 @@
   .btn-secondary:active::after {
     background: linear-gradient(
       205deg,
-      var(--red),
-      var(--pink),
-      var(--gradient-blue),
-      var(--gradient-blue)
+      hsl(var(--red)),
+      hsl(var(--pink)),
+      hsl(var(--gradient-blue)),
+      hsl(var(--gradient-blue))
     );
     opacity: 100;
   }
@@ -142,7 +142,7 @@
   }
 
   .btn-primary:disabled::before {
-    background: var(--primary);
+    background: hsl(var(--primary));
     opacity: 0.4;
   }
 
@@ -154,7 +154,7 @@
   }
 
   .btn-primary[data-state="open"]::before {
-    background: linear-gradient(to right, var(--red), var(--pink));
+    background: linear-gradient(to right, hsl(var(--red)), hsl(var(--pink)));
     opacity: 1;
   }
 
@@ -186,7 +186,7 @@
   }
 
   .react-grid-layout > .react-grid-item.react-grid-placeholder {
-    background: var(--primary);
+    background: hsl(var(--primary));
     opacity: 0.1;
     transition-duration: 100ms;
     z-index: 2;
@@ -206,7 +206,7 @@
     right: 0;
     padding: 0 5px 5px 0;
     cursor: se-resize;
-    border-right: 1px solid var(--primary-accent);
-    border-bottom: 1px solid var(--primary-accent);
+    border-right: 1px solid hsl(var(--primary-accent));
+    border-bottom: 1px solid hsl(var(--primary-accent));
   }
 }
