@@ -27,6 +27,18 @@
     -moz-appearance: textfield !important;
   }
 
+  html.theme-pink {
+    --theme: var(--pink);
+  }
+
+  html.theme-orange {
+    --theme: var(--orange);
+  }
+
+  html.theme-purple {
+    --theme: var(--purple);
+  }
+
   html.light {
     --background: 0 0% 100%;
     --primary: 240 56% 7%;
@@ -41,6 +53,7 @@
 
     color: hsl(var(--primary));
   }
+
   html.dark {
     --background: 0 0% 0%;
     --primary: 0 0% 100%;
@@ -208,5 +221,9 @@
     cursor: se-resize;
     border-right: 1px solid hsl(var(--primary-accent));
     border-bottom: 1px solid hsl(var(--primary-accent));
+  }
+
+  .noselect {
+    user-select: none !important;
   }
 }

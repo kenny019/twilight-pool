@@ -28,6 +28,7 @@ const config: Config = {
         300: "hsl(0, 0%, 87%)",
         400: "hsl(190, 11%, 39%)",
       },
+      theme: "hsl(var(--theme) / <alpha-value>)",
       button: {
         primary: "hsl(var(--background) / <alpha-value>)",
         secondary: "hsl(var(--btn-secondary) / <alpha-value>)",

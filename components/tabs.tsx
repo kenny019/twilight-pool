@@ -37,7 +37,7 @@ const TabsTriggerStyle = {
   default:
     "data-[state=active]:bg-tabs-accent data-[state=active]:text-background rounded-md px-3 py-1",
   underline:
-    "data-[state=active]:border-pink border-b border-transparent duration-300 border-b-2 hover:opacity-80",
+    "data-[state=active]:border-theme border-b border-transparent duration-300 text-sm border-b-2 hover:opacity-80",
   ghost:
     "data-[state=active]:opacity-100 opacity-50 hover:opacity-80 duration-300 px-2",
 };

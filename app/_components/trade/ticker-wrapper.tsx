@@ -38,9 +38,10 @@ const TickerWrapper = () => {
       <TickerItem title="24H Turnover (BTC)">22,600.26</TickerItem>
       <TickerItem border={false} title="Funding Rate / Countdown">
         <p className="flex">
-          <span className="mr-2 inline-flex items-center text-green-medium">
-            <Zap className="mr-2 w-4" /> {`0.01100%`}
+          <span className="text-theme mr-2 inline-flex items-center">
+            <Zap className="w-4" />
           </span>
+          <span className="mr-3 text-green-medium">{`0.01100%`}</span>
           {`/ 02:26:01`}
         </p>
       </TickerItem>

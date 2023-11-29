@@ -1,6 +1,7 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import React, { useState } from "react";
-import { createColumnHelper } from "@tanstack/react-table";
+import { OrderBookDataTable } from "./data-table";
+import { orderAsks, orderbookColumns } from "./columns";
 
 type OrderbookTabs = "market" | "mine";
 
@@ -10,7 +11,20 @@ const Orderbook = () => {
   function OrderbookViews() {
     switch (currentTab) {
       case "market": {
-        return <div></div>;
+        return (
+          <div>
+            <OrderBookDataTable
+              columns={orderbookColumns}
+              data={orderAsks}
+              type="asks"
+            />
+            <OrderBookDataTable
+              columns={orderbookColumns}
+              data={orderAsks}
+              type="bids"
+            />
+          </div>
+        );
       }
       case "mine": {
         return <div></div>;

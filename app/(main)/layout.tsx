@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${instrumentSerif.variable} ${robotoMono.variable}`}
+      className={`${inter.variable} ${instrumentSerif.variable} ${robotoMono.variable} theme-purple`}
       suppressHydrationWarning
     >
       <body>

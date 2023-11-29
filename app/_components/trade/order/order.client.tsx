@@ -170,7 +170,7 @@ const Order = () => {
         </Tabs>
         <DropdownMenu>
           <DropdownTrigger asChild>
-            <button className="mb-[2px] ml-4 flex items-center gap-1">
+            <button className="ml-4 flex items-center gap-1 text-sm">
               Stop <ChevronDown className="h-3 w-3" />
             </button>
           </DropdownTrigger>
