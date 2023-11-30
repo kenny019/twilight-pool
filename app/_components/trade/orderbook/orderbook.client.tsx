@@ -5,7 +5,15 @@ import { orderAsks, orderbookColumns } from "./columns";
 import OrderbookSplitIcon from "@/components/icons/orderbook-split";
 import OrderbookBidsIcon from "@/components/icons/orderbook-bids";
 import OrderbookAsksIcon from "@/components/icons/orderbook-asks";
-import Button from "@/components/button";
+import {
+  DropdownContent,
+  DropdownGroup,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from "@/components/dropdown";
+import { ChevronDown } from "lucide-react";
+import cn from "@/lib/cn";
 
 type OrderbookTabs = "market" | "trades";
 type OrderbookLayout = "split" | "asks" | "bids";
@@ -14,6 +22,8 @@ const Orderbook = () => {
   const [currentTab, setCurrentTab] = useState<OrderbookTabs>("market");
   const [orderbookLayout, setOrderbookLayout] =
     useState<OrderbookLayout>("split");
+
+  const [currentOrderbookPage, setCurrentOrderbookPage] = useState(1);
 
   function OrderbookLayouts() {
     switch (orderbookLayout) {
@@ -77,7 +87,32 @@ const Orderbook = () => {
                   onClick={() => setOrderbookLayout("asks")}
                 />
               </div>
-              1 {/* to replace with pagination dropdown */}
+              <DropdownMenu>
+                <DropdownTrigger asChild>
+                  <button className="group ml-4 flex items-center gap-1 text-sm">
+                    {currentOrderbookPage}
+                    <ChevronDown className="h-3 w-3 transition-all group-data-[state=open]:-rotate-180" />
+                  </button>
+                </DropdownTrigger>
+                <DropdownContent className="mt-2 min-w-[48px] before:mt-[7px]">
+                  <DropdownGroup>
+                    {Array(5)
+                      .fill(0)
+                      .map((_, index) => (
+                        <DropdownItem
+                          key={index}
+                          className={cn(
+                            index + 1 === currentOrderbookPage && "text-theme",
+                            "flex justify-center hover:bg-primary hover:text-button-secondary"
+                          )}
+                          onClick={() => setCurrentOrderbookPage(index + 1)}
+                        >
+                          {index + 1}
+                        </DropdownItem>
+                      ))}
+                  </DropdownGroup>
+                </DropdownContent>
+              </DropdownMenu>
             </div>
             <div>
               <OrderbookLayouts />

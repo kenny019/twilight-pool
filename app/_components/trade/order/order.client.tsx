@@ -43,9 +43,10 @@ const Order = () => {
             </div>
             <div>
               <DropdownMenu>
-                <DropdownTrigger>
+                <DropdownTrigger className="group">
                   <Text className="mb-1 flex cursor-pointer items-center gap-1 text-sm opacity-80">
-                    Amount (Cont) <ChevronDown className="h-3 w-3" />
+                    Amount (Cont){" "}
+                    <ChevronDown className="h-3 w-3 transition-all group-data-[state=open]:-rotate-180" />
                   </Text>
                 </DropdownTrigger>
                 <DropdownContent className="mt-1 before:mt-[3px]">
@@ -170,8 +171,9 @@ const Order = () => {
         </Tabs>
         <DropdownMenu>
           <DropdownTrigger asChild>
-            <button className="ml-4 flex items-center gap-1 text-sm">
-              Stop <ChevronDown className="h-3 w-3" />
+            <button className="group ml-4 flex items-center gap-1 text-sm">
+              Stop
+              <ChevronDown className="h-3 w-3 transition-all group-data-[state=open]:-rotate-180" />
             </button>
           </DropdownTrigger>
           <DropdownContent className="mt-2 before:mt-[7px]">
