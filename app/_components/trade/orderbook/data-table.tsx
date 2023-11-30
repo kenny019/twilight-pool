@@ -12,12 +12,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   type: "asks" | "bids";
+  header?: boolean;
 }
 
 export function OrderBookDataTable<TData, TValue>({
   columns,
   data,
   type,
+  header = false,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -28,7 +30,7 @@ export function OrderBookDataTable<TData, TValue>({
   return (
     <div className="w-full px-3">
       <table cellSpacing={0} className="relative w-full overflow-auto">
-        <thead className={cn(type === "bids" && "hidden")}>
+        <thead className={cn(!header && "hidden")}>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
               className="text-xs font-normal text-primary-accent"

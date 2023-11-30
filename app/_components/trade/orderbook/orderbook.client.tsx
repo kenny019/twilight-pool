@@ -2,31 +2,90 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import React, { useState } from "react";
 import { OrderBookDataTable } from "./data-table";
 import { orderAsks, orderbookColumns } from "./columns";
+import OrderbookSplitIcon from "@/components/icons/orderbook-split";
+import OrderbookBidsIcon from "@/components/icons/orderbook-bids";
+import OrderbookAsksIcon from "@/components/icons/orderbook-asks";
+import Button from "@/components/button";
 
-type OrderbookTabs = "market" | "mine";
+type OrderbookTabs = "market" | "trades";
+type OrderbookLayout = "split" | "asks" | "bids";
 
 const Orderbook = () => {
   const [currentTab, setCurrentTab] = useState<OrderbookTabs>("market");
+  const [orderbookLayout, setOrderbookLayout] =
+    useState<OrderbookLayout>("split");
 
-  function OrderbookViews() {
-    switch (currentTab) {
-      case "market": {
+  function OrderbookLayouts() {
+    switch (orderbookLayout) {
+      case "split": {
         return (
-          <div>
+          <>
             <OrderBookDataTable
               columns={orderbookColumns}
               data={orderAsks}
               type="asks"
+              header
             />
             <OrderBookDataTable
               columns={orderbookColumns}
               data={orderAsks}
               type="bids"
             />
-          </div>
+          </>
         );
       }
-      case "mine": {
+      case "asks": {
+        return (
+          <OrderBookDataTable
+            columns={orderbookColumns}
+            data={orderAsks}
+            type="asks"
+            header
+          />
+        );
+      }
+      case "bids": {
+        return (
+          <OrderBookDataTable
+            columns={orderbookColumns}
+            data={orderAsks}
+            type="bids"
+            header
+          />
+        );
+      }
+    }
+  }
+
+  function OrderbookViews() {
+    switch (currentTab) {
+      case "market": {
+        return (
+          <>
+            <div className="flex w-full justify-between border-b px-3 pb-2">
+              <div className="flex space-x-1">
+                <OrderbookSplitIcon
+                  data-state={orderbookLayout === "split" && "selected"}
+                  onClick={() => setOrderbookLayout("split")}
+                />
+                <OrderbookBidsIcon
+                  data-state={orderbookLayout === "bids" && "selected"}
+                  onClick={() => setOrderbookLayout("bids")}
+                />
+                <OrderbookAsksIcon
+                  data-state={orderbookLayout === "asks" && "selected"}
+                  onClick={() => setOrderbookLayout("asks")}
+                />
+              </div>
+              1 {/* to replace with pagination dropdown */}
+            </div>
+            <div>
+              <OrderbookLayouts />
+            </div>
+          </>
+        );
+      }
+      case "trades": {
         return <div></div>;
       }
     }
@@ -45,7 +104,7 @@ const Orderbook = () => {
               Market
             </TabsTrigger>
             <TabsTrigger
-              onClick={() => setCurrentTab("mine")}
+              onClick={() => setCurrentTab("trades")}
               value={"mine"}
               variant="underline"
             >
