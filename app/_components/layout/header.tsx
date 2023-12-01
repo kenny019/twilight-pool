@@ -6,6 +6,7 @@ import MultiLink from "./multi-link.client";
 import { ArrowUpRight } from "lucide-react";
 import { ThemeSwitch } from "@/components/theme-switch";
 import ConnectWallet from "./connect-wallet.client";
+import Settings from "./settings.client";
 
 const marketSubLinks = [
   {
@@ -67,7 +68,9 @@ const Header = () => {
             </div>
           </div>
 
-          <div className="flex flex-row space-x-4">
+          {/* right side */}
+          <div className="flex flex-row items-center space-x-4">
+            <Settings />
             <ThemeSwitch
               className="mt-2 before:mt-[7px]"
               align="center"

@@ -49,7 +49,7 @@ const TabsTrigger = React.forwardRef<
   <Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex select-none items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50",
       TabsTriggerStyle[variant],
       className
     )}
