@@ -18,6 +18,7 @@ import {
 } from "@/components/dropdown";
 import { ThemeColors, useTwilight } from "@/lib/singleton";
 import cn from "@/lib/cn";
+import { useTheme } from "next-themes";
 
 // workaround for tailwind css
 enum ColorBG {
@@ -29,6 +30,7 @@ enum ColorBG {
 const Settings = () => {
   // todo: refactor into seperate files
   const { colorTheme, setColorTheme } = useTwilight();
+  const { theme, setTheme } = useTheme();
 
   return (
     <Dialog>
@@ -49,7 +51,11 @@ const Settings = () => {
               >
                 Light mode
               </label>
-              <Switch id="toggle-theme" />
+              <Switch
+                checked={theme === "light"}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                id="toggle-theme"
+              />
             </div>
             <Text className="text-xs text-primary-accent">{`Enables light mode for the interface.`}</Text>
           </div>
