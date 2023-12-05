@@ -17,6 +17,14 @@ import {
   DropdownTrigger,
 } from "@/components/dropdown";
 import { ThemeColors, useTwilight } from "@/lib/singleton";
+import cn from "@/lib/cn";
+
+// workaround for tailwind css
+enum ColorBG {
+  "pink" = "bg-pink",
+  "purple" = "bg-purple",
+  "orange" = "bg-orange",
+}
 
 const Settings = () => {
   // todo: refactor into seperate files
@@ -66,7 +74,9 @@ const Settings = () => {
                         className="flex items-center justify-end space-x-1 hover:bg-primary hover:text-button-secondary"
                         onClick={() => setColorTheme(color)}
                       >
-                        <div className={`h-3 w-3 bg-${color}`} />
+                        <div
+                          className={cn("h-3 w-3", ColorBG[ThemeColors[index]])}
+                        />
                         <p className="capitalize">{color}</p>
                       </DropdownItem>
                     ))}
