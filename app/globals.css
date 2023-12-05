@@ -17,6 +17,18 @@
   background-color: hsl(var(--background));
 }
 
+html.pink {
+  --theme: var(--pink);
+}
+
+html.orange {
+  --theme: var(--orange);
+}
+
+html.purple {
+  --theme: var(--purple);
+}
+
 @layer base {
   /* remove default styling */
   input[type="number"]::-webkit-outer-spin-button,
@@ -25,18 +37,6 @@
     -webkit-appearance: none;
     margin: 0;
     -moz-appearance: textfield !important;
-  }
-
-  html.theme-pink {
-    --theme: var(--pink);
-  }
-
-  html.theme-orange {
-    --theme: var(--orange);
-  }
-
-  html.theme-purple {
-    --theme: var(--purple);
   }
 
   html.light {

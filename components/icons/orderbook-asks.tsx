@@ -24,40 +24,39 @@ const OrderbookAsksIcon = ({ onClick, ...props }: Props) => {
             opacity="0.3"
             d="M2.66667 0.75H21.3333C22.3919 0.75 23.25 1.60812 23.25 2.66667V21.3333C23.25 22.3919 22.3919 23.25 21.3333 23.25H2.66667C1.60812 23.25 0.75 22.3919 0.75 21.3333V2.66667C0.75 1.60812 1.60812 0.75 2.66667 0.75Z"
             stroke="hsl(var(--primary))"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="1.5"
+            strokeLinecap="round"
           />
           <path
             d="M8.69 5H5V18.7H8.69V5Z"
             stroke="hsl(var(--red))"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
           <path
             opacity="0.3"
             d="M13 7H19"
             stroke="hsl(var(--primary))"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
           <path
             opacity="0.3"
             d="M13 12H19"
             stroke="hsl(var(--primary))"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
           <path
             opacity="0.3"
             d="M13 17H19"
             stroke="hsl(var(--primary))"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
         </g>
         <defs>

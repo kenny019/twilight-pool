@@ -51,7 +51,6 @@ const Header = () => {
             <Link href="/">
               <Logo className="hover:opacity-80" />
             </Link>
-
             <div className="flex items-center space-x-1">
               <MultiLink title="Marketplace" subLinks={marketSubLinks} />
               <MultiLink title="What We Offer" subLinks={offerSubLinks} />
@@ -71,11 +70,6 @@ const Header = () => {
           {/* right side */}
           <div className="flex flex-row items-center space-x-4">
             <Settings />
-            <ThemeSwitch
-              className="mt-2 before:mt-[7px]"
-              align="center"
-              side="bottom"
-            />
             <ConnectWallet />
           </div>
         </div>
