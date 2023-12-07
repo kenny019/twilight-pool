@@ -46,6 +46,18 @@ function wfetch(url: RequestInfo | URL, init?: RequestInit) {
       });
       return this;
     },
+    post({ body, headers }: { body: string; headers?: HeadersInit }) {
+      _request = fetch(url, {
+        method: "POST",
+        body,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        ...init,
+      });
+      return this;
+    },
     async json<T>(): Promise<SuccessData<T> | ErrorData> {
       await this._resolve();
       if (_error || !_done) {

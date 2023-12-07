@@ -3,7 +3,7 @@ import WalletWelcomeView from "./wallet-welcome.client";
 import WalletProvidersView from "./wallet-providers.client";
 import { DialogContent } from "@/components/dialog";
 import WalletExplainView from "./wallet-explain.client";
-import { useTwilight } from "@/lib/singleton";
+import { useTwilight } from "@/lib/providers/singleton";
 type availableViews = "welcome" | "explanation" | "providers";
 
 export type WalletViewProps = {

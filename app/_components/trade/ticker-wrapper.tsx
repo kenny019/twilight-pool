@@ -5,7 +5,11 @@ import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
 
-const TickerWrapper = () => {
+type Props = {
+  btcPrice: string;
+};
+
+const TickerWrapper = ({ btcPrice }: Props) => {
   return (
     <div className="flex px-4 py-2">
       {/* bitcoin ticker */}
@@ -26,7 +30,7 @@ const TickerWrapper = () => {
         </div>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
         <p className="mx-4 text-2xl font-semibold tracking-tighter text-red">
-          29,000
+          {btcPrice}
         </p>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
@@ -38,7 +42,7 @@ const TickerWrapper = () => {
       <TickerItem title="24H Turnover (BTC)">22,600.26</TickerItem>
       <TickerItem border={false} title="Funding Rate / Countdown">
         <p className="flex">
-          <span className="text-theme mr-2 inline-flex items-center">
+          <span className="mr-2 inline-flex items-center text-theme">
             <Zap className="w-4" />
           </span>
           <span className="mr-3 text-green-medium">{`0.01100%`}</span>

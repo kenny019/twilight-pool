@@ -1,12 +1,11 @@
 "use client";
 import NextImage from "@/components/next-image";
 import cn from "@/lib/cn";
-import { useTwilight } from "@/lib/singleton";
+import { useTwilight } from "@/lib/providers/singleton";
 import { useChainWallet } from "@cosmos-kit/react-lite";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useWalletDialog } from "../connect-wallet.client";
-import { getBTCDepositAddress } from "@/lib/rest";
 import { useToast } from "@/lib/hooks/useToast";
 
 type Wallet = {

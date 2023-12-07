@@ -19,7 +19,7 @@ const OrderbookSplitIcon = ({ onClick, ...props }: Props) => {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <g clip-path="url(#clip0_1526_5549)">
+        <g clipPath="url(#clip0_1526_5549)">
           <path
             opacity="0.3"
             d="M2.66667 0.75H21.3333C22.3919 0.75 23.25 1.60812 23.25 2.66667V21.3333C23.25 22.3919 22.3919 23.25 21.3333 23.25H2.66667C1.60812 23.25 0.75 22.3919 0.75 21.3333V2.66667C0.75 1.60812 1.60812 0.75 2.66667 0.75Z"

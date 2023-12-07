@@ -13,7 +13,7 @@ import {
   twilightTestnetAssets,
 } from "@/lib/chaindata";
 import { MainWalletBase } from "@cosmos-kit/core";
-import { TwilightProvider } from "@/lib/singleton";
+import { TwilightProvider } from "@/lib/providers/singleton";
 import { Toaster } from "@/components/toast-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {

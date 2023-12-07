@@ -4,6 +4,8 @@ import { Responsive as ResponsiveGridLayout } from "react-grid-layout";
 import useWindow from "@/lib/hooks/useWindow";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
+import Chart from "./chart/chart.client";
+import { usePriceFeed } from "@/lib/providers/feed";
 
 function DragWrapper({
   title,
@@ -21,6 +23,7 @@ function DragWrapper({
     </>
   );
 }
+
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 10, minW: 2 },
   { i: "chart", x: 2, y: 0, w: 8, h: 10, minW: 2 },
@@ -29,6 +32,7 @@ const layout = [
 
 const TradeWrapper = () => {
   const { width: windowWidth } = useWindow();
+  const { feed } = usePriceFeed();
 
   return (
     <ResponsiveGridLayout
@@ -59,7 +63,9 @@ const TradeWrapper = () => {
         </DragWrapper>
       </div>
       <div className="rounded-md border bg-background" key="chart">
-        <DragWrapper title="Chart" />
+        <DragWrapper title="Chart">
+          <Chart />
+        </DragWrapper>
       </div>
       <div className="rounded-md border bg-background" key="orderbook">
         <DragWrapper title="Orderbook">
