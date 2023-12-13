@@ -6,23 +6,7 @@ import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
 import Chart from "./chart/chart.client";
 import { usePriceFeed } from "@/lib/providers/feed";
-
-function DragWrapper({
-  title,
-  children,
-}: {
-  title?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <>
-      <div className="draggable min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing">
-        {title}
-      </div>
-      {children}
-    </>
-  );
-}
+import DragWrapper from "./drag-wrapper.client";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 10, minW: 2 },
@@ -57,21 +41,15 @@ const TradeWrapper = () => {
         });
       }}
     >
-      <div className="rounded-md border bg-background" key="order">
-        <DragWrapper title="Orders">
-          <Order />
-        </DragWrapper>
-      </div>
-      <div className="rounded-md border bg-background" key="chart">
-        <DragWrapper title="Chart">
-          <Chart />
-        </DragWrapper>
-      </div>
-      <div className="rounded-md border bg-background" key="orderbook">
-        <DragWrapper title="Orderbook">
-          <Orderbook />
-        </DragWrapper>
-      </div>
+      <DragWrapper title="Orders" key="order">
+        <Order />
+      </DragWrapper>
+      <DragWrapper title="Chart" key="chart">
+        <Chart />
+      </DragWrapper>
+      <DragWrapper title="Orderbook" key="orderbook">
+        <Orderbook />
+      </DragWrapper>
     </ResponsiveGridLayout>
   );
 };
