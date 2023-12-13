@@ -46,9 +46,12 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    ws.current = new WebSocket(
-      process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string
-    );
+    if (process.env.NEXT_PUBLIC_ENVIRONMENT === "dev") {
+      // insecure websocket for now
+      ws.current = new WebSocket(
+        process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string
+      );
+    }
 
     if (ws.current === null) return;
 
