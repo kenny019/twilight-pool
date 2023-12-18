@@ -45,9 +45,10 @@ const Chart = () => {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    console.log("final", width, height);
     const chart = createChart(chartContainerRef.current, {
-      width: width > 0 ? width - 16 : width,
-      height: height > 0 ? height - 52 : height,
+      width: width > 0 ? width : width,
+      height: height > 0 ? height : height,
       layout: {
         background: {
           type: ColorType.Solid,
@@ -90,7 +91,7 @@ const Chart = () => {
     return () => {
       chart.remove();
     };
-  }, [width, height]);
+  }, [theme, width, height]);
 
   return <div ref={chartContainerRef} />;
 };
