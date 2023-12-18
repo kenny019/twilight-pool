@@ -13,11 +13,15 @@ import {
   DropdownTrigger,
 } from "@/components/dropdown";
 import { useWallet } from "@cosmos-kit/react-lite";
+import { useGrid } from "@/lib/providers/grid";
+import cn from "@/lib/cn";
 
 type OrderTabs = "limit" | "market";
 
 const Order = () => {
   const [currentTab, setCurrentTab] = useState<OrderTabs>("limit");
+
+  const { width } = useGrid();
 
   const { status } = useWallet();
 
@@ -83,7 +87,12 @@ const Order = () => {
               </div>
             </div>
             {status === "Connected" ? (
-              <div className="flex justify-between space-x-4">
+              <div
+                className={cn(
+                  "flex justify-between",
+                  width < 350 ? "flex-col space-y-2" : "flex-row space-x-4"
+                )}
+              >
                 <Button
                   className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
                   variant="ui"
@@ -124,7 +133,12 @@ const Order = () => {
               </div>
             </div>
             {status === "Connected" ? (
-              <div className="flex justify-between space-x-4">
+              <div
+                className={cn(
+                  "flex justify-between",
+                  width < 350 ? "flex-col space-y-2" : "flex-row space-x-4"
+                )}
+              >
                 <Button
                   className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
                   variant="ui"

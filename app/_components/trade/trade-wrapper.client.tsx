@@ -9,9 +9,9 @@ import { usePriceFeed } from "@/lib/providers/feed";
 import DragWrapper from "./drag-wrapper.client";
 
 const layout = [
-  { i: "order", x: 10, y: 0, w: 2, h: 10, minW: 2 },
-  { i: "chart", x: 2, y: 0, w: 8, h: 10, minW: 2 },
-  { i: "orderbook", x: 0, y: 0, w: 2, h: 10, minW: 2 },
+  { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
+  { i: "chart", x: 2, y: 0, w: 8, h: 11, minW: 2 },
+  { i: "orderbook", x: 0, y: 0, w: 2, h: 11, minW: 2 },
 ];
 
 const marginH = 16; // refactor
