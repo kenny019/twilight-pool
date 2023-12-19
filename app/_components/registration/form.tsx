@@ -158,6 +158,7 @@ const WalletRegistrationForm = () => {
             Deposit Amount
           </label>
         </Text>
+        {/* todo: refactor into seperate btc amount input */}
         <PopoverInput
           id="input-btc-amount"
           name="depositValue"

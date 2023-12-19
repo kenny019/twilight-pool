@@ -38,7 +38,6 @@ const TradeWrapper = () => {
       rowHeight={30}
       width={windowWidth}
       draggableHandle=".draggable"
-      className="overflow-hidden"
       onResizeStart={() => {
         const widgets = document.querySelectorAll(".react-grid-item");
         widgets.forEach((widget) => {

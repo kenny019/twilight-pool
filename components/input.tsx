@@ -139,7 +139,7 @@ const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
 
     return (
       <div className="relative">
-        <Input ref={ref} {...props} className={cn(className)} />
+        <Input autoComplete="off" ref={ref} {...props} className={className} />
 
         <div className="absolute inset-y-0 right-0 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center border-l">
           <Popover

@@ -14,6 +14,7 @@ type Props = {
   subLinks: Readonly<SubLink[]>;
 };
 
+// todo: repurpose for select menu
 const MultiLink = ({ title, subLinks }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -40,7 +41,7 @@ const MultiLink = ({ title, subLinks }: Props) => {
       <div
         className={cn(
           "absolute inset-x-0 mx-[1px] rounded-b-md bg-background pt-2 text-gray-400",
-          "before:absolute before:inset-0 before:-z-10 before:mx-[-1px] before:mb-[-1px] before:rounded-b-md before:bg-gradient-to-b before:from-gray-500 before:to-gray-300 before:to-70% before:duration-300 dark:bg-background dark:before:from-white dark:before:to-gray-500",
+          "transition-opacity before:absolute before:inset-0 before:-z-10 before:mx-[-1px] before:mb-[-1px] before:rounded-b-md before:bg-gradient-to-b before:from-gray-500 before:to-gray-300 before:to-70% before:duration-300 dark:bg-background dark:before:from-white dark:before:to-gray-500",
           isOpen ? "block" : "hidden"
         )}
       >
