@@ -39,6 +39,7 @@ const config: Config = {
       },
       outline: "var(--outline)",
       gray: colors.zinc,
+      skeleton: "hsl(var(--skeleton) / <alpha-value>)",
     },
     fontFamily: {
       body: ["var(--font-body)"],

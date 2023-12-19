@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useLocalStorage } from "../hooks";
 
 interface UseTwilightProps {
@@ -6,6 +12,8 @@ interface UseTwilightProps {
   setHasInit: (val: string) => void;
   colorTheme: string;
   setColorTheme: (val: string) => void;
+  quisPrivateKey: string;
+  setQuisPrivateKey: (val: string) => void;
 }
 
 interface TwilightProviderProps {
@@ -18,6 +26,8 @@ const defaultContext: UseTwilightProps = {
   setHasInit: () => {},
   colorTheme: "pink",
   setColorTheme: () => {},
+  quisPrivateKey: "",
+  setQuisPrivateKey: () => {},
 };
 
 const twilightContext = createContext<UseTwilightProps | undefined>(undefined);
@@ -33,6 +43,8 @@ export const ThemeColors = ["pink", "purple", "orange"] as const;
 const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
   const [hasInit, setHasInit] = useLocalStorage("init");
   const [storedColorTheme, setColorTheme] = useLocalStorage("color-theme");
+
+  const [quisPrivateKey, setQuisPrivateKey] = useState("");
 
   const colorTheme = storedColorTheme || "pink";
 
@@ -54,8 +66,10 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setHasInit,
       colorTheme: colorTheme || "pink",
       setColorTheme,
+      quisPrivateKey,
+      setQuisPrivateKey,
     }),
-    [hasInit, setHasInit, colorTheme, setColorTheme]
+    [hasInit, setHasInit, colorTheme, setColorTheme, quisPrivateKey]
   );
 
   return (
