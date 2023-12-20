@@ -57,7 +57,6 @@ const ComponentsSidebar = () => {
                 <Logo className="hover:opacity-80" />
               </Link>
             </div>
-            {/* todo: refactor sidebar to be server component and nav unit as client*/}
             <nav className="flex-1 space-y-4 pt-6">
               <div>
                 <CategoryNav>Core</CategoryNav>

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useLocalStorage } from "../hooks";
+import { useWallet } from "@cosmos-kit/react-lite";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -14,6 +15,9 @@ interface UseTwilightProps {
   setColorTheme: (val: string) => void;
   quisPrivateKey: string;
   setQuisPrivateKey: (val: string) => void;
+  quisTradingAddress: string;
+  setQuisTradingAddress: (val: string) => void;
+  setShouldGetQuisTradingAddress: (val: boolean) => void;
 }
 
 interface TwilightProviderProps {
@@ -28,6 +32,9 @@ const defaultContext: UseTwilightProps = {
   setColorTheme: () => {},
   quisPrivateKey: "",
   setQuisPrivateKey: () => {},
+  quisTradingAddress: "",
+  setQuisTradingAddress: () => {},
+  setShouldGetQuisTradingAddress: () => {},
 };
 
 const twilightContext = createContext<UseTwilightProps | undefined>(undefined);
@@ -43,6 +50,13 @@ export const ThemeColors = ["pink", "purple", "orange"] as const;
 const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
   const [hasInit, setHasInit] = useLocalStorage("init");
   const [storedColorTheme, setColorTheme] = useLocalStorage("color-theme");
+
+  // todo: write hook to grab this from localstorage
+  const [quisTradingAddress, setQuisTradingAddress] = useState("");
+
+  // flag to grab quis trading address from localstorage
+  const [shouldGetQuisTradingAddress, setShouldGetQuisTradingAddress] =
+    useState(false);
 
   const [quisPrivateKey, setQuisPrivateKey] = useState("");
 
@@ -68,8 +82,20 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setColorTheme,
       quisPrivateKey,
       setQuisPrivateKey,
+      quisTradingAddress,
+      setQuisTradingAddress,
+      setShouldGetQuisTradingAddress,
     }),
-    [hasInit, setHasInit, colorTheme, setColorTheme, quisPrivateKey]
+    [
+      hasInit,
+      setHasInit,
+      colorTheme,
+      setColorTheme,
+      quisPrivateKey,
+      quisTradingAddress,
+      setQuisTradingAddress,
+      setShouldGetQuisTradingAddress,
+    ]
   );
 
   return (

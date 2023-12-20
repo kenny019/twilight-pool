@@ -23,6 +23,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     );
   }
 );
+
 Input.displayName = "Input";
 
 interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {

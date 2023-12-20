@@ -5,7 +5,15 @@ import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { useTwilight } from "@/lib/providers/singleton";
+import {
+  generateSignMessage,
+  getQuisTradingAddress,
+} from "@/lib/twilight/chain";
 import BTC from "@/lib/twilight/denoms";
+import {
+  generatePublicKey,
+  generatePublicKeyHexAddress,
+} from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
@@ -17,12 +25,22 @@ const tradingAccountAddress =
   "0c2611d9cc63de94577c009e04a4f8b4116ff7f663b04ce9e31a52f0f933eeb34254a097e4df1f4513e81a1bf4610cc5e87f2b57059988785da805deed45e8df4d01e938e0";
 
 const Page = () => {
-  const { status } = useWallet();
+  const { status, mainWallet } = useWallet();
+
+  const {
+    quisPrivateKey,
+    setQuisPrivateKey,
+    quisTradingAddress,
+    setQuisTradingAddress,
+  } = useTwilight();
+
   const router = useRouter();
 
   // todo: store all twilight values in a provider
   const [twilightBTCBalance, setTwilightBTCBalance] = useState("");
   const [quisBTCBalance, setQuisBTCBalance] = useState("");
+
+  const [hasRequestedSignature, setHasRequestedSignature] = useState(false);
 
   function useRedirectUnconnected() {
     useEffect(() => {
@@ -38,10 +56,6 @@ const Page = () => {
       return () => clearTimeout(redirectTimeout);
     }, [status]);
   }
-
-  const { quisPrivateKey } = useTwilight();
-
-  const { mainWallet } = useWallet();
 
   function useGetTwilightBTCBalance() {
     useEffect(() => {
@@ -78,8 +92,95 @@ const Page = () => {
     }, [status]);
   }
 
-  useGetTwilightBTCBalance();
+  function useGetTradingAccount() {
+    useEffect(() => {
+      // todo: refactor into context with flag to retry
+      async function getTradingAccount() {
+        console.log(quisPrivateKey, !!quisPrivateKey, status);
+
+        if (!!quisPrivateKey || status !== "Connected" || hasRequestedSignature)
+          return;
+
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+
+        if (!chainWallet) {
+          console.error("no chainWallet");
+          return;
+        }
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) {
+          console.error("no twilightAddress");
+          return;
+        }
+
+        try {
+          const [_key, signature] = await generateSignMessage(
+            chainWallet,
+            twilightAddress,
+            "Hello Twilight!"
+          );
+
+          // note: not really private key but for our purposes
+          // it acts as the way to derive the public key
+          setQuisPrivateKey(signature as string);
+          setHasRequestedSignature(true);
+
+          console.log("checking quis trading address", quisTradingAddress);
+          // we have the old trading address
+          // so we dont have to generate a new one
+          // and we can just derive the latest trading address
+          if (quisTradingAddress) {
+            return;
+          }
+
+          const storedQuisTradingAddress =
+            getQuisTradingAddress(twilightAddress);
+
+          if (storedQuisTradingAddress) {
+            setQuisTradingAddress(storedQuisTradingAddress);
+            return;
+          }
+
+          const quisPublicKey = await generatePublicKey({
+            signature: signature as string,
+          });
+
+          const quisAddress = await generatePublicKeyHexAddress({
+            publicKey: quisPublicKey,
+          });
+
+          try {
+            window.localStorage.setItem(
+              `twilight-${twilightAddress}-trading-address`,
+              quisAddress
+            );
+
+            setQuisTradingAddress(quisAddress);
+            console.log("derived new trading address", quisAddress);
+          } catch (err) {
+            console.error(err);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      getTradingAccount();
+    }, [status]);
+  }
+
+  // note: incomplete
+  function useGetTradingBTCBalance() {
+    useEffect(() => {
+      if (!quisPrivateKey) return;
+    }, [quisPrivateKey]);
+  }
+
   useRedirectUnconnected();
+  useGetTwilightBTCBalance();
+  useGetTradingAccount();
 
   const totalBTCBalance = Big(twilightBTCBalance || 0).plus(
     quisBTCBalance || 0

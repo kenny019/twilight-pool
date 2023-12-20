@@ -22,6 +22,7 @@ const nextConfig = {
       "bufferutil",
       "utf-8-validate"
     );
+    config.experiments = { asyncWebAssembly: true, layers: true };
     return config;
   },
 };

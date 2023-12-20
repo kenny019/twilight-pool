@@ -17,4 +17,24 @@ async function generateSignMessage(
   return [pub_key, signature];
 }
 
-export { generateSignMessage };
+function getQuisTradingAddress(twilightAddress: string) {
+  try {
+    const data = window.localStorage.getItem(
+      `twilight-${twilightAddress}-trading-address`
+    );
+
+    if (!data) return "";
+
+    console.log("grabbing quis trading address", data);
+
+    return data;
+  } catch (err) {
+    console.error(
+      `Error reading localStorage, key twilight-${twilightAddress}-trading-address`,
+      err
+    );
+    return "";
+  }
+}
+
+export { generateSignMessage, getQuisTradingAddress };
