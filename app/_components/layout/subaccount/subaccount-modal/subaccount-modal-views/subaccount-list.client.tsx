@@ -8,6 +8,7 @@ import { useSubaccount } from "@/lib/providers/subaccounts";
 import { SubaccountStruct } from "@/lib/types";
 import React from "react";
 import { useSubaccountDialog } from "../subaccount-modal.client";
+import { Plus } from "lucide-react";
 
 type AccountRowProps = {
   account: SubaccountStruct;
@@ -42,6 +43,7 @@ const SubaccountListView = () => {
               variant="link"
               onClick={(e) => {
                 e.preventDefault();
+                // todo: add toast
                 setSelectedSubaccount(accountIndex);
               }}
             >
@@ -69,11 +71,27 @@ const SubaccountListView = () => {
             accountIndex={-2}
           />
         </div>
-        <div className="flex flex-row items-center justify-between">
-          <p>Subaccounts</p>
-          <p>Search</p>
+        <div className="space-y-2">
+          <div className="flex flex-row items-center justify-between">
+            <Text>Subaccounts</Text>
+
+            <div className="flex flex-row items-center space-x-2">
+              <Button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setView("create");
+                }}
+                variant="ui"
+                className="px-2 py-1 text-sm"
+                size="icon"
+              >
+                New <Plus className="h-2 w-2" />
+              </Button>
+              <Text>Search</Text>
+            </div>
+          </div>
+          <Separator className="mt-2" />
         </div>
-        <Separator />
         <div className="flex w-full flex-col space-y-2">
           {/* todo: add pagination */}
           {subAccounts.map((subAccount, index) => (

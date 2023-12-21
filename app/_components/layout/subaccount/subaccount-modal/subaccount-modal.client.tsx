@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/dialog";
 import React, { createContext, useContext, useMemo, useState } from "react";
 import SubaccountListView from "./subaccount-modal-views/subaccount-list.client";
+import SubaccountCreateView from "./subaccount-modal-views/subaccount-view.client";
 
 type availableViews = "list" | "create";
 
@@ -45,7 +46,7 @@ const SubaccountModal = ({ open, setOpen }: Props) => {
         return <SubaccountListView />;
       }
       case "create": {
-        return <div>createaaa</div>;
+        return <SubaccountCreateView />;
       }
     }
   }

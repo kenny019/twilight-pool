@@ -1,11 +1,18 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { SubaccountStruct } from "../types";
 
 interface UseSubaccountsProps {
   subAccounts: SubaccountStruct[];
-  setSubAccounts: (val: SubaccountStruct[]) => void;
+  setSubaccounts: (val: SubaccountStruct[]) => void;
   selectedSubaccount: number; // store the index so we can use the subAccounts record as source of truth
   setSelectedSubaccount: (val: number) => void;
+  addSubaccount: (val: SubaccountStruct) => void;
 }
 
 interface SubaccountProviderProps {
@@ -14,9 +21,10 @@ interface SubaccountProviderProps {
 
 const defaultContext: UseSubaccountsProps = {
   subAccounts: [],
-  setSubAccounts: () => {},
+  setSubaccounts: () => {},
   selectedSubaccount: -3, // -1 represents main trading account selected
   setSelectedSubaccount: () => {},
+  addSubaccount: () => {},
 };
 
 const SubaccountContext = createContext<UseSubaccountsProps | undefined>(
@@ -32,35 +40,28 @@ export const SubaccountProvider: React.FC<SubaccountProviderProps> = (
   return <Subaccount {...props} />;
 };
 
-const subAccountsData = [
-  {
-    tag: "Subaccount 1",
-    address: "0x1234567890123456789012345678901234567890",
-  },
-  {
-    tag: "Subaccount 2",
-    address: "0x1234567890123456789012345678901234567890",
-  },
-  {
-    tag: "Subaccount 3",
-    address: "0x1234567890123456789012345678901234567890",
-  },
-];
-
 const Subaccount: React.FC<SubaccountProviderProps> = ({ children }) => {
   // todo: grab list of subaccounts in here
-  const [subAccounts, setSubAccounts] = useState(subAccountsData);
+  const [subAccounts, setSubaccounts] = useState<SubaccountStruct[]>([]);
+
+  const addSubaccount = useCallback(
+    (newSubAccount: SubaccountStruct) => {
+      setSubaccounts([...subAccounts, newSubAccount]);
+    },
+    [subAccounts]
+  );
 
   const [selectedSubaccount, setSelectedSubaccount] = useState(-3);
 
   const providerValue = useMemo(
     () => ({
       subAccounts,
-      setSubAccounts,
+      setSubaccounts,
       selectedSubaccount,
       setSelectedSubaccount,
+      addSubaccount,
     }),
-    [subAccounts, setSubAccounts, selectedSubaccount, setSelectedSubaccount]
+    [subAccounts, setSubaccounts, selectedSubaccount, setSelectedSubaccount]
   );
 
   return (

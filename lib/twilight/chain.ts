@@ -1,4 +1,5 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
+import { generatePublicKey, generatePublicKeyHexAddress } from "./zkos";
 
 async function generateSignMessage(
   chainWallet: ChainWalletBase,
@@ -37,6 +38,16 @@ function getQuisTradingAddress(twilightAddress: string) {
   }
 }
 
-function createSubaccount(signature: string) {}
+async function createSubaccount(signature: string) {
+  const quisPublicKey = await generatePublicKey({
+    signature: signature as string,
+  });
 
-export { generateSignMessage, getQuisTradingAddress };
+  const quisAddress = await generatePublicKeyHexAddress({
+    publicKey: quisPublicKey,
+  });
+
+  return quisAddress;
+}
+
+export { generateSignMessage, getQuisTradingAddress, createSubaccount };
