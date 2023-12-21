@@ -9,12 +9,14 @@ import Button from "@/components/button";
 import { useTwilight } from "@/lib/providers/singleton";
 import { z } from "zod";
 import { createSubaccount } from "@/lib/twilight/chain";
+import { useWallet } from "@cosmos-kit/react-lite";
 
 const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();
 
   const { subAccounts, addSubaccount } = useSubaccount();
 
+  const { mainWallet } = useWallet();
   const { quisPrivateKey } = useTwilight();
 
   const subaccountTagRef = useRef<HTMLInputElement>(null);
@@ -22,7 +24,16 @@ const SubaccountCreateView = () => {
   async function SubmitCreateSubaccount(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!subaccountTagRef.current) {
+    const chainWallet = mainWallet?.getChainWallet("nyks");
+
+    if (!chainWallet) {
+      // todo: add toast
+      return;
+    }
+
+    const twilightAddress = chainWallet.address;
+
+    if (!subaccountTagRef.current || !twilightAddress) {
       // todo: add toast
       return;
     }
@@ -46,7 +57,7 @@ const SubaccountCreateView = () => {
       address: subaccountAddress,
     };
 
-    addSubaccount(newSubaccount);
+    addSubaccount(twilightAddress, newSubaccount);
     setView("list");
 
     // todo: add toast
@@ -75,6 +86,7 @@ const SubaccountCreateView = () => {
             placeholder={`Subaccount ${subAccounts.length + 1}`}
             defaultValue={`Subaccount ${subAccounts.length + 1}`}
             ref={subaccountTagRef}
+            value={subaccountTagRef.current?.value}
           />
         </div>
         <Button type="submit" size="small">

@@ -96,10 +96,64 @@ const Page = () => {
     useEffect(() => {
       // todo: refactor into context with flag to retry
       async function getTradingAccount() {
-        console.log(quisPrivateKey, !!quisPrivateKey, status);
-
-        if (!!quisPrivateKey || status !== "Connected" || hasRequestedSignature)
+        if (status !== "Connected" || quisTradingAddress || !quisPrivateKey)
           return;
+
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+
+        if (!chainWallet) {
+          console.error("no chainWallet");
+          return;
+        }
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) {
+          console.error("no twilightAddress");
+          return;
+        }
+
+        try {
+          const storedQuisTradingAddress =
+            getQuisTradingAddress(twilightAddress);
+
+          if (storedQuisTradingAddress) {
+            setQuisTradingAddress(storedQuisTradingAddress);
+            return;
+          }
+
+          const quisPublicKey = await generatePublicKey({
+            signature: quisPrivateKey,
+          });
+
+          const quisAddress = await generatePublicKeyHexAddress({
+            publicKey: quisPublicKey,
+          });
+
+          try {
+            window.localStorage.setItem(
+              `twilight-${twilightAddress}-trading-address`,
+              quisAddress
+            );
+
+            setQuisTradingAddress(quisAddress);
+            console.log("stored new trading address", quisAddress);
+          } catch (err) {
+            console.error(err);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      getTradingAccount();
+    }, [status, quisPrivateKey]);
+  }
+
+  function useGetQuisPrivateKey() {
+    useEffect(() => {
+      async function getQuisPrivateKey() {
+        if (!!quisPrivateKey || status !== "Connected") return;
 
         const chainWallet = mainWallet?.getChainWallet("nyks");
 
@@ -126,48 +180,11 @@ const Page = () => {
           // it acts as the way to derive the public key
           setQuisPrivateKey(signature as string);
           setHasRequestedSignature(true);
-
-          console.log("checking quis trading address", quisTradingAddress);
-          // we have the old trading address
-          // so we dont have to generate a new one
-          // and we can just derive the latest trading address
-          if (quisTradingAddress) {
-            return;
-          }
-
-          const storedQuisTradingAddress =
-            getQuisTradingAddress(twilightAddress);
-
-          if (storedQuisTradingAddress) {
-            setQuisTradingAddress(storedQuisTradingAddress);
-            return;
-          }
-
-          const quisPublicKey = await generatePublicKey({
-            signature: signature as string,
-          });
-
-          const quisAddress = await generatePublicKeyHexAddress({
-            publicKey: quisPublicKey,
-          });
-
-          try {
-            window.localStorage.setItem(
-              `twilight-${twilightAddress}-trading-address`,
-              quisAddress
-            );
-
-            setQuisTradingAddress(quisAddress);
-            console.log("derived new trading address", quisAddress);
-          } catch (err) {
-            console.error(err);
-          }
         } catch (err) {
           console.error(err);
         }
       }
-
-      getTradingAccount();
+      getQuisPrivateKey();
     }, [status, hasRequestedSignature]);
   }
 
@@ -181,6 +198,7 @@ const Page = () => {
   useRedirectUnconnected();
   useGetTwilightBTCBalance();
   useGetTradingAccount();
+  useGetQuisPrivateKey();
 
   const totalBTCBalance = Big(twilightBTCBalance || 0).plus(
     quisBTCBalance || 0
@@ -221,7 +239,7 @@ const Page = () => {
                   </>
                 ) : (
                   <>
-                    <Skeleton className="h-6 w-[140px]" />
+                    <Skeleton className="h-5 w-[140px]" />
                     <Skeleton className="mt-1 h-4 w-[80px]" />
                   </>
                 )}
@@ -246,7 +264,7 @@ const Page = () => {
             <div className="flex w-full justify-between">
               <Text>Trading</Text>
               <div>
-                <Skeleton className="h-6 w-[140px]" />
+                <Skeleton className="h-5 w-[140px]" />
                 {/* <Text className="text-primary/80">BTC</Text> */}
                 {/* <Text className="text-xs text-primary-accent">
                   = 56632.11 USD

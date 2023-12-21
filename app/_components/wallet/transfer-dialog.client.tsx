@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/select";
 import { Text } from "@/components/typography";
+import { useSubaccount } from "@/lib/providers/subaccounts";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import Big from "big.js";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,13 +26,13 @@ type Props = {
   defaultAccount: "funding" | "trading";
 };
 
-const subAccounts = ["acc1", "acc2", "acc3", "acc4", "acc5"];
-
 const TransferDialog = ({
   defaultAccount,
   tradingAccountAddress,
   children,
 }: Props) => {
+  const { subAccounts } = useSubaccount();
+
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
   const [toAccountValue, setToAccountValue] = useState<string>(
@@ -127,9 +128,11 @@ const TransferDialog = ({
                       </SelectItem>
                       {subAccounts.map((subAccount, index) => (
                         <SelectItem
-                          disabled={selectedTradingAccountTo === subAccount}
-                          value={subAccount}
-                          key={subAccount}
+                          disabled={
+                            selectedTradingAccountTo === subAccount.address
+                          }
+                          value={subAccount.address}
+                          key={subAccount.address}
                         >
                           {`Subaccount ${index + 1}`}
                         </SelectItem>
@@ -205,9 +208,11 @@ const TransferDialog = ({
 
                       {subAccounts.map((subAccount, index) => (
                         <SelectItem
-                          disabled={selectedTradingAccountFrom === subAccount}
-                          value={subAccount}
-                          key={subAccount}
+                          disabled={
+                            selectedTradingAccountFrom === subAccount.address
+                          }
+                          value={subAccount.address}
+                          key={subAccount.address}
                         >
                           {`Subaccount ${index + 1}`}
                         </SelectItem>
