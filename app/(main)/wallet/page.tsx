@@ -19,10 +19,6 @@ import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { twilightproject } from "twilightjs";
-
-const tradingAccountAddress =
-  "0c2611d9cc63de94577c009e04a4f8b4116ff7f663b04ce9e31a52f0f933eeb34254a097e4df1f4513e81a1bf4610cc5e87f2b57059988785da805deed45e8df4d01e938e0";
 
 const Page = () => {
   const { status, mainWallet } = useWallet();
@@ -75,17 +71,21 @@ const Page = () => {
           return;
         }
 
-        const stargateClient = await chainWallet.getSigningStargateClient();
-        const satsBalance = await stargateClient.getBalance(
-          twilightAddress,
-          "sats"
-        );
+        try {
+          const stargateClient = await chainWallet.getSigningStargateClient();
+          const satsBalance = await stargateClient.getBalance(
+            twilightAddress,
+            "sats"
+          );
 
-        const { amount } = satsBalance;
+          const { amount } = satsBalance;
 
-        const btcBalance = new BTC("BTC", Big(amount));
+          const btcBalance = new BTC("BTC", Big(amount));
 
-        setTwilightBTCBalance(btcBalance.value.toFixed(9));
+          setTwilightBTCBalance(btcBalance.value.toFixed(9));
+        } catch (err) {
+          console.error(err);
+        }
       }
 
       fetchData();
@@ -168,7 +168,7 @@ const Page = () => {
       }
 
       getTradingAccount();
-    }, [status]);
+    }, [status, hasRequestedSignature]);
   }
 
   // note: incomplete
@@ -231,7 +231,7 @@ const Page = () => {
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
                 <TransferDialog
-                  tradingAccountAddress={tradingAccountAddress}
+                  tradingAccountAddress={quisTradingAddress}
                   defaultAccount="funding"
                 >
                   <Button variant="ui" size="icon">

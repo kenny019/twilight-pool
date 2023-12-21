@@ -32,13 +32,14 @@ const ConnectWallet = () => {
             await mainWallet?.disconnect();
           }}
           size="small"
+          className="w-[180px]"
         >
           Disconnect <RightArrowIcon />
         </Button>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="small">
+            <Button size="small" className="w-[180px]">
               Connect Wallet
               <RightArrowIcon />
             </Button>

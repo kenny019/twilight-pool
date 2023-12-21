@@ -12,4 +12,17 @@ async function generatePublicKeyHexAddress({
   return zkos.hexStandardAddressFromPublicKey(12, publicKey);
 }
 
-export { generatePublicKey, generatePublicKeyHexAddress };
+async function generateZeroTradingAccountFromHexAddress({
+  tradingHexAddress,
+}: {
+  tradingHexAddress: string;
+}) {
+  const zkos = await import("zkos-wasm");
+  return zkos.generateZeroTradingAccountFromAddress(tradingHexAddress);
+}
+
+export {
+  generatePublicKey,
+  generatePublicKeyHexAddress,
+  generateZeroTradingAccountFromHexAddress,
+};

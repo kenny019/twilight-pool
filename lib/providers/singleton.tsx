@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import { useLocalStorage } from "../hooks";
-import { useWallet } from "@cosmos-kit/react-lite";
 
 interface UseTwilightProps {
   hasInit: string;

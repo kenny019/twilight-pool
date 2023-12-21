@@ -15,6 +15,7 @@ import {
 import { MainWalletBase } from "@cosmos-kit/core";
 import { TwilightProvider } from "@/lib/providers/singleton";
 import { Toaster } from "@/components/toast-provider";
+import { SubaccountProvider } from "@/lib/providers/subaccounts";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -34,7 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         signerOptions={signerOptions}
       >
         <TwilightProvider>
-          {children}
+          <SubaccountProvider>{children}</SubaccountProvider>
           <Toaster />
         </TwilightProvider>
       </ChainProvider>

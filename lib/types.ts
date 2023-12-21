@@ -19,3 +19,8 @@ export type twilightRegistedBtcAddressStruct = {
   depositAddress: string;
   twilightDepositAddress: string;
 };
+
+export type SubaccountStruct = {
+  tag: string;
+  address: string;
+};

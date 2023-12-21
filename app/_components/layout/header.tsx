@@ -4,9 +4,9 @@ import Link from "next/link";
 import React from "react";
 import MultiLink from "./multi-link.client";
 import { ArrowUpRight } from "lucide-react";
-import { ThemeSwitch } from "@/components/theme-switch";
 import ConnectWallet from "./connect-wallet.client";
 import Settings from "./settings.client";
+import SubaccountSelect from "./subaccount/subaccount-select.client";
 
 const marketSubLinks = [
   {
@@ -69,6 +69,7 @@ const Header = () => {
 
           {/* right side */}
           <div className="flex flex-row items-center space-x-4">
+            <SubaccountSelect />
             <Settings />
             <ConnectWallet />
           </div>

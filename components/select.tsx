@@ -50,7 +50,7 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.Viewport
         className={cn(
           position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[calc(var(--radix-select-trigger-width)-2px)]"
+            "h-[var(--radix-select-trigger-height)] w-[calc(var(--radix-select-trigger-width)-2px)]"
         )}
       >
         {children}

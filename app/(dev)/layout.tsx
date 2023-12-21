@@ -2,7 +2,6 @@ import "@/app/globals.css";
 import React from "react";
 import ComponentsSidebar from "./design/sidebar.client";
 
-import type { Metadata } from "next";
 import { Providers } from "../providers";
 import { instrumentSerif, inter, robotoMono } from "@/lib/fonts";
 import { baseMetadata } from "@/lib/metadata";

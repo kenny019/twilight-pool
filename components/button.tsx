@@ -14,7 +14,7 @@ const variantStyles = {
   primary: "btn-primary bg-button-primary rounded-default",
   secondary: `btn-secondary bg-button-secondary hover:bg-button-primary rounded-default transition-colors 
     duration-300 disabled:hover:bg-button-secondary`,
-  link: "underline underline-offset-2 hover:decoration-dashed p-0 disabled:no-underline",
+  link: "transition-colors underline underline-offset-2 hover:decoration-dashed p-0 disabled:no-underline hover:decoration-theme hover:text-theme",
   icon: `border border-primary bg-transparent rounded-full hover:border-transparent hover:bg-accent-200 dark:hover:bg-button-secondary
     disabled:bg-button-primary disabled:border-gray-500 disabled:hover:bg-button-primary dark:disabled:hover:bg-button-primary
   `,

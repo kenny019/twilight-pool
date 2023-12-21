@@ -37,4 +37,6 @@ function getQuisTradingAddress(twilightAddress: string) {
   }
 }
 
+function createSubaccount(signature: string) {}
+
 export { generateSignMessage, getQuisTradingAddress };

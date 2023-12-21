@@ -107,7 +107,9 @@ const Order = () => {
                 </Button>
               </div>
             ) : (
-              <ConnectWallet />
+              <div className="flex w-full justify-center">
+                <ConnectWallet />
+              </div>
             )}
           </form>
         );
