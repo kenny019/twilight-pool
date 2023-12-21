@@ -8,6 +8,7 @@ import { useTwilight } from "@/lib/providers/singleton";
 import {
   generateSignMessage,
   getQuisTradingAddress,
+  getUtxosFromDB,
 } from "@/lib/twilight/chain";
 import BTC from "@/lib/twilight/denoms";
 import {
@@ -191,12 +192,17 @@ const Page = () => {
   // note: incomplete
   function useGetTradingBTCBalance() {
     useEffect(() => {
-      if (!quisPrivateKey) return;
+      async function getTradingBTCBalance() {
+        const data = await getUtxosFromDB();
+        console.log(data);
+      }
+      getTradingBTCBalance();
     }, [quisPrivateKey]);
   }
 
   useRedirectUnconnected();
   useGetTwilightBTCBalance();
+  useGetTradingBTCBalance();
   useGetTradingAccount();
   useGetQuisPrivateKey();
 
