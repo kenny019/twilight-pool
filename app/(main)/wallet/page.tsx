@@ -1,6 +1,7 @@
 "use client";
 import TransferDialog from "@/app/_components/wallet/transfer-dialog.client";
 import Button from "@/components/button";
+import Resource from "@/components/resource";
 import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
@@ -194,7 +195,7 @@ const Page = () => {
     useEffect(() => {
       async function getTradingBTCBalance() {
         const data = await getUtxosFromDB();
-        console.log(data);
+        console.log("utxos from db", data);
       }
       getTradingBTCBalance();
     }, [quisPrivateKey]);
@@ -233,22 +234,23 @@ const Page = () => {
             <div className="flex w-full justify-between">
               <Text>Funding</Text>
               <div className="min-w-[140px]">
-                {twilightBTCBalance ? (
-                  <>
-                    <Text className="text-primary/80">
-                      {twilightBTCBalance} BTC
-                    </Text>
-                    <Text className="text-xs text-primary-accent">
-                      = 0.00 USD
-                      {/* todo: derive usd value */}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Skeleton className="h-5 w-[140px]" />
-                    <Skeleton className="mt-1 h-4 w-[80px]" />
-                  </>
-                )}
+                <Resource
+                  isLoaded={!!twilightBTCBalance}
+                  placeholder={
+                    <>
+                      <Skeleton className="h-5 w-[140px]" />
+                      <Skeleton className="mt-1 h-4 w-[80px]" />
+                    </>
+                  }
+                >
+                  <Text className="text-primary/80">
+                    {twilightBTCBalance} BTC
+                  </Text>
+                  <Text className="text-xs text-primary-accent">
+                    = 0.00 USD
+                    {/* todo: derive usd value */}
+                  </Text>
+                </Resource>
               </div>
               <div className="flex flex-row space-x-2">
                 <Button variant="ui" size="icon">

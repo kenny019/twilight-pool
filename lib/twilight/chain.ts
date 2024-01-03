@@ -66,7 +66,7 @@ async function getUtxosFromDB() {
   };
 
   const apiURL = process.env.NEXT_PUBLIC_ZKOS_API_ENDPOINT as string;
-  const { data, error, success } = await wfetch(`${apiURL}`)
+  const { data, error, success } = await wfetch(apiURL)
     .post({
       headers: {
         "Content-Type": "application/json",
