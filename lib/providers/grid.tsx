@@ -28,48 +28,50 @@ export const GridProvider: React.FC<GridProviderProps> = ({
 }) => {
   // todo: add constant default dimensions
   const [dimensions, setDimensions] = useState({ width: 600, height: 300 });
-  const [oldCallbackDimension, setOldCallbackDimension] = useState({
-    width: 0,
-    height: 0,
-  });
+
+  function useUpdateCallbackDimensions() {
+    useEffect(() => {
+      if (!callbackDimensions) return;
+
+      console.log("callbackdim trigerred", callbackDimensions);
+      setDimensions({
+        width: callbackDimensions.width,
+        height: callbackDimensions.height,
+      });
+    }, [
+      callbackDimensions,
+      callbackDimensions?.width,
+      callbackDimensions?.height,
+    ]);
+  }
+
+  function useUpdateGridDimensions() {
+    useEffect(() => {
+      if (!gridRef.current) return;
+
+      const { clientHeight, clientWidth } = gridRef.current;
+
+      setDimensions({
+        width: clientWidth,
+        height: clientHeight,
+      });
+    }, [
+      gridRef.current,
+      gridRef.current?.clientHeight,
+      gridRef.current?.clientWidth,
+    ]);
+  }
+
+  useUpdateGridDimensions();
+  useUpdateCallbackDimensions();
 
   const value = useMemo(() => {
-    if (!gridRef || !gridRef.current) return;
-    const { clientHeight, clientWidth } = gridRef.current;
-
-    if (
-      dimensions.width !== clientWidth ||
-      dimensions.height !== clientHeight
-    ) {
-      setDimensions({ width: clientWidth - 16, height: clientHeight - 62 }); // todo: fix this hack
-    }
-
     return {
       width: dimensions.width,
       height: dimensions.height,
       setDimensions,
     };
-  }, [gridRef.current?.clientHeight, gridRef.current?.clientWidth]);
-
-  useEffect(() => {
-    if (!callbackDimensions) return;
-
-    console.log("callbackdim", callbackDimensions, oldCallbackDimension);
-
-    setDimensions({
-      width: callbackDimensions.width,
-      height: callbackDimensions.height,
-    });
-
-    setOldCallbackDimension({
-      width: callbackDimensions.width,
-      height: callbackDimensions.height,
-    });
-  }, [
-    callbackDimensions,
-    callbackDimensions?.width,
-    callbackDimensions?.height,
-  ]);
+  }, [dimensions.width, dimensions.height]);
 
   return <gridContext.Provider value={value}>{children}</gridContext.Provider>;
 };

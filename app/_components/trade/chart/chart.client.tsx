@@ -35,6 +35,9 @@ const data = [
   },
 ];
 
+const CHART_X_PADDING = 20;
+const CHART_Y_PADDING = 40;
+
 const Chart = () => {
   const { theme } = useTheme();
 
@@ -45,10 +48,9 @@ const Chart = () => {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    console.log("final", width, height);
     const chart = createChart(chartContainerRef.current, {
-      width: width > 0 ? width : width,
-      height: height > 0 ? height : height,
+      width: width > 0 ? width - CHART_X_PADDING : 0,
+      height: height > 0 ? height - CHART_Y_PADDING : 0,
       layout: {
         background: {
           type: ColorType.Solid,
