@@ -22,7 +22,7 @@ async function generateSignMessage(
 function getQuisTradingAddress(twilightAddress: string) {
   try {
     const data = window.localStorage.getItem(
-      `twilight-${twilightAddress}-trading-address`
+      `twilight-trading-${twilightAddress}`
     );
 
     if (!data) return "";
@@ -51,6 +51,12 @@ async function createSubaccount(signature: string) {
   return quisAddress;
 }
 
+type UtxoFromDBResponse = {
+  result: {
+    result: string;
+  };
+};
+
 async function getUtxosFromDB() {
   const body = {
     jsonrpc: "2.0",
@@ -70,15 +76,14 @@ async function getUtxosFromDB() {
     .post({
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify(body),
     })
-    .json();
+    .json<UtxoFromDBResponse>();
 
   if (!success) {
     console.error(error);
-    return [];
+    return "";
   }
 
   return data;

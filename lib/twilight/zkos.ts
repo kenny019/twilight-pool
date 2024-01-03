@@ -21,8 +21,14 @@ async function generateZeroTradingAccountFromHexAddress({
   return zkos.generateZeroTradingAccountFromAddress(tradingHexAddress);
 }
 
+async function addressMonitoring(signature: string, utxos: string) {
+  const zkos = await import("zkos-wasm");
+  return zkos.coinAddressMonitoring(utxos, signature);
+}
+
 export {
   generatePublicKey,
   generatePublicKeyHexAddress,
   generateZeroTradingAccountFromHexAddress,
+  addressMonitoring,
 };

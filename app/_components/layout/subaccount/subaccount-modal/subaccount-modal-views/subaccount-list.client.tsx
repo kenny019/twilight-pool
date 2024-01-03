@@ -20,7 +20,7 @@ const SubaccountListView = () => {
   const { subAccounts, selectedSubaccount, setSelectedSubaccount } =
     useSubaccount();
 
-  const { quisTradingAddress } = useTwilight();
+  const { mainTradingAccount } = useTwilight();
 
   const { setView } = useSubaccountDialog();
 
@@ -65,7 +65,7 @@ const SubaccountListView = () => {
               selectedSubaccount === -2 ? "border-theme" : "border-outline"
             )}
             account={{
-              address: quisTradingAddress,
+              address: mainTradingAccount?.address || "",
               tag: "Trading Account",
             }}
             accountIndex={-2}

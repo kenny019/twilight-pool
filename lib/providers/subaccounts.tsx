@@ -11,7 +11,6 @@ import { SubaccountStruct } from "../types";
 import {
   getLocalSubaccountList,
   setLocalSubaccountList,
-  updateLocalSubaccount,
 } from "../twilight/config";
 import { useWallet } from "@cosmos-kit/react-lite";
 
@@ -105,6 +104,7 @@ const Subaccount: React.FC<SubaccountProviderProps> = ({ children }) => {
       const localSubaccounts = getLocalSubaccountList(twilightAddress);
 
       console.log("populating localsubaccounts", localSubaccounts);
+
       dispatchSubaccounts({
         payload: {
           accounts: localSubaccounts,

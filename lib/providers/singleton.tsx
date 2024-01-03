@@ -6,6 +6,13 @@ import React, {
   useState,
 } from "react";
 import { useLocalStorage } from "../hooks";
+import { TradingAccountStruct } from "../types";
+import { useWallet } from "@cosmos-kit/react-lite";
+import { generateSignMessage, getQuisTradingAddress } from "../twilight/chain";
+import {
+  generatePublicKey,
+  generatePublicKeyHexAddress,
+} from "../twilight/zkos";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -14,9 +21,8 @@ interface UseTwilightProps {
   setColorTheme: (val: string) => void;
   quisPrivateKey: string;
   setQuisPrivateKey: (val: string) => void;
-  quisTradingAddress: string;
-  setQuisTradingAddress: (val: string) => void;
-  setShouldGetQuisTradingAddress: (val: boolean) => void;
+  mainTradingAccount?: TradingAccountStruct;
+  setMainTradingAccount: (val: TradingAccountStruct) => void;
 }
 
 interface TwilightProviderProps {
@@ -31,9 +37,8 @@ const defaultContext: UseTwilightProps = {
   setColorTheme: () => {},
   quisPrivateKey: "",
   setQuisPrivateKey: () => {},
-  quisTradingAddress: "",
-  setQuisTradingAddress: () => {},
-  setShouldGetQuisTradingAddress: () => {},
+  mainTradingAccount: undefined,
+  setMainTradingAccount: () => {},
 };
 
 const twilightContext = createContext<UseTwilightProps | undefined>(undefined);
@@ -50,16 +55,120 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
   const [hasInit, setHasInit] = useLocalStorage("init");
   const [storedColorTheme, setColorTheme] = useLocalStorage("color-theme");
 
-  // todo: write hook to grab this from localstorage
-  const [quisTradingAddress, setQuisTradingAddress] = useState("");
+  const { mainWallet, status } = useWallet();
 
-  // flag to grab quis trading address from localstorage
-  const [shouldGetQuisTradingAddress, setShouldGetQuisTradingAddress] =
-    useState(false);
+  const [mainTradingAccount, setMainTradingAccount] =
+    useState<TradingAccountStruct>();
 
   const [quisPrivateKey, setQuisPrivateKey] = useState("");
 
   const colorTheme = storedColorTheme || "pink";
+
+  function useGetTradingAccountFromLocal() {
+    useEffect(() => {
+      // todo: refactor into context with flag to retry
+      async function getTradingAccountFromLocal() {
+        if (
+          status !== "Connected" ||
+          !quisPrivateKey ||
+          mainTradingAccount?.address
+        )
+          return;
+
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+
+        if (!chainWallet) {
+          console.error("no chainWallet");
+          return;
+        }
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) {
+          console.error("no twilightAddress");
+          return;
+        }
+
+        try {
+          const storedQuisTradingAddress =
+            getQuisTradingAddress(twilightAddress);
+
+          if (storedQuisTradingAddress) {
+            setMainTradingAccount({
+              address: storedQuisTradingAddress,
+              tag: "main",
+            });
+            return;
+          }
+
+          const quisPublicKey = await generatePublicKey({
+            signature: quisPrivateKey,
+          });
+
+          const quisAddress = await generatePublicKeyHexAddress({
+            publicKey: quisPublicKey,
+          });
+
+          try {
+            window.localStorage.setItem(
+              `twilight-trading-${twilightAddress}`,
+              quisAddress
+            );
+
+            setMainTradingAccount({
+              address: quisAddress,
+              tag: "main",
+            });
+
+            console.log("created a new main trading address", quisAddress);
+          } catch (err) {
+            console.error(err);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      getTradingAccountFromLocal();
+    }, [status, quisPrivateKey]);
+  }
+
+  function useGetQuisPrivateKey() {
+    useEffect(() => {
+      async function getQuisPrivateKey() {
+        if (!!quisPrivateKey || status !== "Connected") return;
+
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+
+        if (!chainWallet) {
+          console.error("no chainWallet");
+          return;
+        }
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) {
+          console.error("no twilightAddress");
+          return;
+        }
+
+        try {
+          const [_key, signature] = await generateSignMessage(
+            chainWallet,
+            twilightAddress,
+            "Hello Twilight!"
+          );
+
+          // note: not really private key but for our purposes
+          // it acts as the way to derive the public key
+          setQuisPrivateKey(signature as string);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      getQuisPrivateKey();
+    }, [status]);
+  }
 
   function useUpdateColorTheme() {
     useEffect(() => {
@@ -71,7 +180,29 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     }, [colorTheme]);
   }
 
+  function useCleanupAccountData() {
+    useEffect(() => {
+      if (status !== "Disconnected" && status !== "Connecting") return;
+
+      console.log("cleaning up account data");
+      if (mainTradingAccount) {
+        setMainTradingAccount(undefined);
+      }
+
+      if (quisPrivateKey) {
+        setQuisPrivateKey("");
+      }
+    }, [status]);
+  }
+
+  function useQueryChainTradingAccountData() {
+    useEffect(() => {}, []);
+  }
+
+  useCleanupAccountData();
+  useGetQuisPrivateKey();
   useUpdateColorTheme();
+  useGetTradingAccountFromLocal();
 
   const providerValue = useMemo(
     () => ({
@@ -81,9 +212,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setColorTheme,
       quisPrivateKey,
       setQuisPrivateKey,
-      quisTradingAddress,
-      setQuisTradingAddress,
-      setShouldGetQuisTradingAddress,
+      mainTradingAccount,
+      setMainTradingAccount,
     }),
     [
       hasInit,
@@ -91,9 +221,9 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       colorTheme,
       setColorTheme,
       quisPrivateKey,
-      quisTradingAddress,
-      setQuisTradingAddress,
-      setShouldGetQuisTradingAddress,
+      setQuisPrivateKey,
+      mainTradingAccount,
+      setMainTradingAccount,
     ]
   );
 

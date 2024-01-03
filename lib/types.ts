@@ -20,7 +20,11 @@ export type twilightRegistedBtcAddressStruct = {
   twilightDepositAddress: string;
 };
 
-export type SubaccountStruct = {
+export interface SubaccountStruct {
   tag: string;
   address: string;
-};
+  value?: number; // btc value
+  isOnChain?: boolean;
+}
+
+export interface TradingAccountStruct extends SubaccountStruct {}
