@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import useWindow from "../hooks/useWindow";
 
 interface UseGridProps {
   width: number;
@@ -28,6 +29,8 @@ export const GridProvider: React.FC<GridProviderProps> = ({
 }) => {
   // todo: add constant default dimensions
   const [dimensions, setDimensions] = useState({ width: 600, height: 300 });
+
+  const { height: windowHeight, width: windowWidth } = useWindow();
 
   function useUpdateCallbackDimensions() {
     useEffect(() => {
@@ -59,6 +62,8 @@ export const GridProvider: React.FC<GridProviderProps> = ({
       gridRef.current,
       gridRef.current?.clientHeight,
       gridRef.current?.clientWidth,
+      windowHeight,
+      windowWidth,
     ]);
   }
 
