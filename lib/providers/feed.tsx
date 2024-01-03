@@ -46,6 +46,7 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    console.log(process.env.NODE_ENV);
     if (process.env.NEXT_PUBLIC_ENVIRONMENT === "dev") {
       // insecure websocket for now
       ws.current = new WebSocket(

@@ -32,7 +32,7 @@ export default class BTC {
 
   convert(toDenom: BTCDenoms) {
     if (toDenom === this.currentDenom) {
-      return toDenom === "sats" ? this.value.toNumber() : this.value.toFixed();
+      return this.value;
     }
 
     let factor = 0;
@@ -52,8 +52,6 @@ export default class BTC {
       }
     }
 
-    const result = this.value.mul(new Big(factor));
-
-    return toDenom === "sats" ? result.toNumber() : result.toFixed();
+    return this.value.mul(new Big(factor));
   }
 }

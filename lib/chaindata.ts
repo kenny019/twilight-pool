@@ -13,15 +13,16 @@ export const twilightTestnet: Chain = {
   bech32_prefix: "twilight",
   slip44: 118, // testnet slip44 https://github.com/satoshilabs/slips/blob/master/slip-0044.md#registered-coin-types
   apis: {
+    // note: helpful information, /rest and /api are the same endpoint for twilight-explorer
     rest: [
       {
-        address: "https://nyks.twilight-explorer.com/rest/",
+        address: process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string,
         provider: "Twilight",
       },
     ],
     rpc: [
       {
-        address: "https://nyks.twilight-explorer.com/tendermint/",
+        address: process.env.NEXT_PUBLIC_TWILIGHT_API_RPC as string,
         provider: "Twilight",
       },
     ],

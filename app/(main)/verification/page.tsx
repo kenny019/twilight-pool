@@ -39,7 +39,7 @@ const Page = () => {
     btcDepositAddress,
     // CreationTwilightBlockHeight // todo: calculate expiry time
     btcSatoshiTestAmount,
-    // isConfirmed // todo: create dialog to show use has already verified
+    // isConfirmed // todo: create dialog to show user has already verified
   } = data;
 
   return (

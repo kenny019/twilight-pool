@@ -86,7 +86,7 @@ const WalletRegistrationForm = () => {
     const depositAddress = parseDepositAddressRes.data;
 
     const deposit = new BTC(depositDenom as BTCDenoms, Big(depositValue));
-    const depositSats = deposit.convert("sats") as number; // sats will always be number todo: type narrowing
+    const depositSats = deposit.convert("sats").toNumber();
 
     const stargateClient = await chainWallet.getSigningStargateClient();
 

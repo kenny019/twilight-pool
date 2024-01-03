@@ -81,9 +81,9 @@ const Page = () => {
 
           const { amount } = satsBalance;
 
-          const btcBalance = new BTC("BTC", Big(amount));
+          const btcBalance = new BTC("sats", Big(amount));
 
-          setTwilightBTCBalance(btcBalance.value.toFixed(9));
+          setTwilightBTCBalance(btcBalance.convert("BTC").toFixed(9));
         } catch (err) {
           console.error(err);
         }
@@ -213,13 +213,13 @@ const Page = () => {
   return (
     <div className="mx-8 mt-4 space-y-8">
       <div className="flex w-full max-w-4xl flex-row items-baseline justify-between">
-        <div className="fspace-y-4">
-          <Text heading="h1" className="font-normal">
+        <div className="space-y-2">
+          <Text heading="h1" className="text-2xl font-normal">
             Assets Overview
           </Text>
           <div className="space-y-1">
-            <Text className="text-6xl">
-              {totalBTCBalance.toFixed()}
+            <Text className="text-4xl">
+              {totalBTCBalance.toFixed(9)}
               <span className="ml-1 inline-flex text-sm">BTC</span>
             </Text>
             <Text className="text-xs text-primary-accent">= 0 USD</Text>
@@ -232,7 +232,7 @@ const Page = () => {
           <div className="space-y-4">
             <div className="flex w-full justify-between">
               <Text>Funding</Text>
-              <div>
+              <div className="min-w-[140px]">
                 {twilightBTCBalance ? (
                   <>
                     <Text className="text-primary/80">
