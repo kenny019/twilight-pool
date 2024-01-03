@@ -36,7 +36,6 @@ export const GridProvider: React.FC<GridProviderProps> = ({
     useEffect(() => {
       if (!callbackDimensions) return;
 
-      console.log("callbackdim trigerred", callbackDimensions);
       setDimensions({
         width: callbackDimensions.width,
         height: callbackDimensions.height,
