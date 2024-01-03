@@ -86,12 +86,12 @@ const Page = () => {
       async function getTradingBTCBalance() {
         if (!quisPrivateKey) return;
         const utxoString = await getUtxosFromDB();
-        const tradingAddresses = await addressMonitoring(
-          quisPrivateKey,
-          utxoString
-        );
+        // const tradingAddresses = await addressMonitoring(
+        //   quisPrivateKey,
+        //   utxoString
+        // );
 
-        console.log("trading addresses on chain", tradingAddresses);
+        // console.log("trading addresses on chain", tradingAddresses);
       }
 
       getTradingBTCBalance();
