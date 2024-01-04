@@ -15,7 +15,10 @@ const DragWrapper = forwardRef<
 >(({ title, name, dimension, children, className, ...props }, ref) => {
   return (
     <div
-      className={cn(className, "rounded-md border bg-background")}
+      className={cn(
+        className,
+        "overflow-hidden rounded-md border bg-background"
+      )}
       ref={ref}
       {...props}
     >

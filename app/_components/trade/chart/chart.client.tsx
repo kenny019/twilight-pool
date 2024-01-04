@@ -1,7 +1,17 @@
 import { useGrid } from "@/lib/providers/grid";
-import { createChart, ColorType, CrosshairMode } from "lightweight-charts";
+import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  IChartApi,
+} from "lightweight-charts";
 import { useTheme } from "next-themes";
-import React, { useEffect, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 const data = [
   // placeholder data untill price feed works consistently
@@ -35,51 +45,77 @@ const data = [
   },
 ];
 
+type ChartContext = {
+  _api?: IChartApi;
+  api: () => IChartApi | void;
+  free: () => void;
+};
+
+const defaultChartContext = { _api: undefined, api: () => {}, free: () => {} };
+const chartContext = createContext<ChartContext>(defaultChartContext);
+
+export const useChart = () => useContext<ChartContext>(chartContext);
+
 const CHART_X_PADDING = 20;
 const CHART_Y_PADDING = 40;
 
 const Chart = () => {
+  // todo: add lightmode theme for chart
   const { theme } = useTheme();
 
   const { width, height } = useGrid();
 
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
+  const chartApiRef = useRef<ChartContext>({
+    _api: undefined,
+    api() {
+      if (this._api) return this._api;
 
-    const chart = createChart(chartContainerRef.current, {
-      width: width > 0 ? width - CHART_X_PADDING : 0,
-      height: height > 0 ? height - CHART_Y_PADDING : 0,
-      layout: {
-        background: {
-          type: ColorType.Solid,
-          color: "#000",
-        },
-        textColor: "rgba(255, 255, 255, 0.9)",
-      },
-      grid: {
-        vertLines: {
-          color: "rgba(197, 203, 206, 0.12)",
-        },
-        horzLines: {
-          color: "rgba(197, 203, 206, 0.12)",
-        },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-      },
-      rightPriceScale: {
-        borderColor: "rgba(255, 255, 255, 0.12)",
-      },
-      timeScale: {
-        borderColor: "rgba(255, 255, 255, 0.12)",
-      },
-    });
+      if (!chartContainerRef.current) return;
 
-    chart.timeScale().applyOptions({
-      barSpacing: 20,
-    });
+      this._api = createChart(chartContainerRef.current, {
+        width: width > 0 ? width - CHART_X_PADDING : 0,
+        height: height > 0 ? height - CHART_Y_PADDING : 0,
+        layout: {
+          background: {
+            type: ColorType.Solid,
+            color: "#000",
+          },
+          textColor: "rgba(255, 255, 255, 0.9)",
+        },
+        grid: {
+          vertLines: {
+            color: "rgba(197, 203, 206, 0.12)",
+          },
+          horzLines: {
+            color: "rgba(197, 203, 206, 0.12)",
+          },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+          borderColor: "rgba(255, 255, 255, 0.12)",
+        },
+        timeScale: {
+          borderColor: "rgba(255, 255, 255, 0.12)",
+        },
+      });
+    },
+    free() {
+      if (!this._api) return;
+
+      this._api.remove();
+      this._api = undefined;
+    },
+  });
+
+  useLayoutEffect(() => {
+    const currentRef = chartApiRef.current;
+    const chart = currentRef.api();
+
+    if (!chart) return;
 
     const newSeries = chart.addCandlestickSeries({
       upColor: "#5FDB66",
@@ -90,11 +126,28 @@ const Chart = () => {
 
     newSeries.setData(data);
 
-    return () => {
-      chart.remove();
-    };
-  }, [theme, width, height]);
+    chart.timeScale().applyOptions({
+      barSpacing: 20,
+    });
 
-  return <div ref={chartContainerRef} />;
+    return () => currentRef.free();
+  }, []);
+
+  useLayoutEffect(() => {
+    const currentRef = chartApiRef.current;
+
+    if (!currentRef._api) return;
+
+    currentRef._api.applyOptions({
+      width: width > 0 ? width - CHART_X_PADDING : 0,
+      height: height > 0 ? height - CHART_Y_PADDING : 0,
+    });
+  }, [width, height]);
+
+  return (
+    <chartContext.Provider value={chartApiRef.current}>
+      <div ref={chartContainerRef} />
+    </chartContext.Provider>
+  );
 };
 export default Chart;
