@@ -17,7 +17,7 @@ export default async function Home() {
     <main>
       <TickerWrapper btcPrice={btcPrice} />
       <Separator orientation="horizontal" />
-      <div>
+      <div className="relative h-full w-full">
         <PriceFeedProvider>
           <TradeWrapper />
         </PriceFeedProvider>
