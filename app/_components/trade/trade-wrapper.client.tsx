@@ -7,15 +7,28 @@ import Orderbook from "./orderbook/orderbook.client";
 import Chart from "./chart/chart.client";
 import { usePriceFeed } from "@/lib/providers/feed";
 import DragWrapper from "./drag-wrapper.client";
+import {
+  GRID_HEIGHT_OFFSET,
+  GRID_ROW_HEIGHT,
+  GRID_WIDTH_OFFSET,
+} from "@/lib/constants";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
-  { i: "chart", x: 2, y: 0, w: 8, h: 11, minW: 2 },
+  { i: "chart", x: 2, y: 0, w: 8, h: 11, minW: 2, minH: 8 },
   { i: "orderbook", x: 0, y: 0, w: 2, h: 11, minW: 2 },
 ];
 
-const marginH = 16; // refactor
-const gridOffsetY = 44;
+function calculateGridDimensions(
+  gridWidth: number,
+  gridHeight: number,
+  windowWidth: number
+) {
+  return {
+    width: gridWidth * Math.floor(windowWidth / 12) - GRID_WIDTH_OFFSET,
+    height: gridHeight * GRID_ROW_HEIGHT + GRID_HEIGHT_OFFSET,
+  };
+}
 
 const TradeWrapper = () => {
   const { width: windowWidth } = useWindow();
@@ -23,10 +36,15 @@ const TradeWrapper = () => {
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
+      const gridDimensions = calculateGridDimensions(
+        layoutVal.w,
+        layoutVal.h,
+        windowWidth
+      );
       return {
         name: layoutVal.i,
-        width: layoutVal.w * Math.floor(Math.floor(windowWidth) / 12) - 24,
-        height: layoutVal.h * 30 + 24,
+        width: gridDimensions.width,
+        height: gridDimensions.height,
       };
     })
   );
@@ -35,7 +53,7 @@ const TradeWrapper = () => {
     <ResponsiveGridLayout
       layouts={{ lg: layout }}
       cols={{ lg: 12, md: 12, sm: 8, xs: 4, xxs: 4 }}
-      rowHeight={30}
+      rowHeight={GRID_ROW_HEIGHT}
       width={windowWidth}
       draggableHandle=".draggable"
       onResizeStart={() => {
@@ -54,10 +72,16 @@ const TradeWrapper = () => {
           return acc;
         }, 0);
 
+        const gridDimensions = calculateGridDimensions(
+          newItem.w,
+          newItem.h,
+          windowWidth
+        );
+
         gridDimensionRefs.current[gridRefToUpdate] = {
           ...gridDimensionRefs.current[gridRefToUpdate],
-          width: newItem.w * Math.floor(Math.floor(windowWidth) / 12) - 24,
-          height: newItem.h * 30 + 24,
+          width: gridDimensions.width,
+          height: gridDimensions.height,
         };
 
         // hack to force the grid to disable selection
