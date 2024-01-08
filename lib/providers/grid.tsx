@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import useWindow from "../hooks/useWindow";
+import { GRID_DEFAULT_DIMENSIONS } from "../constants";
 
 interface UseGridProps {
   width: number;
@@ -14,8 +15,8 @@ interface GridProviderProps {
 }
 
 const defaultContext: UseGridProps = {
-  width: 600,
-  height: 300,
+  width: GRID_DEFAULT_DIMENSIONS.width,
+  height: GRID_DEFAULT_DIMENSIONS.height,
 };
 
 const gridContext = createContext<UseGridProps | undefined>(undefined);
@@ -27,8 +28,10 @@ export const GridProvider: React.FC<GridProviderProps> = ({
   gridRef,
   children,
 }) => {
-  // todo: add constant default dimensions
-  const [dimensions, setDimensions] = useState({ width: 600, height: 300 });
+  const [dimensions, setDimensions] = useState({
+    width: GRID_DEFAULT_DIMENSIONS.width,
+    height: GRID_DEFAULT_DIMENSIONS.height,
+  });
 
   const { height: windowHeight, width: windowWidth } = useWindow();
 
