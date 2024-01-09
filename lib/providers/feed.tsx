@@ -67,7 +67,9 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
         return;
       }
 
-      setFeed((oldFeed) => [...oldFeed, feedDataRes.data]);
+      setFeed((oldFeed) => {
+        return [oldFeed[oldFeed.length - 1], feedDataRes.data];
+      });
     } catch (err) {
       console.error(err);
     }

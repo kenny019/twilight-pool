@@ -22,8 +22,6 @@ const TickerWrapper = ({ btcPrice }: Props) => {
     ? currentPrice - feed[feed.length - 2].params.result[0]
     : 0;
 
-  console.log(feed.length);
-
   return (
     <div className="flex px-4 py-2">
       {/* bitcoin ticker */}
@@ -50,7 +48,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
             "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter"
           )}
         >
-          {`$${currentPrice.toFixed(2)}` || btcPrice}
+          {currentPrice ? `$${currentPrice.toFixed(2)}` : btcPrice}
         </p>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
