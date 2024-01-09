@@ -1,6 +1,7 @@
 "use client";
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { z } from "zod";
+import useWebSocket from "../hooks/useWebsocket";
 
 type PriceFeedProviderProps = {
   children: React.ReactNode;
@@ -19,12 +20,10 @@ type FeedData = z.infer<typeof FeedDataSchema>;
 
 type UsePriceFeedProps = {
   feed: FeedData[];
-  unsubscribe: () => void;
 };
 
 const defaultContext: UsePriceFeedProps = {
   feed: [],
-  unsubscribe: () => {},
 };
 
 const feedContext = createContext<UsePriceFeedProps | undefined>(undefined);
@@ -36,72 +35,53 @@ export const PriceFeedProvider: React.FC<PriceFeedProviderProps> = (props) => {
 };
 
 const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
-  const ws = useRef<WebSocket | null>(null);
+  const [feed, setFeed] = useState<FeedData[]>([]);
 
-  const feed = useRef<FeedData[]>([]);
+  useWebSocket({
+    url: process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string,
+    onOpen: onOpen,
+    onMessage: onMessage,
+    onClose: onClose,
+  });
 
-  const unsubscribe = () => {
-    if (!ws.current) return;
-    ws.current.close();
-  };
+  function onOpen(ws: WebSocket) {
+    console.log("ws", ws);
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "subscribe_live_price_data",
+        id: 123,
+        params: null,
+      })
+    );
+  }
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      // insecure websocket for now
-      ws.current = new WebSocket(
-        process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string
-      );
+  function onMessage(message: any) {
+    try {
+      const parsedMessage = JSON.parse(message.data);
+
+      const feedDataRes = FeedDataSchema.safeParse(parsedMessage);
+
+      if (!feedDataRes.success) {
+        console.log("non feed data detected >> ", parsedMessage);
+        return;
+      }
+
+      setFeed((oldFeed) => [...oldFeed, feedDataRes.data]);
+    } catch (err) {
+      console.error(err);
     }
+  }
 
-    if (ws.current === null) return;
+  function onClose() {
+    console.log("price feed closed");
+  }
 
-    ws.current.onopen = () => {
-      if (ws.current === null) return;
-
-      ws.current.send(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          method: "subscribe_live_price_data",
-          id: 123,
-          params: null,
-        })
-      );
+  const value = useMemo(() => {
+    return {
+      feed: feed,
     };
+  }, [feed]);
 
-    ws.current.onmessage = (message) => {
-      try {
-        const parsedMessage = JSON.parse(message.data);
-
-        const feedDataRes = FeedDataSchema.safeParse(parsedMessage);
-
-        if (!feedDataRes.success) {
-          console.log("non feed data detected >> ", parsedMessage);
-          return;
-        }
-
-        feed.current.push(feedDataRes.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    ws.current.onclose = () => console.log("price feed closed");
-
-    return () => {
-      if (ws.current) {
-        ws.current.close();
-      }
-    };
-  }, []);
-
-  return (
-    <feedContext.Provider
-      value={{
-        feed: feed.current,
-        unsubscribe,
-      }}
-    >
-      {children}
-    </feedContext.Provider>
-  );
+  return <feedContext.Provider value={value}>{children}</feedContext.Provider>;
 };

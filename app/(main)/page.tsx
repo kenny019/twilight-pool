@@ -15,13 +15,13 @@ export default async function Home() {
 
   return (
     <main>
-      <TickerWrapper btcPrice={btcPrice} />
-      <Separator orientation="horizontal" />
-      <div className="relative h-full w-full">
-        <PriceFeedProvider>
+      <PriceFeedProvider>
+        <TickerWrapper btcPrice={btcPrice} />
+        <Separator orientation="horizontal" />
+        <div className="relative h-full w-full">
           <TradeWrapper />
-        </PriceFeedProvider>
-      </div>
+        </div>
+      </PriceFeedProvider>
     </main>
   );
 }

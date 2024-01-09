@@ -1,15 +1,29 @@
+"use client";
 import Image from "next/image";
 import React from "react";
 
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
+import { usePriceFeed } from "@/lib/providers/feed";
+import cn from "@/lib/cn";
 
 type Props = {
   btcPrice: string;
 };
 
 const TickerWrapper = ({ btcPrice }: Props) => {
+  const { feed } = usePriceFeed();
+
+  const currentPrice =
+    feed.length > 0 ? feed[feed.length - 1].params.result[0] : 0;
+
+  const priceDelta = feed[feed.length - 2]
+    ? currentPrice - feed[feed.length - 2].params.result[0]
+    : 0;
+
+  console.log(feed.length);
+
   return (
     <div className="flex px-4 py-2">
       {/* bitcoin ticker */}
@@ -29,8 +43,14 @@ const TickerWrapper = ({ btcPrice }: Props) => {
           </div>
         </div>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
-        <p className="mx-4 text-2xl font-semibold tracking-tighter text-red">
-          {btcPrice}
+        <p
+          className={cn(
+            priceDelta > 0 ? "text-green-medium" : "text-red",
+            priceDelta === 0 && "text-primary",
+            "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter"
+          )}
+        >
+          {`$${currentPrice.toFixed(2)}` || btcPrice}
         </p>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
