@@ -7,6 +7,7 @@ import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
 import { usePriceFeed } from "@/lib/providers/feed";
 import cn from "@/lib/cn";
+import { formatCurrency } from "@/lib/twilight/ticker";
 
 type Props = {
   btcPrice: string;
@@ -48,7 +49,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
             "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter"
           )}
         >
-          {currentPrice ? `$${currentPrice.toFixed(2)}` : btcPrice}
+          {currentPrice ? formatCurrency(currentPrice) : btcPrice}
         </p>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
