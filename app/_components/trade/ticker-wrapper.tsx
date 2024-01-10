@@ -46,7 +46,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
           className={cn(
             priceDelta > 0 ? "text-green-medium" : "text-red",
             priceDelta === 0 && "text-primary",
-            "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter"
+            "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter transition-colors"
           )}
         >
           {currentPrice ? formatCurrency(currentPrice) : btcPrice}
