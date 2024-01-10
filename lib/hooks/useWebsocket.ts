@@ -13,6 +13,8 @@ const useWebSocket = (options: WebSocketHookOptions) => {
   const socketRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
+    if (process.env.NODE_ENV !== "development") return;
+
     socketRef.current = new WebSocket(url);
 
     socketRef.current.onopen = function () {
