@@ -15,26 +15,25 @@ const useWebSocket = (options: WebSocketHookOptions) => {
   const connect = useCallback(() => {
     socketRef.current = new WebSocket(url);
 
-    socketRef.current.onopen = function (event) {
+    socketRef.current.onopen = function () {
       if (onOpen) {
         onOpen(this);
       }
     };
 
-    socketRef.current.onclose = (ev) => {
+    socketRef.current.onclose = function () {
       if (onClose) {
         onClose();
       }
-      console.log("Closed event", ev);
     };
 
-    socketRef.current.onmessage = (event) => {
+    socketRef.current.onmessage = function (event) {
       if (onMessage) {
         onMessage(event);
       }
     };
 
-    socketRef.current.onerror = (error) => {
+    socketRef.current.onerror = function (error) {
       if (onError) {
         onError(error);
       }
