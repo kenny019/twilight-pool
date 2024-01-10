@@ -9,17 +9,50 @@ import { useTheme } from "next-themes";
 import React, {
   createContext,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
 
+type ChartContext = {
+  _api?: IChartApi;
+  api: () => IChartApi | void;
+  free: () => void;
+};
+
+const defaultChartContext = { _api: undefined, api: () => {}, free: () => {} };
+const chartContext = createContext<ChartContext>(defaultChartContext);
+
+export const useChart = () => useContext<ChartContext>(chartContext);
+
+const CHART_X_PADDING = 20;
+const CHART_Y_PADDING = 40;
+
+// note: placeholder data untill price feed works consistently
 const data = [
-  // placeholder data untill price feed works consistently
-  { time: "2018-12-22", open: 75.16, high: 82.84, low: 36.16, close: 45.72 },
+  {
+    time: "2018-12-22",
+    open: 75.16,
+    high: 82.84,
+    low: 36.16,
+    close: 45.72,
+  },
   { time: "2018-12-23", open: 45.12, high: 53.9, low: 45.12, close: 48.09 },
-  { time: "2018-12-24", open: 60.71, high: 60.71, low: 53.39, close: 59.29 },
+  {
+    time: "2018-12-24",
+    open: 60.71,
+    high: 60.71,
+    low: 53.39,
+    close: 59.29,
+  },
   { time: "2018-12-25", open: 68.26, high: 68.26, low: 59.04, close: 60.5 },
-  { time: "2018-12-26", open: 67.71, high: 105.85, low: 66.67, close: 91.04 },
+  {
+    time: "2018-12-26",
+    open: 67.71,
+    high: 105.85,
+    low: 66.67,
+    close: 91.04,
+  },
   { time: "2018-12-27", open: 91.04, high: 121.4, low: 82.7, close: 111.4 },
   {
     time: "2018-12-28",
@@ -35,7 +68,13 @@ const data = [
     low: 77.68,
     close: 96.43,
   },
-  { time: "2018-12-30", open: 106.33, high: 110.2, low: 90.39, close: 98.1 },
+  {
+    time: "2018-12-30",
+    open: 106.33,
+    high: 110.2,
+    low: 90.39,
+    close: 98.1,
+  },
   {
     time: "2018-12-31",
     open: 109.87,
@@ -44,20 +83,6 @@ const data = [
     close: 111.26,
   },
 ];
-
-type ChartContext = {
-  _api?: IChartApi;
-  api: () => IChartApi | void;
-  free: () => void;
-};
-
-const defaultChartContext = { _api: undefined, api: () => {}, free: () => {} };
-const chartContext = createContext<ChartContext>(defaultChartContext);
-
-export const useChart = () => useContext<ChartContext>(chartContext);
-
-const CHART_X_PADDING = 20;
-const CHART_Y_PADDING = 40;
 
 const Chart = () => {
   // todo: add lightmode theme for chart
@@ -102,6 +127,15 @@ const Chart = () => {
           borderColor: "rgba(255, 255, 255, 0.12)",
         },
       });
+
+      const series = this._api.addCandlestickSeries({
+        upColor: "#5FDB66",
+        downColor: "#F84952",
+        wickUpColor: "#5FDB66",
+        wickDownColor: "#F84952",
+      });
+
+      series.setData(data);
     },
     free() {
       if (!this._api) return;
@@ -111,20 +145,18 @@ const Chart = () => {
     },
   });
 
+  useEffect(() => {
+    const currentRef = chartApiRef.current;
+    const chart = currentRef.api();
+
+    if (!chart) return;
+  }, []);
+
   useLayoutEffect(() => {
     const currentRef = chartApiRef.current;
     const chart = currentRef.api();
 
     if (!chart) return;
-
-    const newSeries = chart.addCandlestickSeries({
-      upColor: "#5FDB66",
-      downColor: "#F84952",
-      wickUpColor: "#5FDB66",
-      wickDownColor: "#F84952",
-    });
-
-    newSeries.setData(data);
 
     chart.timeScale().applyOptions({
       barSpacing: 20,
