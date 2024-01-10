@@ -10,8 +10,8 @@ export default async function Home() {
 
   // todo: fallback to alternative price data or maybe show skeleton if price is not valid
   const btcPrice = response.success
-    ? formatCurrency(response.data.result.price)
-    : "0";
+    ? parseFloat(response.data.result.price)
+    : 0;
 
   return (
     <main>

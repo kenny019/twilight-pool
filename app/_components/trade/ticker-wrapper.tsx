@@ -8,9 +8,12 @@ import { Zap } from "lucide-react";
 import { usePriceFeed } from "@/lib/providers/feed";
 import cn from "@/lib/cn";
 import { formatCurrency } from "@/lib/twilight/ticker";
+import usePriceTickerData from "@/lib/hooks/usePriceTickerData";
+import Resource from "@/components/resource";
+import Skeleton from "@/components/skeleton";
 
 type Props = {
-  btcPrice: string;
+  btcPrice: number;
 };
 
 const TickerWrapper = ({ btcPrice }: Props) => {
@@ -22,6 +25,10 @@ const TickerWrapper = ({ btcPrice }: Props) => {
   const priceDelta = feed[feed.length - 2]
     ? currentPrice - feed[feed.length - 2].params.result[0]
     : 0;
+
+  const { high, low, change, turnover } = usePriceTickerData(
+    currentPrice || btcPrice
+  );
 
   return (
     <div className="flex px-4 py-2">
@@ -49,16 +56,51 @@ const TickerWrapper = ({ btcPrice }: Props) => {
             "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter transition-colors"
           )}
         >
-          {currentPrice ? formatCurrency(currentPrice) : btcPrice}
+          {currentPrice
+            ? formatCurrency(currentPrice)
+            : formatCurrency(btcPrice)}
         </p>
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
-      <TickerItem title="24H Change %" className="text-green-medium">
-        + 0.46%
+      <TickerItem
+        title="24H Change %"
+        className={cn(
+          change === 0 && "text-primary",
+          change > 0 ? "text-green-medium" : "text-red"
+        )}
+      >
+        <Resource
+          isLoaded={change !== 0}
+          placeholder={<Skeleton className="h-6 w-[60px]" />}
+        >
+          {change === 0
+            ? change.toFixed(2)
+            : change > 0
+            ? `+ ${change.toFixed(2)}`
+            : `- ${Math.abs(change).toFixed(2)}`}
+          {"%"}
+        </Resource>
       </TickerItem>
-      <TickerItem title="24H High">29,559.12</TickerItem>
-      <TickerItem title="24H Low">28,660.01</TickerItem>
-      <TickerItem title="24H Turnover (BTC)">22,600.26</TickerItem>
+
+      <TickerItem className="min-w-[90px]" title="24H High">
+        <Resource
+          isLoaded={high !== 0}
+          placeholder={<Skeleton className="h-6 w-full" />}
+        >
+          {formatCurrency(high)}
+        </Resource>
+      </TickerItem>
+      <TickerItem className="min-w-[90px]" title="24H Low">
+        <Resource
+          isLoaded={low !== 0}
+          placeholder={<Skeleton className="h-6 w-full" />}
+        >
+          {formatCurrency(low)}
+        </Resource>
+      </TickerItem>
+      <TickerItem title="24H Turnover (BTC)">
+        <Skeleton className="h-6 w-full" />
+      </TickerItem>
       <TickerItem border={false} title="Funding Rate / Countdown">
         <p className="flex">
           <span className="mr-2 inline-flex items-center text-theme">
