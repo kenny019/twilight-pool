@@ -44,6 +44,10 @@ export default function usePriceTickerData(currentPrice: number) {
         }
       );
 
+      if (priceData.length < 1) {
+        return;
+      }
+
       const changeAmount = currentPrice - parseInt(priceData[0].price);
       const changePercent = (changeAmount / currentPrice) * 100;
 
@@ -53,6 +57,7 @@ export default function usePriceTickerData(currentPrice: number) {
     }
 
     if (currentPrice === 0) return;
+
     getPriceTickerData();
   }, [currentPrice]);
 

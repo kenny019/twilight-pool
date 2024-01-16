@@ -5,6 +5,8 @@ import RightArrowIcon from "../../../components/right-arrow";
 import { Dialog, DialogTrigger } from "../../../components/dialog";
 import WalletViewController from "./wallet-modal-views/wallet-view-controller.client";
 import { useWallet } from "@cosmos-kit/react-lite";
+import Resource from "@/components/resource";
+import { Loader2 } from "lucide-react";
 
 type DialogContext = {
   open: boolean;
@@ -23,6 +25,7 @@ const ConnectWallet = () => {
 
   const { status, mainWallet } = useWallet();
 
+  console.log("stat", status);
   return (
     <>
       {status === "Connected" ? (
@@ -40,8 +43,13 @@ const ConnectWallet = () => {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="small" className="w-[180px]">
-              Connect Wallet
-              <RightArrowIcon />
+              <Resource
+                isLoaded={!open}
+                placeholder={<Loader2 className="animate-spin" />}
+              >
+                Connect Wallet
+                <RightArrowIcon />
+              </Resource>
             </Button>
           </DialogTrigger>
           <dialogContext.Provider value={{ open, setOpen }}>

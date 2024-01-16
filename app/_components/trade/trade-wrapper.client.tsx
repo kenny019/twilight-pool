@@ -32,7 +32,6 @@ function calculateGridDimensions(
 
 const TradeWrapper = () => {
   const { width: windowWidth } = useWindow();
-  const { feed } = usePriceFeed();
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
