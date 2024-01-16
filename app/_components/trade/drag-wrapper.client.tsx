@@ -1,6 +1,6 @@
 import cn from "@/lib/cn";
 import { GridProvider } from "@/lib/providers/grid";
-import React, { forwardRef, useEffect } from "react";
+import React, { forwardRef } from "react";
 
 type Props = {
   title?: string;
