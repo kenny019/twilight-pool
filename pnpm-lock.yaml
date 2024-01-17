@@ -29,6 +29,9 @@ dependencies:
   '@cosmos-kit/react-lite':
     specifier: ^2.5.0
     version: 2.5.0(@cosmjs/amino@0.31.1)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)(react-dom@18.2.0)(react@18.2.0)
+  '@kenny019/zkos-wasm':
+    specifier: ^0.1.0
+    version: 0.1.0
   '@next/font':
     specifier: ^13.5.4
     version: 13.5.4
@@ -134,9 +137,6 @@ dependencies:
   typescript:
     specifier: 5.1.6
     version: 5.1.6
-  zkos-wasm:
-    specifier: ^0.3.0
-    version: 0.3.0
   zod:
     specifier: ^3.22.4
     version: 3.22.4
@@ -730,6 +730,10 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
+
+  /@kenny019/zkos-wasm@0.1.0:
+    resolution: {integrity: sha512-SOPKFGV7pYIUT9AVHJENqNSvpW+88Pny4upB5zowCPt/pmKb6wpRe9LYKyiEqJIcqrfUuE/m0xfJb6yNcDPaNQ==}
+    dev: false
 
   /@keplr-wallet/common@0.12.28:
     resolution: {integrity: sha512-ESQorPZw8PRiUXhsrxED+E1FEWkAdc6Kwi3Az7ce204gMBQDI2j0XJtTd4uCUp+C24Em9fk0samdHzdoB4caIg==}
@@ -4896,10 +4900,6 @@ packages:
   /yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
-    dev: false
-
-  /zkos-wasm@0.3.0:
-    resolution: {integrity: sha512-BtJH8ezbV+KEkk+GX2LH1VwU8RsPDpMDBRTLHbA5/kzRyYN2SfPPTf3PbASGV9n1jYAw3bNVyLdOtRl/2iToTQ==}
     dev: false
 
   /zod@3.21.4:

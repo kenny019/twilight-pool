@@ -42,20 +42,22 @@ const TransferDialog = ({
   const [selectedTradingAccountFrom, setSelectedTradingAccountFrom] = useState(
     tradingAccountAddress
   );
+
   const [selectedTradingAccountTo, setSelectedTradingAccountTo] = useState("");
 
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
   const depositRef = useRef<HTMLInputElement>(null);
+
+  function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+  }
 
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="left-auto right-0 min-h-screen max-w-2xl translate-x-0 rounded-none border-r-0">
         <DialogTitle>Transfer</DialogTitle>
-        <form
-          onSubmit={(event) => event.preventDefault()}
-          className="max-w-sm space-y-2"
-        >
+        <form onSubmit={submitTransfer} className="max-w-sm space-y-2">
           <div className="flex flex-row justify-between">
             <div className="space-y-2">
               <div className="space-y-1">

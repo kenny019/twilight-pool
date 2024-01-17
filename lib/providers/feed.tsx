@@ -20,10 +20,12 @@ type FeedData = z.infer<typeof FeedDataSchema>;
 
 type UsePriceFeedProps = {
   feed: FeedData[];
+  currentPrice: number;
 };
 
 const defaultContext: UsePriceFeedProps = {
   feed: [],
+  currentPrice: 0,
 };
 
 const feedContext = createContext<UsePriceFeedProps | undefined>(undefined);
@@ -82,6 +84,8 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
   const value = useMemo(() => {
     return {
       feed: feed,
+      currentPrice:
+        feed.length > 0 ? feed[feed.length - 1].params.result[0] : 0,
     };
   }, [feed]);
 

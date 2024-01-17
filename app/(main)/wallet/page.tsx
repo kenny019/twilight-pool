@@ -5,13 +5,13 @@ import Resource from "@/components/resource";
 import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
+import { usePriceFeed } from "@/lib/providers/feed";
 import { useTwilight } from "@/lib/providers/singleton";
 import { getUtxosFromDB } from "@/lib/twilight/chain";
 import BTC from "@/lib/twilight/denoms";
-import { addressMonitoring } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
-import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
@@ -23,8 +23,10 @@ const Page = () => {
   const router = useRouter();
 
   // todo: store all twilight values in a provider
-  const [twilightBTCBalance, setTwilightBTCBalance] = useState("");
-  const [quisBTCBalance, setQuisBTCBalance] = useState("");
+  const [twilightSatsBalance, setTwilightSatsBalance] = useState<number>(0);
+  const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
+
+  const { currentPrice } = usePriceFeed();
 
   function useRedirectUnconnected() {
     useEffect(() => {
@@ -70,7 +72,7 @@ const Page = () => {
 
           const btcBalance = new BTC("sats", Big(amount));
 
-          setTwilightBTCBalance(btcBalance.convert("BTC").toFixed(9));
+          setTwilightSatsBalance(btcBalance.value.toNumber());
         } catch (err) {
           console.error(err);
         }
@@ -86,10 +88,6 @@ const Page = () => {
       async function getTradingBTCBalance() {
         if (!quisPrivateKey) return;
         const utxoString = await getUtxosFromDB();
-        // const tradingAddresses = await addressMonitoring(
-        //   quisPrivateKey,
-        //   utxoString
-        // );
 
         // console.log("trading addresses on chain", tradingAddresses);
       }
@@ -102,9 +100,25 @@ const Page = () => {
   useGetTwilightBTCBalance();
   useGetTradingBTCBalance();
 
-  const totalBTCBalance = Big(twilightBTCBalance || 0).plus(
-    quisBTCBalance || 0
+  const totalSatsBalance = Big(twilightSatsBalance || 0).plus(
+    totalTradingSatsBalance || 0
   );
+
+  const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
+    .convert("BTC")
+    .toFixed(9);
+
+  const totalBalanceUSDString = Big(totalBTCBalanceString)
+    .mul(currentPrice)
+    .toFixed(2);
+
+  const twilightBTCBalanceString = new BTC("sats", Big(twilightSatsBalance))
+    .convert("BTC")
+    .toFixed(9);
+
+  const twilightBalanceUSDString = Big(twilightBTCBalanceString)
+    .mul(currentPrice)
+    .toFixed(2);
 
   return (
     <div className="mx-8 mt-4 space-y-8">
@@ -115,10 +129,12 @@ const Page = () => {
           </Text>
           <div className="space-y-1">
             <Text className="text-4xl">
-              {totalBTCBalance.toFixed(9)}
+              {totalBTCBalanceString}
               <span className="ml-1 inline-flex text-sm">BTC</span>
             </Text>
-            <Text className="text-xs text-primary-accent">= 0 USD</Text>
+            <Text className="text-xs text-primary-accent">
+              = {totalBalanceUSDString} USD
+            </Text>
           </div>
         </div>
         <div className="flex w-full max-w-sm flex-col">
@@ -130,7 +146,7 @@ const Page = () => {
               <Text>Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={!!twilightBTCBalance}
+                  isLoaded={!!twilightSatsBalance}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
@@ -139,11 +155,10 @@ const Page = () => {
                   }
                 >
                   <Text className="text-primary/80">
-                    {twilightBTCBalance} BTC
+                    {twilightBTCBalanceString} BTC
                   </Text>
                   <Text className="text-xs text-primary-accent">
-                    = 0.00 USD
-                    {/* todo: derive usd value */}
+                    = {twilightBalanceUSDString} USD
                   </Text>
                 </Resource>
               </div>

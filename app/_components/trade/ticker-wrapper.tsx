@@ -17,10 +17,7 @@ type Props = {
 };
 
 const TickerWrapper = ({ btcPrice }: Props) => {
-  const { feed } = usePriceFeed();
-
-  const currentPrice =
-    feed.length > 0 ? feed[feed.length - 1].params.result[0] : 0;
+  const { feed, currentPrice } = usePriceFeed();
 
   const priceDelta = feed[feed.length - 2]
     ? currentPrice - feed[feed.length - 2].params.result[0]
@@ -53,7 +50,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
           className={cn(
             priceDelta > 0 ? "text-green-medium" : "text-red",
             priceDelta === 0 && "text-primary",
-            "mx-4 min-w-[120px] text-2xl font-semibold tracking-tighter transition-colors"
+            "mx-4 text-2xl font-semibold tracking-tighter transition-colors"
           )}
         >
           {currentPrice

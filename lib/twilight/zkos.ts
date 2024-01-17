@@ -1,5 +1,5 @@
 async function generatePublicKey({ signature }: { signature: string }) {
-  const zkos = await import("zkos-wasm");
+  const zkos = await import("@kenny019/zkos-wasm");
   return zkos.generatePublicKeyFromSignature(signature);
 }
 
@@ -8,27 +8,41 @@ async function generatePublicKeyHexAddress({
 }: {
   publicKey: string;
 }) {
-  const zkos = await import("zkos-wasm");
+  const zkos = await import("@kenny019/zkos-wasm");
   return zkos.hexStandardAddressFromPublicKey(12, publicKey);
 }
 
-async function generateZeroTradingAccountFromHexAddress({
-  tradingHexAddress,
+async function generateZeroTradingAccount({
+  publicKeyHex,
 }: {
-  tradingHexAddress: string;
+  publicKeyHex: string;
 }) {
-  const zkos = await import("zkos-wasm");
-  return zkos.generateZeroTradingAccountFromAddress(tradingHexAddress);
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.generateZeroAccount(publicKeyHex);
 }
 
-async function addressMonitoring(signature: string, utxos: string) {
-  const zkos = await import("zkos-wasm");
-  return zkos.coinAddressMonitoring(utxos, signature);
+async function generateRandomScalar() {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.generateRandomScalar();
 }
+
+// async function generateTradingAccountWithBalance({
+//   publicKeyHex,
+//   balance,
+//   scalar,
+// }: {
+//   publicKeyHex: string;
+//   balance: number;
+//   scalar: string;
+// }) {
+//   const zkos = await import("@kenny019/zkos-wasm");
+//   return zkos.generateZkAccountWithBalance(publicKeyHex, balance, scalar);
+// }
 
 export {
   generatePublicKey,
   generatePublicKeyHexAddress,
-  generateZeroTradingAccountFromHexAddress,
-  addressMonitoring,
+  generateZeroTradingAccount,
+  generateRandomScalar,
+  // generateTradingAccountWithBalance,
 };
