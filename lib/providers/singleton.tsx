@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -25,7 +26,8 @@ interface UseTwilightProps {
   mainTradingAccount?: TradingAccountStruct;
   setMainTradingAccount: (val: TradingAccountStruct) => void;
   hasRegisteredBTC: boolean;
-  setHasRegisteredBTC: (val: boolean) => void;
+  hasConfirmedBTC: boolean;
+  checkBTCRegistration: () => void;
 }
 
 interface TwilightProviderProps {
@@ -43,7 +45,8 @@ const defaultContext: UseTwilightProps = {
   mainTradingAccount: undefined,
   setMainTradingAccount: () => {},
   hasRegisteredBTC: false,
-  setHasRegisteredBTC: () => {},
+  hasConfirmedBTC: false,
+  checkBTCRegistration: () => {},
 };
 
 const twilightContext = createContext<UseTwilightProps | undefined>(undefined);
@@ -70,7 +73,23 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     useState<TradingAccountStruct>();
 
   const [quisPrivateKey, setQuisPrivateKey] = useState("");
+
   const [hasRegisteredBTC, setHasRegisteredBTC] = useState(false);
+  const [hasConfirmedBTC, setHasConfirmedBTC] = useState(false);
+  const [shouldRefetchBTCRegistration, setShouldRefetchBTCRegistration] =
+    useState(true);
+
+  const checkBTCRegistration = useCallback(() => {
+    console.log("checkBTCRegistration");
+    setShouldRefetchBTCRegistration(true);
+  }, []);
+
+  function useOnWalletChange() {
+    useEffect(() => {
+      if (shouldRefetchBTCRegistration) return;
+      checkBTCRegistration();
+    }, [chainWallet?.address]);
+  }
 
   function useGetTradingAccountFromLocal() {
     useEffect(() => {
@@ -200,16 +219,24 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       if (quisPrivateKey) {
         setQuisPrivateKey("");
       }
+
+      checkBTCRegistration();
     }, [status]);
   }
 
   const registeredBtcResponse = useGetRegisteredBTCAddress(
     mainWallet,
-    chainWallet
+    chainWallet,
+    shouldRefetchBTCRegistration
   );
 
-  function useHandleHasRegisteredBTCAddress() {
+  function useHandleBTCAddress() {
     useEffect(() => {
+      console.log("useHandleBTCAddress", registeredBtcResponse);
+      // note: sets to default whenever wallet changes
+      setHasRegisteredBTC(false);
+      setHasConfirmedBTC(false);
+      setShouldRefetchBTCRegistration(false);
       if (
         !registeredBtcResponse ||
         !registeredBtcResponse.success ||
@@ -219,10 +246,12 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       }
 
       setHasRegisteredBTC(true);
-    }, [registeredBtcResponse, registeredBtcResponse?.success]);
+      if (registeredBtcResponse.data.isConfirmed) setHasConfirmedBTC(true);
+    }, [registeredBtcResponse]);
   }
 
-  useHandleHasRegisteredBTCAddress();
+  useOnWalletChange();
+  useHandleBTCAddress();
   useCleanupAccountData();
   useGetQuisPrivateKey();
   useUpdateColorTheme();
@@ -240,6 +269,9 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setMainTradingAccount,
       hasRegisteredBTC,
       setHasRegisteredBTC,
+      hasConfirmedBTC,
+      setHasConfirmedBTC,
+      checkBTCRegistration,
     }),
     [
       hasInit,
@@ -251,7 +283,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       mainTradingAccount,
       setMainTradingAccount,
       hasRegisteredBTC,
-      setHasRegisteredBTC,
+      hasConfirmedBTC,
+      checkBTCRegistration,
     ]
   );
 

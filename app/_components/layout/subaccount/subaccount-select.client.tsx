@@ -40,7 +40,7 @@ const SubaccountSelect = () => {
 
   const { status } = useWallet();
 
-  const { hasRegisteredBTC } = useTwilight();
+  const { hasRegisteredBTC, hasConfirmedBTC } = useTwilight();
 
   function useResetSelectedSubaccount() {
     useEffect(() => {
@@ -58,7 +58,7 @@ const SubaccountSelect = () => {
 
   useResetSelectedSubaccount();
 
-  if (!hasRegisteredBTC) {
+  if (!hasRegisteredBTC || !hasConfirmedBTC) {
     return (
       <ExchangeResource>
         <button className="flex h-10 w-[160px] items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-primary transition-colors placeholder:text-primary-accent focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50">

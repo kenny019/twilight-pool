@@ -17,7 +17,8 @@ type ErrorResponse = {
 
 export default function useGetRegisteredBTCAddress(
   mainWallet?: MainWalletBase,
-  chainWallet?: ChainWalletBase
+  chainWallet?: ChainWalletBase,
+  shouldRefetch?: boolean
 ): SuccessResponse | ErrorResponse | undefined {
   const [response, setResponse] = useState<
     SuccessResponse | ErrorResponse | undefined
@@ -57,7 +58,7 @@ export default function useGetRegisteredBTCAddress(
       });
     }
 
-    if (mainWallet === undefined) return;
+    if (mainWallet === undefined || shouldRefetch === false) return;
 
     if (!mainWallet.isWalletConnected) {
       setResponse({
@@ -68,8 +69,9 @@ export default function useGetRegisteredBTCAddress(
 
       return;
     }
+
     getRegisteredBTCAddresses();
-  }, [mainWallet, chainWallet]);
+  }, [mainWallet, chainWallet, chainWallet?.address, shouldRefetch]);
 
   return response;
 }
