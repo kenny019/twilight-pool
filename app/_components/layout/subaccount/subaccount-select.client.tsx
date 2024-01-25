@@ -12,6 +12,10 @@ import { useWallet } from "@cosmos-kit/react-lite";
 import React, { useEffect, useState } from "react";
 import SubaccountModal from "./subaccount-modal/subaccount-modal.client";
 import { SubaccountStruct } from "@/lib/types";
+import ExchangeResource from "@/components/exchange-resource";
+import { useTwilight } from "@/lib/providers/singleton";
+import Button from "@/components/button";
+import { ChevronDown } from "lucide-react";
 
 function representSubaccountTag(
   selectedSubaccount: number,
@@ -36,6 +40,8 @@ const SubaccountSelect = () => {
 
   const { status } = useWallet();
 
+  const { hasRegisteredBTC } = useTwilight();
+
   function useResetSelectedSubaccount() {
     useEffect(() => {
       // todo: replace magic numbers enum
@@ -52,18 +58,27 @@ const SubaccountSelect = () => {
 
   useResetSelectedSubaccount();
 
+  if (!hasRegisteredBTC) {
+    return (
+      <ExchangeResource>
+        <button className="flex h-10 w-[160px] items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-primary transition-colors placeholder:text-primary-accent focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50">
+          <p>Trading Account</p> <ChevronDown className="h-4 w-4 opacity-50" />
+        </button>
+      </ExchangeResource>
+    );
+  }
+
   return (
     <>
       <SubaccountModal
         setOpen={setOpenSubaccountModal}
         open={openSubaccountModal}
       />
-
       <Select
         defaultValue={"main"}
         onValueChange={(newSubaccountIndexStr) => {
           const newSubaccountIndex = parseInt(newSubaccountIndexStr);
-          // note: -1 represents manage subaccount lol
+          // note: -1 represents manage subaccount
           // -2 represents trading account
           // -3 represents disconnected state
           // limitation cause we parseint maybe someone can fix it

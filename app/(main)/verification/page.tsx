@@ -4,7 +4,7 @@ import WalletVerificationForm from "@/app/_components/verification/form";
 import { Text } from "@/components/typography";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { redirect } from "next/navigation";
-import useGetRegisteredBtcAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
+import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBTCAddress";
 
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 const noticeData = [
@@ -17,7 +17,7 @@ const Page = () => {
   const { mainWallet } = useWallet();
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
-  const registeredBtcResponse = useGetRegisteredBtcAddress(
+  const registeredBtcResponse = useGetRegisteredBTCAddress(
     mainWallet,
     chainWallet
   );

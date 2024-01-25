@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import wfetch from "../http";
 import { registeredBtcAddressStruct } from "../types";
 import { ChainWalletBase, MainWalletBase } from "@cosmos-kit/core";
-
-type getResponseData = {
-  addresses: registeredBtcAddressStruct[];
-};
+import { getRegisteredBTCDepositAddress } from "../twilight/rest";
 
 type SuccessResponse = {
   success: true;
@@ -19,9 +15,7 @@ type ErrorResponse = {
   error: unknown;
 };
 
-const restURL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
-
-export default function useGetRegisteredBtcAddress(
+export default function useGetRegisteredBTCAddress(
   mainWallet?: MainWalletBase,
   chainWallet?: ChainWalletBase
 ): SuccessResponse | ErrorResponse | undefined {
@@ -30,24 +24,20 @@ export default function useGetRegisteredBtcAddress(
   >();
 
   useEffect(() => {
-    async function request() {
-      const { success, data, error } = await wfetch(
-        `${restURL}/twilight-project/nyks/bridge/registered_btc_deposit_addresses`
-      )
-        .get()
-        .json<getResponseData>();
+    async function getRegisteredBTCAddresses() {
+      const allRegisteredAddress = await getRegisteredBTCDepositAddress();
 
-      if (!success) {
+      if (allRegisteredAddress.length < 1) {
         setResponse({
           success: false,
           data: undefined,
-          error: error,
+          error: "Could not query registered BTC Deposit Addresses",
         });
         return;
       }
 
       const twilightAddress = chainWallet?.address;
-      const filtered = data.addresses.filter(
+      const filtered = allRegisteredAddress.filter(
         (struct) => struct.twilightAddress === twilightAddress
       );
 
@@ -55,7 +45,7 @@ export default function useGetRegisteredBtcAddress(
         setResponse({
           success: false,
           data: undefined,
-          error: error,
+          error: "BTC Address has not been registered",
         });
         return;
       }
@@ -72,13 +62,13 @@ export default function useGetRegisteredBtcAddress(
     if (!mainWallet.isWalletConnected) {
       setResponse({
         success: false,
-        error: "wallet is not connected", // todo: enum of standard error messages
+        error: "Wallet is not connected", // todo: enum of standard error messages
         data: undefined,
       });
 
       return;
     }
-    request();
+    getRegisteredBTCAddresses();
   }, [mainWallet, chainWallet]);
 
   return response;

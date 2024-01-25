@@ -13,6 +13,7 @@ import {
   generatePublicKey,
   generatePublicKeyHexAddress,
 } from "../twilight/zkos";
+import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBTCAddress";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -23,6 +24,8 @@ interface UseTwilightProps {
   setQuisPrivateKey: (val: string) => void;
   mainTradingAccount?: TradingAccountStruct;
   setMainTradingAccount: (val: TradingAccountStruct) => void;
+  hasRegisteredBTC: boolean;
+  setHasRegisteredBTC: (val: boolean) => void;
 }
 
 interface TwilightProviderProps {
@@ -39,6 +42,8 @@ const defaultContext: UseTwilightProps = {
   setQuisPrivateKey: () => {},
   mainTradingAccount: undefined,
   setMainTradingAccount: () => {},
+  hasRegisteredBTC: false,
+  setHasRegisteredBTC: () => {},
 };
 
 const twilightContext = createContext<UseTwilightProps | undefined>(undefined);
@@ -55,14 +60,17 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
   const [hasInit, setHasInit] = useLocalStorage("init");
   const [storedColorTheme, setColorTheme] = useLocalStorage("color-theme");
 
+  const colorTheme = storedColorTheme || "pink";
+
   const { mainWallet, status } = useWallet();
+
+  const chainWallet = mainWallet?.getChainWallet("nyks");
 
   const [mainTradingAccount, setMainTradingAccount] =
     useState<TradingAccountStruct>();
 
   const [quisPrivateKey, setQuisPrivateKey] = useState("");
-
-  const colorTheme = storedColorTheme || "pink";
+  const [hasRegisteredBTC, setHasRegisteredBTC] = useState(false);
 
   function useGetTradingAccountFromLocal() {
     useEffect(() => {
@@ -195,10 +203,26 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     }, [status]);
   }
 
-  function useQueryChainTradingAccountData() {
-    useEffect(() => {}, []);
+  const registeredBtcResponse = useGetRegisteredBTCAddress(
+    mainWallet,
+    chainWallet
+  );
+
+  function useHandleHasRegisteredBTCAddress() {
+    useEffect(() => {
+      if (
+        !registeredBtcResponse ||
+        !registeredBtcResponse.success ||
+        !registeredBtcResponse.data
+      ) {
+        return;
+      }
+
+      setHasRegisteredBTC(true);
+    }, [registeredBtcResponse, registeredBtcResponse?.success]);
   }
 
+  useHandleHasRegisteredBTCAddress();
   useCleanupAccountData();
   useGetQuisPrivateKey();
   useUpdateColorTheme();
@@ -214,6 +238,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setQuisPrivateKey,
       mainTradingAccount,
       setMainTradingAccount,
+      hasRegisteredBTC,
+      setHasRegisteredBTC,
     }),
     [
       hasInit,
@@ -224,6 +250,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setQuisPrivateKey,
       mainTradingAccount,
       setMainTradingAccount,
+      hasRegisteredBTC,
+      setHasRegisteredBTC,
     ]
   );
 

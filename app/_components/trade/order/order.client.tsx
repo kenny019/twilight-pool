@@ -15,6 +15,7 @@ import {
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useGrid } from "@/lib/providers/grid";
 import cn from "@/lib/cn";
+import ExchangeResource from "@/components/exchange-resource";
 
 type OrderTabs = "limit" | "market";
 
@@ -93,18 +94,22 @@ const Order = () => {
                   width < 350 ? "flex-col space-y-2" : "flex-row space-x-4"
                 )}
               >
-                <Button
-                  className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
-                  variant="ui"
-                >
-                  Buy
-                </Button>
-                <Button
-                  variant="ui"
-                  className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100"
-                >
-                  Sell
-                </Button>
+                <ExchangeResource>
+                  <Button
+                    className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
+                    variant="ui"
+                  >
+                    Buy
+                  </Button>
+                </ExchangeResource>
+                <ExchangeResource>
+                  <Button
+                    variant="ui"
+                    className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100"
+                  >
+                    Sell
+                  </Button>
+                </ExchangeResource>
               </div>
             ) : (
               <div className="flex w-full justify-center">

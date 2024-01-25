@@ -1,9 +1,9 @@
 import wfetch from "./http";
 import { twilightRegistedBtcAddressStruct } from "./types";
 
-async function getBTCDepositAddress(depositAddress: string) {
-  const restURL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
+const restURL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 
+async function getBTCDepositAddress(depositAddress: string) {
   const { success, data, error } = await wfetch(
     `${restURL}/twilight-project/nyks/bridge/registered_btc_deposit_address_by_twilight_address/${depositAddress}`
   )
@@ -25,8 +25,8 @@ async function getBTCDepositAddress(depositAddress: string) {
   };
 }
 
+// todo: refactor into seperate files
 const priceURL = process.env.NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
-
 export type PriceFeedResponseData = {
   jsonrpc: string;
   id: number;
@@ -38,7 +38,6 @@ export type PriceFeedResponseData = {
 };
 
 const bearerToken = process.env.PRICE_ORACLE_TOKEN as string;
-
 async function getBTCPrice() {
   const response = await wfetch(priceURL, {
     next: {
