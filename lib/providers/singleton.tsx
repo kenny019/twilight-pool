@@ -14,7 +14,7 @@ import {
   generatePublicKey,
   generatePublicKeyHexAddress,
 } from "../twilight/zkos";
-import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBTCAddress";
+import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
 
 interface UseTwilightProps {
   hasInit: string;

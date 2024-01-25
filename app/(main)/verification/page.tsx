@@ -4,7 +4,7 @@ import WalletVerificationForm from "@/app/_components/verification/form";
 import { Text } from "@/components/typography";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { redirect } from "next/navigation";
-import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBTCAddress";
+import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 const noticeData = [
