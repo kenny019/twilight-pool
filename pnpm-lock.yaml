@@ -132,8 +132,8 @@ dependencies:
     specifier: 3.3.3
     version: 3.3.3
   twilightjs:
-    specifier: ^0.0.5
-    version: 0.0.5
+    specifier: ^0.0.13
+    version: 0.0.13
   typescript:
     specifier: 5.1.6
     version: 5.1.6
@@ -4652,8 +4652,8 @@ packages:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
     dev: false
 
-  /twilightjs@0.0.5:
-    resolution: {integrity: sha512-SnDLCeTTe7IyByis8m/tbbo6n13xkerFFadUQy0zIJFeHhsVhAfKI6hxuJR6s923qHCzKTKxbXVENjIr5Nr42Q==}
+  /twilightjs@0.0.13:
+    resolution: {integrity: sha512-AUXNudKMgqTFoU/sN89291PIjp4PTYZmENKUmHS72BmPtMQZWSebhoPypSseC+7FcQNZkm8m71uqajuJ9GhPtQ==}
     dependencies:
       '@cosmjs/amino': 0.29.4
       '@cosmjs/proto-signing': 0.29.4
