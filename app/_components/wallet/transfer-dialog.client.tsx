@@ -15,14 +15,27 @@ import {
   SelectValue,
 } from "@/components/select";
 import { Text } from "@/components/typography";
+import { useTwilight } from "@/lib/providers/singleton";
 import { useSubaccount } from "@/lib/providers/subaccounts";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import {
+  generatePublicKey,
+  generateRandomScalar,
+  generateTradingAccount,
+} from "@/lib/twilight/zkos";
+import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import { twilightproject } from "twilightjs";
+
+import Long from "long";
+import { GasPrice, calculateFee } from "@cosmjs/stargate";
+import Resource from "@/components/resource";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   children: React.ReactNode;
-  tradingAccountAddress: string;
+  tradingAccountAddress?: string;
   defaultAccount: "funding" | "trading";
 };
 
@@ -32,6 +45,9 @@ const TransferDialog = ({
   children,
 }: Props) => {
   const { subAccounts } = useSubaccount();
+  const { quisPrivateKey } = useTwilight();
+
+  const { mainWallet } = useWallet();
 
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
@@ -48,8 +64,89 @@ const TransferDialog = ({
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
   const depositRef = useRef<HTMLInputElement>(null);
 
-  function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+
+  async function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!depositRef.current?.value) return; // todo: validation
+
+    // todo: cleanup into seperate function
+    if (fromAccountValue === "funding") {
+      const chainWallet = mainWallet?.getChainWallet("nyks");
+
+      if (!chainWallet) {
+        console.error("no chainWallet");
+        return;
+      }
+
+      const twilightAddress = chainWallet.address;
+      if (!twilightAddress) {
+        console.error("no twilightAddress");
+        return;
+      }
+
+      try {
+        setIsSubmitLoading(true);
+        const scalar = await generateRandomScalar();
+
+        const publicKeyHex = await generatePublicKey({
+          signature: quisPrivateKey,
+        });
+
+        const transferAmount = new BTC(
+          depositDenom as BTCDenoms,
+          Big(depositRef.current.value)
+        )
+          .convert("sats")
+          .toNumber();
+
+        const newTradingAccount = await generateTradingAccount({
+          publicKeyHex,
+          // todo: add with destination balance amount
+          balance: transferAmount,
+          scalar,
+        });
+
+        const stargateClient = await chainWallet.getSigningStargateClient();
+
+        const { mintBurnTradingBtc } =
+          twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
+
+        const msg = mintBurnTradingBtc({
+          btcValue: Long.fromNumber(transferAmount),
+          encryptScalar: scalar,
+          mintOrBurn: false,
+          qqAccount: newTradingAccount,
+          twilightAddress,
+        });
+
+        const gasPrice = GasPrice.fromString("1nyks");
+        const gasEstimation = await stargateClient.simulate(
+          twilightAddress,
+          [msg],
+          ""
+        );
+
+        const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+
+        const res = await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [msg],
+          fee
+        );
+
+        console.log("sent sats from funding to trading", transferAmount);
+        console.log("res", res);
+
+        setIsSubmitLoading(false);
+      } catch (err) {
+        console.error(err);
+
+        setIsSubmitLoading(false);
+      }
+    } else {
+    }
   }
 
   return (
@@ -124,7 +221,7 @@ const TransferDialog = ({
                           selectedTradingAccountTo === tradingAccountAddress &&
                           toAccountValue === "trading"
                         }
-                        value={tradingAccountAddress}
+                        value={tradingAccountAddress || ""}
                       >
                         Trading account
                       </SelectItem>
@@ -203,7 +300,7 @@ const TransferDialog = ({
                             tradingAccountAddress &&
                           fromAccountValue === "trading"
                         }
-                        value={tradingAccountAddress}
+                        value={tradingAccountAddress || ""}
                       >
                         Trading account
                       </SelectItem>
@@ -260,8 +357,13 @@ const TransferDialog = ({
           </div>
 
           <div className="pt-2">
-            <Button className="" size="small">
-              Transfer
+            <Button disabled={isSubmitLoading} type="submit" size="small">
+              <Resource
+                isLoaded={!isSubmitLoading}
+                placeholder={<Loader2 className="animate-spin" />}
+              >
+                Transfer
+              </Resource>
             </Button>
           </div>
         </form>

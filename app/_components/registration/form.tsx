@@ -6,13 +6,13 @@ import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useRouter } from "next/navigation";
-import { twilightproject } from "twilightjs";
 import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
+import { twilightproject } from "twilightjs";
 
 const WalletRegistrationForm = () => {
   const { toast } = useToast();

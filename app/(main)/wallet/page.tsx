@@ -70,6 +70,8 @@ const Page = () => {
 
           const { amount } = satsBalance;
 
+          console.log("rawSatsBal", amount);
+
           const btcBalance = new BTC("sats", Big(amount));
 
           setTwilightSatsBalance(btcBalance.value.toNumber());
@@ -106,7 +108,7 @@ const Page = () => {
 
   const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
     .convert("BTC")
-    .toFixed(9);
+    .toFixed(8);
 
   const totalBalanceUSDString = Big(totalBTCBalanceString)
     .mul(currentPrice)
@@ -114,7 +116,7 @@ const Page = () => {
 
   const twilightBTCBalanceString = new BTC("sats", Big(twilightSatsBalance))
     .convert("BTC")
-    .toFixed(9);
+    .toFixed(8);
 
   const twilightBalanceUSDString = Big(twilightBTCBalanceString)
     .mul(currentPrice)
@@ -163,14 +165,22 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                <Button variant="ui" size="icon">
+                <Button
+                  variant="ui"
+                  size="icon"
+                  disabled={twilightSatsBalance < 1}
+                >
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
                 <TransferDialog
-                  tradingAccountAddress={mainTradingAccount?.address || ""}
+                  tradingAccountAddress={mainTradingAccount?.address}
                   defaultAccount="funding"
                 >
-                  <Button variant="ui" size="icon">
+                  <Button
+                    disabled={twilightSatsBalance < 1}
+                    variant="ui"
+                    size="icon"
+                  >
                     <ArrowLeftRight className="h-4 w-4" />
                   </Button>
                 </TransferDialog>
@@ -190,7 +200,11 @@ const Page = () => {
                 <Skeleton className="mt-1 h-4 w-[80px]" />
               </div>
               <div className="flex flex-row space-x-2">
-                <Button variant="ui" size="icon">
+                <Button
+                  variant="ui"
+                  size="icon"
+                  disabled={twilightSatsBalance < 1}
+                >
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
 
@@ -199,7 +213,11 @@ const Page = () => {
                   "
                   defaultAccount="trading"
                 >
-                  <Button variant="ui" size="icon">
+                  <Button
+                    disabled={twilightSatsBalance < 1}
+                    variant="ui"
+                    size="icon"
+                  >
                     <ArrowLeftRight className="h-4 w-4" />
                   </Button>
                 </TransferDialog>
