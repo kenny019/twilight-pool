@@ -9,6 +9,8 @@ import { SubaccountStruct } from "@/lib/types";
 import React from "react";
 import { useSubaccountDialog } from "../subaccount-modal.client";
 import { Plus } from "lucide-react";
+import BTC from "@/lib/twilight/denoms";
+import Big from "big.js";
 
 type AccountRowProps = {
   account: SubaccountStruct;
@@ -25,6 +27,10 @@ const SubaccountListView = () => {
   const { setView } = useSubaccountDialog();
 
   function AccountRow({ accountIndex, account, className }: AccountRowProps) {
+    const subAccountBTCValue = new BTC("sats", Big(account.value || 0))
+      .convert("BTC")
+      .toFixed(8); // todo: add method to BTC class for string representation
+
     return (
       <div
         className={cn(
@@ -35,7 +41,9 @@ const SubaccountListView = () => {
         <div className="flex w-full flex-row items-center justify-between">
           <div className="space-y-1">
             <Text>{account.tag}</Text>
-            <Text className="text-xs text-primary-accent">0.123 BTC</Text>
+            <Text className="text-xs text-primary-accent">
+              {subAccountBTCValue} BTC
+            </Text>
           </div>
           <div className="flex flex-row space-x-2">
             <Button variant="link">Edit</Button>

@@ -9,10 +9,13 @@ import React, {
 import { useLocalStorage } from "../hooks";
 import { TradingAccountStruct } from "../types";
 import { useWallet } from "@cosmos-kit/react-lite";
-import { generateSignMessage, getQuisTradingAddress } from "../twilight/chain";
+import {
+  generateSignMessage,
+  getLocalTradingAccountAddress,
+} from "../twilight/chain";
 import {
   generatePublicKey,
-  generatePublicKeyHexAddress,
+  generateTradingAccountAddress,
 } from "../twilight/zkos";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
 
@@ -118,7 +121,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
 
         try {
           const storedQuisTradingAddress =
-            getQuisTradingAddress(twilightAddress);
+            getLocalTradingAccountAddress(twilightAddress);
 
           if (storedQuisTradingAddress) {
             setMainTradingAccount({
@@ -128,26 +131,29 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
             return;
           }
 
-          const quisPublicKey = await generatePublicKey({
+          const quisPublicKeyHex = await generatePublicKey({
             signature: quisPrivateKey,
           });
 
-          const quisAddress = await generatePublicKeyHexAddress({
-            publicKey: quisPublicKey,
+          const mainTradingAddress = await generateTradingAccountAddress({
+            publicKeyHex: quisPublicKeyHex,
           });
 
           try {
             window.localStorage.setItem(
               `twilight-trading-${twilightAddress}`,
-              quisAddress
+              mainTradingAddress
             );
 
             setMainTradingAccount({
-              address: quisAddress,
+              address: mainTradingAddress,
               tag: "main",
             });
 
-            console.log("created a new main trading address", quisAddress);
+            console.log(
+              "created a new main trading address",
+              mainTradingAddress
+            );
           } catch (err) {
             console.error(err);
           }

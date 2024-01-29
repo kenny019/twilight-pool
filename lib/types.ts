@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SubAccountStructSchema } from "./schema";
 
 export const btcAddressSchema = z
   .string()
@@ -20,11 +21,6 @@ export type twilightRegistedBtcAddressStruct = {
   twilightDepositAddress: string;
 };
 
-export interface SubaccountStruct {
-  tag: string;
-  address: string;
-  value?: number; // btc value
-  isOnChain?: boolean;
-}
+export type SubaccountStruct = z.infer<typeof SubAccountStructSchema>;
 
 export interface TradingAccountStruct extends SubaccountStruct {}

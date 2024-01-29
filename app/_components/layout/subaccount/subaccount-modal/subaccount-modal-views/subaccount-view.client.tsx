@@ -55,6 +55,7 @@ const SubaccountCreateView = () => {
     const newSubaccount = {
       tag: subaccountTag,
       address: subaccountAddress,
+      value: 0,
     };
 
     addSubaccount(twilightAddress, newSubaccount);

@@ -3,7 +3,7 @@ async function generatePublicKey({ signature }: { signature: string }) {
   return zkos.generatePublicKeyFromSignature(signature);
 }
 
-async function generatePublicKeyHexAddress({
+async function generateHexAddressFromPublicKey({
   publicKey,
 }: {
   publicKey: string;
@@ -12,13 +12,35 @@ async function generatePublicKeyHexAddress({
   return zkos.hexStandardAddressFromPublicKey(12, publicKey);
 }
 
-async function generateZeroTradingAccount({
+async function generateTradingAccountAddress({
   publicKeyHex,
 }: {
   publicKeyHex: string;
 }) {
   const zkos = await import("@kenny019/zkos-wasm");
-  return zkos.generateZeroAccount(publicKeyHex);
+  return zkos.generateNewRandomAddress(publicKeyHex);
+}
+
+async function generateZeroBalanceTradingAccount({
+  tradingAccountAddress,
+}: {
+  tradingAccountAddress: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.generateZeroBalaneZkAccountFromAddress(tradingAccountAddress);
+}
+
+async function generateTradingAccount({
+  publicKeyHex,
+  balance,
+  scalar,
+}: {
+  publicKeyHex: string;
+  balance: number;
+  scalar: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.generateZkAccountWithBalance(publicKeyHex, balance, scalar);
 }
 
 async function generateRandomScalar() {
@@ -26,23 +48,12 @@ async function generateRandomScalar() {
   return zkos.generateRandomScalar();
 }
 
-// async function generateTradingAccountWithBalance({
-//   publicKeyHex,
-//   balance,
-//   scalar,
-// }: {
-//   publicKeyHex: string;
-//   balance: number;
-//   scalar: string;
-// }) {
-//   const zkos = await import("@kenny019/zkos-wasm");
-//   return zkos.generateZkAccountWithBalance(publicKeyHex, balance, scalar);
-// }
-
 export {
   generatePublicKey,
-  generatePublicKeyHexAddress,
-  generateZeroTradingAccount,
+  generateHexAddressFromPublicKey,
+  generateZeroBalanceTradingAccount,
   generateRandomScalar,
+  generateTradingAccountAddress,
+  generateTradingAccount,
   // generateTradingAccountWithBalance,
 };

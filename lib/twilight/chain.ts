@@ -1,5 +1,5 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
-import { generatePublicKey, generatePublicKeyHexAddress } from "./zkos";
+import { generatePublicKey, generateTradingAccountAddress } from "./zkos";
 import wfetch from "../http";
 
 async function generateSignMessage(
@@ -19,7 +19,7 @@ async function generateSignMessage(
   return [pub_key, signature];
 }
 
-function getQuisTradingAddress(twilightAddress: string) {
+function getLocalTradingAccountAddress(twilightAddress: string) {
   try {
     const data = window.localStorage.getItem(
       `twilight-trading-${twilightAddress}`
@@ -40,15 +40,15 @@ function getQuisTradingAddress(twilightAddress: string) {
 }
 
 async function createSubaccount(signature: string) {
-  const quisPublicKey = await generatePublicKey({
-    signature: signature as string,
+  const publicKeyHex = await generatePublicKey({
+    signature: signature,
   });
 
-  const quisAddress = await generatePublicKeyHexAddress({
-    publicKey: quisPublicKey,
+  const newSubAccountAddress = generateTradingAccountAddress({
+    publicKeyHex,
   });
 
-  return quisAddress;
+  return newSubAccountAddress;
 }
 
 type UtxoFromDBResponse = {
@@ -91,7 +91,7 @@ async function getUtxosFromDB() {
 
 export {
   generateSignMessage,
-  getQuisTradingAddress,
+  getLocalTradingAccountAddress,
   createSubaccount,
   getUtxosFromDB,
 };

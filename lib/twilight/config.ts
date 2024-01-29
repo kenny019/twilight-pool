@@ -1,11 +1,6 @@
 import { z } from "zod";
+import { SubAccountStructSchema } from "../schema";
 import { SubaccountStruct } from "../types";
-
-// todo: convert types to zod schemas
-const SubAccountStructSchema = z.object({
-  tag: z.string(),
-  address: z.string(),
-});
 
 const SubAccountListSchema = z.array(SubAccountStructSchema);
 
