@@ -74,6 +74,7 @@ const SubaccountListView = () => {
             )}
             account={{
               address: mainTradingAccount?.address || "",
+              value: mainTradingAccount?.value || 0,
               tag: "Trading Account",
             }}
             accountIndex={-2}

@@ -22,6 +22,7 @@ import {
   generatePublicKey,
   generateRandomScalar,
   generateTradingAccount,
+  getTradingAddressFromTradingAccount,
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -32,6 +33,7 @@ import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
+import { TradingAccountStruct } from "@/lib/types";
 
 type Props = {
   children: React.ReactNode;
@@ -45,7 +47,7 @@ const TransferDialog = ({
   children,
 }: Props) => {
   const { subAccounts } = useSubaccount();
-  const { quisPrivateKey } = useTwilight();
+  const { quisPrivateKey, setMainTradingAccount } = useTwilight();
 
   const { mainWallet } = useWallet();
 
@@ -65,6 +67,18 @@ const TransferDialog = ({
   const depositRef = useRef<HTMLInputElement>(null);
 
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+
+  function updateTransferredAccount(newAccountData: TradingAccountStruct) {
+    switch (toAccountValue) {
+      case "trading": {
+        if (selectedTradingAccountTo === tradingAccountAddress) {
+          setMainTradingAccount(newAccountData);
+        }
+      }
+      default: {
+      }
+    }
+  }
 
   async function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -108,6 +122,14 @@ const TransferDialog = ({
           scalar,
         });
 
+        const newTradingAccountAddress =
+          await getTradingAddressFromTradingAccount({
+            tradingAccountAddress: newTradingAccount,
+          });
+
+        console.log("newTradingAccount", newTradingAccount);
+        console.log("newTradingAccountAddress", newTradingAccountAddress);
+
         const stargateClient = await chainWallet.getSigningStargateClient();
 
         const { mintBurnTradingBtc } =
@@ -116,7 +138,7 @@ const TransferDialog = ({
         const msg = mintBurnTradingBtc({
           btcValue: Long.fromNumber(transferAmount),
           encryptScalar: scalar,
-          mintOrBurn: false,
+          mintOrBurn: true,
           qqAccount: newTradingAccount,
           twilightAddress,
         });
@@ -140,6 +162,20 @@ const TransferDialog = ({
         console.log("res", res);
 
         setIsSubmitLoading(false);
+
+        updateTransferredAccount({
+          account: newTradingAccount,
+          address: newTradingAccountAddress,
+          isOnChain: true,
+          tag:
+            selectedTradingAccountTo === tradingAccountAddress
+              ? "main"
+              : subAccounts.filter(
+                  (subAccount) =>
+                    subAccount.address === selectedTradingAccountTo
+                )[0].tag,
+          value: transferAmount,
+        });
       } catch (err) {
         console.error(err);
 

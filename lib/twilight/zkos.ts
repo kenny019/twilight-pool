@@ -43,6 +43,15 @@ async function generateTradingAccount({
   return zkos.generateZkAccountWithBalance(publicKeyHex, balance, scalar);
 }
 
+async function getTradingAddressFromTradingAccount({
+  tradingAccountAddress,
+}: {
+  tradingAccountAddress: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.getAddressFromZkAccountHex(tradingAccountAddress);
+}
+
 async function generateRandomScalar() {
   const zkos = await import("@kenny019/zkos-wasm");
   return zkos.generateRandomScalar();
@@ -56,4 +65,5 @@ export {
   generateTradingAccountAddress,
   generateTradingAccount,
   // generateTradingAccountWithBalance,
+  getTradingAddressFromTradingAccount,
 };
