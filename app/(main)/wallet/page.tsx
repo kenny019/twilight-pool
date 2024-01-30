@@ -81,6 +81,11 @@ const Page = () => {
       }
 
       fetchData();
+      const intervalId = setInterval(async () => {
+        await fetchData();
+      }, 15000);
+
+      return () => clearInterval(intervalId);
     }, [status]);
   }
 
