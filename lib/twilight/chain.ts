@@ -1,6 +1,7 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
 import { generatePublicKey, generateTradingAccountAddress } from "./zkos";
 import wfetch from "../http";
+import { TradingAccountStruct } from "../types";
 
 async function generateSignMessage(
   chainWallet: ChainWalletBase,
@@ -19,23 +20,43 @@ async function generateSignMessage(
   return [pub_key, signature];
 }
 
-function getLocalTradingAccountAddress(twilightAddress: string) {
+function getLocalTradingAccount(
+  twilightAddress: string
+): Partial<TradingAccountStruct> {
   try {
     const data = window.localStorage.getItem(
       `twilight-trading-${twilightAddress}`
     );
 
-    if (!data) return "";
+    if (!data) return {};
 
-    console.log("grabbing quis trading address", data);
+    const tradingAccount = JSON.parse(data);
 
-    return data;
+    console.log("getting local trading account data", tradingAccount);
+
+    return tradingAccount;
   } catch (err) {
     console.error(
       `Error reading localStorage, key twilight-${twilightAddress}-trading-address`,
       err
     );
-    return "";
+    return {};
+  }
+}
+
+function setLocalTradingAccount(
+  twilightAddress: string,
+  data: TradingAccountStruct
+) {
+  try {
+    window.localStorage.setItem(
+      `twilight-trading-${twilightAddress}`,
+      JSON.stringify(data)
+    );
+
+    console.log("updated trading account");
+  } catch (err) {
+    console.error(err);
   }
 }
 
@@ -91,7 +112,8 @@ async function getUtxosFromDB() {
 
 export {
   generateSignMessage,
-  getLocalTradingAccountAddress,
+  getLocalTradingAccount,
+  setLocalTradingAccount,
   createSubaccount,
   getUtxosFromDB,
 };

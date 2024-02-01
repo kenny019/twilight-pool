@@ -57,6 +57,31 @@ async function generateRandomScalar() {
   return zkos.generateRandomScalar();
 }
 
+async function utxoStringToHex({ utxoString }: { utxoString: string }) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.getUtxoHexFromJson(utxoString);
+}
+
+async function getZKAccountHexFromOutputString({
+  outputString,
+}: {
+  outputString: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.extractZkAccountFromOutput(outputString);
+}
+
+async function decryptZKAccountHexValue({
+  zkAccountHex,
+  signature,
+}: {
+  zkAccountHex: string;
+  signature: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.decryptZkAccountValue(signature, zkAccountHex);
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
@@ -66,4 +91,7 @@ export {
   generateTradingAccount,
   // generateTradingAccountWithBalance,
   getTradingAddressFromTradingAccount,
+  getZKAccountHexFromOutputString,
+  utxoStringToHex,
+  decryptZKAccountHexValue,
 };

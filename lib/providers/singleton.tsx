@@ -11,13 +11,18 @@ import { TradingAccountStruct } from "../types";
 import { useWallet } from "@cosmos-kit/react-lite";
 import {
   generateSignMessage,
-  getLocalTradingAccountAddress,
+  getLocalTradingAccount,
+  setLocalTradingAccount,
 } from "../twilight/chain";
 import {
+  decryptZKAccountHexValue,
   generatePublicKey,
   generateTradingAccountAddress,
+  getZKAccountHexFromOutputString,
+  utxoStringToHex,
 } from "../twilight/zkos";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
+import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -120,14 +125,62 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
         }
 
         try {
-          const storedQuisTradingAddress =
-            getLocalTradingAccountAddress(twilightAddress);
+          const storedTradingAccount = getLocalTradingAccount(twilightAddress);
 
-          if (storedQuisTradingAddress) {
-            setMainTradingAccount({
-              address: storedQuisTradingAddress,
-              tag: "main",
+          if (
+            storedTradingAccount &&
+            storedTradingAccount.address &&
+            storedTradingAccount.tag
+          ) {
+            console.log("mainTradingAddress", storedTradingAccount.address);
+
+            const utxoData = await queryUtxoForAddress(
+              storedTradingAccount.address
+            );
+
+            console.log("utxoData", utxoData);
+
+            if (!!utxoData.output_index) {
+              setMainTradingAccount(
+                storedTradingAccount as TradingAccountStruct
+              );
+              return;
+            }
+
+            const utxoString = JSON.stringify(utxoData);
+
+            const utxoHex = await utxoStringToHex({
+              utxoString,
             });
+
+            const output = await queryUtxoForOutput(utxoHex);
+
+            if (!output.out_type) return;
+
+            console.log("output", output);
+
+            const outputString = JSON.stringify(output);
+
+            const zkAccountHex = await getZKAccountHexFromOutputString({
+              outputString,
+            });
+
+            const accountValue = await decryptZKAccountHexValue({
+              signature: quisPrivateKey,
+              zkAccountHex,
+            });
+
+            console.log("decryptedValue", Number(accountValue));
+
+            const updatedTradingAccountData = {
+              tag: "main",
+              address: zkAccountHex,
+              isOnChain: true,
+              value: Number(accountValue),
+            };
+            setMainTradingAccount(updatedTradingAccountData);
+
+            setLocalTradingAccount(twilightAddress, updatedTradingAccountData);
             return;
           }
 
@@ -140,15 +193,14 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
           });
 
           try {
-            window.localStorage.setItem(
-              `twilight-trading-${twilightAddress}`,
-              mainTradingAddress
-            );
-
-            setMainTradingAccount({
+            const newTradingAccount = {
               address: mainTradingAddress,
               tag: "main",
-            });
+            };
+
+            setMainTradingAccount(newTradingAccount);
+
+            setLocalTradingAccount(twilightAddress, newTradingAccount);
 
             console.log(
               "created a new main trading address",
