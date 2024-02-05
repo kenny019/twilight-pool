@@ -5,10 +5,12 @@ import Resource from "@/components/resource";
 import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
+import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import { usePriceFeed } from "@/lib/providers/feed";
-import { useTwilight } from "@/lib/providers/singleton";
-import { getUtxosFromDB } from "@/lib/twilight/chain";
+import { useTwilight } from "@/lib/providers/twilight";
+import { useAccountStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
+import { ZkAccount } from "@/lib/types";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
@@ -18,7 +20,14 @@ import React, { useEffect, useState } from "react";
 const Page = () => {
   const { status, mainWallet } = useWallet();
 
-  const { quisPrivateKey, mainTradingAccount } = useTwilight();
+  const { quisPrivateKey } = useTwilight();
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+
+  const tradingAccount = zkAccounts[ZK_ACCOUNT_INDEX.MAIN] as
+    | ZkAccount
+    | undefined;
+
+  const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
 
   const router = useRouter();
 
@@ -39,6 +48,7 @@ const Page = () => {
 
         router.replace("/");
       }, 500);
+
       return () => clearTimeout(redirectTimeout);
     }, [status]);
   }
@@ -56,6 +66,7 @@ const Page = () => {
         }
 
         const twilightAddress = chainWallet.address;
+
         if (!twilightAddress) {
           console.error("no twilightAddress");
           return;
@@ -94,7 +105,8 @@ const Page = () => {
     useEffect(() => {
       async function getTradingBTCBalance() {
         if (!quisPrivateKey) return;
-        const utxoString = await getUtxosFromDB();
+
+        // queryUtxoForAddress("");
 
         // console.log("trading addresses on chain", tradingAddresses);
       }
@@ -178,7 +190,7 @@ const Page = () => {
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
                 <TransferDialog
-                  tradingAccountAddress={mainTradingAccount?.address}
+                  tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="funding"
                 >
                   <Button
@@ -214,8 +226,7 @@ const Page = () => {
                 </Button>
 
                 <TransferDialog
-                  tradingAccountAddress="
-                  "
+                  tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="trading"
                 >
                   <Button

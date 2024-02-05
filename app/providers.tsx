@@ -13,10 +13,10 @@ import {
   twilightTestnetAssets,
 } from "@/lib/chaindata";
 import { MainWalletBase } from "@cosmos-kit/core";
-import { TwilightProvider } from "@/lib/providers/singleton";
+import { TwilightProvider } from "@/lib/providers/twilight";
 import { Toaster } from "@/components/toast-provider";
-import { SubaccountProvider } from "@/lib/providers/subaccounts";
 import { PriceFeedProvider } from "@/lib/providers/feed";
+import { ZkAccountProvider } from "@/lib/providers/zk";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -36,9 +36,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         signerOptions={signerOptions}
       >
         <TwilightProvider>
-          <SubaccountProvider>
+          <ZkAccountProvider>
             <PriceFeedProvider>{children}</PriceFeedProvider>
-          </SubaccountProvider>
+          </ZkAccountProvider>
           <Toaster />
         </TwilightProvider>
       </ChainProvider>

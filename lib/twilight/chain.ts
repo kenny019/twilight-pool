@@ -1,7 +1,11 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
-import { generatePublicKey, generateTradingAccountAddress } from "./zkos";
+import {
+  generatePublicKey,
+  generateRandomScalar,
+  generateTradingAccountAddress,
+} from "./zkos";
 import wfetch from "../http";
-import { TradingAccountStruct } from "../types";
+import { ZkAccount } from "../types";
 
 async function generateSignMessage(
   chainWallet: ChainWalletBase,
@@ -20,9 +24,7 @@ async function generateSignMessage(
   return [pub_key, signature];
 }
 
-function getLocalTradingAccount(
-  twilightAddress: string
-): Partial<TradingAccountStruct> {
+function getLocalTradingAccount(twilightAddress: string): Partial<ZkAccount> {
   try {
     const data = window.localStorage.getItem(
       `twilight-trading-${twilightAddress}`
@@ -44,10 +46,7 @@ function getLocalTradingAccount(
   }
 }
 
-function setLocalTradingAccount(
-  twilightAddress: string,
-  data: TradingAccountStruct
-) {
+function setLocalTradingAccount(twilightAddress: string, data: ZkAccount) {
   try {
     window.localStorage.setItem(
       `twilight-trading-${twilightAddress}`,
@@ -58,18 +57,6 @@ function setLocalTradingAccount(
   } catch (err) {
     console.error(err);
   }
-}
-
-async function createSubaccount(signature: string) {
-  const publicKeyHex = await generatePublicKey({
-    signature: signature,
-  });
-
-  const newSubAccountAddress = generateTradingAccountAddress({
-    publicKeyHex,
-  });
-
-  return newSubAccountAddress;
 }
 
 type UtxoFromDBResponse = {
@@ -114,6 +101,5 @@ export {
   generateSignMessage,
   getLocalTradingAccount,
   setLocalTradingAccount,
-  createSubaccount,
   getUtxosFromDB,
 };

@@ -1,5 +1,5 @@
 "use client";
-import { getBTCDepositAddress } from "@/lib/rest";
+import { getBTCDepositAddress } from "@/lib/api/rest";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { usePathname } from "next/navigation";
 import React, { useEffect } from "react";

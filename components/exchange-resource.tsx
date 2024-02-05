@@ -1,4 +1,4 @@
-import { useTwilight } from "@/lib/providers/singleton";
+import { useTwilight } from "@/lib/providers/twilight";
 import React, { useState } from "react";
 import {
   Dialog,

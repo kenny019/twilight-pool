@@ -1,7 +1,7 @@
 import { Separator } from "@/components/seperator";
 import TickerWrapper from "../_components/trade/ticker-wrapper";
 import TradeWrapper from "../_components/trade/trade-wrapper.client";
-import { getBTCPrice } from "@/lib/rest";
+import { getBTCPrice } from "@/lib/api/rest";
 export default async function Home() {
   const response = await getBTCPrice();
 

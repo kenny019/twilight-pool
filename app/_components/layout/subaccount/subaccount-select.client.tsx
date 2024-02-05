@@ -7,56 +7,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/select";
-import { useSubaccount } from "@/lib/providers/subaccounts";
 import { useWallet } from "@cosmos-kit/react-lite";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import SubaccountModal from "./subaccount-modal/subaccount-modal.client";
-import { SubaccountStruct } from "@/lib/types";
 import ExchangeResource from "@/components/exchange-resource";
-import { useTwilight } from "@/lib/providers/singleton";
-import Button from "@/components/button";
+import { useTwilight } from "@/lib/providers/twilight";
 import { ChevronDown } from "lucide-react";
+import { ZkAccount } from "@/lib/types";
+import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
+import { useAccountStore } from "@/lib/state/store";
 
-function representSubaccountTag(
-  selectedSubaccount: number,
-  subAccounts: SubaccountStruct[]
-) {
-  if (selectedSubaccount < 0) {
-    return selectedSubaccount < -1
-      ? selectedSubaccount === -2
-        ? "Trading Account"
-        : ""
-      : "Manage Subacconuts";
+function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
+  if (selectedZkAccount === ZK_ACCOUNT_INDEX.DISCONNECTED) {
+    return "";
   }
 
-  return `${subAccounts[selectedSubaccount].tag}`;
+  if (selectedZkAccount === ZK_ACCOUNT_INDEX.MAIN) {
+    return "Trading Account";
+  }
+
+  return zkAccounts[selectedZkAccount].tag;
 }
 
 const SubaccountSelect = () => {
-  const { subAccounts, selectedSubaccount, setSelectedSubaccount } =
-    useSubaccount();
-
   const [openSubaccountModal, setOpenSubaccountModal] = useState(false);
 
   const { status } = useWallet();
 
   const { hasRegisteredBTC, hasConfirmedBTC } = useTwilight();
 
-  function useResetSelectedSubaccount() {
-    useEffect(() => {
-      // todo: replace magic numbers enum
-      if (status === "Connected" && selectedSubaccount === -3) {
-        setSelectedSubaccount(-2);
-      }
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
 
-      if (status === "Disconnected" && selectedSubaccount > -3) {
-        // note: -3 represents no account selected (disconnected state)
-        setSelectedSubaccount(-3);
-      }
-    }, [status]);
-  }
+  const selectedZkAccount =
+    useAccountStore((state) => state.zk.selectedZkAccount) ||
+    ZK_ACCOUNT_INDEX.MAIN;
 
-  useResetSelectedSubaccount();
+  const updateSelectedZkAccount = useAccountStore(
+    (state) => state.zk.updateSelectedZkccount
+  );
 
   if (!hasRegisteredBTC || !hasConfirmedBTC) {
     return (
@@ -75,48 +63,60 @@ const SubaccountSelect = () => {
         open={openSubaccountModal}
       />
       <Select
-        defaultValue={"main"}
+        defaultValue={ZK_ACCOUNT_INDEX.DISCONNECTED.toString()}
         onValueChange={(newSubaccountIndexStr) => {
           const newSubaccountIndex = parseInt(newSubaccountIndexStr);
           // note: -1 represents manage subaccount
           // -2 represents trading account
           // -3 represents disconnected state
           // limitation cause we parseint maybe someone can fix it
-          if (newSubaccountIndex === -1) {
+          if (newSubaccountIndex === ZK_ACCOUNT_INDEX.MANAGE_ACCOUNT) {
             // open modal to create subaccount
             setOpenSubaccountModal(true);
             return;
           }
 
-          setSelectedSubaccount(newSubaccountIndex);
+          updateSelectedZkAccount(newSubaccountIndex);
         }}
-        value={selectedSubaccount.toString()}
+        value={selectedZkAccount.toString()}
         disabled={status !== "Connected"}
       >
         <SelectTrigger id="select-subaccount-quick" className="w-[160px]">
           <SelectValue asChild>
-            <p>{representSubaccountTag(selectedSubaccount, subAccounts)}</p>
+            <p>{getSelectMenuText(selectedZkAccount, zkAccounts)}</p>
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {subAccounts.length < 1 ? (
+          {zkAccounts.length < 1 ? (
             // todo: should block adding subaccounts into current value
             <>
-              <SelectItem value={"-2"}>Trading Account</SelectItem>
-              <SelectItem value={"-1"}>Manage Subaccounts</SelectItem>
+              <SelectItem value={ZK_ACCOUNT_INDEX.MAIN.toString()}>
+                Trading Account
+              </SelectItem>
+              <SelectItem value={ZK_ACCOUNT_INDEX.MANAGE_ACCOUNT.toString()}>
+                Manage Subaccounts
+              </SelectItem>
             </>
           ) : (
             <>
-              <SelectItem value={"-2"}>Trading Account</SelectItem>
-              {subAccounts.map((subAccount, index) => {
-                // todo: replace key tag with actual address
+              <SelectItem value={ZK_ACCOUNT_INDEX.MAIN.toString()}>
+                Trading Account
+              </SelectItem>
+              {zkAccounts.map((account, index) => {
+                if (index === ZK_ACCOUNT_INDEX.MAIN) {
+                  // todo: replace key tag with actual address
+                  return null;
+                }
+
                 return (
                   <SelectItem key={index} value={index.toString()}>
-                    {subAccount.tag}
+                    {account.tag}
                   </SelectItem>
                 );
               })}
-              <SelectItem value={"-1"}>Manage Subaccounts</SelectItem>
+              <SelectItem value={ZK_ACCOUNT_INDEX.MANAGE_ACCOUNT.toString()}>
+                Manage Subaccounts
+              </SelectItem>
             </>
           )}
         </SelectContent>

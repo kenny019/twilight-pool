@@ -7,22 +7,10 @@ import React, {
   useState,
 } from "react";
 import { useLocalStorage } from "../hooks";
-import { TradingAccountStruct } from "../types";
 import { useWallet } from "@cosmos-kit/react-lite";
-import {
-  generateSignMessage,
-  getLocalTradingAccount,
-  setLocalTradingAccount,
-} from "../twilight/chain";
-import {
-  decryptZKAccountHexValue,
-  generatePublicKey,
-  generateTradingAccountAddress,
-  getZKAccountHexFromOutputString,
-  utxoStringToHex,
-} from "../twilight/zkos";
+import { generateSignMessage } from "../twilight/chain";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
-import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
+import { useAccountStore } from "../state/store";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -31,8 +19,6 @@ interface UseTwilightProps {
   setColorTheme: (val: string) => void;
   quisPrivateKey: string;
   setQuisPrivateKey: (val: string) => void;
-  mainTradingAccount?: TradingAccountStruct;
-  setMainTradingAccount: (val: TradingAccountStruct) => void;
   hasRegisteredBTC: boolean;
   hasConfirmedBTC: boolean;
   checkBTCRegistration: () => void;
@@ -50,8 +36,6 @@ const defaultContext: UseTwilightProps = {
   setColorTheme: () => {},
   quisPrivateKey: "",
   setQuisPrivateKey: () => {},
-  mainTradingAccount: undefined,
-  setMainTradingAccount: () => {},
   hasRegisteredBTC: false,
   hasConfirmedBTC: false,
   checkBTCRegistration: () => {},
@@ -77,9 +61,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
-  const [mainTradingAccount, setMainTradingAccount] =
-    useState<TradingAccountStruct>();
-
   const [quisPrivateKey, setQuisPrivateKey] = useState("");
 
   const [hasRegisteredBTC, setHasRegisteredBTC] = useState(false);
@@ -97,125 +78,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       if (shouldRefetchBTCRegistration) return;
       checkBTCRegistration();
     }, [chainWallet?.address]);
-  }
-
-  function useGetTradingAccountFromLocal() {
-    useEffect(() => {
-      // todo: refactor into context with flag to retry
-      async function getTradingAccountFromLocal() {
-        if (
-          status !== "Connected" ||
-          !quisPrivateKey ||
-          mainTradingAccount?.address
-        )
-          return;
-
-        const chainWallet = mainWallet?.getChainWallet("nyks");
-
-        if (!chainWallet) {
-          console.error("no chainWallet");
-          return;
-        }
-
-        const twilightAddress = chainWallet.address;
-
-        if (!twilightAddress) {
-          console.error("no twilightAddress");
-          return;
-        }
-
-        try {
-          const storedTradingAccount = getLocalTradingAccount(twilightAddress);
-
-          if (
-            storedTradingAccount &&
-            storedTradingAccount.address &&
-            storedTradingAccount.tag
-          ) {
-            console.log("mainTradingAddress", storedTradingAccount.address);
-
-            const utxoData = await queryUtxoForAddress(
-              storedTradingAccount.address
-            );
-
-            console.log("utxoData", utxoData);
-
-            if (!!utxoData.output_index) {
-              setMainTradingAccount(
-                storedTradingAccount as TradingAccountStruct
-              );
-              return;
-            }
-
-            const utxoString = JSON.stringify(utxoData);
-
-            const utxoHex = await utxoStringToHex({
-              utxoString,
-            });
-
-            const output = await queryUtxoForOutput(utxoHex);
-
-            if (!output.out_type) return;
-
-            console.log("output", output);
-
-            const outputString = JSON.stringify(output);
-
-            const zkAccountHex = await getZKAccountHexFromOutputString({
-              outputString,
-            });
-
-            const accountValue = await decryptZKAccountHexValue({
-              signature: quisPrivateKey,
-              zkAccountHex,
-            });
-
-            console.log("decryptedValue", Number(accountValue));
-
-            const updatedTradingAccountData = {
-              tag: "main",
-              address: zkAccountHex,
-              isOnChain: true,
-              value: Number(accountValue),
-            };
-            setMainTradingAccount(updatedTradingAccountData);
-
-            setLocalTradingAccount(twilightAddress, updatedTradingAccountData);
-            return;
-          }
-
-          const quisPublicKeyHex = await generatePublicKey({
-            signature: quisPrivateKey,
-          });
-
-          const mainTradingAddress = await generateTradingAccountAddress({
-            publicKeyHex: quisPublicKeyHex,
-          });
-
-          try {
-            const newTradingAccount = {
-              address: mainTradingAddress,
-              tag: "main",
-            };
-
-            setMainTradingAccount(newTradingAccount);
-
-            setLocalTradingAccount(twilightAddress, newTradingAccount);
-
-            console.log(
-              "created a new main trading address",
-              mainTradingAddress
-            );
-          } catch (err) {
-            console.error(err);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      getTradingAccountFromLocal();
-    }, [status, quisPrivateKey]);
   }
 
   function useGetQuisPrivateKey() {
@@ -270,16 +132,29 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       if (status !== "Disconnected" && status !== "Connecting") return;
 
       console.log("cleaning up account data");
-      if (mainTradingAccount) {
-        setMainTradingAccount(undefined);
-      }
 
       if (quisPrivateKey) {
         setQuisPrivateKey("");
       }
-
-      checkBTCRegistration();
     }, [status]);
+  }
+
+  function useRehydrateTwilightStore() {
+    useEffect(() => {
+      async function updateTwilightStore() {
+        const twilightAddress = chainWallet?.address || "";
+
+        if (!twilightAddress) return;
+        useAccountStore.persist.setOptions({
+          name: `twilight-${twilightAddress}`,
+        });
+
+        await useAccountStore.persist.rehydrate();
+        console.log(`rehydrated twilight-${twilightAddress}`);
+      }
+
+      updateTwilightStore();
+    }, [chainWallet?.address]);
   }
 
   const registeredBtcResponse = useGetRegisteredBTCAddress(
@@ -295,6 +170,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setHasRegisteredBTC(false);
       setHasConfirmedBTC(false);
       setShouldRefetchBTCRegistration(false);
+
       if (
         !registeredBtcResponse ||
         !registeredBtcResponse.success ||
@@ -308,12 +184,12 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     }, [registeredBtcResponse]);
   }
 
+  useRehydrateTwilightStore();
   useOnWalletChange();
   useHandleBTCAddress();
   useCleanupAccountData();
   useGetQuisPrivateKey();
   useUpdateColorTheme();
-  useGetTradingAccountFromLocal();
 
   const providerValue = useMemo(
     () => ({
@@ -323,8 +199,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setColorTheme,
       quisPrivateKey,
       setQuisPrivateKey,
-      mainTradingAccount,
-      setMainTradingAccount,
       hasRegisteredBTC,
       setHasRegisteredBTC,
       hasConfirmedBTC,
@@ -338,8 +212,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setColorTheme,
       quisPrivateKey,
       setQuisPrivateKey,
-      mainTradingAccount,
-      setMainTradingAccount,
       hasRegisteredBTC,
       hasConfirmedBTC,
       checkBTCRegistration,

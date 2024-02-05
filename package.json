@@ -18,7 +18,7 @@
     "@cosmos-kit/keplr-extension": "^2.5.0",
     "@cosmos-kit/leap-extension": "^2.5.0",
     "@cosmos-kit/react-lite": "^2.5.0",
-    "@kenny019/zkos-wasm": "^0.2.13",
+    "@kenny019/zkos-wasm": "^0.2.14",
     "@next/font": "^13.5.4",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.5",
@@ -41,6 +41,7 @@
     "clsx": "^2.0.0",
     "eslint": "8.47.0",
     "eslint-config-next": "13.4.16",
+    "immer": "^10.0.3",
     "lightweight-charts": "^4.1.1",
     "long": "^5.2.3",
     "lucide-react": "^0.274.0",
@@ -54,7 +55,8 @@
     "tailwindcss": "3.3.3",
     "twilightjs": "^0.0.14",
     "typescript": "5.1.6",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@chain-registry/types": "^0.16.0",

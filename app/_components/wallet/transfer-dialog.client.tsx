@@ -15,14 +15,14 @@ import {
   SelectValue,
 } from "@/components/select";
 import { Text } from "@/components/typography";
-import { useTwilight } from "@/lib/providers/singleton";
-import { useSubaccount } from "@/lib/providers/subaccounts";
+import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import {
   generatePublicKey,
   generateRandomScalar,
   generateTradingAccount,
   getTradingAddressFromTradingAccount,
+  utxoStringToHex,
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -33,7 +33,11 @@ import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
-import { TradingAccountStruct } from "@/lib/types";
+import { setLocalTradingAccount } from "@/lib/twilight/chain";
+import { queryUtxoForAddress, queryUtxoForOutput } from "@/lib/api/zkos";
+import { ZkAccount } from "@/lib/types";
+import { useAccountStore } from "@/lib/state/store";
+import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 
 type Props = {
   children: React.ReactNode;
@@ -46,10 +50,11 @@ const TransferDialog = ({
   tradingAccountAddress,
   children,
 }: Props) => {
-  const { subAccounts } = useSubaccount();
-  const { quisPrivateKey, setMainTradingAccount } = useTwilight();
+  const { quisPrivateKey } = useTwilight();
 
   const { mainWallet } = useWallet();
+
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
 
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
@@ -68,12 +73,34 @@ const TransferDialog = ({
 
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
-  function updateTransferredAccount(newAccountData: TradingAccountStruct) {
+  async function updateTransferredAccount(newAccountData: ZkAccount) {
     switch (toAccountValue) {
       case "trading": {
-        if (selectedTradingAccountTo === tradingAccountAddress) {
-          setMainTradingAccount(newAccountData);
-        }
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+
+        if (!chainWallet) return;
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) return;
+
+        // if (selectedTradingAccountFrom !== tradingAccountAddress) return;
+
+        // const utxoData = await queryUtxoForAddress(newAccountData.address);
+
+        // if (!utxoData.output_index) return;
+
+        // const utxoString = JSON.stringify(utxoData);
+
+        // console.log("utxoString", utxoString);
+
+        // const utxoHex = await utxoStringToHex({ utxoString });
+
+        // const output = await queryUtxoForOutput(utxoHex);
+
+        // if (!output.out_type) return;
+
+        setLocalTradingAccount(twilightAddress, newAccountData);
       }
       default: {
       }
@@ -138,10 +165,20 @@ const TransferDialog = ({
         const msg = mintBurnTradingBtc({
           btcValue: Long.fromNumber(transferAmount),
           encryptScalar: scalar,
-          mintOrBurn: true,
+          mintOrBurn: false,
           qqAccount: newTradingAccount,
           twilightAddress,
         });
+
+        console.log("params", {
+          btcValue: Long.fromNumber(transferAmount),
+          encryptScalar: scalar,
+          mintOrBurn: false,
+          qqAccount: newTradingAccount,
+          twilightAddress,
+        });
+
+        console.log("msg");
 
         const gasPrice = GasPrice.fromString("1nyks");
         const gasEstimation = await stargateClient.simulate(
@@ -163,19 +200,19 @@ const TransferDialog = ({
 
         setIsSubmitLoading(false);
 
-        updateTransferredAccount({
-          account: newTradingAccount,
-          address: newTradingAccountAddress,
-          isOnChain: true,
-          tag:
-            selectedTradingAccountTo === tradingAccountAddress
-              ? "main"
-              : subAccounts.filter(
-                  (subAccount) =>
-                    subAccount.address === selectedTradingAccountTo
-                )[0].tag,
-          value: transferAmount,
-        });
+        // updateTransferredAccount({
+        //   scalar,
+        //   address: newTradingAccountAddress,
+        //   isOnChain: true,
+        //   tag:
+        //     selectedTradingAccountTo === tradingAccountAddress
+        //       ? "main"
+        //       : subAccounts.filter(
+        //           (subAccount) =>
+        //             subAccount.address === selectedTradingAccountTo
+        //         )[0].tag,
+        //   value: transferAmount,
+        // });
       } catch (err) {
         console.error(err);
 
@@ -261,17 +298,22 @@ const TransferDialog = ({
                       >
                         Trading account
                       </SelectItem>
-                      {subAccounts.map((subAccount, index) => (
-                        <SelectItem
-                          disabled={
-                            selectedTradingAccountTo === subAccount.address
-                          }
-                          value={subAccount.address}
-                          key={subAccount.address}
-                        >
-                          {`Subaccount ${index + 1}`}
-                        </SelectItem>
-                      ))}
+                      {zkAccounts.map((subAccount, index) => {
+                        if (index === ZK_ACCOUNT_INDEX.MAIN) {
+                          return null;
+                        }
+                        return (
+                          <SelectItem
+                            disabled={
+                              selectedTradingAccountTo === subAccount.address
+                            }
+                            value={subAccount.address}
+                            key={subAccount.address}
+                          >
+                            {`Subaccount ${index}`}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -341,17 +383,20 @@ const TransferDialog = ({
                         Trading account
                       </SelectItem>
 
-                      {subAccounts.map((subAccount, index) => (
-                        <SelectItem
-                          disabled={
-                            selectedTradingAccountFrom === subAccount.address
-                          }
-                          value={subAccount.address}
-                          key={subAccount.address}
-                        >
-                          {`Subaccount ${index + 1}`}
-                        </SelectItem>
-                      ))}
+                      {zkAccounts.map((subAccount, index) => {
+                        if (index === ZK_ACCOUNT_INDEX.MAIN) return null;
+                        return (
+                          <SelectItem
+                            disabled={
+                              selectedTradingAccountFrom === subAccount.address
+                            }
+                            value={subAccount.address}
+                            key={subAccount.address}
+                          >
+                            {`Subaccount ${index}`}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

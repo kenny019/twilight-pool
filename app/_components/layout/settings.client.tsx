@@ -16,7 +16,7 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from "@/components/dropdown";
-import { ThemeColors, useTwilight } from "@/lib/providers/singleton";
+import { ThemeColors, useTwilight } from "@/lib/providers/twilight";
 import cn from "@/lib/cn";
 import { useTheme } from "next-themes";
 

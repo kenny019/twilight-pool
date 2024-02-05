@@ -30,8 +30,8 @@ dependencies:
     specifier: ^2.5.0
     version: 2.5.0(@cosmjs/amino@0.31.1)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)(react-dom@18.2.0)(react@18.2.0)
   '@kenny019/zkos-wasm':
-    specifier: ^0.2.13
-    version: 0.2.13
+    specifier: ^0.2.14
+    version: 0.2.14
   '@next/font':
     specifier: ^13.5.4
     version: 13.5.4
@@ -98,6 +98,9 @@ dependencies:
   eslint-config-next:
     specifier: 13.4.16
     version: 13.4.16(eslint@8.47.0)(typescript@5.1.6)
+  immer:
+    specifier: ^10.0.3
+    version: 10.0.3
   lightweight-charts:
     specifier: ^4.1.1
     version: 4.1.1
@@ -140,6 +143,9 @@ dependencies:
   zod:
     specifier: ^3.22.4
     version: 3.22.4
+  zustand:
+    specifier: ^4.5.0
+    version: 4.5.0(@types/react@18.2.20)(immer@10.0.3)(react@18.2.0)
 
 devDependencies:
   '@chain-registry/types':
@@ -731,8 +737,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kenny019/zkos-wasm@0.2.13:
-    resolution: {integrity: sha512-VcV7lTD3vBOFRwV8NnvQsj94Ul90V6O4o8U6ojOVtfmcfmuvDOw4lpqyzhc7dDeJujAITdDmtaTp4ka8E5BHZw==}
+  /@kenny019/zkos-wasm@0.2.14:
+    resolution: {integrity: sha512-3J2S6rAtQbZcG/AopoCYNTATtBsamw/PfDDR7XKeALbYGrTjI1gi2Fm5umtrsRgOSRH9FiN8o+Bbs9p+s0c7ng==}
     dev: false
 
   /@keplr-wallet/common@0.12.28:
@@ -3211,6 +3217,10 @@ packages:
     engines: {node: '>= 4'}
     dev: false
 
+  /immer@10.0.3:
+    resolution: {integrity: sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==}
+    dev: false
+
   /import-fresh@3.3.0:
     resolution: {integrity: sha512-veYYhQa+D1QBKznvhUHxb8faxlrwUnxseDAbAp457E0wLNio2bOSKnjYDhMj+YiAq61xrMGhQk9iXVk5FzgQMw==}
     engines: {node: '>=6'}
@@ -4783,6 +4793,14 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /use-sync-external-store@1.2.0(react@18.2.0):
+    resolution: {integrity: sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 18.2.0
+    dev: false
+
   /util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
@@ -4908,4 +4926,25 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false
+
+  /zustand@4.5.0(@types/react@18.2.20)(immer@10.0.3)(react@18.2.0):
+    resolution: {integrity: sha512-zlVFqS5TQ21nwijjhJlx4f9iGrXSL0o/+Dpy4txAP22miJ8Ti6c1Ol1RLNN98BMib83lmDH/2KmLwaNXpjrO1A==}
+    engines: {node: '>=12.7.0'}
+    peerDependencies:
+      '@types/react': '>=16.8'
+      immer: '>=9.0.6'
+      react: '>=16.8'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+    dependencies:
+      '@types/react': 18.2.20
+      immer: 10.0.3
+      react: 18.2.0
+      use-sync-external-store: 1.2.0(react@18.2.0)
     dev: false

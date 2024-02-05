@@ -4,17 +4,19 @@ import React, { useRef } from "react";
 import { useSubaccountDialog } from "../subaccount-modal.client";
 import { Text } from "@/components/typography";
 import { Input } from "@/components/input";
-import { useSubaccount } from "@/lib/providers/subaccounts";
 import Button from "@/components/button";
-import { useTwilight } from "@/lib/providers/singleton";
+import { useTwilight } from "@/lib/providers/twilight";
 import { z } from "zod";
-import { createSubaccount } from "@/lib/twilight/chain";
 import { useWallet } from "@cosmos-kit/react-lite";
+import { createZkAccount } from "@/lib/twilight/zk";
+import { useAccountStore } from "@/lib/state/store";
 
 const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();
 
-  const { subAccounts, addSubaccount } = useSubaccount();
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+
+  const addZkAccount = useAccountStore((state) => state.zk.addZkAccount);
 
   const { mainWallet } = useWallet();
   const { quisPrivateKey } = useTwilight();
@@ -50,15 +52,17 @@ const SubaccountCreateView = () => {
       return;
     }
 
-    const subaccountAddress = await createSubaccount(quisPrivateKey);
-
-    const newSubaccount = {
+    const newZkAccount = await createZkAccount({
       tag: subaccountTag,
-      address: subaccountAddress,
-      value: 0,
-    };
+      signature: quisPrivateKey,
+    });
 
-    addSubaccount(twilightAddress, newSubaccount);
+    addZkAccount({
+      ...newZkAccount,
+      isOnChain: false,
+      value: 0,
+    });
+
     setView("list");
 
     // todo: add toast
@@ -84,8 +88,8 @@ const SubaccountCreateView = () => {
           </Text>
           <Input
             id="subaccount-tag-input"
-            placeholder={`Subaccount ${subAccounts.length + 1}`}
-            defaultValue={`Subaccount ${subAccounts.length + 1}`}
+            placeholder={`Subaccount ${zkAccounts.length}`}
+            defaultValue={`Subaccount ${zkAccounts.length}`}
             ref={subaccountTagRef}
             value={subaccountTagRef.current?.value}
           />

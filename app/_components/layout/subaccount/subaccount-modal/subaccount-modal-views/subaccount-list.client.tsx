@@ -3,28 +3,31 @@ import { DialogTitle } from "@/components/dialog";
 import { Separator } from "@/components/seperator";
 import { Text } from "@/components/typography";
 import cn from "@/lib/cn";
-import { useTwilight } from "@/lib/providers/singleton";
-import { useSubaccount } from "@/lib/providers/subaccounts";
-import { SubaccountStruct } from "@/lib/types";
 import React from "react";
 import { useSubaccountDialog } from "../subaccount-modal.client";
 import { Plus } from "lucide-react";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
+import { ZkAccount } from "@/lib/types";
+import { useAccountStore } from "@/lib/state/store";
+import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 
 type AccountRowProps = {
-  account: SubaccountStruct;
+  account: ZkAccount;
   accountIndex: number;
   className?: string;
 };
 
 const SubaccountListView = () => {
-  const { subAccounts, selectedSubaccount, setSelectedSubaccount } =
-    useSubaccount();
-
-  const { mainTradingAccount } = useTwilight();
-
   const { setView } = useSubaccountDialog();
+
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const selectedZkAccount = useAccountStore(
+    (state) => state.zk.selectedZkAccount
+  );
+  const updateSelectedZkAccount = useAccountStore(
+    (state) => state.zk.updateSelectedZkccount
+  );
 
   function AccountRow({ accountIndex, account, className }: AccountRowProps) {
     const subAccountBTCValue = new BTC("sats", Big(account.value || 0))
@@ -52,7 +55,7 @@ const SubaccountListView = () => {
               onClick={(e) => {
                 e.preventDefault();
                 // todo: add toast
-                setSelectedSubaccount(accountIndex);
+                updateSelectedZkAccount(accountIndex);
               }}
             >
               Select
@@ -70,14 +73,12 @@ const SubaccountListView = () => {
         <div className="space-y-1">
           <AccountRow
             className={cn(
-              selectedSubaccount === -2 ? "border-theme" : "border-outline"
+              selectedZkAccount === ZK_ACCOUNT_INDEX.MAIN
+                ? "border-theme"
+                : "border-outline"
             )}
-            account={{
-              address: mainTradingAccount?.address || "",
-              value: mainTradingAccount?.value || 0,
-              tag: "Trading Account",
-            }}
-            accountIndex={-2}
+            account={zkAccounts[0]}
+            accountIndex={ZK_ACCOUNT_INDEX.MAIN}
           />
         </div>
         <div className="space-y-2">
@@ -103,17 +104,24 @@ const SubaccountListView = () => {
         </div>
         <div className="flex w-full flex-col space-y-2">
           {/* todo: add pagination */}
-          {subAccounts.map((subAccount, index) => (
-            // todo: change.tag to actual address
-            <AccountRow
-              className={cn(
-                selectedSubaccount === index ? "border-theme" : "border-outline"
-              )}
-              key={subAccount.tag}
-              accountIndex={index}
-              account={subAccount}
-            />
-          ))}
+          {zkAccounts.map((subAccount, index) => {
+            if (index === ZK_ACCOUNT_INDEX.MAIN) {
+              return null;
+            }
+
+            return (
+              <AccountRow
+                className={cn(
+                  selectedZkAccount === index
+                    ? "border-theme"
+                    : "border-outline"
+                )}
+                key={subAccount.tag}
+                accountIndex={index}
+                account={subAccount}
+              />
+            );
+          })}
         </div>
       </div>
     </>
