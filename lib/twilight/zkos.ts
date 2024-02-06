@@ -82,6 +82,59 @@ async function decryptZKAccountHexValue({
   return zkos.decryptZkAccountValue(signature, zkAccountHex);
 }
 
+async function createInputCoinFromOutput({
+  outputString,
+  utxoString,
+}: {
+  outputString: string;
+  utxoString: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.createInputCoinFromOutput(outputString, utxoString);
+}
+
+async function createTraderOrder({
+  inputString,
+  scriptAddress,
+  signature,
+  scalar,
+  value,
+  positionType,
+  orderType,
+  leverage,
+  entryPrice,
+  timebounds,
+}: {
+  inputString: string;
+  scriptAddress: string;
+  signature: string;
+  scalar: string;
+  value: number;
+  positionType: "LONG" | "SHORT";
+  orderType: "LIMIT" | "MARKET" | "DARK" | "LEND";
+  leverage: number;
+  entryPrice?: number;
+  timebounds: number;
+}) {
+  if (orderType === "LIMIT" && !entryPrice) {
+    return "";
+  }
+
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.createZkOSTraderOrder(
+    inputString,
+    scriptAddress,
+    signature,
+    scalar,
+    BigInt(value),
+    positionType,
+    orderType,
+    leverage,
+    entryPrice || 0,
+    timebounds
+  );
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
@@ -89,9 +142,10 @@ export {
   generateRandomScalar,
   generateTradingAccountAddress,
   generateTradingAccount,
-  // generateTradingAccountWithBalance,
   getTradingAddressFromTradingAccount,
   getZKAccountHexFromOutputString,
   utxoStringToHex,
+  createInputCoinFromOutput,
   decryptZKAccountHexValue,
+  createTraderOrder,
 };

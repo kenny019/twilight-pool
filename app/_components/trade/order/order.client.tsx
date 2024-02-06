@@ -15,7 +15,6 @@ import {
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useGrid } from "@/lib/providers/grid";
 import cn from "@/lib/cn";
-import ExchangeResource from "@/components/exchange-resource";
 import OrderLimitForm from "./forms/limit.client";
 
 type OrderTabs = "limit" | "market";

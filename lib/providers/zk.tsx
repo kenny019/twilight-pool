@@ -24,6 +24,8 @@ export const ZkAccountProvider: React.FC<ZkAccountsProviderProps> = (props) => {
 const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
   const store = useRef<zkStore>(useAccountStore().zk).current;
 
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+
   const { quisPrivateKey } = useTwilight();
 
   const { status } = useWallet();
@@ -33,7 +35,7 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
       if (
         status !== WalletStatus.Connected ||
         !quisPrivateKey ||
-        store.zkAccounts.length > 0
+        zkAccounts.filter((account) => account.tag === "main")
       ) {
         return;
       }
@@ -44,7 +46,7 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
           signature: quisPrivateKey,
         });
 
-        store.addZkAccount(account);
+        store.addZkAccount({ ...account, value: 0, isOnChain: false });
 
         console.log("Account", account);
       }

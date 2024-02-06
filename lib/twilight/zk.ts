@@ -1,4 +1,4 @@
-import { ZkAccount } from "../types";
+import { OrderTypes, PositionTypes, ZkAccount } from "../types";
 import {
   decryptZKAccountHexValue,
   generatePublicKey,
@@ -6,6 +6,8 @@ import {
   getZKAccountHexFromOutputString,
   utxoStringToHex,
   generateRandomScalar,
+  createInputCoinFromOutput,
+  createTraderOrder,
 } from "./zkos";
 import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
 
@@ -33,25 +35,15 @@ async function createZkAccount({
   };
 }
 
-async function getZkAccountBalance({
+async function getOutputFromZkAddress({
   zkAccountAddress,
-  signature,
 }: {
   zkAccountAddress: string;
-  signature: string;
-}): Promise<{
-  value: number;
-  isOnChain: boolean;
-}> {
+}) {
   const utxoData = await queryUtxoForAddress(zkAccountAddress);
 
-  console.log("utxoData", utxoData);
-
   if (!Object.hasOwn(utxoData, "output_index")) {
-    return {
-      isOnChain: false,
-      value: 0,
-    };
+    return {};
   }
 
   const utxoString = JSON.stringify(utxoData);
@@ -62,14 +54,27 @@ async function getZkAccountBalance({
 
   const output = await queryUtxoForOutput(utxoHex);
 
+  return output;
+}
+
+async function getZkAccountBalance({
+  zkAccountAddress,
+  signature,
+}: {
+  zkAccountAddress: string;
+  signature: string;
+}): Promise<{
+  value: number;
+  isOnChain: boolean;
+}> {
+  const output = getOutputFromZkAddress({ zkAccountAddress });
+
   if (!Object.hasOwn(output, "out_type")) {
     return {
       isOnChain: false,
       value: 0,
     };
   }
-
-  console.log("output", output);
 
   const outputString = JSON.stringify(output);
 
@@ -89,4 +94,71 @@ async function getZkAccountBalance({
   };
 }
 
-export { createZkAccount, getZkAccountBalance };
+async function createZkOrder({
+  zkAccount,
+  signature,
+  value,
+  positionType,
+  orderType,
+  leverage,
+  entryPrice,
+  timebounds,
+}: {
+  zkAccount: ZkAccount;
+  signature: string;
+  value: number;
+  positionType: PositionTypes;
+  orderType: OrderTypes;
+  leverage: number;
+  entryPrice?: number;
+  timebounds: number;
+}) {
+  const zkAccountAddress = zkAccount.address;
+  const scalar = zkAccount.scalar;
+
+  const utxoData = await queryUtxoForAddress(zkAccountAddress);
+
+  if (!Object.hasOwn(utxoData, "output_index")) {
+    return {
+      success: false,
+    };
+  }
+
+  const utxoString = JSON.stringify(utxoData);
+
+  const utxoHex = await utxoStringToHex({
+    utxoString,
+  });
+
+  const output = await queryUtxoForOutput(utxoHex);
+
+  if (!Object.hasOwn(output, "out_type")) {
+    return {
+      success: false,
+    };
+  }
+
+  const outputString = JSON.stringify(output);
+
+  const inputString = await createInputCoinFromOutput({
+    outputString,
+    utxoString,
+  });
+
+  const orderString = await createTraderOrder({
+    inputString,
+    scriptAddress: "18f2ebda173ffc6ad2e3b4d3a3864a96ae8a6f7e30",
+    signature,
+    scalar,
+    value,
+    positionType,
+    orderType,
+    leverage,
+    entryPrice,
+    timebounds,
+  });
+
+  return orderString;
+}
+
+export { createZkAccount, getZkAccountBalance, createZkOrder };

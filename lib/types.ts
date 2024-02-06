@@ -22,3 +22,6 @@ export type twilightRegistedBtcAddressStruct = {
 };
 
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
+
+export type PositionTypes = "LONG" | "SHORT";
+export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";
