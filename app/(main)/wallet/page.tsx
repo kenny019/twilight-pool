@@ -6,6 +6,7 @@ import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useTwilight } from "@/lib/providers/twilight";
@@ -15,12 +16,9 @@ import { ZkAccount } from "@/lib/types";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const Page = () => {
-  const { status, mainWallet } = useWallet();
-
   const { quisPrivateKey } = useTwilight();
   const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
 
@@ -30,60 +28,9 @@ const Page = () => {
 
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
 
-  const router = useRouter();
-
-  // todo: store all twilight values in a provider
-  const [twilightSatsBalance, setTwilightSatsBalance] = useState<number>(0);
   const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
 
   const { currentPrice } = usePriceFeed();
-
-  function useGetTwilightBTCBalance() {
-    useEffect(() => {
-      if (status !== "Connected") return;
-
-      async function fetchData() {
-        const chainWallet = mainWallet?.getChainWallet("nyks");
-
-        if (!chainWallet) {
-          console.error("no chainWallet");
-          return;
-        }
-
-        const twilightAddress = chainWallet.address;
-
-        if (!twilightAddress) {
-          console.error("no twilightAddress");
-          return;
-        }
-
-        try {
-          const stargateClient = await chainWallet.getSigningStargateClient();
-          const satsBalance = await stargateClient.getBalance(
-            twilightAddress,
-            "sats"
-          );
-
-          const { amount } = satsBalance;
-
-          console.log("rawSatsBal", amount);
-
-          const btcBalance = new BTC("sats", Big(amount));
-
-          setTwilightSatsBalance(btcBalance.value.toNumber());
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      fetchData();
-      const intervalId = setInterval(async () => {
-        await fetchData();
-      }, 15000);
-
-      return () => clearInterval(intervalId);
-    }, [status]);
-  }
 
   // note: incomplete
   function useGetTradingBTCBalance() {
@@ -101,12 +48,10 @@ const Page = () => {
   }
 
   useRedirectUnconnected();
-  useGetTwilightBTCBalance();
+  const { twilightSats } = useGetTwilightBTCBalance();
   useGetTradingBTCBalance();
 
-  const totalSatsBalance = Big(twilightSatsBalance || 0).plus(
-    totalTradingSatsBalance || 0
-  );
+  const totalSatsBalance = Big(twilightSats).plus(totalTradingSatsBalance || 0);
 
   const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
     .convert("BTC")
@@ -116,7 +61,7 @@ const Page = () => {
     .mul(currentPrice)
     .toFixed(2);
 
-  const twilightBTCBalanceString = new BTC("sats", Big(twilightSatsBalance))
+  const twilightBTCBalanceString = new BTC("sats", Big(twilightSats))
     .convert("BTC")
     .toFixed(8);
 
@@ -150,7 +95,7 @@ const Page = () => {
               <Text>Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={!!twilightSatsBalance}
+                  isLoaded={!!twilightSats}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
@@ -167,22 +112,14 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                <Button
-                  variant="ui"
-                  size="icon"
-                  disabled={twilightSatsBalance < 1}
-                >
+                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="funding"
                 >
-                  <Button
-                    disabled={twilightSatsBalance < 1}
-                    variant="ui"
-                    size="icon"
-                  >
+                  <Button disabled={twilightSats < 1} variant="ui" size="icon">
                     <ArrowLeftRight className="h-4 w-4" />
                   </Button>
                 </TransferDialog>
@@ -202,11 +139,7 @@ const Page = () => {
                 <Skeleton className="mt-1 h-4 w-[80px]" />
               </div>
               <div className="flex flex-row space-x-2">
-                <Button
-                  variant="ui"
-                  size="icon"
-                  disabled={twilightSatsBalance < 1}
-                >
+                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
 
@@ -214,11 +147,7 @@ const Page = () => {
                   tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="trading"
                 >
-                  <Button
-                    disabled={twilightSatsBalance < 1}
-                    variant="ui"
-                    size="icon"
-                  >
+                  <Button disabled={twilightSats < 1} variant="ui" size="icon">
                     <ArrowLeftRight className="h-4 w-4" />
                   </Button>
                 </TransferDialog>
