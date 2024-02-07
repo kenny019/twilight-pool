@@ -15,7 +15,6 @@ const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();
 
   const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
-
   const addZkAccount = useAccountStore((state) => state.zk.addZkAccount);
 
   const { mainWallet } = useWallet();

@@ -6,8 +6,8 @@ import { createZkAccountSlice } from "./slices/accounts";
 
 export const useAccountStore = create<AccountSlices>()(
   persist(
-    immer((set, get, store) => ({
-      zk: createZkAccountSlice(set, get, store),
+    immer((...actions) => ({
+      zk: createZkAccountSlice(...actions),
     })),
     {
       name: "twilight-",

@@ -25,6 +25,7 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
   const store = useRef<zkStore>(useAccountStore().zk).current;
 
   const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const addZkAccount = useAccountStore((state) => state.zk.addZkAccount);
 
   const { quisPrivateKey } = useTwilight();
 
@@ -32,11 +33,10 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
 
   function useInitializeMainZkAccount() {
     useEffect(() => {
-      if (
-        status !== WalletStatus.Connected ||
-        !quisPrivateKey ||
-        zkAccounts.filter((account) => account.tag === "main")
-      ) {
+      const shouldInit =
+        zkAccounts.filter((account) => account.tag === "main").length > 0;
+
+      if (status !== WalletStatus.Connected || !quisPrivateKey || shouldInit) {
         return;
       }
 
@@ -46,7 +46,8 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
           signature: quisPrivateKey,
         });
 
-        store.addZkAccount({ ...account, value: 0, isOnChain: false });
+        console.log("store", store);
+        addZkAccount({ ...account, value: 0, isOnChain: false });
 
         console.log("Account", account);
       }
