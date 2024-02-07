@@ -10,8 +10,8 @@ import SubaccountSelect from "./subaccount/subaccount-select.client";
 
 const marketSubLinks = [
   {
-    href: "/exchange",
-    title: "Exchange",
+    href: "/lend",
+    title: "Lend",
   },
   {
     href: "/wallet",

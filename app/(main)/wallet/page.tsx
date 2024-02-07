@@ -13,13 +13,13 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { useAccountStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
-import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 const Page = () => {
   const { quisPrivateKey } = useTwilight();
+
   const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
 
   const tradingAccount = zkAccounts[ZK_ACCOUNT_INDEX.MAIN] as
@@ -47,8 +47,9 @@ const Page = () => {
     }, [quisPrivateKey]);
   }
 
-  useRedirectUnconnected();
   const { twilightSats } = useGetTwilightBTCBalance();
+
+  useRedirectUnconnected();
   useGetTradingBTCBalance();
 
   const totalSatsBalance = Big(twilightSats).plus(totalTradingSatsBalance || 0);
