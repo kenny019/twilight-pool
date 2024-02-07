@@ -6,6 +6,7 @@ import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
+import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useTwilight } from "@/lib/providers/twilight";
 import { useAccountStore } from "@/lib/state/store";
@@ -36,22 +37,6 @@ const Page = () => {
   const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
 
   const { currentPrice } = usePriceFeed();
-
-  function useRedirectUnconnected() {
-    useEffect(() => {
-      if (status !== "Disconnected") {
-        return;
-      }
-
-      const redirectTimeout = setTimeout(() => {
-        console.log(status);
-
-        router.replace("/");
-      }, 500);
-
-      return () => clearTimeout(redirectTimeout);
-    }, [status]);
-  }
 
   function useGetTwilightBTCBalance() {
     useEffect(() => {
