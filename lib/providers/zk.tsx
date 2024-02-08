@@ -62,14 +62,14 @@ const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
         status === "Connected" &&
         store.selectedZkAccount === ZK_ACCOUNT_INDEX.DISCONNECTED
       ) {
-        store.updateSelectedZkccount(ZK_ACCOUNT_INDEX.MAIN);
+        store.updateSelectedZkAccount(ZK_ACCOUNT_INDEX.MAIN);
       }
 
       if (
         status === "Disconnected" &&
         store.selectedZkAccount > ZK_ACCOUNT_INDEX.DISCONNECTED
       ) {
-        store.updateSelectedZkccount(ZK_ACCOUNT_INDEX.DISCONNECTED);
+        store.updateSelectedZkAccount(ZK_ACCOUNT_INDEX.DISCONNECTED);
       }
     }, [status]);
   }

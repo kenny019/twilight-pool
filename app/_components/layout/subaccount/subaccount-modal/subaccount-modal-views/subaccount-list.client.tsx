@@ -25,9 +25,9 @@ const SubaccountListView = () => {
   const selectedZkAccount = useAccountStore(
     (state) => state.zk.selectedZkAccount
   );
-  const updateSelectedZkAccount = useAccountStore(
-    (state) => state.zk.updateSelectedZkccount
-  );
+
+  const updateSelectedZkAccount =
+    useAccountStore.getState().zk.updateSelectedZkAccount;
 
   function AccountRow({ accountIndex, account, className }: AccountRowProps) {
     const subAccountBTCValue = new BTC("sats", Big(account.value || 0))

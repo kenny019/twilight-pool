@@ -4,9 +4,9 @@ import { immer } from "zustand/middleware/immer";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { createZkAccountSlice } from "./slices/accounts";
 
-export const useAccountStore = create<AccountSlices>()(
+export const useAccountStore = create(
   persist(
-    immer((...actions) => ({
+    immer<AccountSlices>((...actions) => ({
       zk: createZkAccountSlice(...actions),
     })),
     {

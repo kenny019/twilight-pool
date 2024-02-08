@@ -34,7 +34,6 @@ import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
 import { setLocalTradingAccount } from "@/lib/twilight/chain";
-import { queryUtxoForAddress, queryUtxoForOutput } from "@/lib/api/zkos";
 import { ZkAccount } from "@/lib/types";
 import { useAccountStore } from "@/lib/state/store";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
@@ -55,6 +54,14 @@ const TransferDialog = ({
   const { mainWallet } = useWallet();
 
   const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+
+  const updateZkAccount = useAccountStore.getState().zk.updateZkAccount;
+
+  const selectedZkAccountIndex = useAccountStore(
+    (state) => state.zk.selectedZkAccount
+  );
+
+  const selectedZkAccount = zkAccounts[selectedZkAccountIndex];
 
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
@@ -165,7 +172,7 @@ const TransferDialog = ({
         const msg = mintBurnTradingBtc({
           btcValue: Long.fromNumber(transferAmount),
           encryptScalar: scalar,
-          mintOrBurn: false,
+          mintOrBurn: true,
           qqAccount: newTradingAccount,
           twilightAddress,
         });
@@ -173,7 +180,7 @@ const TransferDialog = ({
         console.log("params", {
           btcValue: Long.fromNumber(transferAmount),
           encryptScalar: scalar,
-          mintOrBurn: false,
+          mintOrBurn: true,
           qqAccount: newTradingAccount,
           twilightAddress,
         });
@@ -200,19 +207,21 @@ const TransferDialog = ({
 
         setIsSubmitLoading(false);
 
-        // updateTransferredAccount({
-        //   scalar,
-        //   address: newTradingAccountAddress,
-        //   isOnChain: true,
-        //   tag:
-        //     selectedTradingAccountTo === tradingAccountAddress
-        //       ? "main"
-        //       : subAccounts.filter(
-        //           (subAccount) =>
-        //             subAccount.address === selectedTradingAccountTo
-        //         )[0].tag,
-        //   value: transferAmount,
-        // });
+        console.log("updated zkaccount data", {
+          tag: selectedZkAccount.tag,
+          address: newTradingAccountAddress,
+          scalar,
+          isOnChain: true,
+          value: (selectedZkAccount.value || 0) + transferAmount,
+        });
+
+        updateZkAccount(selectedZkAccount.address, {
+          tag: selectedZkAccount.tag,
+          address: newTradingAccountAddress,
+          scalar,
+          isOnChain: true,
+          value: (selectedZkAccount.value || 0) + transferAmount,
+        });
       } catch (err) {
         console.error(err);
 

@@ -32,19 +32,17 @@ function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
 const SubaccountSelect = () => {
   const [openSubaccountModal, setOpenSubaccountModal] = useState(false);
 
+  const updateSelectedZkAccount =
+    useAccountStore.getState().zk.updateSelectedZkAccount;
+
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
   const { status } = useWallet();
 
   const { hasRegisteredBTC, hasConfirmedBTC } = useTwilight();
 
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
-
   const selectedZkAccount =
     useAccountStore((state) => state.zk.selectedZkAccount) ||
     ZK_ACCOUNT_INDEX.MAIN;
-
-  const updateSelectedZkAccount = useAccountStore(
-    (state) => state.zk.updateSelectedZkccount
-  );
 
   if (!hasRegisteredBTC || !hasConfirmedBTC) {
     return (
