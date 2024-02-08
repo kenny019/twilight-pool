@@ -158,7 +158,10 @@ async function createZkOrder({
     timebounds,
   });
 
-  return orderString;
+  return {
+    success: true,
+    msg: orderString,
+  };
 }
 
 export { createZkAccount, getZkAccountBalance, createZkOrder };

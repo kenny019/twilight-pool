@@ -10,8 +10,12 @@ import {
 import ExchangeResource from "@/components/exchange-resource";
 import { Input, NumberInput } from "@/components/input";
 import { Text } from "@/components/typography";
+import { sendTradeOrder } from "@/lib/api/relayer";
 import cn from "@/lib/cn";
 import { useGrid } from "@/lib/providers/grid";
+import { useTwilight } from "@/lib/providers/twilight";
+import { useAccountStore } from "@/lib/state/store";
+import { createZkOrder } from "@/lib/twilight/zk";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { ChevronDown } from "lucide-react";
 import React from "react";
@@ -19,7 +23,15 @@ import React from "react";
 const OrderLimitForm = () => {
   const { width } = useGrid();
 
+  const { quisPrivateKey } = useTwilight();
   const { status } = useWallet();
+
+  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const selectedZkAccountIndex = useAccountStore(
+    (state) => state.zk.selectedZkAccount
+  );
+  const currentZkAccount = zkAccounts[selectedZkAccountIndex];
+
   return (
     <form
       onSubmit={(e) => e.preventDefault()}
@@ -91,6 +103,25 @@ const OrderLimitForm = () => {
             <Button
               className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100"
               variant="ui"
+              onClick={async () => {
+                const { success, msg } = await createZkOrder({
+                  zkAccount: currentZkAccount,
+                  signature: quisPrivateKey,
+                  value: 100,
+                  positionType: "LONG",
+                  leverage: 1,
+                  orderType: "MARKET",
+                  timebounds: 0,
+                  entryPrice: 0,
+                });
+
+                if (!success || !msg)
+                  return console.error("error creating zk order");
+
+                console.log("txString", msg);
+                const data = await sendTradeOrder(msg);
+                console.log(data);
+              }}
             >
               Buy
             </Button>
