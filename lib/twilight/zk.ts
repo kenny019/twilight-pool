@@ -8,6 +8,8 @@ import {
   generateRandomScalar,
   createInputCoinFromOutput,
   createTraderOrder,
+  generateTradingAccount,
+  getTradingAddressFromTradingAccount,
 } from "./zkos";
 import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
 
@@ -32,6 +34,46 @@ async function createZkAccount({
     address: zkAccountAddress,
     scalar,
     tag,
+  };
+}
+
+async function createZkAccountWithBalance({
+  tag,
+  signature,
+  balance,
+}: {
+  tag: string;
+  signature: string;
+  balance: number;
+}): Promise<{
+  account: ZkAccount;
+  accountHex: string;
+}> {
+  const publicKeyHex = await generatePublicKey({
+    signature,
+  });
+
+  const scalar = await generateRandomScalar();
+
+  const newTradingAccountHex = await generateTradingAccount({
+    publicKeyHex,
+    balance,
+    scalar,
+  });
+
+  const address = await getTradingAddressFromTradingAccount({
+    tradingAccountAddress: newTradingAccountHex,
+  });
+
+  return {
+    account: {
+      address,
+      scalar,
+      tag,
+      isOnChain: false,
+      value: balance,
+    },
+    accountHex: newTradingAccountHex,
   };
 }
 
@@ -164,4 +206,9 @@ async function createZkOrder({
   };
 }
 
-export { createZkAccount, getZkAccountBalance, createZkOrder };
+export {
+  createZkAccount,
+  getZkAccountBalance,
+  createZkOrder,
+  createZkAccountWithBalance,
+};

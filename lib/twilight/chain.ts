@@ -46,19 +46,6 @@ function getLocalTradingAccount(twilightAddress: string): Partial<ZkAccount> {
   }
 }
 
-function setLocalTradingAccount(twilightAddress: string, data: ZkAccount) {
-  try {
-    window.localStorage.setItem(
-      `twilight-trading-${twilightAddress}`,
-      JSON.stringify(data)
-    );
-
-    console.log("updated trading account");
-  } catch (err) {
-    console.error(err);
-  }
-}
-
 type UtxoFromDBResponse = {
   result: {
     result: string;
@@ -97,9 +84,4 @@ async function getUtxosFromDB() {
   return data;
 }
 
-export {
-  generateSignMessage,
-  getLocalTradingAccount,
-  setLocalTradingAccount,
-  getUtxosFromDB,
-};
+export { generateSignMessage, getLocalTradingAccount, getUtxosFromDB };

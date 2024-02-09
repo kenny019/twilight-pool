@@ -22,7 +22,6 @@ import {
   generateRandomScalar,
   generateTradingAccount,
   getTradingAddressFromTradingAccount,
-  utxoStringToHex,
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -33,10 +32,11 @@ import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
-import { setLocalTradingAccount } from "@/lib/twilight/chain";
 import { ZkAccount } from "@/lib/types";
 import { useAccountStore } from "@/lib/state/store";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
+import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
+import { createZkAccountWithBalance } from "@/lib/twilight/zk";
 
 type Props = {
   children: React.ReactNode;
@@ -106,8 +106,6 @@ const TransferDialog = ({
         // const output = await queryUtxoForOutput(utxoHex);
 
         // if (!output.out_type) return;
-
-        setLocalTradingAccount(twilightAddress, newAccountData);
       }
       default: {
       }
@@ -136,12 +134,6 @@ const TransferDialog = ({
 
       try {
         setIsSubmitLoading(true);
-        const scalar = await generateRandomScalar();
-
-        const publicKeyHex = await generatePublicKey({
-          signature: quisPrivateKey,
-        });
-
         const transferAmount = new BTC(
           depositDenom as BTCDenoms,
           Big(depositRef.current.value)
@@ -149,43 +141,24 @@ const TransferDialog = ({
           .convert("sats")
           .toNumber();
 
-        const newTradingAccount = await generateTradingAccount({
-          publicKeyHex,
-          // todo: add with destination balance amount
-          balance: transferAmount,
-          scalar,
-        });
-
-        const newTradingAccountAddress =
-          await getTradingAddressFromTradingAccount({
-            tradingAccountAddress: newTradingAccount,
-          });
-
-        console.log("newTradingAccount", newTradingAccount);
-        console.log("newTradingAccountAddress", newTradingAccountAddress);
-
         const stargateClient = await chainWallet.getSigningStargateClient();
 
-        const { mintBurnTradingBtc } =
-          twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
+        const { account: newTradingAccount, accountHex: newTradingAccountHex } =
+          await createZkAccountWithBalance({
+            tag: selectedZkAccount.tag,
+            balance: transferAmount,
+            signature: quisPrivateKey,
+          });
 
-        const msg = mintBurnTradingBtc({
-          btcValue: Long.fromNumber(transferAmount),
-          encryptScalar: scalar,
-          mintOrBurn: true,
-          qqAccount: newTradingAccount,
+        const msg = await createFundingToTradingTransferMsg({
           twilightAddress,
+          signature: quisPrivateKey,
+          transferAmount,
+          account: newTradingAccount,
+          accountHex: newTradingAccountHex,
         });
 
-        console.log("params", {
-          btcValue: Long.fromNumber(transferAmount),
-          encryptScalar: scalar,
-          mintOrBurn: true,
-          qqAccount: newTradingAccount,
-          twilightAddress,
-        });
-
-        console.log("msg");
+        console.log("msg", msg);
 
         const gasPrice = GasPrice.fromString("1nyks");
         const gasEstimation = await stargateClient.simulate(
@@ -209,16 +182,16 @@ const TransferDialog = ({
 
         console.log("updated zkaccount data", {
           tag: selectedZkAccount.tag,
-          address: newTradingAccountAddress,
-          scalar,
+          address: newTradingAccount.address,
+          scalar: newTradingAccount.scalar,
           isOnChain: true,
           value: (selectedZkAccount.value || 0) + transferAmount,
         });
 
         updateZkAccount(selectedZkAccount.address, {
           tag: selectedZkAccount.tag,
-          address: newTradingAccountAddress,
-          scalar,
+          address: newTradingAccount.address,
+          scalar: newTradingAccount.scalar,
           isOnChain: true,
           value: (selectedZkAccount.value || 0) + transferAmount,
         });
