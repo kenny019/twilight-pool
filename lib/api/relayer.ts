@@ -48,6 +48,41 @@ async function queryTradeOrder(tradeData: string) {
   return data;
 }
 
+async function cancelTradeOrder({
+  accountId,
+  uuid,
+  orderType,
+  orderStatus,
+}: {
+  accountId: string;
+  uuid: string;
+  orderType: string;
+  orderStatus: string;
+}) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "CancelTraderOrder",
+    params: {
+      account_id: accountId,
+      uuid,
+      order_type: orderType,
+      order_status: orderStatus,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(RELAYER_URL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+    return {};
+  }
+
+  return data;
+}
+
 async function queryLendOrder(lendData: string) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
@@ -70,4 +105,4 @@ async function queryLendOrder(lendData: string) {
   return data;
 }
 
-export { sendTradeOrder, queryLendOrder, queryTradeOrder };
+export { sendTradeOrder, queryLendOrder, queryTradeOrder, cancelTradeOrder };
