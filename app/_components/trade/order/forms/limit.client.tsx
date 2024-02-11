@@ -10,7 +10,7 @@ import {
 import ExchangeResource from "@/components/exchange-resource";
 import { Input, NumberInput } from "@/components/input";
 import { Text } from "@/components/typography";
-import { sendTradeOrder } from "@/lib/api/relayer";
+import { sendTradeOrder } from "@/lib/api/client";
 import cn from "@/lib/cn";
 import { useGrid } from "@/lib/providers/grid";
 import { useTwilight } from "@/lib/providers/twilight";
