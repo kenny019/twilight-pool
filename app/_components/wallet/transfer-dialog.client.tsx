@@ -18,17 +18,13 @@ import { Text } from "@/components/typography";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import {
-  generatePublicKey,
-  generateRandomScalar,
-  generateTradingAccount,
-  getTradingAddressFromTradingAccount,
+  createInputCoinFromOutput,
+  createTradingTxSingle,
+  utxoStringToHex,
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import React, { useRef, useState } from "react";
-import { twilightproject } from "twilightjs";
-
-import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
@@ -37,6 +33,11 @@ import { useAccountStore } from "@/lib/state/store";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { createZkAccountWithBalance } from "@/lib/twilight/zk";
+import {
+  broadcastTradingTx,
+  queryUtxoForAddress,
+  queryUtxoForOutput,
+} from "@/lib/api/zkos";
 
 type Props = {
   children: React.ReactNode;
@@ -81,8 +82,8 @@ const TransferDialog = ({
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   async function updateTransferredAccount(newAccountData: ZkAccount) {
-    switch (toAccountValue) {
-      case "trading": {
+    switch (fromAccountValue) {
+      case "funding": {
         const chainWallet = mainWallet?.getChainWallet("nyks");
 
         if (!chainWallet) return;
@@ -90,22 +91,6 @@ const TransferDialog = ({
         const twilightAddress = chainWallet.address;
 
         if (!twilightAddress) return;
-
-        // if (selectedTradingAccountFrom !== tradingAccountAddress) return;
-
-        // const utxoData = await queryUtxoForAddress(newAccountData.address);
-
-        // if (!utxoData.output_index) return;
-
-        // const utxoString = JSON.stringify(utxoData);
-
-        // console.log("utxoString", utxoString);
-
-        // const utxoHex = await utxoStringToHex({ utxoString });
-
-        // const output = await queryUtxoForOutput(utxoHex);
-
-        // if (!output.out_type) return;
       }
       default: {
       }
@@ -117,35 +102,45 @@ const TransferDialog = ({
 
     if (!depositRef.current?.value) return; // todo: validation
 
-    // todo: cleanup into seperate function
-    if (fromAccountValue === "funding") {
-      const chainWallet = mainWallet?.getChainWallet("nyks");
+    const chainWallet = mainWallet?.getChainWallet("nyks");
 
-      if (!chainWallet) {
-        console.error("no chainWallet");
-        return;
-      }
+    if (!chainWallet) {
+      console.error("no chainWallet");
+      return;
+    }
 
-      const twilightAddress = chainWallet.address;
-      if (!twilightAddress) {
-        console.error("no twilightAddress");
-        return;
-      }
+    const twilightAddress = chainWallet.address;
+    if (!twilightAddress) {
+      console.error("no twilightAddress");
+      return;
+    }
 
-      try {
-        setIsSubmitLoading(true);
-        const transferAmount = new BTC(
-          depositDenom as BTCDenoms,
-          Big(depositRef.current.value)
-        )
-          .convert("sats")
-          .toNumber();
+    setIsSubmitLoading(true);
+
+    const transferAmount = new BTC(
+      depositDenom as BTCDenoms,
+      Big(depositRef.current.value)
+    )
+      .convert("sats")
+      .toNumber();
+
+    try {
+      // todo: cleanup into seperate function
+      if (fromAccountValue === "funding") {
+        const depositZkAccount = zkAccounts.filter(
+          (account) => account.address === selectedTradingAccountTo
+        )[0];
+
+        if (!depositZkAccount) {
+          console.error("error cant find depositZkAccount", depositZkAccount);
+          return;
+        }
 
         const stargateClient = await chainWallet.getSigningStargateClient();
 
         const { account: newTradingAccount, accountHex: newTradingAccountHex } =
           await createZkAccountWithBalance({
-            tag: selectedZkAccount.tag,
+            tag: depositZkAccount.tag,
             balance: transferAmount,
             signature: quisPrivateKey,
           });
@@ -181,26 +176,94 @@ const TransferDialog = ({
         setIsSubmitLoading(false);
 
         console.log("updated zkaccount data", {
-          tag: selectedZkAccount.tag,
+          tag: newTradingAccount.tag,
           address: newTradingAccount.address,
           scalar: newTradingAccount.scalar,
           isOnChain: true,
-          value: (selectedZkAccount.value || 0) + transferAmount,
+          value: transferAmount,
         });
 
         updateZkAccount(selectedZkAccount.address, {
-          tag: selectedZkAccount.tag,
+          tag: newTradingAccount.tag,
           address: newTradingAccount.address,
           scalar: newTradingAccount.scalar,
           isOnChain: true,
-          value: (selectedZkAccount.value || 0) + transferAmount,
+          value: transferAmount,
         });
-      } catch (err) {
-        console.error(err);
+      } else {
+        const senderZkAccount = zkAccounts.filter(
+          (account) => account.address === selectedTradingAccountFrom
+        )[0];
+
+        const depositZkAccount = zkAccounts.filter(
+          (account) => account.address === selectedTradingAccountTo
+        )[0];
+
+        if (!senderZkAccount || !Object.hasOwn(senderZkAccount, "value")) {
+          console.error("error cant find depositZkAccount", depositZkAccount);
+          return;
+        }
+
+        const utxoData = await queryUtxoForAddress(senderZkAccount.address);
+
+        if (!Object.hasOwn(utxoData, "output_index")) {
+          setIsSubmitLoading(false);
+          console.error("no utxoData");
+          return;
+        }
+
+        const utxoString = JSON.stringify(utxoData);
+
+        const utxoHex = await utxoStringToHex({
+          utxoString,
+        });
+
+        const output = await queryUtxoForOutput(utxoHex);
+
+        if (!Object.hasOwn(output, "out_type")) {
+          setIsSubmitLoading(false);
+          console.error("no Output");
+          return;
+        }
+
+        const outputString = JSON.stringify(output);
+
+        const inputString = await createInputCoinFromOutput({
+          outputString,
+          utxoString,
+        });
+
+        console.log("receiverAddress", depositZkAccount.address);
+
+        const msgStruct = await createTradingTxSingle({
+          signature: quisPrivateKey,
+          senderInput: inputString,
+          receiverAddress: depositZkAccount.address,
+          amount: transferAmount,
+          updatedSenderBalance:
+            (senderZkAccount.value as number) - transferAmount,
+        });
+
+        const { encrypt_scalar_hex, tx } = JSON.parse(msgStruct) as {
+          tx: string;
+          encrypt_scalar_hex: string;
+        };
+
+        const txId = await broadcastTradingTx(tx);
+        console.log("broadcasted", txId);
+
+        updateZkAccount(depositZkAccount.address, {
+          ...depositZkAccount,
+          scalar: encrypt_scalar_hex,
+          value: transferAmount,
+          isOnChain: true,
+        });
 
         setIsSubmitLoading(false);
       }
-    } else {
+    } catch (err) {
+      console.error("err", err);
+      setIsSubmitLoading(false);
     }
   }
 

@@ -82,4 +82,30 @@ async function queryUtxoForOutput(
   return result;
 }
 
-export { queryUtxoForAddress, queryUtxoForOutput };
+async function broadcastTradingTx(
+  txHex: string
+): Promise<Record<string, never> | string> {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "txCommit",
+    params: [txHex],
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(ZK_URL)
+    .post({ body })
+    .json<ZkApiResponse<string>>(); // note: "Coin" constant could possibly be abstracted
+
+  if (!success) {
+    console.error(error);
+    return {};
+  }
+
+  const result = data.result;
+
+  if (typeof result !== "string") return {};
+
+  return result;
+}
+
+export { queryUtxoForAddress, queryUtxoForOutput, broadcastTradingTx };

@@ -161,6 +161,7 @@ async function createZkOrder({
   const utxoData = await queryUtxoForAddress(zkAccountAddress);
 
   if (!Object.hasOwn(utxoData, "output_index")) {
+    console.error("no utxoData");
     return {
       success: false,
     };
@@ -175,6 +176,7 @@ async function createZkOrder({
   const output = await queryUtxoForOutput(utxoHex);
 
   if (!Object.hasOwn(output, "out_type")) {
+    console.error("no output");
     return {
       success: false,
     };
