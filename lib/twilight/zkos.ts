@@ -135,6 +135,57 @@ async function createTraderOrder({
   );
 }
 
+async function createTradingTxSingle({
+  signature,
+  senderInput,
+  receiverAddress,
+  amount,
+  updatedSenderBalance,
+}: {
+  signature: string;
+  senderInput: string;
+  receiverAddress: string;
+  amount: number;
+  updatedSenderBalance: number;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.privateTransactionSingle(
+    signature,
+    senderInput,
+    receiverAddress,
+    BigInt(amount),
+    false,
+    BigInt(updatedSenderBalance),
+    BigInt(1)
+  );
+}
+
+async function createQueryTradeOrderMsg({
+  address,
+  signature,
+  orderStatus,
+}: {
+  address: string;
+  signature: string;
+  orderStatus: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.queryTraderOrderZkos(address, signature, orderStatus);
+}
+
+async function createQueryLendOrderMsg({
+  address,
+  signature,
+  orderStatus,
+}: {
+  address: string;
+  signature: string;
+  orderStatus: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.queryLendOrderZkos(address, signature, orderStatus);
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
@@ -148,4 +199,7 @@ export {
   createInputCoinFromOutput,
   decryptZKAccountHexValue,
   createTraderOrder,
+  createTradingTxSingle,
+  createQueryTradeOrderMsg,
+  createQueryLendOrderMsg,
 };
