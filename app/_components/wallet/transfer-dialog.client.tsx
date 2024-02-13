@@ -38,6 +38,7 @@ import {
   queryUtxoForAddress,
   queryUtxoForOutput,
 } from "@/lib/api/zkos";
+import { useToast } from "@/lib/hooks/useToast";
 
 type Props = {
   children: React.ReactNode;
@@ -51,6 +52,8 @@ const TransferDialog = ({
   children,
 }: Props) => {
   const { quisPrivateKey } = useTwilight();
+
+  const { toast } = useToast();
 
   const { mainWallet } = useWallet();
 
@@ -133,6 +136,11 @@ const TransferDialog = ({
 
         if (!depositZkAccount) {
           console.error("error cant find depositZkAccount", depositZkAccount);
+          toast({
+            variant: "error",
+            title: "An error has occurred",
+            description: "Please try again later.",
+          });
           return;
         }
 
@@ -189,6 +197,17 @@ const TransferDialog = ({
           scalar: newTradingAccount.scalar,
           isOnChain: true,
           value: transferAmount,
+        });
+
+        toast({
+          title: "Success",
+          description: `Successfully sent ${new BTC("sats", Big(transferAmount))
+            .convert("BTC")
+            .toString()} BTC to ${
+            depositZkAccount.tag === "main"
+              ? "Trading Account"
+              : depositZkAccount.tag
+          }`,
         });
       } else {
         const senderZkAccount = zkAccounts.filter(
@@ -259,6 +278,12 @@ const TransferDialog = ({
           isOnChain: true,
         });
 
+        toast({
+          title: "Success",
+          description: `Successfully sent ${new BTC("sats", Big(transferAmount))
+            .convert("BTC")
+            .toString()} BTC to ${depositZkAccount.tag}`,
+        });
         setIsSubmitLoading(false);
       }
     } catch (err) {
