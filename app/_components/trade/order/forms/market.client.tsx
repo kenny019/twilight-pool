@@ -8,7 +8,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useGrid } from "@/lib/providers/grid";
 import { useTwilight } from "@/lib/providers/twilight";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
 import { createZkOrder } from "@/lib/twilight/zk";
 import { WalletStatus } from "@cosmos-kit/core";
@@ -32,8 +32,8 @@ const OrderMarketForm = () => {
   const btcRef = useRef<HTMLInputElement>(null);
   const usdRef = useRef<HTMLInputElement>(null);
 
-  const zKAccounts = useAccountStore((state) => state.zk.zkAccounts);
-  const selectedZkAccount = useAccountStore(
+  const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const selectedZkAccount = useTwilightStore(
     (state) => state.zk.selectedZkAccount
   );
 

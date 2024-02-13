@@ -10,7 +10,7 @@ import { useLocalStorage } from "../hooks";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { generateSignMessage } from "../twilight/chain";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
-import { useAccountStore } from "../state/store";
+import { useTwilightStore } from "../state/store";
 
 interface UseTwilightProps {
   hasInit: string;
@@ -145,11 +145,11 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
         const twilightAddress = chainWallet?.address || "";
 
         if (!twilightAddress) return;
-        useAccountStore.persist.setOptions({
+        useTwilightStore.persist.setOptions({
           name: `twilight-${twilightAddress}`,
         });
 
-        await useAccountStore.persist.rehydrate();
+        await useTwilightStore.persist.rehydrate();
         console.log(`rehydrated twilight-${twilightAddress}`);
       }
 

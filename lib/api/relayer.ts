@@ -1,6 +1,6 @@
 import wfetch from "../http";
 
-const RELAYER_URL = process.env.NEXT_PUBLIC_CLIENT_ENDPOINT as string;
+const RELAYER_URL = process.env.NEXT_PUBLIC_RELAYER_ENDPOINT as string;
 
 async function queryLendOrder(lendData: string) {
   const body = JSON.stringify({
@@ -45,5 +45,7 @@ async function queryTradeOrder(tradeData: string) {
 
   return data;
 }
+
+// async function
 
 export { queryLendOrder, queryTradeOrder };

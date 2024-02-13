@@ -10,6 +10,7 @@ import {
   createTraderOrder,
   generateTradingAccount,
   getTradingAddressFromTradingAccount,
+  createZkOSLendOrder,
 } from "./zkos";
 import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
 
@@ -208,9 +209,67 @@ async function createZkOrder({
   };
 }
 
+async function createZkLendOrder({
+  zkAccount,
+  signature,
+  deposit,
+}: {
+  zkAccount: ZkAccount;
+  signature: string;
+  deposit: number;
+}) {
+  // todo: refactor
+  const zkAccountAddress = zkAccount.address;
+  const scalar = zkAccount.scalar;
+
+  const utxoData = await queryUtxoForAddress(zkAccountAddress);
+
+  if (!Object.hasOwn(utxoData, "output_index")) {
+    console.error("no utxoData");
+    return {
+      success: false,
+    };
+  }
+
+  const utxoString = JSON.stringify(utxoData);
+
+  const utxoHex = await utxoStringToHex({
+    utxoString,
+  });
+
+  const output = await queryUtxoForOutput(utxoHex);
+
+  if (!Object.hasOwn(output, "out_type")) {
+    console.error("no output");
+    return {
+      success: false,
+    };
+  }
+
+  const outputString = JSON.stringify(output);
+
+  const inputString = await createInputCoinFromOutput({
+    outputString,
+    utxoString,
+  });
+
+  const orderString = await createZkOSLendOrder({
+    inputString,
+    scalar,
+    scriptAddress: "18f2ebda173ffc6ad2e3b4d3a3864a96ae8a6f7e30",
+    signature,
+    deposit,
+  });
+  return {
+    success: true,
+    msg: orderString,
+  };
+}
+
 export {
   createZkAccount,
   getZkAccountBalance,
   createZkOrder,
   createZkAccountWithBalance,
+  createZkLendOrder,
 };

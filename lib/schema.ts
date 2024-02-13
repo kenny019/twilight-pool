@@ -7,3 +7,17 @@ export const ZkAccountSchema = z.object({
   isOnChain: z.boolean().optional(),
   value: z.number().optional(), // note: sats value
 });
+
+export const TradeOrderSchema = z.object({
+  accountAddress: z.string(),
+  value: z.number(),
+  uuid: z.string(),
+  orderStatus: z.string(),
+});
+
+export const LendOrderSchema = z.object({
+  accountAddress: z.string(),
+  value: z.number(),
+  uuid: z.string(),
+  orderStatus: z.string(),
+});

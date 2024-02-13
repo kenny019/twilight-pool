@@ -14,7 +14,7 @@ import { sendTradeOrder } from "@/lib/api/client";
 import cn from "@/lib/cn";
 import { useGrid } from "@/lib/providers/grid";
 import { useTwilight } from "@/lib/providers/twilight";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/state/store";
 import { createZkOrder } from "@/lib/twilight/zk";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { ChevronDown } from "lucide-react";
@@ -26,8 +26,8 @@ const OrderLimitForm = () => {
   const { quisPrivateKey } = useTwilight();
   const { status } = useWallet();
 
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
-  const selectedZkAccountIndex = useAccountStore(
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const selectedZkAccountIndex = useTwilightStore(
     (state) => state.zk.selectedZkAccount
   );
   const currentZkAccount = zkAccounts[selectedZkAccountIndex];

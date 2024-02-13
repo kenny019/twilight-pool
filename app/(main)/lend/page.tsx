@@ -7,8 +7,10 @@ import { Text } from "@/components/typography";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilight } from "@/lib/providers/twilight";
+import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
+import { createQueryLendOrderMsg } from "@/lib/twilight/zkos";
 import Big from "big.js";
 import { ArrowDown, ArrowLeftRight, Wallet } from "lucide-react";
 import React, { useState } from "react";
@@ -17,10 +19,13 @@ const Page = () => {
   useRedirectUnconnected();
 
   const { currentPrice } = usePriceFeed();
+  const { quisPrivateKey } = useTwilight();
 
   const { twilightSats } = useGetTwilightBTCBalance();
 
-  const zKAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const lendOrders = useTwilightStore((state) => state.lend.lends);
+
   const totalTradingSatsBalance = zKAccounts.reduce(
     (acc, account) => (acc += account.value || 0),
     0
@@ -62,6 +67,22 @@ const Page = () => {
   const totalBalanceUSDString = Big(totalBTCBalanceString)
     .mul(currentPrice)
     .toFixed(2);
+
+  const totalLentSats = lendOrders.reduce((acc, lendOrder) => {
+    acc += lendOrder.value;
+    return acc;
+  }, 0);
+
+  const totalLentBTC = new BTC("sats", Big(totalLentSats))
+    .convert("BTC")
+    .toFixed(8);
+
+  const totalLentUSDString = Big(totalLentSats).mul(currentPrice).toFixed(2);
+
+  function submitRedeemLentSats() {
+    // for (const val of lendOrders) {
+    // }
+  }
 
   return (
     <div className="mx-8 mt-4 space-y-8">
@@ -163,9 +184,11 @@ const Page = () => {
                   <Text>Lending</Text>
                 </div>
                 <div className="w-[150px]">
-                  <Text className="text-primary/80">0.00 USD</Text>
+                  <Text className="text-primary/80">
+                    {totalLentUSDString} USD
+                  </Text>
                   <Text className="text-xs text-primary-accent">
-                    = 0.00000000 BTC
+                    = {totalLentBTC} BTC
                   </Text>
                 </div>
               </div>
@@ -174,7 +197,22 @@ const Page = () => {
                 <LendDialog>
                   <Button size="small">Lend</Button>
                 </LendDialog>
-                <Button size="small">Redeem</Button>
+                <Button
+                  onClick={async () => {
+                    const add =
+                      "0cbcb4aecfc5d49bf05701307d2ff981aa080e77207b5322f407cbf68405b0b84356ed8d08f9845cc73a6eb5303f619c7d34f7d687732fe1ecf7f83c930aa64d7892c6e7d0";
+
+                    const msg = await createQueryLendOrderMsg({
+                      address: add,
+                      signature: quisPrivateKey,
+                    });
+
+                    console.log(msg);
+                  }}
+                  size="small"
+                >
+                  Redeem
+                </Button>
               </div>
             </div>
           </div>

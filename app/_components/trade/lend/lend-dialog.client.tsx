@@ -1,10 +1,13 @@
 "use client";
+import Button from "@/components/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogTrigger,
 } from "@/components/dialog";
+import { PopoverInput } from "@/components/input";
+import Resource from "@/components/resource";
 import {
   Select,
   SelectContent,
@@ -13,20 +16,95 @@ import {
   SelectValue,
 } from "@/components/select";
 import { Text } from "@/components/typography";
-import { useAccountStore } from "@/lib/state/store";
-import React, { useState } from "react";
+import { sendLendOrder } from "@/lib/api/client";
+import { useToast } from "@/lib/hooks/useToast";
+import { useTwilight } from "@/lib/providers/twilight";
+import { useTwilightStore } from "@/lib/state/store";
+import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import { createZkLendOrder } from "@/lib/twilight/zk";
+import Big from "big.js";
+import { Loader2 } from "lucide-react";
+import React, { useRef, useState } from "react";
 
 type Props = {
   children: React.ReactNode;
 };
 
 const LendDialog = ({ children }: Props) => {
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const { toast } = useToast();
+  const { quisPrivateKey } = useTwilight();
+
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const addLendOrder = useTwilightStore((state) => state.lend.addLend);
 
   const [selectedAccountIndex, setSelectedAccountIndex] = useState(0);
+  const [depositDenom, setDepositDenom] = useState<string>("BTC");
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
-  function submitForm(e: React.FormEvent<HTMLFormElement>) {
+  const depositRef = useRef<HTMLInputElement>(null);
+
+  const selectedZkAccount = zkAccounts[selectedAccountIndex];
+
+  async function submitForm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!depositRef.current?.value) {
+      toast({
+        variant: "error",
+        title: "Error ",
+        description: "Invalid BTC amount",
+      });
+      return;
+    }
+
+    const depositAmount = new BTC(
+      depositDenom as BTCDenoms,
+      Big(depositRef.current.value)
+    )
+      .convert("sats")
+      .toNumber();
+
+    setIsSubmitLoading(true);
+
+    const { success, msg } = await createZkLendOrder({
+      zkAccount: selectedZkAccount,
+      deposit: depositAmount,
+      signature: quisPrivateKey,
+    });
+
+    if (!success || !msg) {
+      toast({
+        variant: "error",
+        title: "Unable to submit lend order",
+        description: "An error has occurred, try again later.",
+      });
+      setIsSubmitLoading(false);
+      return;
+    }
+
+    const data = await sendLendOrder(msg);
+
+    if (data.result && data.result.id_key) {
+      console.log(data);
+      toast({
+        title: "Success",
+        description: "Successfully submitted lend order",
+      });
+
+      addLendOrder({
+        accountAddress: selectedZkAccount.address,
+        uuid: data.result.id_key as string,
+        orderStatus: "",
+        value: depositAmount,
+      });
+    } else {
+      toast({
+        variant: "error",
+        title: "Unable to submit lend order",
+        description: "An error has occurred, try again later.",
+      });
+    }
+
+    setIsSubmitLoading(false);
   }
 
   return (
@@ -34,43 +112,83 @@ const LendDialog = ({ children }: Props) => {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="left-auto right-0 min-h-screen max-w-2xl translate-x-0 rounded-none border-r-0">
         <DialogTitle>Lend</DialogTitle>
-        <form onSubmit={submitForm}>
-          <div className="flex flex-row justify-between">
-            <div className="space-y-1">
-              <Text className="text-xs text-primary-accent" asChild>
-                <label htmlFor="dropdown-trading-account-from">
-                  Account from
-                </label>
-              </Text>
+        <form onSubmit={submitForm} className="max-w-sm space-y-4">
+          <div className="space-y-1">
+            <Text className="text-xs text-primary-accent" asChild>
+              <label htmlFor="dropdown-trading-account-from">
+                Account from
+              </label>
+            </Text>
 
-              <Select
-                defaultValue={selectedAccountIndex.toString()}
-                value={selectedAccountIndex.toString()}
-                onValueChange={(val) => setSelectedAccountIndex(parseInt(val))}
+            <Select
+              defaultValue={selectedAccountIndex.toString()}
+              value={selectedAccountIndex.toString()}
+              onValueChange={(val) => setSelectedAccountIndex(parseInt(val))}
+            >
+              <SelectTrigger
+                id="dropdown-account-lend-from"
+                className="w-[180px]"
               >
-                <SelectTrigger
-                  id="dropdown-account-lend-from"
-                  className="w-[180px]"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {zkAccounts.map((subAccount, index) => {
-                    return (
-                      <SelectItem
-                        value={index.toString()}
-                        key={subAccount.address}
-                      >
-                        {subAccount.tag === "main"
-                          ? "Trading Account"
-                          : subAccount.tag}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {zkAccounts.map((subAccount, index) => {
+                  return (
+                    <SelectItem
+                      value={index.toString()}
+                      key={subAccount.address}
+                    >
+                      {subAccount.tag === "main"
+                        ? "Trading Account"
+                        : subAccount.tag}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="space-y-1">
+            <Text className="text-xs text-primary-accent" asChild>
+              <label htmlFor="dropdown-trading-account-from">Sats Amount</label>
+            </Text>
+
+            <PopoverInput
+              id="input-btc-amount"
+              name="depositValue"
+              onClickPopover={(e) => {
+                e.preventDefault();
+                if (!depositRef.current?.value) return;
+
+                const toDenom = e.currentTarget.value as BTCDenoms;
+
+                const currentValue = new BTC(
+                  depositDenom as BTCDenoms,
+                  Big(depositRef.current.value)
+                );
+
+                depositRef.current.value = currentValue
+                  .convert(toDenom)
+                  .toString();
+              }}
+              type="number"
+              step="any"
+              placeholder="1.00"
+              options={["BTC", "mBTC", "sats"]}
+              setSelected={setDepositDenom}
+              selected={depositDenom}
+              ref={depositRef}
+            />
+          </div>
+
+          <Button disabled={isSubmitLoading} type="submit" size="small">
+            <Resource
+              isLoaded={!isSubmitLoading}
+              placeholder={<Loader2 className="animate-spin" />}
+            >
+              Deposit
+            </Resource>
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

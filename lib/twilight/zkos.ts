@@ -135,6 +135,29 @@ async function createTraderOrder({
   );
 }
 
+async function createZkOSLendOrder({
+  inputString,
+  signature,
+  scriptAddress,
+  scalar,
+  deposit,
+}: {
+  inputString: string;
+  signature: string;
+  scriptAddress: string;
+  scalar: string;
+  deposit: number;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.createZkOSLendOrder(
+    inputString,
+    signature,
+    scriptAddress,
+    scalar,
+    BigInt(deposit)
+  );
+}
+
 async function createTradingTxSingle({
   signature,
   senderInput,
@@ -176,14 +199,12 @@ async function createQueryTradeOrderMsg({
 async function createQueryLendOrderMsg({
   address,
   signature,
-  orderStatus,
 }: {
   address: string;
   signature: string;
-  orderStatus: string;
 }) {
   const zkos = await import("@kenny019/zkos-wasm");
-  return zkos.queryLendOrderZkos(address, signature, orderStatus);
+  return zkos.queryLendOrderZkos(address, signature, "PENDING");
 }
 
 export {
@@ -202,4 +223,5 @@ export {
   createTradingTxSingle,
   createQueryTradeOrderMsg,
   createQueryLendOrderMsg,
+  createZkOSLendOrder,
 };

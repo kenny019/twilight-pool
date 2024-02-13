@@ -15,7 +15,7 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { ChevronDown } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/state/store";
 
 function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
   if (selectedZkAccount === ZK_ACCOUNT_INDEX.DISCONNECTED) {
@@ -33,15 +33,15 @@ const SubaccountSelect = () => {
   const [openSubaccountModal, setOpenSubaccountModal] = useState(false);
 
   const updateSelectedZkAccount =
-    useAccountStore.getState().zk.updateSelectedZkAccount;
+    useTwilightStore.getState().zk.updateSelectedZkAccount;
 
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const { status } = useWallet();
 
   const { hasRegisteredBTC, hasConfirmedBTC } = useTwilight();
 
   const selectedZkAccount =
-    useAccountStore((state) => state.zk.selectedZkAccount) ||
+    useTwilightStore((state) => state.zk.selectedZkAccount) ||
     ZK_ACCOUNT_INDEX.MAIN;
 
   if (!hasRegisteredBTC || !hasConfirmedBTC) {

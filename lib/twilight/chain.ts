@@ -1,9 +1,4 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
-import {
-  generatePublicKey,
-  generateRandomScalar,
-  generateTradingAccountAddress,
-} from "./zkos";
 import wfetch from "../http";
 import { ZkAccount } from "../types";
 

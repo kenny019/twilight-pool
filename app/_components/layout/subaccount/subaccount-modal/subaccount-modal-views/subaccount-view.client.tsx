@@ -9,13 +9,13 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { z } from "zod";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkAccount } from "@/lib/twilight/zk";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/state/store";
 
 const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();
 
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
-  const addZkAccount = useAccountStore((state) => state.zk.addZkAccount);
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
 
   const { mainWallet } = useWallet();
   const { quisPrivateKey } = useTwilight();

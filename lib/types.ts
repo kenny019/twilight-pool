@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZkAccountSchema } from "./schema";
+import { LendOrderSchema, TradeOrderSchema, ZkAccountSchema } from "./schema";
 
 export const btcAddressSchema = z
   .string()
@@ -22,6 +22,8 @@ export type twilightRegistedBtcAddressStruct = {
 };
 
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
+export type TradeOrder = z.infer<typeof TradeOrderSchema>;
+export type LendOrder = z.infer<typeof LendOrderSchema>;
 
 export type PositionTypes = "LONG" | "SHORT";
 export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";

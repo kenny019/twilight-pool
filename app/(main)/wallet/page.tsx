@@ -10,7 +10,7 @@ import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useTwilight } from "@/lib/providers/twilight";
-import { useAccountStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
@@ -20,7 +20,7 @@ import React, { useEffect, useState } from "react";
 const Page = () => {
   const { quisPrivateKey } = useTwilight();
 
-  const zkAccounts = useAccountStore((state) => state.zk.zkAccounts);
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
   const tradingAccount = zkAccounts[ZK_ACCOUNT_INDEX.MAIN] as
     | ZkAccount

@@ -26,6 +26,30 @@ async function sendTradeOrder(tradeData: string) {
   return data;
 }
 
+async function sendLendOrder(lendData: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "CreateLendOrder",
+    params: {
+      data: lendData,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(CLIENT_URL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+
+    return {};
+  }
+
+  console.log("success sent trader order", data);
+  return data;
+}
+
 async function cancelTradeOrder({
   accountId,
   uuid,
@@ -61,4 +85,4 @@ async function cancelTradeOrder({
   return data;
 }
 
-export { sendTradeOrder, cancelTradeOrder };
+export { sendTradeOrder, cancelTradeOrder, sendLendOrder };
