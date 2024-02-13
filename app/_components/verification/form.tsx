@@ -8,8 +8,6 @@ import { CopyIcon, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
-const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
-
 type Props = {
   btcDepositAddress: string;
   btcSatoshiTestAmount: string;
@@ -52,7 +50,7 @@ const WalletVerificationForm = ({
           />
           <CopyIcon
             onClick={async () => {
-              await navigator.clipboard.writeText(address);
+              await navigator.clipboard.writeText(btcDepositAddress);
               toast({
                 title: "Copied to clipboard",
                 description: "Bitcoin address was copied to your clipboard",
