@@ -1,24 +1,20 @@
 import Button from "@/components/button";
 import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
-import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 import { useToast } from "@/lib/hooks/useToast";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
-import { redirect, useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
 import { twilightproject } from "twilightjs";
 import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
+import { Loader2 } from "lucide-react";
 
 const BtcWithdrawalForm = () => {
   const { mainWallet } = useWallet();
-  const router = useRouter();
 
   const { toast } = useToast();
-  const chainWallet = mainWallet?.getChainWallet("nyks");
-
   const withdrawBtcRef = useRef<HTMLInputElement>(null);
   const depositRef = useRef<HTMLInputElement>(null);
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
@@ -83,6 +79,10 @@ const BtcWithdrawalForm = () => {
     );
 
     const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+    toast({
+      title: "Withdraw submitted",
+      description: "Please wait while your Bitcoin is being withdrawn...",
+    });
 
     const res = await stargateClient.signAndBroadcast(
       twilightAddress,
@@ -90,21 +90,21 @@ const BtcWithdrawalForm = () => {
       fee
     );
 
-    console.log("response", res);
-    toast({
-      title: "Withdraw submitted",
-      description: "Please wait while your Bitcoin is being withdrawn...",
-    });
-
-    setTimeout(() => {
-      // since we have to wait for chain to update info, in the future lets add a loop here to check if the chain has done it
-      setIsSubmitLoading(false);
+    setIsSubmitLoading(false);
+    if (res.code !== 0) {
       toast({
-        title: "Submitted Bitcoin address",
-        description: "Your Bitcoin address has been successfully submitted",
+        variant: "error",
+        title: "Error",
+        description: "There was an error with submitting your withdrawal",
       });
-      // router.push("/verification");
-    }, 5000);
+      return;
+    }
+    console.log("response", res);
+
+    toast({
+      title: "Success",
+      description: "Your withdrawal request has been successfully sent",
+    });
 
     try {
     } catch (err) {
@@ -172,7 +172,11 @@ const BtcWithdrawalForm = () => {
           submitWithdrawal();
         }}
       >
-        Withdraw
+        {isSubmitLoading ? (
+          <Loader2 className="animate-spin text-primary opacity-60" />
+        ) : (
+          "Withdraw"
+        )}
       </Button>
     </form>
   );

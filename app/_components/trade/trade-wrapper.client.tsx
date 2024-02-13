@@ -1,10 +1,11 @@
 "use client";
-import React, { createRef, useRef } from "react";
-import { Responsive as ResponsiveGridLayout } from "react-grid-layout";
+import React, { useRef } from "react";
+import { Responsive, WidthProvider } from "react-grid-layout";
 import useWindow from "@/lib/hooks/useWindow";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
 import Chart from "./chart/chart.client";
+import { usePriceFeed } from "@/lib/providers/feed";
 import DragWrapper from "./drag-wrapper.client";
 import {
   GRID_HEIGHT_OFFSET,
@@ -18,6 +19,8 @@ const layout = [
   { i: "orderbook", x: 0, y: 0, w: 2, h: 11, minW: 2 },
 ];
 
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
 function calculateGridDimensions(
   gridWidth: number,
   gridHeight: number,
@@ -30,14 +33,12 @@ function calculateGridDimensions(
 }
 
 const TradeWrapper = () => {
-  const { width: windowWidth } = useWindow();
-
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
       const gridDimensions = calculateGridDimensions(
         layoutVal.w,
         layoutVal.h,
-        windowWidth
+        1366
       );
       return {
         name: layoutVal.i,
@@ -52,7 +53,6 @@ const TradeWrapper = () => {
       layouts={{ lg: layout }}
       cols={{ lg: 12, md: 12, sm: 8, xs: 4, xxs: 4 }}
       rowHeight={GRID_ROW_HEIGHT}
-      width={windowWidth}
       draggableHandle=".draggable"
       onResizeStart={() => {
         const widgets = document.querySelectorAll(".react-grid-item");
@@ -73,7 +73,7 @@ const TradeWrapper = () => {
         const gridDimensions = calculateGridDimensions(
           newItem.w,
           newItem.h,
-          windowWidth
+          1366
         );
 
         gridDimensionRefs.current[gridRefToUpdate] = {

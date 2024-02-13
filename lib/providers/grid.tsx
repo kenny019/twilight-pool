@@ -33,8 +33,6 @@ export const GridProvider: React.FC<GridProviderProps> = ({
     height: GRID_DEFAULT_DIMENSIONS.height,
   });
 
-  const { height: windowHeight, width: windowWidth } = useWindow();
-
   function useUpdateCallbackDimensions() {
     useEffect(() => {
       if (!callbackDimensions) return;
@@ -64,8 +62,6 @@ export const GridProvider: React.FC<GridProviderProps> = ({
       gridRef.current,
       gridRef.current?.clientHeight,
       gridRef.current?.clientWidth,
-      windowHeight,
-      windowWidth,
     ]);
   }
 
