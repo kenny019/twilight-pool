@@ -102,4 +102,31 @@ async function getBTCPrice() {
   return response;
 }
 
-export { getBTCDepositAddress, getReserveData, getBTCPrice };
+async function queryTransactionHashes(address: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "transaction_hashes",
+    params: {
+      AccountId: { id: address },
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(priceURL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+    return {};
+  }
+
+  return data;
+}
+
+export {
+  getBTCDepositAddress,
+  getReserveData,
+  getBTCPrice,
+  queryTransactionHashes,
+};

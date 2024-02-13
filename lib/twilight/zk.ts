@@ -161,6 +161,7 @@ async function createZkOrder({
 
   const utxoData = await queryUtxoForAddress(zkAccountAddress);
 
+  console.log("utxoData", utxoData);
   if (!Object.hasOwn(utxoData, "output_index")) {
     console.error("no utxoData");
     return {

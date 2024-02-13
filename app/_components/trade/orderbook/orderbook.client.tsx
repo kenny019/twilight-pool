@@ -14,6 +14,7 @@ import {
 } from "@/components/dropdown";
 import { ChevronDown } from "lucide-react";
 import cn from "@/lib/cn";
+import OrderMyTrades from "./my-trades.client";
 
 type OrderbookTabs = "market" | "trades";
 type OrderbookLayout = "split" | "asks" | "bids";
@@ -121,7 +122,7 @@ const Orderbook = () => {
         );
       }
       case "trades": {
-        return <div></div>;
+        return <OrderMyTrades />;
       }
     }
   }

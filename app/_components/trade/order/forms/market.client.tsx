@@ -3,6 +3,7 @@ import ExchangeResource from "@/components/exchange-resource";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
+import { queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -11,6 +12,7 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
 import { createZkOrder } from "@/lib/twilight/zk";
+import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -86,6 +88,27 @@ const OrderMarketForm = () => {
         title: "Success",
         description: "Successfully submitted trade order",
       });
+
+      // note: currently broken
+      // const queryTradeOrderMsg = await createQueryTradeOrderMsg({
+      //   address: currentZkAccount.address,
+      //   orderStatus: "PENDING",
+      //   signature: quisPrivateKey,
+      // });
+
+      // console.log("queryTradeOrderMsg", queryTradeOrderMsg);
+      // const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
+      // console.log("queryTradeOrderRes", queryTradeOrderRes);
+
+      const txHashesRes = await queryTransactionHashes(
+        currentZkAccount.address
+      );
+
+      if (!txHashesRes.result) return;
+
+      const orderData = txHashesRes.result[0] as Record<string, any>[];
+
+      console.log("tx_hashes", txHashesRes);
     } else {
       toast({
         variant: "error",
@@ -93,6 +116,7 @@ const OrderMarketForm = () => {
         description: "An error has occurred, try again later.",
       });
     }
+
     setIsSubmitting(false);
     // todo: get this data and put it into "my trades"
   }

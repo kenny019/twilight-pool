@@ -13,6 +13,7 @@ import React, {
   useLayoutEffect,
   useRef,
 } from "react";
+import Series from "./series.client";
 
 type ChartContext = {
   _api?: IChartApi;
@@ -127,15 +128,6 @@ const Chart = () => {
           borderColor: "rgba(255, 255, 255, 0.12)",
         },
       });
-
-      const series = this._api.addCandlestickSeries({
-        upColor: "#5FDB66",
-        downColor: "#F84952",
-        wickUpColor: "#5FDB66",
-        wickDownColor: "#F84952",
-      });
-
-      series.setData(data);
     },
     free() {
       if (!this._api) return;
@@ -178,7 +170,9 @@ const Chart = () => {
 
   return (
     <chartContext.Provider value={chartApiRef.current}>
-      <div ref={chartContainerRef} />
+      <div ref={chartContainerRef}>
+        <Series />
+      </div>
     </chartContext.Provider>
   );
 };

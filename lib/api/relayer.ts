@@ -46,6 +46,4 @@ async function queryTradeOrder(tradeData: string) {
   return data;
 }
 
-// async function
-
 export { queryLendOrder, queryTradeOrder };
