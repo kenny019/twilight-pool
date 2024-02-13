@@ -3,8 +3,9 @@ import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useTwilight } from "@/lib/providers/twilight";
 import { CopyIcon, HelpCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 
 const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
@@ -19,8 +20,9 @@ const WalletVerificationForm = ({
   btcSatoshiTestAmount,
 }: Props) => {
   const { toast } = useToast();
+  const router = useRouter();
 
-  const { mainWallet } = useWallet();
+  const { checkBTCRegistration, hasConfirmedBTC } = useTwilight();
 
   return (
     <div className="space-y-6">
@@ -91,7 +93,32 @@ const WalletVerificationForm = ({
           </p>
         </div>
       </div>
-      <Button className="w-full justify-center">Verify Deposit</Button>
+      <Button
+        onClick={() => {
+          checkBTCRegistration();
+
+          if (!hasConfirmedBTC) {
+            toast({
+              variant: "error",
+              title: "Error",
+              description: "Deposit has not been detected.",
+            });
+            return;
+          }
+
+          toast({
+            title: "Success",
+            description: "Deposit is successful, redirecting now...",
+          });
+
+          setTimeout(() => {
+            router.replace("/");
+          }, 2000);
+        }}
+        className="w-full justify-center"
+      >
+        Verify Deposit
+      </Button>
     </div>
   );
 };

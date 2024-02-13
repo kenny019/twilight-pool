@@ -6,9 +6,8 @@ import { useWallet } from "@cosmos-kit/react-lite";
 import { redirect } from "next/navigation";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 
-const address = "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY";
 const noticeData = [
-  `Please transfer the exact amount stipulated to the address provided. Please do so within 72 hours to verify your ownership of the BTC address ${address}`,
+  `Please transfer the exact amount stipulated to the address provided. Please do so within 72 hours to verify your ownership of the BTC address`,
   `Deposit amount* needs to be a decimal number that does not end the last 1, 2 or 3 digits with zeroes. For example, the following amounts arenot valid: 3, 3.0, 5.00, 10.00, while the following are acceptable: 1.2356, 5.0085.`,
   `The verification could take up to 30 mins. Once done you will be notified on the confirmation screen.`,
 ];
