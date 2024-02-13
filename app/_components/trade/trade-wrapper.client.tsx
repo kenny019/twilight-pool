@@ -5,7 +5,6 @@ import useWindow from "@/lib/hooks/useWindow";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
 import Chart from "./chart/chart.client";
-import { usePriceFeed } from "@/lib/providers/feed";
 import DragWrapper from "./drag-wrapper.client";
 import {
   GRID_HEIGHT_OFFSET,

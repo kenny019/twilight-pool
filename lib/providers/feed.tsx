@@ -25,7 +25,7 @@ type UsePriceFeedProps = {
 
 const defaultContext: UsePriceFeedProps = {
   feed: [],
-  currentPrice: 0,
+  currentPrice: 49980, // todo: fetch initial price
 };
 
 const feedContext = createContext<UsePriceFeedProps | undefined>(undefined);

@@ -1,4 +1,5 @@
 "use client";
+import LendDialog from "@/app/_components/trade/lend/lend-dialog.client";
 import TransferDialog from "@/app/_components/wallet/transfer-dialog.client";
 import Button from "@/components/button";
 import { Separator } from "@/components/seperator";
@@ -170,7 +171,9 @@ const Page = () => {
               </div>
 
               <div className="flex space-x-4">
-                <Button size="small">Lend</Button>
+                <LendDialog>
+                  <Button size="small">Lend</Button>
+                </LendDialog>
                 <Button size="small">Redeem</Button>
               </div>
             </div>

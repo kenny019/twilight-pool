@@ -10,22 +10,27 @@ import {
 import { Text } from "./typography";
 import Button from "./button";
 import { useRouter } from "next/navigation";
+import { useWallet } from "@cosmos-kit/react-lite";
+import { WalletStatus } from "@cosmos-kit/core";
 
 type Props = {
   children: React.ReactNode;
 };
 
 const ExchangeResource = ({ children }: Props) => {
-  const [open, setOpen] = useState(false);
   const { hasRegisteredBTC, hasConfirmedBTC } = useTwilight();
-
   const router = useRouter();
+  const { status } = useWallet();
+
+  const [open, setOpen] = useState(false);
 
   if (hasRegisteredBTC && hasConfirmedBTC) return children;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogTrigger asChild disabled={status === WalletStatus.Disconnected}>
+        {children}
+      </DialogTrigger>
       <DialogContent className="top-[35%]">
         {hasRegisteredBTC ? (
           <DialogTitle>Verify BTC Address</DialogTitle>
