@@ -1,21 +1,19 @@
 "use client";
-import WalletRegistrationForm from "@/app/_components/registration/form";
+import BtcWithdrawalForm from "@/app/_components/withdrawal/form";
 import { Text } from "@/components/typography";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import React from "react";
 
-const importantNotice = `Please register the Bitcoin Address from which you
-plan on making deposits so that funds can be directed to your account properly.
-Please don't forget to complete the next step (Verify Ownership Form) to make
-a deposit from this address within 72 hours to complete the registration process.
+const importantNotice = `
 `;
 
 const Page = () => {
   useRedirectUnconnected();
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="mx-auto my-16 grid h-full w-full max-w-5xl grid-cols-2 gap-16">
-        <WalletRegistrationForm />
+        <BtcWithdrawalForm />
         <div className="rounded-md border p-4">
           <Text heading="h3">Important:</Text>
           <Text className="text-primary opacity-80">{importantNotice}</Text>

@@ -28,6 +28,45 @@ async function getBTCDepositAddress(depositAddress: string) {
   };
 }
 
+type BtcReserveStruct = {
+  ReserveId: string;
+  ReserveAddress: string;
+  JudgeAddress: string;
+  BtcRelayCapacityValue: string;
+  TotalValue: string;
+  PrivatePoolValue: string;
+  PublicValue: string;
+  FeePool: string;
+  UnlockHeight: string;
+  RoundId: string;
+};
+
+type ReserveDataStruct = {
+  BtcReserves: BtcReserveStruct[];
+};
+
+async function getReserveData() {
+  const { success, data, error } = await wfetch(
+    new URL("/twilight-project/nyks/volt/btc_reserve", REST_URL)
+  )
+    .get()
+    .json<ReserveDataStruct>();
+
+  if (!success) {
+    console.error("getReserveData", error);
+
+    return {
+      success,
+      error,
+    };
+  }
+
+  return {
+    success,
+    data,
+  };
+}
+
 // todo: refactor into seperate files
 const priceURL = process.env.NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
 export type PriceFeedResponseData = {
@@ -63,4 +102,4 @@ async function getBTCPrice() {
   return response;
 }
 
-export { getBTCDepositAddress, getBTCPrice };
+export { getBTCDepositAddress, getReserveData, getBTCPrice };

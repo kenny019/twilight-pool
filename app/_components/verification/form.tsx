@@ -2,11 +2,12 @@
 import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
+import { getReserveData } from "@/lib/api/rest";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilight } from "@/lib/providers/twilight";
 import { CopyIcon, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 type Props = {
   btcDepositAddress: string;
@@ -21,6 +22,27 @@ const WalletVerificationForm = ({
   const router = useRouter();
 
   const { checkBTCRegistration, hasConfirmedBTC } = useTwilight();
+
+  const [btcReserveAddress, setBtcReserveAddress] = useState("");
+
+  const [btcReserveId, setBtcReserveId] = useState(1);
+
+  function useReserveData() {
+    useEffect(() => {
+      async function populateReserveData() {
+        const { success, data } = await getReserveData();
+
+        if (!success) return;
+
+        setBtcReserveAddress(data.BtcReserves[0].ReserveAddress);
+        setBtcReserveId(parseInt(data.BtcReserves[0].ReserveId));
+      }
+
+      populateReserveData();
+    }, []);
+  }
+
+  useReserveData();
 
   return (
     <div className="space-y-6">
@@ -39,58 +61,101 @@ const WalletVerificationForm = ({
         <div className="relative flex items-center justify-center">
           <Input
             id="input-btc-deposit-address"
-            className="select-all"
             readOnly={true}
             defaultValue={btcDepositAddress}
-            onClick={(e) => {
-              if (e.currentTarget) {
-                e.currentTarget.select();
-              }
-            }}
-          />
-          <CopyIcon
-            onClick={async () => {
-              await navigator.clipboard.writeText(btcDepositAddress);
-              toast({
-                title: "Copied to clipboard",
-                description: "Bitcoin address was copied to your clipboard",
-              });
-            }}
-            className="absolute right-4 my-auto h-4 w-4 cursor-pointer text-primary-accent hover:text-primary"
           />
         </div>
-      </div>
-      <div className="space-y-1">
-        <div className="flex items-center space-x-2">
+
+        <div className="space-y-1">
           <Text asChild>
             <label
               className="text-primary-accent"
-              htmlFor="input-deposit-amount"
+              htmlFor="input-btc-reserve-address"
             >
-              Deposit Amount*
+              BTC Reserve Address
             </label>
           </Text>
-
-          <HelpCircle className="h-4 w-4 text-primary-accent hover:text-primary" />
+          <div className="relative flex items-center justify-center">
+            <Input
+              id="input-btc-reserve-address"
+              className="select-all"
+              readOnly={true}
+              defaultValue={btcReserveAddress}
+            />
+            <CopyIcon
+              onClick={async () => {
+                await navigator.clipboard.writeText(btcReserveAddress);
+                toast({
+                  title: "Copied to clipboard",
+                  description: "Reserve address was copied to your clipboard",
+                });
+              }}
+              className="absolute right-4 my-auto h-4 w-4 cursor-pointer text-primary-accent hover:text-primary"
+            />
+          </div>
         </div>
-        <div className="relative flex items-center justify-center">
-          <Input
-            required
-            id="input-deposit-amount"
-            className="select-all"
-            readOnly={true}
-            defaultValue={btcSatoshiTestAmount}
-            onClick={(e) => {
-              if (e.currentTarget) {
-                e.currentTarget.select();
-              }
-            }}
-          />
-          <p className="absolute right-4 my-auto cursor-default font-ui text-xs">
-            SATS
-          </p>
+
+        <div className="space-y-1">
+          <Text asChild>
+            <label
+              className="text-primary-accent"
+              htmlFor="input-btc-reserve-address"
+            >
+              BTC Reserve Id
+            </label>
+          </Text>
+          <div className="relative flex items-center justify-center">
+            <Input
+              id="input-btc-reserve-id"
+              className="select-all"
+              readOnly={true}
+              defaultValue={btcReserveId}
+            />
+            <CopyIcon
+              onClick={async () => {
+                await navigator.clipboard.writeText(btcReserveId.toString());
+                toast({
+                  title: "Copied to clipboard",
+                  description: "Reserve Id was copied to your clipboard",
+                });
+              }}
+              className="absolute right-4 my-auto h-4 w-4 cursor-pointer text-primary-accent hover:text-primary"
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <Text asChild>
+              <label
+                className="text-primary-accent"
+                htmlFor="input-deposit-amount"
+              >
+                Deposit Amount*
+              </label>
+            </Text>
+
+            <HelpCircle className="h-4 w-4 text-primary-accent hover:text-primary" />
+          </div>
+          <div className="relative flex items-center justify-center">
+            <Input
+              required
+              id="input-deposit-amount"
+              className="select-all"
+              readOnly={true}
+              defaultValue={btcSatoshiTestAmount}
+              onClick={(e) => {
+                if (e.currentTarget) {
+                  e.currentTarget.select();
+                }
+              }}
+            />
+            <p className="absolute right-4 my-auto cursor-default font-ui text-xs">
+              SATS
+            </p>
+          </div>
         </div>
       </div>
+
       <Button
         onClick={() => {
           checkBTCRegistration();
