@@ -17,7 +17,7 @@ const DragWrapper = forwardRef<
     <div
       className={cn(
         className,
-        "overflow-hidden rounded-md border bg-background"
+        "flex h-full w-full flex-col overflow-hidden rounded-md border bg-background"
       )}
       ref={ref}
       {...props}

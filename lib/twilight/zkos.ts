@@ -207,6 +207,38 @@ async function createQueryLendOrderMsg({
   return zkos.queryLendOrderZkos(address, signature, "PENDING");
 }
 
+async function executeTradeLendOrderMsg({
+  outputMemo,
+  signature,
+  address,
+  uuid,
+  orderType,
+  orderStatus,
+  executionPricePoolshare,
+  transactionType,
+}: {
+  outputMemo: string;
+  signature: string;
+  address: string;
+  uuid: string;
+  orderType: string;
+  orderStatus: string;
+  executionPricePoolshare: number;
+  transactionType: "ORDERTX" | "LENDTX";
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.executeTradeLendOrderZkOS(
+    outputMemo,
+    signature,
+    address,
+    uuid,
+    orderType,
+    orderStatus,
+    executionPricePoolshare,
+    transactionType
+  );
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
@@ -224,4 +256,5 @@ export {
   createQueryTradeOrderMsg,
   createQueryLendOrderMsg,
   createZkOSLendOrder,
+  executeTradeLendOrderMsg,
 };

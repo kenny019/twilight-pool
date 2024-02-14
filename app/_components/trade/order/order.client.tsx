@@ -29,7 +29,7 @@ const Order = () => {
   }
 
   return (
-    <div className="w-full space-y-2 py-2">
+    <div className="space-y-2 py-2">
       <div className="flex w-full items-center border-b pl-3 ">
         <Tabs defaultValue={currentTab}>
           <TabsList variant="underline">

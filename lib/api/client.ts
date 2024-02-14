@@ -85,4 +85,28 @@ async function cancelTradeOrder({
   return data;
 }
 
-export { sendTradeOrder, cancelTradeOrder, sendLendOrder };
+async function executeTradeOrder(msg: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "ExecuteTraderOrder",
+    params: {
+      data: msg,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(CLIENT_URL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+
+    return {};
+  }
+
+  console.log("success sent execute trade order", data);
+  return data;
+}
+
+export { sendTradeOrder, cancelTradeOrder, sendLendOrder, executeTradeOrder };

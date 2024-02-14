@@ -1,5 +1,6 @@
 import wfetch from "../http";
 import { twilightRegistedBtcAddressStruct } from "../types";
+import { TwilightApiResponse } from "./zkos";
 
 const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 
@@ -102,7 +103,20 @@ async function getBTCPrice() {
   return response;
 }
 
-async function queryTransactionHashes(address: string) {
+export type TransactionHash = {
+  account_id: string;
+  datetime: string;
+  id: number;
+  order_id: string;
+  order_status: string;
+  order_type: string;
+  output: string;
+  tx_hash: string;
+};
+
+async function queryTransactionHashes(
+  address: string
+): Promise<Record<string, never> | TwilightApiResponse<TransactionHash[]>> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "transaction_hashes",
@@ -114,7 +128,7 @@ async function queryTransactionHashes(address: string) {
 
   const { success, data, error } = await wfetch(priceURL)
     .post({ body })
-    .json<Record<string, any>>();
+    .json<TwilightApiResponse<TransactionHash[]>>();
 
   if (!success) {
     console.error(error);

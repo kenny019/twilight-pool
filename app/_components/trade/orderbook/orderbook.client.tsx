@@ -128,10 +128,10 @@ const Orderbook = () => {
   }
 
   return (
-    <div className="w-full space-y-2 py-2">
+    <div className="flex h-full w-full flex-col space-y-2 overflow-auto py-2">
       <div className="flex w-full items-center border-b pl-3">
         <Tabs defaultValue={currentTab}>
-          <TabsList variant="underline">
+          <TabsList className="flex w-full border-b-0" variant="underline">
             <TabsTrigger
               onClick={() => setCurrentTab("market")}
               value={"market"}

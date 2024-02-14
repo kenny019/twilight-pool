@@ -2,7 +2,7 @@ import wfetch from "../http";
 
 const ZK_URL = process.env.NEXT_PUBLIC_ZKOS_API_ENDPOINT as string;
 
-type ZkApiResponse<Result> = {
+export type TwilightApiResponse<Result> = {
   id: number;
   jsonrpc: string;
   result: string | Result;
@@ -25,7 +25,7 @@ async function queryUtxoForAddress(
 
   const { success, data, error } = await wfetch(ZK_URL)
     .post({ body })
-    .json<ZkApiResponse<UtxoData[]>>();
+    .json<TwilightApiResponse<UtxoData[]>>();
 
   if (!success) {
     console.error(error);
@@ -68,7 +68,7 @@ async function queryUtxoForOutput(
 
   const { success, data, error } = await wfetch(ZK_URL)
     .post({ body })
-    .json<ZkApiResponse<OutputData<"Coin">>>(); // note: "Coin" constant could possibly be abstracted
+    .json<TwilightApiResponse<OutputData<"Coin">>>(); // note: "Coin" constant could possibly be abstracted
 
   if (!success) {
     console.error(error);
@@ -94,7 +94,7 @@ async function broadcastTradingTx(
 
   const { success, data, error } = await wfetch(ZK_URL)
     .post({ body })
-    .json<ZkApiResponse<string>>(); // note: "Coin" constant could possibly be abstracted
+    .json<TwilightApiResponse<string>>(); // note: "Coin" constant could possibly be abstracted
 
   if (!success) {
     console.error(error);

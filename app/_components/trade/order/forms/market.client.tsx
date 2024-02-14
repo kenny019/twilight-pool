@@ -3,7 +3,7 @@ import ExchangeResource from "@/components/exchange-resource";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
-import { queryTransactionHashes } from "@/lib/api/rest";
+import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -38,6 +38,8 @@ const OrderMarketForm = () => {
   const selectedZkAccount = useTwilightStore(
     (state) => state.zk.selectedZkAccount
   );
+
+  const addTrade = useTwilightStore((state) => state.trade.addTrade);
 
   const currentZkAccount = zKAccounts[selectedZkAccount];
 
@@ -85,8 +87,8 @@ const OrderMarketForm = () => {
     if (data.result && data.result.id_key) {
       console.log(data);
       toast({
-        title: "Success",
-        description: "Successfully submitted trade order",
+        title: "Submitting order",
+        description: "Order is being submitted...",
       });
 
       // note: currently broken
@@ -106,9 +108,22 @@ const OrderMarketForm = () => {
 
       if (!txHashesRes.result) return;
 
-      const orderData = txHashesRes.result[0] as Record<string, any>[];
+      const orderData = txHashesRes.result[0] as TransactionHash;
 
-      console.log("tx_hashes", txHashesRes);
+      toast({
+        title: "Success",
+        description: "Successfully submitted trade order",
+      });
+
+      addTrade({
+        accountAddress: currentZkAccount.address,
+        orderStatus: orderData.order_status,
+        orderType: orderData.order_type,
+        tx_hash: orderData.tx_hash,
+        uuid: orderData.order_id,
+        value: satsValue,
+        output: orderData.output,
+      });
     } else {
       toast({
         variant: "error",
