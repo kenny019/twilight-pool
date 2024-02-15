@@ -85,6 +85,30 @@ async function cancelTradeOrder({
   return data;
 }
 
+async function executeLendOrder(msg: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "ExecuteLendOrder",
+    params: {
+      data: msg,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(CLIENT_URL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+
+    return {};
+  }
+
+  console.log("success sent execute trade order", data);
+  return data;
+}
+
 async function executeTradeOrder(msg: string) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
@@ -109,4 +133,10 @@ async function executeTradeOrder(msg: string) {
   return data;
 }
 
-export { sendTradeOrder, cancelTradeOrder, sendLendOrder, executeTradeOrder };
+export {
+  sendTradeOrder,
+  cancelTradeOrder,
+  sendLendOrder,
+  executeTradeOrder,
+  executeLendOrder,
+};

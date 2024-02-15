@@ -1,23 +1,28 @@
 "use client";
+
 import LendDialog from "@/app/_components/trade/lend/lend-dialog.client";
 import TransferDialog from "@/app/_components/wallet/transfer-dialog.client";
 import Button from "@/components/button";
 import { Separator } from "@/components/seperator";
 import { Text } from "@/components/typography";
+import { executeLendOrder } from "@/lib/api/client";
+import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
+import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useTwilight } from "@/lib/providers/twilight";
 import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
-import { createQueryLendOrderMsg } from "@/lib/twilight/zkos";
+import { executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
 import Big from "big.js";
-import { ArrowDown, ArrowLeftRight, Wallet } from "lucide-react";
+import { ArrowDown, ArrowLeftRight, Loader2, Wallet } from "lucide-react";
 import React, { useState } from "react";
 
 const Page = () => {
   useRedirectUnconnected();
 
+  const { toast } = useToast();
   const { currentPrice } = usePriceFeed();
   const { quisPrivateKey } = useTwilight();
 
@@ -26,6 +31,9 @@ const Page = () => {
   const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
 
+  const removeLend = useTwilightStore((state) => state.lend.removeLend);
+
+  const [isRedeemLoading, setIsRedeemLoading] = useState(false);
   const totalTradingSatsBalance = zKAccounts.reduce(
     (acc, account) => (acc += account.value || 0),
     0
@@ -79,7 +87,50 @@ const Page = () => {
 
   const totalLentUSDString = Big(totalLentSats).mul(currentPrice).toFixed(2);
 
-  function submitRedeemLentSats() {
+  async function submitRedeemLentSats() {
+    try {
+      for (const lendOrder of lendOrders) {
+        setIsRedeemLoading(true);
+        const lendOrderRes = await queryTransactionHashes(
+          lendOrder.accountAddress
+        );
+
+        const lendOrderData = (lendOrderRes.result as TransactionHash[])[0];
+
+        console.log(lendOrderData);
+        if (!lendOrderData) {
+          setIsRedeemLoading(false);
+          continue;
+        }
+
+        const msg = await executeTradeLendOrderMsg({
+          outputMemo: lendOrderData.output,
+          signature: quisPrivateKey,
+          address: lendOrderData.account_id,
+          uuid: lendOrderData.order_id,
+          orderStatus: lendOrderData.order_status,
+          orderType: lendOrderData.order_type,
+          transactionType: "LENDTX",
+          executionPricePoolshare: 1,
+        });
+
+        console.log(msg);
+
+        const executeLendRes = await executeLendOrder(msg);
+        console.log("executeLendRes", executeLendRes);
+
+        removeLend(lendOrder);
+
+        setIsRedeemLoading(false);
+        toast({
+          title: "Success",
+          description: "Redeemed lend sats successfully",
+        });
+      }
+    } catch (err) {
+      setIsRedeemLoading(false);
+      console.error(err);
+    }
     // for (const val of lendOrders) {
     // }
   }
@@ -198,20 +249,17 @@ const Page = () => {
                   <Button size="small">Lend</Button>
                 </LendDialog>
                 <Button
-                  onClick={async () => {
-                    const add =
-                      "0cbcb4aecfc5d49bf05701307d2ff981aa080e77207b5322f407cbf68405b0b84356ed8d08f9845cc73a6eb5303f619c7d34f7d687732fe1ecf7f83c930aa64d7892c6e7d0";
-
-                    const msg = await createQueryLendOrderMsg({
-                      address: add,
-                      signature: quisPrivateKey,
-                    });
-
-                    console.log(msg);
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await submitRedeemLentSats();
                   }}
                   size="small"
                 >
-                  Redeem
+                  {isRedeemLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Redeem"
+                  )}
                 </Button>
               </div>
             </div>
