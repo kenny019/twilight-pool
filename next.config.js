@@ -14,6 +14,7 @@ const nextConfig = {
       },
     ];
   },
+  transpilePackages: ["lightweight-charts"],
   webpack: (config) => {
     config.externals.push(
       // nextjs bundler cant correctly resolve deeply nested client and server dependencies, temporary fix

@@ -1,21 +1,30 @@
 import { Separator } from "@/components/seperator";
 import TickerWrapper from "../_components/trade/ticker-wrapper";
 import TradeWrapper from "../_components/trade/trade-wrapper.client";
-import { getBTCPrice } from "@/lib/api/rest";
+import { getBTCPrice, getCandleData } from "@/lib/api/rest";
 export default async function Home() {
-  const response = await getBTCPrice();
+  const btcPriceResponse = await getBTCPrice();
+  const candleDataResponse = await getCandleData();
 
   // todo: fallback to alternative price data or maybe show skeleton if price is not valid
-  const btcPrice = response.success
-    ? parseFloat(response.data.result.price)
+  const btcPrice = btcPriceResponse.success
+    ? parseFloat(btcPriceResponse.data.result.price)
     : 0;
+
+  const candleData = candleDataResponse.success
+    ? candleDataResponse.data.result
+    : [];
+
+  candleData.sort(
+    (left, right) => Date.parse(left.end) / 1000 - Date.parse(right.end) / 1000
+  );
 
   return (
     <main>
       <TickerWrapper btcPrice={btcPrice} />
       <Separator orientation="horizontal" />
       <div className="relative h-full w-full">
-        <TradeWrapper />
+        <TradeWrapper candleData={candleData} />
       </div>
     </main>
   );

@@ -103,6 +103,55 @@ async function getBTCPrice() {
   return response;
 }
 
+export type CandleData = {
+  btc_volume: string;
+  close: string;
+  end: string;
+  high: string;
+  low: string;
+  open: string;
+  resolution: string;
+  start: string;
+  trades: number;
+  usd_volume: string;
+};
+
+export type CandleFeedResponseData = {
+  jsonrpc: string;
+  id: number;
+  result: CandleData[];
+};
+
+async function getCandleData() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - 15);
+
+  const response = await wfetch(priceURL, {
+    next: {
+      revalidate: 10,
+    },
+  })
+    .post({
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "candle_data",
+        id: 123, // todo: autoincrement
+        params: {
+          interval: "ONE_MINUTE",
+          since: date.toISOString(),
+          limit: 15,
+          offset: 0,
+        },
+      }),
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+      },
+    })
+    .json<CandleFeedResponseData>();
+
+  return response;
+}
+
 export type TransactionHash = {
   account_id: string;
   datetime: string;
@@ -143,4 +192,5 @@ export {
   getReserveData,
   getBTCPrice,
   queryTransactionHashes,
+  getCandleData,
 };

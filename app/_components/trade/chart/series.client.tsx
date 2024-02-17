@@ -1,131 +1,87 @@
+"use client";
 import React, {
   forwardRef,
+  useContext,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
-  useState,
 } from "react";
-import { useChart } from "./chart.client";
+import { chartContext } from "./chart.client";
 import { ISeriesApi, UTCTimestamp } from "lightweight-charts";
-import useWebSocket from "@/lib/hooks/useWebsocket";
+import { CandleData } from "@/lib/api/rest";
 
-type SeriesContext = {
+type Props = {
+  data: CandleData[];
+  children?: React.ReactNode;
+};
+
+type SeriesApi = {
   _api?: ISeriesApi<"Candlestick">;
   api: () => ISeriesApi<"Candlestick"> | void;
   free: () => void;
   lastUpdatedTime: number;
 };
 
-type CandlestickData = {
-  btc_volume: string;
-  close: string;
-  end: string;
-  high: string;
-  low: string;
-  open: string;
-  resolution: string;
-  start: string;
-  trades: number;
-};
+const Series = forwardRef<ISeriesApi<"Candlestick"> | void, Props>(
+  (props, ref) => {
+    const { children, data } = props;
+    const parent = useContext(chartContext);
 
-const Series = forwardRef(({}, ref) => {
-  const chartContext = useChart();
+    const context = useRef<SeriesApi>({
+      lastUpdatedTime: 0,
+      _api: undefined,
+      api() {
+        if (!this._api) {
+          if (!parent._api) {
+            parent.api();
+          }
 
-  const seriesRef = useRef<SeriesContext>({
-    lastUpdatedTime: 0,
-    _api: undefined,
-    api() {
-      if (!this._api) {
-        this._api = chartContext._api?.addCandlestickSeries({
-          upColor: "#5FDB66",
-          downColor: "#F84952",
-          wickUpColor: "#5FDB66",
-          wickDownColor: "#F84952",
-        });
-      }
-      return this._api;
-    },
-    free() {
-      if (this._api) {
-        chartContext.free();
-      }
-    },
-  });
+          console.log("series calling parent._api", parent._api);
 
-  useWebSocket({
-    url: process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string,
-    onOpen: onOpen,
-    onMessage: onMessage,
-    onClose: onClose,
-  });
+          this._api = parent._api?.addCandlestickSeries({
+            upColor: "#5FDB66",
+            downColor: "#F84952",
+            wickUpColor: "#5FDB66",
+            wickDownColor: "#F84952",
+          });
 
-  function onOpen(ws: WebSocket) {
-    console.log("ws", ws);
-    ws.send(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        method: "subscribe_candle_data",
-        id: 123,
-        params: {
-          interval: "ONE_MINUTE",
-        },
-      })
-    );
-  }
+          const chartData = data.map((candleData) => {
+            const time = Math.floor(
+              Date.parse(candleData.start) / 1000
+            ) as UTCTimestamp;
+            return {
+              close: parseInt(candleData.close),
+              open: parseInt(candleData.open),
+              high: parseInt(candleData.high),
+              low: parseInt(candleData.low),
+              time,
+            };
+          });
 
-  function onMessage(message: any) {
-    try {
-      const parsedMessage = JSON.parse(message.data);
-
-      // console.log("candledata", parsedMessage);
-      if (!parsedMessage.params || !parsedMessage.params.result) return;
-
-      const data = parsedMessage.params.result as CandlestickData[];
-
-      data.sort(
-        (left, right) =>
-          Date.parse(left.end) / 1000 - Date.parse(right.end) / 1000
-      );
-
-      data.forEach((priceData: CandlestickData, index) => {
-        const time = Math.floor(
-          Date.parse(priceData.start) / 1000
-        ) as UTCTimestamp;
-
-        if (time < seriesRef.current.lastUpdatedTime) return;
-
-        if (index === data.length - 1) {
-          seriesRef.current.lastUpdatedTime = time;
+          this._api?.setData(chartData);
+          // console.log(this._api?.data());
         }
+        return this._api;
+      },
+      free() {
+        if (this._api) {
+          parent.free();
+        }
+      },
+    });
 
-        // const time = new Date(priceData.start);
-        seriesRef.current._api?.update({
-          close: parseInt(priceData.close),
-          open: parseInt(priceData.open),
-          high: parseInt(priceData.high),
-          low: parseInt(priceData.low),
-          time,
-          // time: 1642514276,
-        });
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    useLayoutEffect(() => {
+      const currentRef = context.current;
+      currentRef.api();
+
+      return () => currentRef.free();
+    }, []);
+
+    useImperativeHandle(ref, () => context.current.api(), []);
+
+    return <>{children}</>;
   }
-
-  function onClose() {
-    console.log("candle feed closed");
-  }
-
-  useLayoutEffect(() => {
-    const currentRef = seriesRef.current;
-    currentRef.api();
-
-    return () => currentRef.free();
-  }, []);
-
-  return <></>;
-});
+);
 
 Series.displayName = "Series";
 

@@ -131,8 +131,6 @@ const Page = () => {
       setIsRedeemLoading(false);
       console.error(err);
     }
-    // for (const val of lendOrders) {
-    // }
   }
 
   return (

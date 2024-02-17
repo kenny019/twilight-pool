@@ -1,17 +1,16 @@
 "use client";
 import React, { useRef } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
-import useWindow from "@/lib/hooks/useWindow";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
-import Chart from "./chart/chart.client";
-import { usePriceFeed } from "@/lib/providers/feed";
 import DragWrapper from "./drag-wrapper.client";
 import {
   GRID_HEIGHT_OFFSET,
   GRID_ROW_HEIGHT,
   GRID_WIDTH_OFFSET,
 } from "@/lib/constants";
+import ChartWrapper from "./chart/chart-wrapper.client";
+import { CandleData } from "@/lib/api/rest";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
@@ -32,7 +31,11 @@ function calculateGridDimensions(
   };
 }
 
-const TradeWrapper = () => {
+type Props = {
+  candleData: CandleData[];
+};
+
+const TradeWrapper = ({ candleData }: Props) => {
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
       const gridDimensions = calculateGridDimensions(
@@ -104,7 +107,7 @@ const TradeWrapper = () => {
         title="Chart"
         key="chart"
       >
-        <Chart />
+        <ChartWrapper candleData={candleData} />
       </DragWrapper>
       <DragWrapper
         dimension={gridDimensionRefs.current}
