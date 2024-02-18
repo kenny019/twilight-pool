@@ -1,14 +1,17 @@
 "use client";
 import { useGrid } from "@/lib/providers/grid";
+import { useTwilight } from "@/lib/providers/twilight";
 import {
   ColorType,
   CrosshairMode,
   IChartApi,
   createChart,
 } from "lightweight-charts";
+import { useTheme } from "next-themes";
 import React, {
   createContext,
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -34,79 +37,143 @@ type Props = {
   children: React.ReactNode;
 };
 
-const Chart = forwardRef<IChartApi | void, Props>((props, ref) => {
-  const { children, container } = props;
+const Chart = forwardRef<IChartApi | void, Props>(
+  ({ children, container }, ref) => {
+    const { width, height } = useGrid();
 
-  const { width, height } = useGrid();
+    const { theme } = useTheme();
 
-  const chartApiRef = useRef<ChartApi>({
-    api() {
-      if (!this._api) {
-        if (!container) return;
-        this._api = createChart(container, {
-          width: width > 0 ? width - CHART_X_PADDING : 0,
-          height: height > 0 ? height - CHART_Y_PADDING : 0,
-          layout: {
-            background: {
-              type: ColorType.Solid,
-              color: "#000",
+    const chartApiRef = useRef<ChartApi>({
+      api() {
+        if (!this._api) {
+          if (!container) return;
+          this._api = createChart(container, {
+            width: width > 0 ? width - CHART_X_PADDING : 0,
+            height: height > 0 ? height - CHART_Y_PADDING : 0,
+            layout: {
+              background: {
+                type: ColorType.Solid,
+                color: theme === "light" ? "#ffffff" : "#000",
+              },
+              textColor:
+                theme === "light"
+                  ? "rgba(0, 0, 0, 1)"
+                  : "rgba(255, 255, 255, 0.9)",
             },
-            textColor: "rgba(255, 255, 255, 0.9)",
-          },
-          grid: {
-            vertLines: {
-              color: "rgba(197, 203, 206, 0.12)",
+            grid: {
+              vertLines: {
+                color:
+                  theme === "light"
+                    ? "rgba(0, 0, 0, 0.4)"
+                    : "rgba(197, 203, 206, 0.12)",
+              },
+              horzLines: {
+                color:
+                  theme === "light"
+                    ? "rgba(0, 0, 0, 0.4)"
+                    : "rgba(197, 203, 206, 0.12)",
+              },
             },
-            horzLines: {
-              color: "rgba(197, 203, 206, 0.12)",
+            crosshair: {
+              mode: CrosshairMode.Normal,
             },
-          },
-          crosshair: {
-            mode: CrosshairMode.Normal,
-          },
-          rightPriceScale: {
-            borderColor: "rgba(255, 255, 255, 0.12)",
-          },
-          timeScale: {
-            borderColor: "rgba(255, 255, 255, 0.12)",
-          },
-        });
-        this._api.timeScale().fitContent();
-      }
-      return this._api;
-    },
-    free() {
-      if (this._api) {
-        this._api.remove();
-      }
-    },
-  });
-
-  useLayoutEffect(() => {
-    const currentRef = chartApiRef.current;
-    const chart = currentRef.api();
-
-    if (!chart) return;
-
-    chart.applyOptions({
-      width: width > 0 ? width - CHART_X_PADDING : 0,
-      height: height > 0 ? height - CHART_Y_PADDING : 0,
+            rightPriceScale: {
+              borderColor:
+                theme === "light"
+                  ? "rgba(0, 0, 0, 0.6)"
+                  : "rgba(255, 255, 255, 0.12)",
+            },
+            timeScale: {
+              borderColor:
+                theme === "light"
+                  ? "rgba(0, 0, 0, 0.6)"
+                  : "rgba(255, 255, 255, 0.12)",
+            },
+          });
+          this._api.timeScale().fitContent();
+        }
+        return this._api;
+      },
+      free() {
+        if (this._api) {
+          this._api.remove();
+        }
+      },
     });
-  }, [width, height]);
 
-  useLayoutEffect(() => {
-    const currentRef = chartApiRef.current;
-    currentRef.api();
-  }, []);
+    useLayoutEffect(() => {
+      const currentRef = chartApiRef.current;
+      const chart = currentRef.api();
 
-  useImperativeHandle(ref, () => chartApiRef.current.api(), []);
+      if (!chart) return;
 
-  return (
-    <chartContext.Provider value={chartApiRef.current}>
-      {children}
-    </chartContext.Provider>
-  );
-});
+      chart.applyOptions({
+        width: width > 0 ? width - CHART_X_PADDING : 0,
+        height: height > 0 ? height - CHART_Y_PADDING : 0,
+      });
+    }, [width, height]);
+
+    useLayoutEffect(() => {
+      const currentRef = chartApiRef.current;
+      currentRef.api();
+    }, []);
+
+    useEffect(() => {
+      const currentRef = chartApiRef.current;
+      const chart = currentRef.api();
+
+      if (!chart) return;
+
+      chart.applyOptions({
+        layout: {
+          background: {
+            type: ColorType.Solid,
+            color: theme === "light" ? "#ffffff" : "#000",
+          },
+          textColor:
+            theme === "light" ? "rgba(0, 0, 0, 1)" : "rgba(255, 255, 255, 0.9)",
+        },
+        grid: {
+          vertLines: {
+            color:
+              theme === "light"
+                ? "rgba(0, 0, 0, 0.4)"
+                : "rgba(197, 203, 206, 0.12)",
+          },
+          horzLines: {
+            color:
+              theme === "light"
+                ? "rgba(0, 0, 0, 0.4)"
+                : "rgba(197, 203, 206, 0.12)",
+          },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+          borderColor:
+            theme === "light"
+              ? "rgba(0, 0, 0, 0.6)"
+              : "rgba(255, 255, 255, 0.12)",
+        },
+        timeScale: {
+          borderColor:
+            theme === "light"
+              ? "rgba(0, 0, 0, 0.6)"
+              : "rgba(255, 255, 255, 0.12)",
+        },
+      });
+    }, [theme]);
+
+    useImperativeHandle(ref, () => chartApiRef.current.api(), []);
+
+    return (
+      <chartContext.Provider value={chartApiRef.current}>
+        {children}
+      </chartContext.Provider>
+    );
+  }
+);
 
 Chart.displayName = "Chart";
 
