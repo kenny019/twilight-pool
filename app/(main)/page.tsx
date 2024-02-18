@@ -1,7 +1,7 @@
 import { Separator } from "@/components/seperator";
-import TickerWrapper from "../_components/trade/ticker-wrapper";
 import TradeWrapper from "../_components/trade/trade-wrapper.client";
 import { getBTCPrice, getCandleData } from "@/lib/api/rest";
+import TickerWrapper from "../_components/trade/ticker-wrapper.client";
 export default async function Home() {
   const btcPriceResponse = await getBTCPrice();
   const candleDataResponse = await getCandleData();

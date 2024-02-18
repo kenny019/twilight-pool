@@ -25,7 +25,6 @@ const ConnectWallet = () => {
 
   const { status, mainWallet } = useWallet();
 
-  console.log("stat", status);
   return (
     <>
       {status === "Connected" ? (

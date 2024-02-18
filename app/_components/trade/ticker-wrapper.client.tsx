@@ -28,7 +28,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
   );
 
   return (
-    <div className="flex px-4 py-2">
+    <div className="hidden px-4 py-2 lg:flex">
       {/* bitcoin ticker */}
       <div className="flex items-center">
         <div className="flex items-center space-x-2 pr-4">
