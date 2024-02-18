@@ -51,12 +51,12 @@ const Header = () => {
             <Link href="/">
               <Logo className="hover:opacity-80" />
             </Link>
-            <div className="hidden lg:flex">
+            <div className="hidden items-center lg:flex">
               <div className="flex items-center space-x-1">
                 <MultiLink title="Marketplace" subLinks={marketSubLinks} />
                 <MultiLink title="What We Offer" subLinks={offerSubLinks} />
               </div>
-              <Separator className="h-5" orientation="vertical" />
+              <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-6">
                 <Link
                   href="https://docs.twilight.finance/"
