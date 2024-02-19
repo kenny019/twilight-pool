@@ -44,6 +44,9 @@ export const TwilightStoreProvider = ({
   const selectedZkAccount = storeRef.current.getState().zk.selectedZkAccount;
   const updateSelectedZkAccount =
     storeRef.current.getState().zk.updateSelectedZkAccount;
+  const storedTwilightAddress = storeRef.current.getState().zk.twilightAddress;
+  const updateTwilightAddress =
+    storeRef.current.getState().zk.updateTwilightAddress;
 
   function useInitializeMainZkAccount() {
     useEffect(() => {
@@ -62,9 +65,21 @@ export const TwilightStoreProvider = ({
 
         addZkAccount({ ...account, value: 0, isOnChain: false });
 
-        console.log("Account", account);
+        console.log("initialising main zk account", account);
       }
 
+      async function storeTwilightAddress() {
+        const chainAddress = chainWallet?.address;
+
+        if (!chainAddress) return;
+
+        if (storedTwilightAddress || storedTwilightAddress === chainAddress)
+          return;
+
+        updateTwilightAddress(chainAddress);
+      }
+
+      storeTwilightAddress();
       initZkAccount();
     }, [status, quisPrivateKey]);
   }
@@ -94,6 +109,8 @@ export const TwilightStoreProvider = ({
 
         if (!twilightAddress || !storeRef.current) return;
 
+        if (storedTwilightAddress === twilightAddress) return;
+
         const options = storeRef.current.persist.getOptions();
 
         if (options.name === `twilight-${twilightAddress}`) {
@@ -105,7 +122,8 @@ export const TwilightStoreProvider = ({
         });
 
         await storeRef.current.persist.rehydrate();
-        console.log(`rehydrated twilight-${twilightAddress}`);
+
+        console.log(`2. rehydrated twilight-${twilightAddress}`);
       }
 
       updateTwilightStore();

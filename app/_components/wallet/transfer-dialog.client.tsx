@@ -133,6 +133,7 @@ const TransferDialog = ({
         const depositZkAccount = zkAccounts.filter(
           (account) => account.address === selectedTradingAccountTo
         )[0];
+        console.log("depositZkAccount", depositZkAccount.tag);
 
         if (!depositZkAccount) {
           console.error("error cant find depositZkAccount", depositZkAccount);
@@ -380,7 +381,7 @@ const TransferDialog = ({
                             value={subAccount.address}
                             key={subAccount.address}
                           >
-                            {`Subaccount ${index}`}
+                            {subAccount.tag}
                           </SelectItem>
                         );
                       })}
@@ -463,7 +464,7 @@ const TransferDialog = ({
                             value={subAccount.address}
                             key={subAccount.address}
                           >
-                            {`Subaccount ${index}`}
+                            {subAccount.tag}
                           </SelectItem>
                         );
                       })}

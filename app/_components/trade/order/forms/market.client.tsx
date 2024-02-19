@@ -105,13 +105,31 @@ const OrderMarketForm = () => {
         // const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
         // console.log("queryTradeOrderRes", queryTradeOrderRes);
 
-        const txHashesRes = await queryTransactionHashes(
-          currentZkAccount.address
-        );
+        let retries = 0;
+        let orderData: TransactionHash | undefined = undefined;
 
-        if (!txHashesRes.result) return;
+        while (retries < 2 && !orderData) {
+          const txHashesRes = await queryTransactionHashes(
+            currentZkAccount.address
+          );
 
-        const orderData = txHashesRes.result[0] as TransactionHash;
+          if (!txHashesRes.result) {
+            retries += 1;
+            continue;
+          }
+
+          orderData = txHashesRes.result[0] as TransactionHash;
+        }
+
+        if (!orderData) {
+          toast({
+            variant: "error",
+            title: "Error",
+            description: "Error with creating trade order",
+          });
+
+          return;
+        }
 
         toast({
           title: "Success",

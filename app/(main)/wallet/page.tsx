@@ -70,6 +70,20 @@ const Page = () => {
     .mul(currentPrice)
     .toFixed(2);
 
+  const zkAccountSatsBalance = zkAccounts.reduce((acc, account) => {
+    acc += account.value || 0;
+
+    return acc;
+  }, 0);
+
+  const zkAccountBTCString = new BTC("sats", Big(zkAccountSatsBalance))
+    .convert("BTC")
+    .toFixed(8);
+
+  const zkAccountBTCUSDString = Big(zkAccountBTCString)
+    .mul(currentPrice)
+    .toFixed(2);
+
   return (
     <div className="mx-8 mt-4 space-y-8">
       <div className="flex w-full max-w-4xl flex-row items-baseline justify-between">
@@ -131,13 +145,23 @@ const Page = () => {
 
             <div className="flex w-full justify-between">
               <Text>Trading</Text>
-              <div>
-                <Skeleton className="h-5 w-[140px]" />
-                {/* <Text className="text-primary/80">BTC</Text> */}
-                {/* <Text className="text-xs text-primary-accent">
-                  = 56632.11 USD
-                </Text> */}
-                <Skeleton className="mt-1 h-4 w-[80px]" />
+              <div className="min-w-[140px]">
+                <Resource
+                  isLoaded={zkAccountSatsBalance > 0}
+                  placeholder={
+                    <>
+                      <Skeleton className="h-5 w-[140px]" />
+                      <Skeleton className="mt-1 h-4 w-[80px]" />
+                    </>
+                  }
+                >
+                  <Text className="text-primary/80">
+                    {zkAccountBTCString} BTC
+                  </Text>
+                  <Text className="text-xs text-primary-accent">
+                    = {zkAccountBTCUSDString} USD
+                  </Text>
+                </Resource>
               </div>
               <div className="flex flex-row space-x-2">
                 <Button variant="ui" size="icon" disabled={twilightSats < 1}>

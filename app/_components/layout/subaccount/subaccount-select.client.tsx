@@ -16,6 +16,8 @@ import { ChevronDown } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import { useTwilightStore } from "@/lib/providers/store";
+import BTC from "@/lib/twilight/denoms";
+import Big from "big.js";
 
 function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
   if (selectedZkAccount === ZK_ACCOUNT_INDEX.DISCONNECTED) {
@@ -89,8 +91,15 @@ const SubaccountSelect = () => {
           {zkAccounts.length < 1 ? (
             // todo: should block adding subaccounts into current value
             <>
-              <SelectItem value={ZK_ACCOUNT_INDEX.MAIN.toString()}>
+              <SelectItem
+                className="flex-col items-start"
+                value={ZK_ACCOUNT_INDEX.MAIN.toString()}
+                isNotSpan
+              >
                 Trading Account
+                <span className="text-xs text-primary-accent">
+                  {new BTC("sats", Big(0)).convert("BTC").toString()} BTC
+                </span>
               </SelectItem>
               <SelectItem value={ZK_ACCOUNT_INDEX.MANAGE_ACCOUNT.toString()}>
                 Manage Subaccounts
@@ -98,8 +107,24 @@ const SubaccountSelect = () => {
             </>
           ) : (
             <>
-              <SelectItem value={ZK_ACCOUNT_INDEX.MAIN.toString()}>
+              <SelectItem
+                className="flex-col items-start"
+                value={ZK_ACCOUNT_INDEX.MAIN.toString()}
+                isNotSpan
+              >
                 Trading Account
+                <span className="text-xs text-primary-accent">
+                  {new BTC(
+                    "sats",
+                    Big(
+                      zkAccounts.filter((account) => account.tag === "main")[0]
+                        .value || 0
+                    )
+                  )
+                    .convert("BTC")
+                    .toString()}{" "}
+                  BTC
+                </span>
               </SelectItem>
               {zkAccounts.map((account, index) => {
                 if (index === ZK_ACCOUNT_INDEX.MAIN) {
@@ -108,8 +133,19 @@ const SubaccountSelect = () => {
                 }
 
                 return (
-                  <SelectItem key={index} value={index.toString()}>
+                  <SelectItem
+                    className="flex-col items-start"
+                    key={index}
+                    value={index.toString()}
+                    isNotSpan
+                  >
                     {account.tag}
+                    <span className="text-xs text-primary-accent">
+                      {new BTC("sats", Big(account.value || 0))
+                        .convert("BTC")
+                        .toString()}{" "}
+                      BTC
+                    </span>
                   </SelectItem>
                 );
               })}

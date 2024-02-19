@@ -22,8 +22,29 @@ export const createTwilightStore = () => {
         name: "twilight-",
         storage: createJSONStorage(() => localStorage),
         skipHydration: true,
-        merge: (persistedState, currentState) =>
-          deepMerge(currentState, persistedState as AccountSlices),
+        merge: (persistedState, currentState) => {
+          const mergedData = deepMerge(
+            {
+              zk: {
+                ...currentState.zk,
+                zkAccounts: [],
+                selectedZkAccount: -1,
+                twilightAddress: "",
+              },
+              lend: {
+                ...currentState.lend,
+                lends: [],
+              },
+              trade: {
+                ...currentState.trade,
+                trades: [],
+              },
+            },
+            persistedState as AccountSlices
+          );
+
+          return mergedData;
+        },
       }
     )
   );

@@ -3,6 +3,8 @@ import { AccountSlices, StateImmerCreator } from "../utils";
 import { immer } from "zustand/middleware/immer";
 
 export interface ZkAccountSlice {
+  twilightAddress: string;
+  updateTwilightAddress: (twilightAddress: string) => void;
   selectedZkAccount: number;
   updateSelectedZkAccount: (index: number) => void;
   zkAccounts: ZkAccount[];
@@ -15,6 +17,11 @@ export const createZkAccountSlice: StateImmerCreator<
   AccountSlices,
   ZkAccountSlice
 > = (set) => ({
+  twilightAddress: "",
+  updateTwilightAddress: (twilightAddress) =>
+    set((state) => {
+      state.zk.twilightAddress = twilightAddress;
+    }),
   selectedZkAccount: -1,
   updateSelectedZkAccount: (index) =>
     set((state) => {
