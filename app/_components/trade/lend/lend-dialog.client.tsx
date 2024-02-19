@@ -18,8 +18,8 @@ import {
 import { Text } from "@/components/typography";
 import { sendLendOrder } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
+import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
-import { useTwilightStore } from "@/lib/state/store";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { createZkLendOrder } from "@/lib/twilight/zk";
 import Big from "big.js";

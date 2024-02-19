@@ -29,7 +29,6 @@ import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
-import { useTwilightStore } from "@/lib/state/store";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { createZkAccountWithBalance } from "@/lib/twilight/zk";
@@ -39,6 +38,7 @@ import {
   queryUtxoForOutput,
 } from "@/lib/api/zkos";
 import { useToast } from "@/lib/hooks/useToast";
+import { useTwilightStore } from "@/lib/providers/store";
 
 type Props = {
   children: React.ReactNode;
@@ -59,7 +59,7 @@ const TransferDialog = ({
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
-  const updateZkAccount = useTwilightStore.getState().zk.updateZkAccount;
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
 
   const selectedZkAccountIndex = useTwilightStore(
     (state) => state.zk.selectedZkAccount

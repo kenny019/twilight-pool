@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useRef } from "react";
 import { createZkAccountSlice } from "../state/slices/accounts";
-import { useTwilightStore } from "../state/store";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useTwilight } from "./twilight";
@@ -22,8 +21,6 @@ export const ZkAccountProvider: React.FC<ZkAccountsProviderProps> = (props) => {
 };
 
 const ZkAccount: React.FC<ZkAccountsProviderProps> = ({ children }) => {
-  const store = useRef<zkStore>(useTwilightStore().zk).current;
-
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
 

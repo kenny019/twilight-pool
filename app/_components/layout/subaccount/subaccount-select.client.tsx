@@ -15,7 +15,7 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { ChevronDown } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
-import { useTwilightStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/providers/store";
 
 function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
   if (selectedZkAccount === ZK_ACCOUNT_INDEX.DISCONNECTED) {
@@ -32,8 +32,9 @@ function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
 const SubaccountSelect = () => {
   const [openSubaccountModal, setOpenSubaccountModal] = useState(false);
 
-  const updateSelectedZkAccount =
-    useTwilightStore.getState().zk.updateSelectedZkAccount;
+  const updateSelectedZkAccount = useTwilightStore(
+    (state) => state.zk.updateSelectedZkAccount
+  );
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const { status } = useWallet();

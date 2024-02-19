@@ -9,7 +9,7 @@ import { useTwilight } from "@/lib/providers/twilight";
 import { z } from "zod";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkAccount } from "@/lib/twilight/zk";
-import { useTwilightStore } from "@/lib/state/store";
+import { useTwilightStore } from "@/lib/providers/store";
 
 const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();

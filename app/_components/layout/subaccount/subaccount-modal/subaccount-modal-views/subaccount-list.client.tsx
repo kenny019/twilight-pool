@@ -9,8 +9,8 @@ import { Plus } from "lucide-react";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import { ZkAccount } from "@/lib/types";
-import { useTwilightStore } from "@/lib/state/store";
 import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
+import { useTwilightStore } from "@/lib/providers/store";
 
 type AccountRowProps = {
   account: ZkAccount;
@@ -26,8 +26,13 @@ const SubaccountListView = () => {
     (state) => state.zk.selectedZkAccount
   );
 
-  const updateSelectedZkAccount =
-    useTwilightStore.getState().zk.updateSelectedZkAccount;
+  console.log(
+    "zk",
+    useTwilightStore((state) => state.zk)
+  );
+  const updateSelectedZkAccount = useTwilightStore(
+    (state) => state.zk.updateSelectedZkAccount
+  );
 
   function AccountRow({ accountIndex, account, className }: AccountRowProps) {
     const subAccountBTCValue = new BTC("sats", Big(account.value || 0))

@@ -39,6 +39,7 @@
     "big.js": "^6.2.1",
     "chain-registry": "^1.20.0",
     "clsx": "^2.0.0",
+    "deepmerge": "^4.3.1",
     "eslint": "8.47.0",
     "eslint-config-next": "13.4.16",
     "immer": "^10.0.3",
