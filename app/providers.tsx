@@ -16,7 +16,6 @@ import { MainWalletBase } from "@cosmos-kit/core";
 import { TwilightProvider } from "@/lib/providers/twilight";
 import { Toaster } from "@/components/toast-provider";
 import { PriceFeedProvider } from "@/lib/providers/feed";
-import { ZkAccountProvider } from "@/lib/providers/zk";
 import { TwilightStoreProvider } from "@/lib/providers/store";
 
 export function Providers({ children }: { children: React.ReactNode }) {
