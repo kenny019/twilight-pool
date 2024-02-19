@@ -99,13 +99,14 @@ const TickerWrapper = ({ btcPrice }: Props) => {
         <Skeleton className="h-6 w-full" />
       </TickerItem>
       <TickerItem border={false} title="Funding Rate / Countdown">
-        <p className="flex">
+        <Skeleton className="h-6 w-full" />
+        {/* <p className="flex">
           <span className="mr-2 inline-flex items-center text-theme">
             <Zap className="w-4" />
           </span>
           <span className="mr-3 text-green-medium">{`0.01100%`}</span>
           {`/ 02:26:01`}
-        </p>
+        </p> */}
       </TickerItem>
     </div>
   );
