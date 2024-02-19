@@ -193,7 +193,7 @@ async function createZkOrder({
 
   const orderString = await createTraderOrder({
     inputString,
-    scriptAddress: "18f2ebda173ffc6ad2e3b4d3a3864a96ae8a6f7e30",
+    scriptAddress: "1860eef63edee1078178b3adb63e9f86921caa16b5",
     signature,
     scalar,
     value,
@@ -257,7 +257,7 @@ async function createZkLendOrder({
   const orderString = await createZkOSLendOrder({
     inputString,
     scalar,
-    scriptAddress: "18f2ebda173ffc6ad2e3b4d3a3864a96ae8a6f7e30",
+    scriptAddress: "1860eef63edee1078178b3adb63e9f86921caa16b5",
     signature,
     deposit,
   });
