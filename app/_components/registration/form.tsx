@@ -116,7 +116,7 @@ const WalletRegistrationForm = () => {
           description: "Your Bitcoin address has been successfully submitted",
         });
         router.push("/verification");
-      }, 5000);
+      }, 1000);
     } catch (err) {
       setIsLoading(false);
       console.error(err);
