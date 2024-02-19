@@ -10,8 +10,7 @@ type GetRegisteredBTCDepositAddressRes = {
 async function getRegisteredBTCDepositAddress() {
   const { success, data, error } = await wfetch(
     new URL(
-      "twilight-project/nyks/bridge/registered_btc_deposit_addresses",
-      REST_URL
+      REST_URL + "twilight-project/nyks/bridge/registered_btc_deposit_addresses"
     )
   )
     .get()

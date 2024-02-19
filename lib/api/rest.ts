@@ -7,8 +7,8 @@ const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 async function getBTCDepositAddress(depositAddress: string) {
   const { success, data, error } = await wfetch(
     new URL(
-      `/twilight-project/nyks/bridge/registered_btc_deposit_address_by_twilight_address/${depositAddress}`,
-      REST_URL
+      REST_URL +
+        `/twilight-project/nyks/bridge/registered_btc_deposit_address_by_twilight_address/${depositAddress}`
     )
   )
     .get()
@@ -48,7 +48,10 @@ type ReserveDataStruct = {
 
 async function getReserveData() {
   const { success, data, error } = await wfetch(
-    new URL("/twilight-project/nyks/volt/btc_reserve", REST_URL)
+    new URL(
+      // "https://nyks.twilight-explorer.com/rest/" +
+      REST_URL + "/twilight-project/nyks/volt/btc_reserve"
+    )
   )
     .get()
     .json<ReserveDataStruct>();
