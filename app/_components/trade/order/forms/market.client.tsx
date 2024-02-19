@@ -45,93 +45,101 @@ const OrderMarketForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function submitMarket(type: "SELL" | "BUY") {
-    if (!hasRegisteredBTC) return;
-    const btcValue = btcRef.current?.value;
+    try {
+      if (!hasRegisteredBTC) return;
 
-    if (!btcValue) {
-      toast({
-        variant: "error",
-        title: "Missing BTC value",
-        description: "Please enter a valid value",
-      });
-      return;
-    }
+      const btcValue = btcRef.current?.value;
 
-    const satsValue = new BTC("BTC", Big(btcValue)).convert("sats").toNumber();
+      if (!btcValue) {
+        toast({
+          variant: "error",
+          title: "Missing BTC value",
+          description: "Please enter a valid value",
+        });
+        return;
+      }
 
-    setIsSubmitting(true);
+      const satsValue = new BTC("BTC", Big(btcValue))
+        .convert("sats")
+        .toNumber();
 
-    const { success, msg } = await createZkOrder({
-      leverage: 1,
-      orderType: "MARKET",
-      positionType: type === "BUY" ? "LONG" : "SHORT",
-      signature: quisPrivateKey,
-      timebounds: 1,
-      zkAccount: currentZkAccount,
-      value: satsValue,
-    });
+      setIsSubmitting(true);
 
-    if (!success || !msg) {
-      toast({
-        variant: "error",
-        title: "Unable to submit trade order",
-        description: "An error has occurred, try again later.",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const data = await sendTradeOrder(msg);
-
-    if (data.result && data.result.id_key) {
-      console.log(data);
-      toast({
-        title: "Submitting order",
-        description: "Order is being submitted...",
-      });
-
-      // note: currently broken
-      // const queryTradeOrderMsg = await createQueryTradeOrderMsg({
-      //   address: currentZkAccount.address,
-      //   orderStatus: "PENDING",
-      //   signature: quisPrivateKey,
-      // });
-
-      // console.log("queryTradeOrderMsg", queryTradeOrderMsg);
-      // const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
-      // console.log("queryTradeOrderRes", queryTradeOrderRes);
-
-      const txHashesRes = await queryTransactionHashes(
-        currentZkAccount.address
-      );
-
-      if (!txHashesRes.result) return;
-
-      const orderData = txHashesRes.result[0] as TransactionHash;
-
-      toast({
-        title: "Success",
-        description: "Successfully submitted trade order",
-      });
-
-      addTrade({
-        accountAddress: currentZkAccount.address,
-        orderStatus: orderData.order_status,
-        orderType: orderData.order_type,
-        tx_hash: orderData.tx_hash,
-        uuid: orderData.order_id,
+      const { success, msg } = await createZkOrder({
+        leverage: 1,
+        orderType: "MARKET",
+        positionType: type === "BUY" ? "LONG" : "SHORT",
+        signature: quisPrivateKey,
+        timebounds: 1,
+        zkAccount: currentZkAccount,
         value: satsValue,
-        output: orderData.output,
       });
-    } else {
-      toast({
-        variant: "error",
-        title: "Unable to submit trade order",
-        description: "An error has occurred, try again later.",
-      });
-    }
 
-    setIsSubmitting(false);
+      if (!success || !msg) {
+        toast({
+          variant: "error",
+          title: "Unable to submit trade order",
+          description: "An error has occurred, try again later.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await sendTradeOrder(msg);
+
+      if (data.result && data.result.id_key) {
+        console.log(data);
+        toast({
+          title: "Submitting order",
+          description: "Order is being submitted...",
+        });
+
+        // note: currently broken
+        // const queryTradeOrderMsg = await createQueryTradeOrderMsg({
+        //   address: currentZkAccount.address,
+        //   orderStatus: "PENDING",
+        //   signature: quisPrivateKey,
+        // });
+
+        // console.log("queryTradeOrderMsg", queryTradeOrderMsg);
+        // const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
+        // console.log("queryTradeOrderRes", queryTradeOrderRes);
+
+        const txHashesRes = await queryTransactionHashes(
+          currentZkAccount.address
+        );
+
+        if (!txHashesRes.result) return;
+
+        const orderData = txHashesRes.result[0] as TransactionHash;
+
+        toast({
+          title: "Success",
+          description: "Successfully submitted trade order",
+        });
+
+        addTrade({
+          accountAddress: currentZkAccount.address,
+          orderStatus: orderData.order_status,
+          orderType: orderData.order_type,
+          tx_hash: orderData.tx_hash,
+          uuid: orderData.order_id,
+          value: satsValue,
+          output: orderData.output,
+        });
+      } else {
+        toast({
+          variant: "error",
+          title: "Unable to submit trade order",
+          description: "An error has occurred, try again later.",
+        });
+      }
+
+      setIsSubmitting(false);
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
     // todo: get this data and put it into "my trades"
   }
 
