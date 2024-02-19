@@ -175,7 +175,7 @@ const TransferDialog = ({
         const res = await stargateClient.signAndBroadcast(
           twilightAddress,
           [msg],
-          fee
+          100
         );
 
         console.log("sent sats from funding to trading", transferAmount);

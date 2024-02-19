@@ -15,98 +15,113 @@ const BtcWithdrawalForm = () => {
   const { mainWallet } = useWallet();
 
   const { toast } = useToast();
+
   const withdrawBtcRef = useRef<HTMLInputElement>(null);
   const depositRef = useRef<HTMLInputElement>(null);
+  const reserveIdRef = useRef<HTMLInputElement>(null);
+
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
 
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   async function submitWithdrawal() {
-    if (!depositRef.current?.value) {
-      toast({
-        variant: "error",
-        title: "Error ",
-        description: "Invalid BTC amount",
-      });
-      return;
-    }
-
-    if (!mainWallet) {
-      console.error("no mainWallet");
-      return toast({
-        title: "No wallet",
-        description: "Please connect your wallet before registration",
-        variant: "error",
-      });
-    }
-
-    const chainWallet = mainWallet.getChainWallet("nyks");
-
-    const withdrawAddress = withdrawBtcRef.current?.value;
-
-    if (!chainWallet || !withdrawAddress) return;
-
-    const twilightAddress = chainWallet.address || "";
-
-    const withdrawAmount = new BTC(
-      depositDenom as BTCDenoms,
-      Big(depositRef.current.value)
-    )
-      .convert("sats")
-      .toNumber();
-
-    setIsSubmitLoading(true);
-
-    const stargateClient = await chainWallet.getSigningStargateClient();
-
-    const { withdrawBtcRequest } =
-      twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
-
-    const msg = withdrawBtcRequest({
-      reserveId: Long.fromNumber(1),
-      twilightAddress,
-      withdrawAddress: withdrawAddress,
-      withdrawAmount: Long.fromNumber(withdrawAmount),
-    });
-
-    setIsSubmitLoading(false);
-
-    const gasPrice = GasPrice.fromString("1nyks");
-    const gasEstimation = await stargateClient.simulate(
-      twilightAddress,
-      [msg],
-      ""
-    );
-
-    const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
-    toast({
-      title: "Withdraw submitted",
-      description: "Please wait while your Bitcoin is being withdrawn...",
-    });
-
-    const res = await stargateClient.signAndBroadcast(
-      twilightAddress,
-      [msg],
-      fee
-    );
-
-    setIsSubmitLoading(false);
-    if (res.code !== 0) {
-      toast({
-        variant: "error",
-        title: "Error",
-        description: "There was an error with submitting your withdrawal",
-      });
-      return;
-    }
-    console.log("response", res);
-
-    toast({
-      title: "Success",
-      description: "Your withdrawal request has been successfully sent",
-    });
-
     try {
+      const reserveId = reserveIdRef.current?.value;
+
+      if (!depositRef.current?.value) {
+        toast({
+          variant: "error",
+          title: "Error ",
+          description: "Invalid BTC amount",
+        });
+        return;
+      }
+
+      if (!reserveId) {
+        toast({
+          variant: "error",
+          title: "Error ",
+          description: "Invalid reserve ID",
+        });
+        return;
+      }
+
+      if (!mainWallet) {
+        console.error("no mainWallet");
+        return toast({
+          title: "No wallet",
+          description: "Please connect your wallet before registration",
+          variant: "error",
+        });
+      }
+
+      const chainWallet = mainWallet.getChainWallet("nyks");
+
+      const withdrawAddress = withdrawBtcRef.current?.value;
+
+      if (!chainWallet || !withdrawAddress) return;
+
+      const twilightAddress = chainWallet.address || "";
+
+      const withdrawAmount = new BTC(
+        depositDenom as BTCDenoms,
+        Big(depositRef.current.value)
+      )
+        .convert("sats")
+        .toNumber();
+
+      setIsSubmitLoading(true);
+
+      const stargateClient = await chainWallet.getSigningStargateClient();
+
+      const { withdrawBtcRequest } =
+        twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
+
+      const msg = withdrawBtcRequest({
+        reserveId: Long.fromNumber(parseInt(reserveId)),
+        twilightAddress,
+        withdrawAddress: withdrawAddress,
+        withdrawAmount: Long.fromNumber(withdrawAmount),
+      });
+
+      setIsSubmitLoading(false);
+
+      const gasPrice = GasPrice.fromString("1nyks");
+      const gasEstimation = await stargateClient.simulate(
+        twilightAddress,
+        [msg],
+        ""
+      );
+
+      const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+
+      toast({
+        title: "Withdraw submitted",
+        description: "Please wait while your Bitcoin is being withdrawn...",
+      });
+
+      const res = await stargateClient.signAndBroadcast(
+        twilightAddress,
+        [msg],
+        // fee
+        100
+      );
+
+      setIsSubmitLoading(false);
+      if (res.code !== 0) {
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "There was an error with submitting your withdrawal",
+        });
+        return;
+      }
+      console.log("response", res);
+
+      toast({
+        title: "Success",
+        description: "Your withdrawal request has been successfully sent",
+      });
     } catch (err) {
       console.error(err);
       setIsSubmitLoading(false);
@@ -165,6 +180,15 @@ const BtcWithdrawalForm = () => {
           selected={depositDenom}
           ref={depositRef}
         />
+      </div>
+
+      <div className="space-y-1">
+        <Text asChild>
+          <label className="text-primary-accent" htmlFor="input-reserve-id">
+            Reserve ID
+          </label>
+        </Text>
+        <Input type="number" id="input-reserve-id" ref={reserveIdRef} />
       </div>
       <Button
         onClick={(e) => {

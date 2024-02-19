@@ -85,7 +85,7 @@ const Page = () => {
     .convert("BTC")
     .toFixed(8);
 
-  const totalLentUSDString = Big(totalLentSats).mul(currentPrice).toFixed(2);
+  const totalLentUSDString = Big(totalLentBTC).mul(currentPrice).toFixed(2);
 
   async function submitRedeemLentSats() {
     try {

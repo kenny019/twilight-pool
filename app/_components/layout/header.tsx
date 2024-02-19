@@ -17,28 +17,20 @@ const marketSubLinks = [
     href: "/wallet",
     title: "Wallet",
   },
-  {
-    href: "/explorer",
-    title: "Explorer",
-  },
 ] as const;
 
-const offerSubLinks = [
+const btcSubLinks = [
   {
-    href: "/mint",
-    title: "Mint",
+    href: "/registration",
+    title: "Register",
   },
   {
-    href: "/trade",
-    title: "Trade",
+    href: "/verification",
+    title: "Verify",
   },
   {
-    href: "/deploy",
-    title: "Deploy",
-  },
-  {
-    href: "/governance",
-    title: "Governance",
+    href: "/withdrawal",
+    title: "Withdraw",
   },
 ] as const;
 
@@ -53,8 +45,8 @@ const Header = () => {
             </Link>
             <div className="hidden items-center lg:flex">
               <div className="flex items-center space-x-1">
-                <MultiLink title="Marketplace" subLinks={marketSubLinks} />
-                <MultiLink title="What We Offer" subLinks={offerSubLinks} />
+                <MultiLink title="Trade" subLinks={marketSubLinks} />
+                <MultiLink title="Bitcoin" subLinks={btcSubLinks} />
               </div>
               <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-6">

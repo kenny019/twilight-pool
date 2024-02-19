@@ -2,7 +2,7 @@
 import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
-import { getReserveData } from "@/lib/api/rest";
+import { BtcReserveStruct, getReserveData } from "@/lib/api/rest";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilight } from "@/lib/providers/twilight";
 import { CopyIcon, HelpCircle } from "lucide-react";
@@ -23,9 +23,7 @@ const WalletVerificationForm = ({
 
   const { checkBTCRegistration, hasConfirmedBTC } = useTwilight();
 
-  const [btcReserveAddress, setBtcReserveAddress] = useState("");
-
-  const [btcReserveId, setBtcReserveId] = useState(1);
+  const [btcReserves, setBtcReserves] = useState<BtcReserveStruct[]>([]);
 
   function useReserveData() {
     useEffect(() => {
@@ -34,8 +32,7 @@ const WalletVerificationForm = ({
 
         if (!success) return;
 
-        setBtcReserveAddress(data.BtcReserves[0].ReserveAddress);
-        setBtcReserveId(parseInt(data.BtcReserves[0].ReserveId));
+        setBtcReserves(data.BtcReserves);
       }
 
       populateReserveData();
@@ -66,7 +63,33 @@ const WalletVerificationForm = ({
           />
         </div>
 
-        <div className="space-y-1">
+        <div className="max-h-[250px] overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b">
+              <tr className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors">
+                <th className="h-10 px-2 text-left align-middle font-medium">
+                  Reserve Address
+                </th>
+                <th className="h-10 px-2 text-left align-middle font-medium">
+                  Reserve ID
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {btcReserves.map((reserve) => (
+                <tr
+                  key={reserve.ReserveId}
+                  className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                >
+                  <td className="p-2 align-middle">{reserve.ReserveAddress}</td>
+                  <td className="p-2 align-middle">{reserve.ReserveId}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* <div className="space-y-1">
           <Text asChild>
             <label
               className="text-primary-accent"
@@ -122,7 +145,8 @@ const WalletVerificationForm = ({
               className="absolute right-4 my-auto h-4 w-4 cursor-pointer text-primary-accent hover:text-primary"
             />
           </div>
-        </div>
+        </div> */}
+
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Text asChild>

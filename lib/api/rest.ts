@@ -29,7 +29,7 @@ async function getBTCDepositAddress(depositAddress: string) {
   };
 }
 
-type BtcReserveStruct = {
+export type BtcReserveStruct = {
   ReserveId: string;
   ReserveAddress: string;
   JudgeAddress: string;

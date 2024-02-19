@@ -2,6 +2,7 @@
 import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import { executeTradeOrder } from "@/lib/api/client";
+import { useToast } from "@/lib/hooks/useToast";
 import { useTwilight } from "@/lib/providers/twilight";
 import { useTwilightStore } from "@/lib/state/store";
 import BTC from "@/lib/twilight/denoms";
@@ -12,6 +13,7 @@ import React from "react";
 
 const OrderMyTrades = () => {
   const { quisPrivateKey } = useTwilight();
+  const { toast } = useToast();
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
@@ -45,6 +47,11 @@ const OrderMyTrades = () => {
       await executeTradeOrder(msg);
 
       removeTrade(tradeOrder);
+
+      toast({
+        title: "Success",
+        description: `Successfully closed ${tradeOrder.orderType.toLowerCase()} order`,
+      });
     } catch (err) {
       console.error(err);
     }

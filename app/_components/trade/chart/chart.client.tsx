@@ -95,8 +95,12 @@ const Chart = forwardRef<IChartApi | void, Props>(
         return this._api;
       },
       free() {
-        if (this._api) {
-          this._api.remove();
+        try {
+          if (this._api) {
+            this._api.remove();
+          }
+        } catch (err) {
+          console.error(err);
         }
       },
     });
