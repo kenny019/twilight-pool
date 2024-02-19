@@ -63,32 +63,6 @@ const WalletVerificationForm = ({
           />
         </div>
 
-        <div className="max-h-[250px] overflow-auto">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="[&_tr]:border-b">
-              <tr className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors">
-                <th className="h-10 px-2 text-left align-middle font-medium">
-                  Reserve Address
-                </th>
-                <th className="h-10 px-2 text-left align-middle font-medium">
-                  Reserve ID
-                </th>
-              </tr>
-            </thead>
-            <tbody className="[&_tr:last-child]:border-0">
-              {btcReserves.map((reserve) => (
-                <tr
-                  key={reserve.ReserveId}
-                  className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
-                >
-                  <td className="p-2 align-middle">{reserve.ReserveAddress}</td>
-                  <td className="p-2 align-middle">{reserve.ReserveId}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         {/* <div className="space-y-1">
           <Text asChild>
             <label
@@ -206,6 +180,31 @@ const WalletVerificationForm = ({
       >
         Verify Deposit
       </Button>
+      <div className="max-h-[250px] overflow-auto rounded-md border p-2">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors">
+              <th className="h-10 px-2 text-left align-middle font-medium">
+                Reserve Address
+              </th>
+              <th className="h-10 px-2 text-left align-middle font-medium">
+                Reserve ID
+              </th>
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
+            {btcReserves.map((reserve) => (
+              <tr
+                key={reserve.ReserveId}
+                className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+              >
+                <td className="p-2 align-middle">{reserve.ReserveAddress}</td>
+                <td className="p-2 align-middle">{reserve.ReserveId}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
