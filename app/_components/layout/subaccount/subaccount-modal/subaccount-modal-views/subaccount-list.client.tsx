@@ -26,10 +26,6 @@ const SubaccountListView = () => {
     (state) => state.zk.selectedZkAccount
   );
 
-  console.log(
-    "zk",
-    useTwilightStore((state) => state.zk)
-  );
   const updateSelectedZkAccount = useTwilightStore(
     (state) => state.zk.updateSelectedZkAccount
   );
