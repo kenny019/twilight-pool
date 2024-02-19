@@ -43,6 +43,7 @@ export const createTwilightStore = () => {
             persistedState as AccountSlices
           );
 
+          console.log("merged", mergedData);
           return mergedData;
         },
       }

@@ -1,6 +1,6 @@
 import Button from "@/components/button";
 import ExchangeResource from "@/components/exchange-resource";
-import { Input } from "@/components/input";
+import { Input, NumberInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
@@ -32,6 +32,7 @@ const OrderMarketForm = () => {
 
   const btcRef = useRef<HTMLInputElement>(null);
   const usdRef = useRef<HTMLInputElement>(null);
+  const leverageRef = useRef<HTMLInputElement>(null);
 
   const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const selectedZkAccount = useTwilightStore(
@@ -65,8 +66,12 @@ const OrderMarketForm = () => {
 
       setIsSubmitting(true);
 
+      const leverage = parseInt(leverageRef.current?.value || "1");
+
+      console.log("lev", leverage);
+      // return;
       const { success, msg } = await createZkOrder({
-        leverage: 1,
+        leverage: leverage,
         orderType: "MARKET",
         positionType: type === "BUY" ? "LONG" : "SHORT",
         signature: quisPrivateKey,
@@ -227,6 +232,36 @@ const OrderMarketForm = () => {
             }}
           />
         </div>
+      </div>
+      <div>
+        <Text
+          className={cn("mb-1 text-sm opacity-80", width < 350 && "text-xs")}
+          asChild
+        >
+          <label htmlFor="input-market-leverage">Leverage (x)</label>
+        </Text>
+        <Input
+          ref={leverageRef}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^\d]/, "");
+
+            if (leverageRef.current) {
+              if (parseInt(value) > 50) {
+                leverageRef.current.value = "50";
+                return;
+              }
+
+              if (parseInt(value) < 1) {
+                leverageRef.current.value = "1";
+                return;
+              }
+
+              leverageRef.current.value = value;
+            }
+          }}
+          placeholder="1"
+          id="input-market-leverage"
+        />
       </div>
       <ExchangeResource>
         <div
