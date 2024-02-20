@@ -39,6 +39,7 @@ import {
 } from "@/lib/api/zkos";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
+import Link from "next/link";
 
 type Props = {
   children: React.ReactNode;
@@ -202,13 +203,25 @@ const TransferDialog = ({
 
         toast({
           title: "Success",
-          description: `Successfully sent ${new BTC("sats", Big(transferAmount))
-            .convert("BTC")
-            .toString()} BTC to ${
-            depositZkAccount.tag === "main"
-              ? "Trading Account"
-              : depositZkAccount.tag
-          }`,
+          description: (
+            <div className="flex space-x-1 opacity-90">
+              {`Successfully sent ${new BTC("sats", Big(transferAmount))
+                .convert("BTC")
+                .toString()} BTC to ${depositZkAccount.tag}. `}
+              <Button
+                variant="link"
+                className="inline-flex text-sm opacity-90 hover:opacity-100"
+                asChild
+              >
+                <Link
+                  href={`https://nyks.twilight-explorer.com/transaction/${res.transactionHash}`}
+                  target={"_blank"}
+                >
+                  Explorer link
+                </Link>
+              </Button>
+            </div>
+          ),
         });
       } else {
         const senderZkAccount = zkAccounts.filter(

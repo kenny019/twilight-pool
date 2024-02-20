@@ -150,7 +150,7 @@ const OrderMarketForm = () => {
         toast({
           title: "Success",
           description: (
-            <div className="flex opacity-90">
+            <div className="flex space-x-1 opacity-90">
               Successfully submitted trade order.{" "}
               <Button
                 variant="link"

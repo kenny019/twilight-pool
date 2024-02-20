@@ -49,7 +49,7 @@ export const tradeHistoryColumns: ColumnDef<Trade, any>[] = [
           row.getValue() === "LONG" ? "text-green-medium" : "text-red"
         )}
       >
-        Open {capitaliseFirstLetter(row.getValue() as string)}
+        Open {capitaliseFirstLetter(row.getValue() || ("" as string))}
       </span>
     ),
   },
