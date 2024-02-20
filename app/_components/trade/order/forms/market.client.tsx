@@ -8,6 +8,7 @@ import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useGrid } from "@/lib/providers/grid";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
@@ -41,12 +42,15 @@ const OrderMarketForm = () => {
   );
 
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
+  const addTradeHistory = useSessionStore((state) => state.trade.addTrade);
 
   const currentZkAccount = zKAccounts[selectedZkAccount];
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function submitMarket(type: "SELL" | "BUY") {
+    const positionType = type === "BUY" ? "LONG" : "SHORT";
+
     try {
       if (!hasRegisteredBTC) return;
 
@@ -74,7 +78,7 @@ const OrderMarketForm = () => {
       const { success, msg } = await createZkOrder({
         leverage: leverage,
         orderType: "MARKET",
-        positionType: type === "BUY" ? "LONG" : "SHORT",
+        positionType,
         signature: quisPrivateKey,
         timebounds: 1,
         zkAccount: currentZkAccount,
@@ -115,59 +119,76 @@ const OrderMarketForm = () => {
         let orderData: TransactionHash | undefined = undefined;
 
         while (retries < 2 && !orderData) {
-          const txHashesRes = await queryTransactionHashes(
-            currentZkAccount.address
-          );
+          try {
+            const txHashesRes = await queryTransactionHashes(
+              currentZkAccount.address
+            );
 
-          if (!txHashesRes.result) {
-            retries += 1;
-            continue;
+            if (!txHashesRes.result) {
+              retries += 1;
+              continue;
+            }
+
+            orderData = txHashesRes.result[0] as TransactionHash;
+            break;
+          } catch (err) {
+            break;
           }
-
-          orderData = txHashesRes.result[0] as TransactionHash;
         }
 
-        if (!orderData) {
+        if (!orderData || orderData.tx_hash.includes("Error")) {
           toast({
             variant: "error",
             title: "Error",
             description: "Error with creating trade order",
           });
 
+          setIsSubmitting(false);
           return;
         }
 
         toast({
           title: "Success",
           description: (
-            <>
-              <span className="opacity-90">
-                Successfully submitted trade order. View it on the explorer{" "}
-              </span>
-              <Link
-                href={`https://nyks.twilight-explorer.com/transaction/${orderData.tx_hash}`}
-                target={"_blank"}
-                passHref
+            <div className="flex opacity-90">
+              Successfully submitted trade order.{" "}
+              <Button
+                variant="link"
+                className="inline-flex text-sm opacity-90 hover:opacity-100"
+                asChild
               >
-                <Button
-                  variant="link"
-                  className="text-sm opacity-90 hover:opacity-100"
+                <Link
+                  href={`https://nyks.twilight-explorer.com/transaction/${orderData.tx_hash}`}
+                  target={"_blank"}
                 >
-                  here
-                </Button>
-              </Link>
-            </>
+                  Explorer link
+                </Link>
+              </Button>
+            </div>
           ),
         });
 
         addTrade({
           accountAddress: currentZkAccount.address,
           orderStatus: orderData.order_status,
+          positionType,
           orderType: orderData.order_type,
           tx_hash: orderData.tx_hash,
           uuid: orderData.order_id,
           value: satsValue,
           output: orderData.output,
+        });
+
+        addTradeHistory({
+          accountAddress: currentZkAccount.address,
+          orderStatus: orderData.order_status,
+          orderType: orderData.order_type,
+          positionType,
+          tx_hash: orderData.tx_hash,
+          uuid: orderData.order_id,
+          value: satsValue,
+          output: orderData.output,
+          date: new Date(),
         });
       } else {
         toast({
@@ -315,6 +336,44 @@ const OrderMarketForm = () => {
               "Sell"
             )}
           </Button>
+          {/* <Button
+            onClick={() => {
+              toast({
+                title: "Success",
+                description: (
+                  <div className="flex items-center space-x-1 opacity-90">
+                    <span>Successfully submitted trade order.</span>
+                    <Button
+                      variant="link"
+                      className="inline-flex text-sm opacity-90 hover:opacity-100"
+                      asChild
+                    >
+                      <Link
+                        href={`https://nyks.twilight-explorer.com/transaction/BRCs50fMzA3AW7q0HuzkA`}
+                        target={"_blank"}
+                      >
+                        Explorer link
+                      </Link>
+                    </Button>
+                  </div>
+                ),
+              });
+
+              addTradeHistory({
+                accountAddress: currentZkAccount.address,
+                orderStatus: "FILLED",
+                orderType: "MARKET",
+                tx_hash: "BRCs50fMzA3AW7q0HuzkA",
+                uuid: "BRCs50fMzA3AW7q0Hu_zkA",
+                value: 100,
+                output: "",
+                positionType: "LONG",
+                date: new Date(),
+              });
+            }}
+          >
+            Test
+          </Button> */}
         </div>
       </ExchangeResource>
     </form>

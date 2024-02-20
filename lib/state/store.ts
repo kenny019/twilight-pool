@@ -44,7 +44,6 @@ export const createTwilightStore = () => {
             persistedState as AccountSlices
           );
 
-          console.log("merged", mergedData);
           return mergedData;
         },
       }
@@ -63,8 +62,8 @@ export const createSessionStore = () => {
       })),
       {
         name: "twilight-session-",
-        skipHydration: true,
         storage: createJSONStorage(() => sessionStorage),
+        skipHydration: true,
         merge: (persistedState, currentState) => {
           const mergedData = deepMerge(
             {
@@ -76,7 +75,7 @@ export const createSessionStore = () => {
             persistedState as AccountSlices
           );
 
-          console.log("merged", mergedData);
+          console.log("merged session", mergedData);
           return mergedData;
         },
       }

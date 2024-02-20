@@ -1,10 +1,14 @@
 import { TradeOrder } from "@/lib/types";
 import { SessionSlices, StateImmerCreator } from "../utils";
 
+type TradeHistory = {
+  date: Date;
+} & TradeOrder;
+
 export interface TradeSessionSlice {
-  trades: TradeOrder[];
-  addTrade: (tradeOrder: TradeOrder) => void;
-  removeTrade: (tradeOrder: TradeOrder) => void;
+  trades: TradeHistory[];
+  addTrade: (tradeOrder: TradeHistory) => void;
+  removeTrade: (tradeOrder: TradeHistory) => void;
 }
 
 export const createSessionTradeSlice: StateImmerCreator<

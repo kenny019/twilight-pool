@@ -23,7 +23,7 @@ export default function usePriceTickerData(currentPrice: number) {
       const yesterday = date.toISOString();
       const priceData = await getHistoricalPrice(
         yesterday,
-        9999, // todo: get all entries
+        999, // todo: get all entries
         0
       );
 

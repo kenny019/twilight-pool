@@ -2,6 +2,7 @@
 import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import { executeTradeOrder } from "@/lib/api/client";
+import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
@@ -32,6 +33,7 @@ const OrderMyTrades = () => {
         signature: quisPrivateKey,
         executionPricePoolshare: 1, // todo: fix for non market order
       });
+
       const msg = await executeTradeLendOrderMsg({
         address: tradeOrder.accountAddress,
         orderStatus: tradeOrder.orderStatus,
@@ -77,7 +79,15 @@ const OrderMyTrades = () => {
               key={trade.accountAddress}
             >
               <Text>BTCUSD</Text>
-              <Text>{quantity}</Text>
+              <Text
+                className={cn(
+                  trade.positionType === "LONG"
+                    ? "text-green-medium"
+                    : "text-red"
+                )}
+              >
+                {quantity}
+              </Text>
               <Text>{trade.orderType}</Text>
               <Button
                 onClick={async (e) => {

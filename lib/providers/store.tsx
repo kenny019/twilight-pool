@@ -48,24 +48,48 @@ export const TwilightStoreProvider = ({
   const updateTwilightAddress =
     storeRef.current.getState().zk.updateTwilightAddress;
 
+  useEffect(() => {
+    if (!storeRef.current) return;
+
+    if (status !== WalletStatus.Connected) return;
+
+    console.log("calling on finish hydration");
+    const unsub = storeRef.current.persist.onFinishHydration(async (state) => {
+      const hasMainZkAccount =
+        state.zk.zkAccounts.filter((account) => account.tag === "main").length >
+        0;
+
+      console.log("hasMainZkAccount", hasMainZkAccount);
+      if (hasMainZkAccount) return;
+
+      const account = await createZkAccount({
+        tag: "main",
+        signature: quisPrivateKey,
+      });
+
+      state.zk.addZkAccount({
+        ...account,
+        value: 0,
+        isOnChain: false,
+      });
+
+      console.log("post hydration: initialising main zk account", account);
+    });
+
+    return () => unsub();
+  }, [status, quisPrivateKey]);
+
+  useEffect(() => {
+    if (status !== "Disconnected" && status !== "Connecting") return;
+
+    console.log("cleanup localstorage store");
+    storeRef.current?.persist.clearStorage();
+  }, [status]);
+
   function useInitializeMainZkAccount() {
     useEffect(() => {
-      const shouldInit =
-        zkAccounts.filter((account) => account.tag === "main").length > 0;
-
-      if (status !== WalletStatus.Connected || !quisPrivateKey || shouldInit) {
+      if (status !== WalletStatus.Connected || !quisPrivateKey) {
         return;
-      }
-
-      async function initZkAccount() {
-        const account = await createZkAccount({
-          tag: "main",
-          signature: quisPrivateKey,
-        });
-
-        addZkAccount({ ...account, value: 0, isOnChain: false });
-
-        console.log("initialising main zk account", account);
       }
 
       async function storeTwilightAddress() {
@@ -80,8 +104,7 @@ export const TwilightStoreProvider = ({
       }
 
       storeTwilightAddress();
-      initZkAccount();
-    }, [status, quisPrivateKey]);
+    }, [chainWallet?.address, quisPrivateKey]);
   }
 
   function useResetSelectedZkAccount() {
@@ -109,16 +132,7 @@ export const TwilightStoreProvider = ({
 
         if (!twilightAddress || !storeRef.current) return;
 
-        if (storedTwilightAddress === twilightAddress) return;
-
-        const options = storeRef.current.persist.getOptions();
-
-        if (
-          options.name === "twilight-" ||
-          options.name === `twilight-${twilightAddress}`
-        ) {
-          return;
-        }
+        // if (storedTwilightAddress === twilightAddress) return;
 
         storeRef.current.persist.setOptions({
           name: `twilight-${twilightAddress}`,

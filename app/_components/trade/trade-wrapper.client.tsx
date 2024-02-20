@@ -11,11 +11,13 @@ import {
 } from "@/lib/constants";
 import ChartWrapper from "./chart/chart-wrapper.client";
 import { CandleData } from "@/lib/api/rest";
+import DetailsPanel from "./details/details.client";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
   { i: "chart", x: 2, y: 0, w: 8, h: 11, minW: 2, minH: 8 },
   { i: "orderbook", x: 0, y: 0, w: 2, h: 11, minW: 2 },
+  { i: "details", x: 0, y: 12, w: 8, h: 5, minW: 4, minH: 4 },
 ];
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -56,6 +58,7 @@ const TradeWrapper = ({ candleData }: Props) => {
       layouts={{ lg: layout }}
       cols={{ lg: 12, md: 12, sm: 8, xs: 4, xxs: 4 }}
       rowHeight={GRID_ROW_HEIGHT}
+      className="pb-4"
       draggableHandle=".draggable"
       onResizeStart={() => {
         const widgets = document.querySelectorAll(".react-grid-item");
@@ -116,6 +119,14 @@ const TradeWrapper = ({ candleData }: Props) => {
         key="orderbook"
       >
         <Orderbook />
+      </DragWrapper>
+      <DragWrapper
+        dimension={gridDimensionRefs.current}
+        name="details"
+        title="Details"
+        key="details"
+      >
+        <DetailsPanel />
       </DragWrapper>
     </ResponsiveGridLayout>
   );
