@@ -16,6 +16,7 @@ import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import React, { useRef, useState } from "react";
 
 const OrderMarketForm = () => {
@@ -138,7 +139,25 @@ const OrderMarketForm = () => {
 
         toast({
           title: "Success",
-          description: "Successfully submitted trade order",
+          description: (
+            <>
+              <span className="opacity-90">
+                Successfully submitted trade order. View it on the explorer{" "}
+              </span>
+              <Link
+                href={`https://nyks.twilight-explorer.com/transaction/${orderData.tx_hash}`}
+                target={"_blank"}
+                passHref
+              >
+                <Button
+                  variant="link"
+                  className="text-sm opacity-90 hover:opacity-100"
+                >
+                  here
+                </Button>
+              </Link>
+            </>
+          ),
         });
 
         addTrade({
