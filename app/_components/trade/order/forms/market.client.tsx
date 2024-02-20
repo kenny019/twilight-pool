@@ -118,8 +118,9 @@ const OrderMarketForm = () => {
         let retries = 0;
         let orderData: TransactionHash | undefined = undefined;
 
-        while (retries < 2 && !orderData) {
+        while (!orderData) {
           try {
+            if (retries > 4) break;
             const txHashesRes = await queryTransactionHashes(
               currentZkAccount.address
             );
@@ -130,7 +131,6 @@ const OrderMarketForm = () => {
             }
 
             orderData = txHashesRes.result[0] as TransactionHash;
-            break;
           } catch (err) {
             break;
           }
