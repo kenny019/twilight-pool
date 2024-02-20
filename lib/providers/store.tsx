@@ -113,7 +113,10 @@ export const TwilightStoreProvider = ({
 
         const options = storeRef.current.persist.getOptions();
 
-        if (options.name === `twilight-${twilightAddress}`) {
+        if (
+          options.name === "twilight-" ||
+          options.name === `twilight-${twilightAddress}`
+        ) {
           return;
         }
 

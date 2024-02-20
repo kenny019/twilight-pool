@@ -17,6 +17,7 @@ import { TwilightProvider } from "@/lib/providers/twilight";
 import { Toaster } from "@/components/toast-provider";
 import { PriceFeedProvider } from "@/lib/providers/feed";
 import { TwilightStoreProvider } from "@/lib/providers/store";
+import { SessionStoreProvider } from "@/lib/providers/session";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -36,9 +37,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         signerOptions={signerOptions}
       >
         <TwilightProvider>
-          <TwilightStoreProvider>
-            <PriceFeedProvider>{children}</PriceFeedProvider>
-          </TwilightStoreProvider>
+          <SessionStoreProvider>
+            <TwilightStoreProvider>
+              <PriceFeedProvider>{children}</PriceFeedProvider>
+            </TwilightStoreProvider>
+          </SessionStoreProvider>
           <Toaster />
         </TwilightProvider>
       </ChainProvider>
