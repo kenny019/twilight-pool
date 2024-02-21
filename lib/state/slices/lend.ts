@@ -5,12 +5,17 @@ export interface LendSlice {
   lends: LendOrder[];
   addLend: (lendOrder: LendOrder) => void;
   removeLend: (lendOrder: LendOrder) => void;
+  resetState: () => void;
 }
+
+export const initialLendSliceState = {
+  lends: [],
+};
 
 export const createLendSlice: StateImmerCreator<AccountSlices, LendSlice> = (
   set
 ) => ({
-  lends: [],
+  ...initialLendSliceState,
   addLend: (lendOrder) =>
     set((state) => {
       state.lend.lends = [...state.lend.lends, lendOrder];
@@ -21,4 +26,12 @@ export const createLendSlice: StateImmerCreator<AccountSlices, LendSlice> = (
         (lend) => lend.accountAddress !== lendOrder.accountAddress
       );
     }),
+  resetState: () => {
+    set((state) => {
+      state.lend = {
+        ...state.lend,
+        ...initialLendSliceState,
+      };
+    });
+  },
 });

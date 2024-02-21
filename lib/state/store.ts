@@ -1,10 +1,13 @@
-import { create, createStore } from "zustand";
+import { createStore } from "zustand";
 import { AccountSlices, SessionSlices } from "./utils";
 import { immer } from "zustand/middleware/immer";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { createZkAccountSlice } from "./slices/accounts";
-import { createLendSlice } from "./slices/lend";
-import { createTradeSlice } from "./slices/trade";
+import {
+  createZkAccountSlice,
+  initialZkAccountSliceState,
+} from "./slices/accounts";
+import { createLendSlice, initialLendSliceState } from "./slices/lend";
+import { createTradeSlice, initialTradeSliceState } from "./slices/trade";
 import deepMerge from "deepmerge";
 import { createSessionTradeSlice } from "./session/trade";
 
@@ -22,29 +25,29 @@ export const createTwilightStore = () => {
       {
         name: "twilight-",
         storage: createJSONStorage(() => localStorage),
-        skipHydration: true,
         merge: (persistedState, currentState) => {
-          const mergedData = deepMerge(
-            {
-              zk: {
-                ...currentState.zk,
-                zkAccounts: [],
-                selectedZkAccount: -1,
-                twilightAddress: "",
-              },
-              lend: {
-                ...currentState.lend,
-                lends: [],
-              },
-              trade: {
-                ...currentState.trade,
-                trades: [],
-              },
+          const cleanCurrentState = {
+            zk: {
+              ...currentState.zk,
+              ...initialZkAccountSliceState,
             },
+            trade: {
+              ...currentState.trade,
+              ...initialTradeSliceState,
+            },
+            lend: {
+              ...currentState.lend,
+              ...initialLendSliceState,
+            },
+          };
+
+          console.log("merged localstorage current data ->", cleanCurrentState);
+          console.log("merged localstorage persisted data ->", persistedState);
+          const mergedData = deepMerge(
+            cleanCurrentState,
             persistedState as AccountSlices
           );
 
-          console.log("merged localstorage", mergedData);
           return mergedData;
         },
       }

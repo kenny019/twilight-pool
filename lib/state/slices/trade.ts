@@ -5,12 +5,17 @@ export interface TradeSlice {
   trades: TradeOrder[];
   addTrade: (tradeOrder: TradeOrder) => void;
   removeTrade: (tradeOrder: TradeOrder) => void;
+  resetState: () => void;
 }
+
+export const initialTradeSliceState = {
+  trades: [],
+};
 
 export const createTradeSlice: StateImmerCreator<AccountSlices, TradeSlice> = (
   set
 ) => ({
-  trades: [],
+  ...initialTradeSliceState,
   addTrade: (tradeOrder) =>
     set((state) => {
       state.trade.trades = [...state.trade.trades, tradeOrder];
@@ -21,4 +26,12 @@ export const createTradeSlice: StateImmerCreator<AccountSlices, TradeSlice> = (
         (trade) => trade.accountAddress !== tradeOrder.accountAddress
       );
     }),
+  resetState: () => {
+    set((state) => {
+      state.trade = {
+        ...state.trade,
+        ...initialTradeSliceState,
+      };
+    });
+  },
 });

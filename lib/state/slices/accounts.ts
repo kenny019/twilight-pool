@@ -11,23 +11,28 @@ export interface ZkAccountSlice {
   updateZkAccount: (zkAddress: string, updatedZkAccount: ZkAccount) => void;
   addZkAccount: (zkAccount: ZkAccount) => void;
   removeZkAccount: (zkAccount: ZkAccount) => void;
+  resetState: () => void;
 }
+
+export const initialZkAccountSliceState = {
+  twilightAddress: "",
+  selectedZkAccount: -1,
+  zkAccounts: [],
+};
 
 export const createZkAccountSlice: StateImmerCreator<
   AccountSlices,
   ZkAccountSlice
 > = (set) => ({
-  twilightAddress: "",
+  ...initialZkAccountSliceState,
   updateTwilightAddress: (twilightAddress) =>
     set((state) => {
       state.zk.twilightAddress = twilightAddress;
     }),
-  selectedZkAccount: -1,
   updateSelectedZkAccount: (index) =>
     set((state) => {
       state.zk.selectedZkAccount = index;
     }),
-  zkAccounts: [],
   updateZkAccount: (zkAddress, updatedZkAccount) =>
     set((state) => {
       state.zk.zkAccounts = state.zk.zkAccounts.map((account) => {
@@ -45,4 +50,12 @@ export const createZkAccountSlice: StateImmerCreator<
         (account) => account.address !== zkAccount.address
       );
     }),
+  resetState: () => {
+    set((state) => {
+      state.zk = {
+        ...state.zk,
+        ...initialZkAccountSliceState,
+      };
+    });
+  },
 });

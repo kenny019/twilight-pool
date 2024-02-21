@@ -132,8 +132,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     useEffect(() => {
       if (status !== "Disconnected" && status !== "Connecting") return;
 
-      console.log("cleaning up account data");
-
       if (quisPrivateKey) {
         setQuisPrivateKey("");
       }
