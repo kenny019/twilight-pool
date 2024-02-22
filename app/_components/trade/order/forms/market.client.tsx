@@ -24,8 +24,9 @@ const OrderMarketForm = () => {
   const { width } = useGrid();
   // todo: fix bug with ref getting reset on window size change
 
-  const { hasRegisteredBTC, quisPrivateKey } = useTwilight();
+  const privateKey = useSessionStore((state) => state.privateKey);
 
+  const { hasRegisteredBTC } = useTwilight();
   const { currentPrice } = usePriceFeed();
 
   const { toast } = useToast();
@@ -79,7 +80,7 @@ const OrderMarketForm = () => {
         leverage: leverage,
         orderType: "MARKET",
         positionType,
-        signature: quisPrivateKey,
+        signature: privateKey,
         timebounds: 1,
         zkAccount: currentZkAccount,
         value: satsValue,
@@ -108,7 +109,7 @@ const OrderMarketForm = () => {
         // const queryTradeOrderMsg = await createQueryTradeOrderMsg({
         //   address: currentZkAccount.address,
         //   orderStatus: "PENDING",
-        //   signature: quisPrivateKey,
+        //   signature: privateKey,
         // });
 
         // console.log("queryTradeOrderMsg", queryTradeOrderMsg);

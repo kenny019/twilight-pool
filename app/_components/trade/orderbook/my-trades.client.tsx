@@ -4,6 +4,7 @@ import { Text } from "@/components/typography";
 import { executeTradeOrder } from "@/lib/api/client";
 import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
@@ -13,8 +14,9 @@ import Big from "big.js";
 import React from "react";
 
 const OrderMyTrades = () => {
-  const { quisPrivateKey } = useTwilight();
   const { toast } = useToast();
+
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
@@ -30,7 +32,7 @@ const OrderMyTrades = () => {
         outputMemo: tradeOrder.output,
         transactionType: "ORDERTX",
         uuid: tradeOrder.uuid,
-        signature: quisPrivateKey,
+        signature: privateKey,
         executionPricePoolshare: 1, // todo: fix for non market order
       });
 
@@ -41,7 +43,7 @@ const OrderMyTrades = () => {
         outputMemo: tradeOrder.output,
         transactionType: "ORDERTX",
         uuid: tradeOrder.uuid,
-        signature: quisPrivateKey,
+        signature: privateKey,
         executionPricePoolshare: 1, // todo: fix for non market order
       });
 

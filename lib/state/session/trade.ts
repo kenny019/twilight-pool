@@ -11,11 +11,15 @@ export interface TradeSessionSlice {
   removeTrade: (tradeOrder: TradeHistory) => void;
 }
 
+export const initialSessionTradeData = {
+  trades: [],
+};
+
 export const createSessionTradeSlice: StateImmerCreator<
   SessionSlices,
   TradeSessionSlice
 > = (set) => ({
-  trades: [],
+  ...initialSessionTradeData,
   addTrade: (tradeOrder) =>
     set((state) => {
       state.trade.trades = [...state.trade.trades, tradeOrder];

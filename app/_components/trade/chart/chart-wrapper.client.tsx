@@ -41,7 +41,7 @@ const ChartWrapper = ({ candleData }: Props) => {
   function onOpen(ws: WebSocket) {
     const seriesData = seriesRef.current?.data();
 
-    if (seriesData) {
+    if (seriesData && seriesData.length) {
       lastUpdatedTime.current = seriesData[seriesData.length - 1]
         .time as number;
     }

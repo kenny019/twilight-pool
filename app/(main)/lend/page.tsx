@@ -11,6 +11,7 @@ import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
@@ -24,10 +25,10 @@ const Page = () => {
 
   const { toast } = useToast();
   const { currentPrice } = usePriceFeed();
-  const { quisPrivateKey } = useTwilight();
 
   const { twilightSats } = useGetTwilightBTCBalance();
 
+  const privateKey = useSessionStore((state) => state.privateKey);
   const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
 
@@ -105,7 +106,7 @@ const Page = () => {
 
         const msg = await executeTradeLendOrderMsg({
           outputMemo: lendOrderData.output,
-          signature: quisPrivateKey,
+          signature: privateKey,
           address: lendOrderData.account_id,
           uuid: lendOrderData.order_id,
           orderStatus: lendOrderData.order_status,

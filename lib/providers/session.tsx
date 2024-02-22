@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { type StoreApi, Mutate, useStore } from "zustand";
 import { SessionSlices } from "../state/utils";
 import { createSessionStore } from "../state/store";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { WalletStatus } from "@cosmos-kit/core";
+import { generateSignMessage } from "../twilight/chain";
 
 export const sessionStoreContext =
   createContext<StoreApi<SessionSlices> | null>(null);
@@ -30,42 +31,87 @@ export const SessionStoreProvider = ({
   }
 
   const { mainWallet, status } = useWallet();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
+  function useGenerateTwilightPrivateKey() {
+    useEffect(() => {
+      async function generateTwilightPrivateKey() {
+        if (
+          status !== WalletStatus.Connected ||
+          !storeRef.current ||
+          !isHydrated
+        )
+          return;
+
+        const chainWallet = mainWallet?.getChainWallet("nyks");
+        const existingPrivateKey = storeRef.current.getState().privateKey;
+
+        if (!chainWallet || existingPrivateKey) {
+          return;
+        }
+
+        const twilightAddress = chainWallet.address;
+
+        if (!twilightAddress) {
+          return;
+        }
+
+        const [_, newPrivateKey] = await generateSignMessage(
+          chainWallet,
+          twilightAddress,
+          "Hello Twilight!"
+        );
+
+        storeRef.current.getState().setPrivateKey(newPrivateKey as string);
+        setIsHydrated(false);
+      }
+
+      generateTwilightPrivateKey();
+    }, [isHydrated]);
+  }
+
   function useRehydrateSessionStore() {
     useEffect(() => {
-      async function updateSessionStore() {
-        const twilightAddress = chainWallet?.address || "";
+      async function rehydrateSessionStore() {
+        if (!storeRef.current) {
+          return;
+        }
 
-        if (!twilightAddress || !storeRef.current) return;
+        if (!chainWallet?.address) {
+          storeRef.current.persist.setOptions({
+            name: `twilight-session-`,
+          });
+
+          storeRef.current.setState(storeRef.current.getInitialState());
+          return;
+        }
+
+        const chainAddress = chainWallet.address;
 
         storeRef.current.persist.setOptions({
-          name: `twilight-session-${twilightAddress}`,
+          name: `twilight-session-${chainAddress}`,
         });
+
+        const oldState = storeRef.current.getState();
 
         await storeRef.current.persist.rehydrate();
 
-        console.log(`3. rehydrated twilight-session-${twilightAddress}`);
+        const newState = storeRef.current.getState();
 
-        console.log(
-          "3. post rehydration trades",
-          storeRef.current.getState().trade.trades
-        );
+        if (oldState === newState) {
+          storeRef.current.setState(storeRef.current.getInitialState());
+        }
+
+        setIsHydrated(true);
       }
 
-      updateSessionStore();
+      rehydrateSessionStore();
     }, [chainWallet?.address]);
   }
 
-  useEffect(() => {
-    if (status !== "Disconnected" && status !== "Connecting") return;
-
-    console.log("cleanup session store", status, storeRef.current);
-
-    storeRef.current?.persist.clearStorage();
-  }, [status]);
-
+  useGenerateTwilightPrivateKey();
   useRehydrateSessionStore();
 
   return (

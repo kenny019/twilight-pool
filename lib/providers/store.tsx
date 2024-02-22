@@ -15,6 +15,7 @@ import { useTwilight } from "./twilight";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkAccount } from "../twilight/zk";
 import { ZK_ACCOUNT_INDEX } from "../constants";
+import { useSessionStore } from "./session";
 
 export const twilightStoreContext =
   createContext<StoreApi<AccountSlices> | null>(null);
@@ -34,19 +35,22 @@ export const TwilightStoreProvider = ({
       >
     >();
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   if (!storeRef.current) {
     storeRef.current = createTwilightStore();
   }
 
-  const { quisPrivateKey } = useTwilight();
-
   const { status, mainWallet } = useWallet();
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
   function useRehydrateLocalStore() {
     useEffect(() => {
-      async function run() {
+      async function rehydrateLocalStore() {
+        setIsHydrated(false);
+
         if (!storeRef.current) {
           return;
         }
@@ -56,13 +60,11 @@ export const TwilightStoreProvider = ({
             name: `twilight-`,
           });
 
-          await storeRef.current.persist.rehydrate();
+          storeRef.current.setState(storeRef.current.getInitialState());
           return;
         }
 
         const chainAddress = chainWallet.address;
-
-        if (!chainAddress) return console.log("twilight address not found");
 
         console.log("rehydrating local data", chainAddress);
         storeRef.current.persist.setOptions({
@@ -70,8 +72,10 @@ export const TwilightStoreProvider = ({
         });
 
         await storeRef.current.persist.rehydrate();
+
+        setIsHydrated(true);
       }
-      run();
+      rehydrateLocalStore();
     }, [chainWallet?.address]);
   }
 
@@ -97,44 +101,42 @@ export const TwilightStoreProvider = ({
       ) {
         updateSelectedZkAccount(ZK_ACCOUNT_INDEX.DISCONNECTED);
       }
-    }, [status]);
+    }, [isHydrated]);
   }
 
   useEffect(() => {
-    if (!storeRef.current) return;
+    async function initZkAccount() {
+      if (!storeRef.current || !isHydrated) return;
 
-    const unsubFinishHydration = storeRef.current.persist.onFinishHydration(
-      async (state) => {
-        if (!chainWallet?.address) return;
+      if (!chainWallet?.address) return;
 
-        const zkAccounts = state.zk.zkAccounts;
+      console.log("CHECKING INIT ZKACCOUNT");
 
-        const addZkAccount = state.zk.addZkAccount;
+      const zkAccounts = storeRef.current.getState().zk.zkAccounts;
 
-        const hasMainZkAccount =
-          zkAccounts.filter((account) => account.tag === "main").length > 0;
+      const addZkAccount = storeRef.current.getState().zk.addZkAccount;
 
-        if (!hasMainZkAccount) {
-          console.log("initialising new zk account");
+      const hasMainZkAccount =
+        zkAccounts.filter((account) => account.tag === "main").length > 0;
 
-          const account = await createZkAccount({
-            tag: "main",
-            signature: quisPrivateKey,
-          });
+      if (!hasMainZkAccount) {
+        console.log("initialising new zk account");
 
-          addZkAccount({
-            ...account,
-            value: 0,
-            isOnChain: false,
-          });
-        }
+        const account = await createZkAccount({
+          tag: "main",
+          signature: privateKey,
+        });
+
+        addZkAccount({
+          ...account,
+          value: 0,
+          isOnChain: false,
+        });
       }
-    );
+    }
 
-    return () => {
-      unsubFinishHydration();
-    };
-  }, [chainWallet?.address]);
+    initZkAccount();
+  }, [isHydrated, chainWallet?.address]);
 
   useRehydrateLocalStore();
   useResetSelectedZkAccount();

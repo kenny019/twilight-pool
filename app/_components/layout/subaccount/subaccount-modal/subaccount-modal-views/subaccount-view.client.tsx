@@ -10,6 +10,7 @@ import { z } from "zod";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkAccount } from "@/lib/twilight/zk";
 import { useTwilightStore } from "@/lib/providers/store";
+import { useSessionStore } from "@/lib/providers/session";
 
 const SubaccountCreateView = () => {
   const { setView } = useSubaccountDialog();
@@ -17,8 +18,9 @@ const SubaccountCreateView = () => {
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
 
+  const privateKey = useSessionStore((state) => state.privateKey);
+
   const { mainWallet } = useWallet();
-  const { quisPrivateKey } = useTwilight();
 
   const subaccountTagRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +55,7 @@ const SubaccountCreateView = () => {
 
     const newZkAccount = await createZkAccount({
       tag: subaccountTag,
-      signature: quisPrivateKey,
+      signature: privateKey,
     });
 
     addZkAccount({

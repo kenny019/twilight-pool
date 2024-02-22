@@ -40,6 +40,7 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import Link from "next/link";
+import { useSessionStore } from "@/lib/providers/session";
 
 type Props = {
   children: React.ReactNode;
@@ -52,15 +53,14 @@ const TransferDialog = ({
   tradingAccountAddress,
   children,
 }: Props) => {
-  const { quisPrivateKey } = useTwilight();
-
   const { toast } = useToast();
 
   const { mainWallet } = useWallet();
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
-
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const selectedZkAccountIndex = useTwilightStore(
     (state) => state.zk.selectedZkAccount
@@ -152,12 +152,12 @@ const TransferDialog = ({
           await createZkAccountWithBalance({
             tag: depositZkAccount.tag,
             balance: transferAmount,
-            signature: quisPrivateKey,
+            signature: privateKey,
           });
 
         const msg = await createFundingToTradingTransferMsg({
           twilightAddress,
-          signature: quisPrivateKey,
+          signature: privateKey,
           transferAmount,
           account: newTradingAccount,
           accountHex: newTradingAccountHex,
@@ -269,7 +269,7 @@ const TransferDialog = ({
         console.log("receiverAddress", depositZkAccount.address);
 
         const msgStruct = await createTradingTxSingle({
-          signature: quisPrivateKey,
+          signature: privateKey,
           senderInput: inputString,
           receiverAddress: depositZkAccount.address,
           amount: transferAmount,

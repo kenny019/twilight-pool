@@ -9,6 +9,7 @@ import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
@@ -18,7 +19,7 @@ import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 const Page = () => {
-  const { quisPrivateKey } = useTwilight();
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
@@ -36,7 +37,7 @@ const Page = () => {
   function useGetTradingBTCBalance() {
     useEffect(() => {
       async function getTradingBTCBalance() {
-        if (!quisPrivateKey) return;
+        if (!privateKey) return;
 
         // queryUtxoForAddress("");
 
@@ -44,7 +45,7 @@ const Page = () => {
       }
 
       getTradingBTCBalance();
-    }, [quisPrivateKey]);
+    }, [privateKey]);
   }
 
   const { twilightSats } = useGetTwilightBTCBalance();

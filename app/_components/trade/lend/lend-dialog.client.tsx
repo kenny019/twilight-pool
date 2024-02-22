@@ -18,6 +18,7 @@ import {
 import { Text } from "@/components/typography";
 import { sendLendOrder } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
@@ -32,7 +33,7 @@ type Props = {
 
 const LendDialog = ({ children }: Props) => {
   const { toast } = useToast();
-  const { quisPrivateKey } = useTwilight();
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const addLendOrder = useTwilightStore((state) => state.lend.addLend);
@@ -68,7 +69,7 @@ const LendDialog = ({ children }: Props) => {
     const { success, msg } = await createZkLendOrder({
       zkAccount: selectedZkAccount,
       deposit: depositAmount,
-      signature: quisPrivateKey,
+      signature: privateKey,
     });
 
     if (!success || !msg) {

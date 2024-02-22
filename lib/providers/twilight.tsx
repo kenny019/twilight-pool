@@ -8,9 +8,7 @@ import React, {
 } from "react";
 import { useLocalStorage } from "../hooks";
 import { useWallet } from "@cosmos-kit/react-lite";
-import { generateSignMessage } from "../twilight/chain";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
-import { useTwilightStore } from "./store";
 import { createTwilightStore } from "../state/store";
 
 interface UseTwilightProps {
@@ -18,8 +16,6 @@ interface UseTwilightProps {
   setHasInit: (val: string) => void;
   colorTheme: string;
   setColorTheme: (val: string) => void;
-  quisPrivateKey: string;
-  setQuisPrivateKey: (val: string) => void;
   hasRegisteredBTC: boolean;
   hasConfirmedBTC: boolean;
   checkBTCRegistration: () => void;
@@ -35,8 +31,6 @@ const defaultContext: UseTwilightProps = {
   setHasInit: () => {},
   colorTheme: "pink",
   setColorTheme: () => {},
-  quisPrivateKey: "",
-  setQuisPrivateKey: () => {},
   hasRegisteredBTC: false,
   hasConfirmedBTC: false,
   checkBTCRegistration: () => {},
@@ -62,8 +56,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
-  const [quisPrivateKey, setQuisPrivateKey] = useState("");
-
   const [hasRegisteredBTC, setHasRegisteredBTC] = useState(false);
   const [hasConfirmedBTC, setHasConfirmedBTC] = useState(false);
   const [shouldRefetchBTCRegistration, setShouldRefetchBTCRegistration] =
@@ -81,43 +73,6 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     }, [chainWallet?.address]);
   }
 
-  function useGetQuisPrivateKey() {
-    useEffect(() => {
-      async function getQuisPrivateKey() {
-        if (!!quisPrivateKey || status !== "Connected") return;
-
-        const chainWallet = mainWallet?.getChainWallet("nyks");
-
-        if (!chainWallet) {
-          console.error("no chainWallet");
-          return;
-        }
-
-        const twilightAddress = chainWallet.address;
-
-        if (!twilightAddress) {
-          console.error("no twilightAddress");
-          return;
-        }
-
-        try {
-          const [_key, signature] = await generateSignMessage(
-            chainWallet,
-            twilightAddress,
-            "Hello Twilight!"
-          );
-
-          // note: not really private key but for our purposes
-          // it acts as the way to derive the public key
-          setQuisPrivateKey(signature as string);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-      getQuisPrivateKey();
-    }, [status]);
-  }
-
   function useUpdateColorTheme() {
     useEffect(() => {
       const root = window.document.documentElement;
@@ -128,15 +83,15 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     }, [colorTheme]);
   }
 
-  function useCleanupAccountData() {
-    useEffect(() => {
-      if (status !== "Disconnected" && status !== "Connecting") return;
+  // function useCleanupAccountData() {
+  //   useEffect(() => {
+  //     if (status !== "Disconnected" && status !== "Connecting") return;
 
-      if (quisPrivateKey) {
-        setQuisPrivateKey("");
-      }
-    }, [status]);
-  }
+  //     if (quisPrivateKey) {
+  //       setQuisPrivateKey("");
+  //     }
+  //   }, [status]);
+  // }
 
   function useRehydrateTwilightStore() {
     useEffect(() => {
@@ -189,8 +144,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
   // useRehydrateTwilightStore();
   useOnWalletChange();
   useHandleBTCAddress();
-  useCleanupAccountData();
-  useGetQuisPrivateKey();
+  // useCleanupAccountData();
+  // useGetQuisPrivateKey();
   useUpdateColorTheme();
 
   const providerValue = useMemo(
@@ -199,8 +154,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setHasInit,
       colorTheme: colorTheme || "pink",
       setColorTheme,
-      quisPrivateKey,
-      setQuisPrivateKey,
+      // quisPrivateKey,
+      // setQuisPrivateKey,
       hasRegisteredBTC,
       setHasRegisteredBTC,
       hasConfirmedBTC,
@@ -212,8 +167,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       setHasInit,
       colorTheme,
       setColorTheme,
-      quisPrivateKey,
-      setQuisPrivateKey,
+      // quisPrivateKey,
+      // setQuisPrivateKey,
       hasRegisteredBTC,
       hasConfirmedBTC,
       checkBTCRegistration,

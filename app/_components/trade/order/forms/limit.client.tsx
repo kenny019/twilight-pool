@@ -13,6 +13,7 @@ import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import cn from "@/lib/cn";
 import { useGrid } from "@/lib/providers/grid";
+import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import { createZkOrder } from "@/lib/twilight/zk";
@@ -23,7 +24,7 @@ import React from "react";
 const OrderLimitForm = () => {
   const { width } = useGrid();
 
-  const { quisPrivateKey } = useTwilight();
+  const privateKey = useSessionStore((state) => state.privateKey);
   const { status } = useWallet();
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
@@ -106,7 +107,7 @@ const OrderLimitForm = () => {
               onClick={async () => {
                 const { success, msg } = await createZkOrder({
                   zkAccount: currentZkAccount,
-                  signature: quisPrivateKey,
+                  signature: privateKey,
                   value: 100,
                   positionType: "LONG",
                   leverage: 1,

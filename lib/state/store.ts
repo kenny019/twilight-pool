@@ -9,7 +9,11 @@ import {
 import { createLendSlice, initialLendSliceState } from "./slices/lend";
 import { createTradeSlice, initialTradeSliceState } from "./slices/trade";
 import deepMerge from "deepmerge";
-import { createSessionTradeSlice } from "./session/trade";
+import {
+  createSessionTradeSlice,
+  initialSessionTradeData,
+} from "./session/trade";
+import { generateSignMessage } from "../twilight/chain";
 
 export const createTwilightStore = () => {
   return createStore<
@@ -25,6 +29,7 @@ export const createTwilightStore = () => {
       {
         name: "twilight-",
         storage: createJSONStorage(() => localStorage),
+        skipHydration: true,
         merge: (persistedState, currentState) => {
           const cleanCurrentState = {
             zk: {
@@ -63,23 +68,33 @@ export const createSessionStore = () => {
     persist(
       immer<SessionSlices>((...actions) => ({
         trade: createSessionTradeSlice(...actions),
+        twilightAddress: "",
+        privateKey: "",
+        setPrivateKey: (privateKey) => {
+          const [set] = actions;
+          set((state) => {
+            state.privateKey = privateKey;
+          });
+        },
       })),
       {
         name: "twilight-session-",
         storage: createJSONStorage(() => sessionStorage),
         skipHydration: true,
+        // note: merge only triggers when there is saved data
         merge: (persistedState, currentState) => {
           const mergedData = deepMerge(
             {
               trade: {
                 ...currentState.trade,
-                trades: [],
+                ...initialSessionTradeData,
               },
+              twilightAddress: currentState.twilightAddress,
+              setPrivateKey: currentState.setPrivateKey,
+              privateKey: "",
             },
             persistedState as AccountSlices
           );
-
-          console.log("merged session", mergedData);
           return mergedData;
         },
       }
