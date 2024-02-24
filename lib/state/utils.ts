@@ -1,7 +1,7 @@
 import { StateCreator } from "zustand";
-import { ZkAccountSlice } from "./slices/accounts";
-import { LendSlice } from "./slices/lend";
-import { TradeSlice } from "./slices/trade";
+import { ZkAccountSlice } from "./local/accounts";
+import { LendSlice } from "./local/lend";
+import { TradeSlice } from "./local/trade";
 import { TradeSessionSlice } from "./session/trade";
 import { ChainWalletBase } from "@cosmos-kit/core";
 

@@ -5,9 +5,9 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import {
   createZkAccountSlice,
   initialZkAccountSliceState,
-} from "./slices/accounts";
-import { createLendSlice, initialLendSliceState } from "./slices/lend";
-import { createTradeSlice, initialTradeSliceState } from "./slices/trade";
+} from "./local/accounts";
+import { createLendSlice, initialLendSliceState } from "./local/lend";
+import { createTradeSlice, initialTradeSliceState } from "./local/trade";
 import deepMerge from "deepmerge";
 import {
   createSessionTradeSlice,
