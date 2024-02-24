@@ -157,7 +157,6 @@ const TransferDialog = ({
 
         const msg = await createFundingToTradingTransferMsg({
           twilightAddress,
-          signature: privateKey,
           transferAmount,
           account: newTradingAccount,
           accountHex: newTradingAccountHex,
