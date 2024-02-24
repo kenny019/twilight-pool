@@ -19,28 +19,6 @@ async function generateSignMessage(
   return [pub_key, signature];
 }
 
-function getLocalTradingAccount(twilightAddress: string): Partial<ZkAccount> {
-  try {
-    const data = window.localStorage.getItem(
-      `twilight-trading-${twilightAddress}`
-    );
-
-    if (!data) return {};
-
-    const tradingAccount = JSON.parse(data);
-
-    console.log("getting local trading account data", tradingAccount);
-
-    return tradingAccount;
-  } catch (err) {
-    console.error(
-      `Error reading localStorage, key twilight-${twilightAddress}-trading-address`,
-      err
-    );
-    return {};
-  }
-}
-
 type UtxoFromDBResponse = {
   result: {
     result: string;
@@ -79,4 +57,4 @@ async function getUtxosFromDB() {
   return data;
 }
 
-export { generateSignMessage, getLocalTradingAccount, getUtxosFromDB };
+export { generateSignMessage, getUtxosFromDB };

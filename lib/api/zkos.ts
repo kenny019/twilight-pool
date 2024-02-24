@@ -1,12 +1,7 @@
 import wfetch from "../http";
+import { TwilightApiResponse } from "../types";
 
 const ZK_URL = process.env.NEXT_PUBLIC_ZKOS_API_ENDPOINT as string;
-
-export type TwilightApiResponse<Result> = {
-  id: number;
-  jsonrpc: string;
-  result: string | Result;
-};
 
 type UtxoData = {
   output_index: number;

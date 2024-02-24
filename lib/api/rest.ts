@@ -1,6 +1,8 @@
 import wfetch from "../http";
-import { twilightRegistedBtcAddressStruct } from "../types";
-import { TwilightApiResponse } from "./zkos";
+import {
+  TwilightApiResponse,
+  twilightRegistedBtcAddressStruct,
+} from "../types";
 
 const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 
@@ -48,10 +50,7 @@ type ReserveDataStruct = {
 
 async function getReserveData() {
   const { success, data, error } = await wfetch(
-    new URL(
-      // "https://nyks.twilight-explorer.com/rest/" +
-      REST_URL + "/twilight-project/nyks/volt/btc_reserve"
-    )
+    new URL(REST_URL + "/twilight-project/nyks/volt/btc_reserve")
   )
     .get()
     .json<ReserveDataStruct>();
@@ -73,14 +72,11 @@ async function getReserveData() {
 
 // todo: refactor into seperate files
 const priceURL = process.env.NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
-export type PriceFeedResponseData = {
-  jsonrpc: string;
-  id: number;
-  result: {
-    id: string;
-    price: string;
-    timestamp: string;
-  };
+
+type PriceFeedData = {
+  id: string;
+  price: string;
+  timestamp: string;
 };
 
 const bearerToken = process.env.PRICE_ORACLE_TOKEN as string;
@@ -101,7 +97,7 @@ async function getBTCPrice() {
         Authorization: `Bearer ${bearerToken}`,
       },
     })
-    .json<PriceFeedResponseData>();
+    .json<TwilightApiResponse<PriceFeedData>>();
 
   return response;
 }
@@ -117,12 +113,6 @@ export type CandleData = {
   start: string;
   trades: number;
   usd_volume: string;
-};
-
-export type CandleFeedResponseData = {
-  jsonrpc: string;
-  id: number;
-  result: CandleData[];
 };
 
 async function getCandleData() {
@@ -150,7 +140,7 @@ async function getCandleData() {
         Authorization: `Bearer ${bearerToken}`,
       },
     })
-    .json<CandleFeedResponseData>();
+    .json<TwilightApiResponse<CandleData[]>>();
 
   return response;
 }

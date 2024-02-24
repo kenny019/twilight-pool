@@ -21,6 +21,12 @@ export type twilightRegistedBtcAddressStruct = {
   twilightDepositAddress: string;
 };
 
+export type TwilightApiResponse<Result> = {
+  id: number;
+  jsonrpc: string;
+  result: Result;
+};
+
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
 export type TradeOrder = z.infer<typeof TradeOrderSchema>;
 export type LendOrder = z.infer<typeof LendOrderSchema>;

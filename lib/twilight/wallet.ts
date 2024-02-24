@@ -6,13 +6,11 @@ import { ZkAccount } from "../types";
 async function createFundingToTradingTransferMsg({
   twilightAddress,
   transferAmount,
-  signature,
   account,
   accountHex,
 }: {
   twilightAddress: string;
   transferAmount: number;
-  signature: string;
   account: ZkAccount;
   accountHex: string;
 }) {
