@@ -103,4 +103,45 @@ async function broadcastTradingTx(
   return result;
 }
 
-export { queryUtxoForAddress, queryUtxoForOutput, broadcastTradingTx };
+async function getUtxosFromDB(
+  startBlock: number,
+  endBlock: number,
+  currentPage: number
+) {
+  const body = {
+    jsonrpc: "2.0",
+    method: "getUtxosFromDB",
+    params: {
+      start_block: startBlock,
+      end_block: endBlock,
+      limit: 100,
+      pagination: currentPage,
+      io_type: "Coin",
+    },
+    id: 1,
+  };
+
+  const apiURL = process.env.NEXT_PUBLIC_ZKOS_API_ENDPOINT as string;
+  const { data, error, success } = await wfetch(apiURL)
+    .post({
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+    .json<TwilightApiResponse<{ result: string | null }>>();
+
+  if (!success) {
+    console.error(error);
+    return null;
+  }
+
+  return data.result.result;
+}
+
+export {
+  queryUtxoForAddress,
+  queryUtxoForOutput,
+  broadcastTradingTx,
+  getUtxosFromDB,
+};

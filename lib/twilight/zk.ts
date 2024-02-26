@@ -11,8 +11,13 @@ import {
   generateTradingAccount,
   getTradingAddressFromTradingAccount,
   createZkOSLendOrder,
+  coinAddressMonitoring,
 } from "./zkos";
-import { queryUtxoForAddress, queryUtxoForOutput } from "../api/zkos";
+import {
+  getUtxosFromDB,
+  queryUtxoForAddress,
+  queryUtxoForOutput,
+} from "../api/zkos";
 
 async function createZkAccount({
   tag,
@@ -107,34 +112,42 @@ async function getZkAccountBalance({
   zkAccountAddress: string;
   signature: string;
 }): Promise<{
+  address: string;
   value: number;
-  isOnChain: boolean;
 }> {
-  const output = getOutputFromZkAddress({ zkAccountAddress });
+  try {
+    const output = await getOutputFromZkAddress({ zkAccountAddress });
 
-  if (!Object.hasOwn(output, "out_type")) {
+    if (!Object.hasOwn(output, "out_type")) {
+      return {
+        address: zkAccountAddress,
+        value: 0,
+      };
+    }
+
+    const outputString = JSON.stringify(output);
+
+    const zkAccountHex = await getZKAccountHexFromOutputString({
+      outputString,
+    });
+
+    const accountValue = await decryptZKAccountHexValue({
+      signature,
+      zkAccountHex,
+    });
+
+    console.log("decryptedValue", Number(accountValue));
     return {
-      isOnChain: false,
+      address: zkAccountAddress,
+      value: Number(accountValue),
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      address: zkAccountAddress,
       value: 0,
     };
   }
-
-  const outputString = JSON.stringify(output);
-
-  const zkAccountHex = await getZKAccountHexFromOutputString({
-    outputString,
-  });
-
-  const accountValue = await decryptZKAccountHexValue({
-    signature,
-    zkAccountHex,
-  });
-
-  console.log("decryptedValue", Number(accountValue));
-  return {
-    value: Number(accountValue),
-    isOnChain: true,
-  };
 }
 
 async function createZkOrder({
@@ -267,10 +280,65 @@ async function createZkLendOrder({
   };
 }
 
+async function syncOnChainZkAccounts({
+  startBlock,
+  endBlock,
+  currentZkAccounts,
+  signature,
+}: {
+  startBlock: number;
+  endBlock: number;
+  currentZkAccounts?: ZkAccount[];
+  signature: string;
+}) {
+  try {
+    let finishSync = false;
+    let currentPage = 0;
+
+    while (!finishSync) {
+      const result = await getUtxosFromDB(startBlock, endBlock, currentPage);
+
+      if (result === null) {
+        finishSync = true;
+        break;
+      }
+
+      const utxoOutputString = result;
+      currentPage += 1;
+
+      const onChainTradingAccountString = await coinAddressMonitoring({
+        utxoOutputString,
+        signature,
+      });
+
+      if (!onChainTradingAccountString) {
+        continue;
+      }
+
+      const onChainTradingAccounts = JSON.parse(
+        onChainTradingAccountString
+      ) as string[];
+
+      const accountValuePromises = onChainTradingAccounts.map((address) =>
+        getZkAccountBalance({
+          signature,
+          zkAccountAddress: address,
+        })
+      );
+
+      const accountWithBalance = await Promise.all(accountValuePromises);
+      console.log("accountWithBalance", accountWithBalance);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 export {
   createZkAccount,
   getZkAccountBalance,
   createZkOrder,
   createZkAccountWithBalance,
   createZkLendOrder,
+  syncOnChainZkAccounts,
 };

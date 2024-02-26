@@ -13,9 +13,10 @@ import React, {
 } from "react";
 import { useTwilight } from "./twilight";
 import { useWallet } from "@cosmos-kit/react-lite";
-import { createZkAccount } from "../twilight/zk";
+import { createZkAccount, syncOnChainZkAccounts } from "../twilight/zk";
 import { ZK_ACCOUNT_INDEX } from "../constants";
 import { useSessionStore } from "./session";
+import { getBlockHeight } from "../twilight/chain";
 
 export const twilightStoreContext =
   createContext<StoreApi<AccountSlices> | null>(null);
@@ -104,40 +105,69 @@ export const TwilightStoreProvider = ({
     }, [isHydrated]);
   }
 
-  useEffect(() => {
-    async function initZkAccount() {
-      if (!storeRef.current || !isHydrated) return;
+  function useInitZkAccount() {
+    useEffect(() => {
+      async function initZkAccount() {
+        if (!storeRef.current || !isHydrated || !privateKey) return;
 
-      if (!chainWallet?.address) return;
+        if (!chainWallet?.address) return;
 
-      console.log("CHECKING INIT ZKACCOUNT");
+        console.log("CHECKING INIT ZKACCOUNT");
 
-      const zkAccounts = storeRef.current.getState().zk.zkAccounts;
+        const zkAccounts = storeRef.current.getState().zk.zkAccounts;
 
-      const addZkAccount = storeRef.current.getState().zk.addZkAccount;
+        const addZkAccount = storeRef.current.getState().zk.addZkAccount;
 
-      const hasMainZkAccount =
-        zkAccounts.filter((account) => account.tag === "main").length > 0;
+        const hasMainZkAccount =
+          zkAccounts.filter((account) => account.tag === "main").length > 0;
 
-      if (!hasMainZkAccount) {
-        console.log("initialising new zk account");
+        if (!hasMainZkAccount) {
+          console.log("initialising new zk account");
 
-        const account = await createZkAccount({
-          tag: "main",
+          const account = await createZkAccount({
+            tag: "main",
+            signature: privateKey,
+          });
+
+          addZkAccount({
+            ...account,
+            value: 0,
+            isOnChain: false,
+          });
+        }
+      }
+
+      initZkAccount();
+    }, [isHydrated, chainWallet?.address, privateKey]);
+  }
+
+  function useSyncZkAccounts() {
+    useEffect(() => {
+      async function syncZkAccounts() {
+        if (!storeRef.current || !isHydrated || !privateKey) return;
+
+        if (!chainWallet?.address) return;
+
+        const height = await getBlockHeight(chainWallet);
+
+        if (!height) return;
+
+        const oldHeight = storeRef.current.getState().zk.blockHeight;
+
+        // storeRef.current.getState().zk.updateBlockHeight(height);
+        await syncOnChainZkAccounts({
+          startBlock: oldHeight,
+          endBlock: height,
           signature: privateKey,
         });
-
-        addZkAccount({
-          ...account,
-          value: 0,
-          isOnChain: false,
-        });
       }
-    }
 
-    initZkAccount();
-  }, [isHydrated, chainWallet?.address]);
+      syncZkAccounts();
+    }, [isHydrated, chainWallet?.address, privateKey]);
+  }
 
+  useSyncZkAccounts();
+  useInitZkAccount();
   useRehydrateLocalStore();
   useResetSelectedZkAccount();
 

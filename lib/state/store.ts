@@ -13,7 +13,6 @@ import {
   createSessionTradeSlice,
   initialSessionTradeData,
 } from "./session/trade";
-import { generateSignMessage } from "../twilight/chain";
 
 export const createTwilightStore = () => {
   return createStore<
@@ -30,6 +29,16 @@ export const createTwilightStore = () => {
         name: "twilight-",
         storage: createJSONStorage(() => localStorage),
         skipHydration: true,
+        version: 0.1,
+        migrate: (persistedState, version) => {
+          if (version === 0) {
+            const newState = persistedState as AccountSlices;
+            newState.zk.blockHeight = 0;
+
+            return newState;
+          }
+          return persistedState as AccountSlices;
+        },
         merge: (persistedState, currentState) => {
           const cleanCurrentState = {
             zk: {
@@ -46,8 +55,6 @@ export const createTwilightStore = () => {
             },
           };
 
-          console.log("merged localstorage current data ->", cleanCurrentState);
-          console.log("merged localstorage persisted data ->", persistedState);
           const mergedData = deepMerge(
             cleanCurrentState,
             persistedState as AccountSlices

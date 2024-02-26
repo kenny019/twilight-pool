@@ -239,6 +239,17 @@ async function executeTradeLendOrderMsg({
   );
 }
 
+async function coinAddressMonitoring({
+  utxoOutputString,
+  signature,
+}: {
+  utxoOutputString: string;
+  signature: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.coinAddressMonitoring(utxoOutputString, signature);
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
@@ -257,4 +268,5 @@ export {
   createQueryLendOrderMsg,
   createZkOSLendOrder,
   executeTradeLendOrderMsg,
+  coinAddressMonitoring,
 };
