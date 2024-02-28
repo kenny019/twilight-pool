@@ -1,5 +1,6 @@
 import wfetch from "../http";
 import {
+  CandleInterval,
   TwilightApiResponse,
   twilightRegistedBtcAddressStruct,
 } from "../types";
@@ -80,6 +81,7 @@ type PriceFeedData = {
 };
 
 const bearerToken = process.env.PRICE_ORACLE_TOKEN as string;
+
 async function getBTCPrice() {
   const response = await wfetch(priceURL, {
     next: {
@@ -115,10 +117,17 @@ export type CandleData = {
   usd_volume: string;
 };
 
-async function getCandleData() {
-  const date = new Date();
-  date.setMinutes(date.getMinutes() - 15);
-
+async function getCandleData({
+  since,
+  limit = 15,
+  offset = 0,
+  interval,
+}: {
+  since: string;
+  interval: keyof typeof CandleInterval;
+  limit?: number;
+  offset?: number;
+}) {
   const response = await wfetch(priceURL, {
     next: {
       revalidate: 10,
@@ -130,10 +139,10 @@ async function getCandleData() {
         method: "candle_data",
         id: 123, // todo: autoincrement
         params: {
-          interval: "ONE_MINUTE",
-          since: date.toISOString(),
-          limit: 15,
-          offset: 0,
+          interval,
+          since,
+          limit,
+          offset,
         },
       }),
       headers: {

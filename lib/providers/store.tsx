@@ -155,11 +155,11 @@ export const TwilightStoreProvider = ({
         const oldHeight = storeRef.current.getState().zk.blockHeight;
 
         // storeRef.current.getState().zk.updateBlockHeight(height);
-        await syncOnChainZkAccounts({
-          startBlock: oldHeight,
-          endBlock: height,
-          signature: privateKey,
-        });
+        // await syncOnChainZkAccounts({
+        //   startBlock: oldHeight,
+        //   endBlock: height,
+        //   signature: privateKey,
+        // });
       }
 
       syncZkAccounts();

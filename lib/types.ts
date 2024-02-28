@@ -33,3 +33,14 @@ export type LendOrder = z.infer<typeof LendOrderSchema>;
 
 export type PositionTypes = "LONG" | "SHORT";
 export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";
+
+export enum CandleInterval {
+  ONE_MINUTE = "ONE_MINUTE",
+  FIVE_MINUTE = "FIVE_MINUTE",
+  FIFTEEN_MINUTE = "FIFTEEN_MINUTE",
+  ONE_HOUR = "ONE_HOUR",
+  FOUR_HOUR = "FOUR_HOUR",
+  EIGHT_HOUR = "EIGHT_HOUR",
+  TWELVE_HOUR = "TWELVE_HOUR",
+  ONE_DAY = "ONE_DAY",
+}

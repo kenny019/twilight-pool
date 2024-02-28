@@ -95,8 +95,13 @@ const TickerWrapper = ({ btcPrice }: Props) => {
           {formatCurrency(low)}
         </Resource>
       </TickerItem>
-      <TickerItem title="24H Turnover (BTC)">
-        <Skeleton className="h-6 w-full" />
+      <TickerItem title="24H Turnover">
+        <Resource
+          isLoaded={turnover !== 0}
+          placeholder={<Skeleton className="h-6 w-full" />}
+        >
+          {formatCurrency(turnover)}
+        </Resource>
       </TickerItem>
       <TickerItem border={false} title="Funding Rate / Countdown">
         <Skeleton className="h-6 w-full" />
