@@ -352,12 +352,16 @@ const TransferDialog = ({
             return;
           }
 
-          const { success, msg: zkBurnMsg } = await createZkBurnTx({
+          const {
+            success,
+            msg: zkBurnMsg,
+            zkAccountHex,
+          } = await createZkBurnTx({
             signature: privateKey,
             zkAccount: senderZkAccount,
           });
 
-          if (!success || !zkBurnMsg) {
+          if (!success || !zkBurnMsg || !zkAccountHex) {
             toast({
               variant: "error",
               title: "An error has occurred",
@@ -368,15 +372,20 @@ const TransferDialog = ({
             return;
           }
 
-          const tradingTxRes = await broadcastTradingTx(
+          toast({
+            title: "Broadcasting transfer",
+            description:
+              "Please wait while your transfer is being submitted...",
+          });
+
+          const tradingTxResString = await broadcastTradingTx(
             zkBurnMsg,
             twilightAddress
           );
 
-          if (
-            typeof tradingTxRes === "string" ||
-            Object.hasOwn(tradingTxRes, "error")
-          ) {
+          const tradingTxRes = JSON.parse(tradingTxResString as string);
+
+          if (Object.hasOwn(tradingTxRes, "error")) {
             toast({
               variant: "error",
               title: "An error has occurred",
@@ -394,13 +403,14 @@ const TransferDialog = ({
 
           const stargateClient = await chainWallet.getSigningStargateClient();
           const mintBurnMsg = mintBurnTradingBtc({
-            btcValue: Long.fromNumber(senderZkAccount.value),
+            btcValue: Long.fromNumber(senderZkAccount.value as number),
             encryptScalar: senderZkAccount.scalar,
             mintOrBurn: false,
-            qqAccount: senderZkAccount.address,
+            qqAccount: zkAccountHex,
             twilightAddress,
           });
 
+          console.log("mintBurnMsg", mintBurnMsg);
           const mintBurnRes = await stargateClient.signAndBroadcast(
             twilightAddress,
             [mintBurnMsg],
@@ -430,6 +440,28 @@ const TransferDialog = ({
           );
 
           console.log("mintBurnRes", mintBurnRes);
+          toast({
+            title: "Success",
+            description: (
+              <div className="flex space-x-1 opacity-90">
+                {`Successfully sent ${new BTC("sats", Big(transferAmount))
+                  .convert("BTC")
+                  .toString()} BTC to Funding Account. `}
+                <Button
+                  variant="link"
+                  className="inline-flex text-sm opacity-90 hover:opacity-100"
+                  asChild
+                >
+                  <Link
+                    href={`https://nyks.twilight-explorer.com/transaction/${mintBurnRes.transactionHash}`}
+                    target={"_blank"}
+                  >
+                    Explorer link
+                  </Link>
+                </Button>
+              </div>
+            ),
+          });
         }
 
         setIsSubmitLoading(false);
@@ -539,7 +571,7 @@ const TransferDialog = ({
 
                   {zkAccounts.find(
                     (account) => account.address === selectedTradingAccountFrom
-                  )?.value && (
+                  )?.value ? (
                     <Text className="text-xs text-primary/80">
                       {new BTC(
                         "sats",
@@ -554,6 +586,8 @@ const TransferDialog = ({
                         .toString()}
                       {` ${depositDenom}`}
                     </Text>
+                  ) : (
+                    <Text className="text-xs text-primary/80">{`0 ${depositDenom}`}</Text>
                   )}
                 </div>
               )}
@@ -667,7 +701,7 @@ const TransferDialog = ({
 
                   {zkAccounts.find(
                     (account) => account.address === selectedTradingAccountTo
-                  )?.value && (
+                  )?.value ? (
                     <Text className="text-xs text-primary/80">
                       {new BTC(
                         "sats",
@@ -682,6 +716,8 @@ const TransferDialog = ({
                         .toString()}
                       {` ${depositDenom}`}
                     </Text>
+                  ) : (
+                    <Text className="text-xs text-primary/80">{`0 ${depositDenom}`}</Text>
                   )}
                 </div>
               )}

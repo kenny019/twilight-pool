@@ -1,8 +1,12 @@
 import { useWallet } from "@cosmos-kit/react-lite";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function useGetTwilightBTCBalance() {
   const [twilightSats, setTwilightSats] = useState(0);
+
+  const sats = useMemo(() => {
+    return twilightSats;
+  }, [twilightSats]);
 
   const { status, mainWallet } = useWallet();
 
@@ -33,8 +37,6 @@ export default function useGetTwilightBTCBalance() {
 
         const { amount } = satsBalance;
 
-        console.log("rawSatsBal", amount);
-
         setTwilightSats(parseInt(amount));
       } catch (err) {
         console.error(err);
@@ -51,7 +53,7 @@ export default function useGetTwilightBTCBalance() {
   }, [status]);
 
   return {
-    twilightSats,
+    twilightSats: sats,
     setTwilightSats,
   };
 }

@@ -195,13 +195,22 @@ async function createZkBurnTx({
     utxoString,
   });
 
-  const burnMsg = await createBurnMessageTx({
+  const burnMsgPromise = createBurnMessageTx({
     inputString,
     address: zkAccount.address,
     amount: zkAccount.value,
     scalar: zkAccount.scalar,
     signature,
   });
+
+  const zkAccountHexPromise = getZKAccountHexFromOutputString({
+    outputString: outputString,
+  });
+
+  const [burnMsg, zkAccountHex] = await Promise.all([
+    burnMsgPromise,
+    zkAccountHexPromise,
+  ]);
 
   console.log({
     inputString,
@@ -214,6 +223,7 @@ async function createZkBurnTx({
   return {
     success: true,
     msg: burnMsg,
+    zkAccountHex,
   };
 }
 
