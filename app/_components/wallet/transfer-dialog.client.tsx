@@ -76,7 +76,7 @@ const TransferDialog = ({
   );
 
   const [selectedTradingAccountFrom, setSelectedTradingAccountFrom] = useState(
-    selectedZkAccount.address
+    tradingAccountAddress
   );
 
   const [selectedTradingAccountTo, setSelectedTradingAccountTo] = useState("");
