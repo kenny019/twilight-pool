@@ -26,7 +26,7 @@ const DragWrapper = forwardRef<
     >
       <div
         className={cn(
-          windowWidth < 600 ? "" : "draggable",
+          windowWidth < 800 ? "" : "draggable",
           "min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing"
         )}
       >
