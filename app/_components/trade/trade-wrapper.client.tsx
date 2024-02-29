@@ -20,6 +20,13 @@ const layout = [
   { i: "details", x: 0, y: 12, w: 8, h: 5, minW: 4, minH: 4 },
 ];
 
+const layoutSmall = [
+  { i: "order", x: 0, y: 11, w: 2, h: 11, minW: 2, minH: 11 },
+  { i: "chart", x: 0, y: 0, w: 4, h: 11, minW: 2, minH: 8 },
+  { i: "orderbook", x: 2, y: 11, w: 2, h: 11, minW: 2 },
+  { i: "details", x: 0, y: 22, w: 4, h: 5, minW: 4, minH: 4 },
+];
+
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 function calculateGridDimensions(
@@ -55,7 +62,7 @@ const TradeWrapper = ({ candleData }: Props) => {
 
   return (
     <ResponsiveGridLayout
-      layouts={{ lg: layout }}
+      layouts={{ lg: layout, sm: layoutSmall }}
       cols={{ lg: 12, md: 12, sm: 8, xs: 4, xxs: 4 }}
       rowHeight={GRID_ROW_HEIGHT}
       className="pb-4"

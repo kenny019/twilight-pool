@@ -1,4 +1,5 @@
 import cn from "@/lib/cn";
+import useWindow from "@/lib/hooks/useWindow";
 import { GridProvider } from "@/lib/providers/grid";
 import React, { forwardRef } from "react";
 
@@ -13,6 +14,7 @@ const DragWrapper = forwardRef<
   HTMLDivElement,
   React.PropsWithoutRef<Props> & React.ComponentPropsWithoutRef<"div">
 >(({ title, name, dimension, children, className, ...props }, ref) => {
+  const { width: windowWidth } = useWindow();
   return (
     <div
       className={cn(
@@ -22,7 +24,12 @@ const DragWrapper = forwardRef<
       ref={ref}
       {...props}
     >
-      <div className="draggable min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing">
+      <div
+        className={cn(
+          windowWidth < 600 ? "" : "draggable",
+          "min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing"
+        )}
+      >
         {title}
       </div>
       <GridProvider

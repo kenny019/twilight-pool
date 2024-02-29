@@ -37,10 +37,10 @@ const btcSubLinks = [
 const Header = () => {
   return (
     <nav className="border-b">
-      <div className="mx-auto px-4 py-4">
+      <div className="mx-auto px-1 py-1 md:px-4 md:py-4">
         <div className="relative flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <Link className="hidden sm:block" href="/">
               <Logo className="hover:opacity-80" />
             </Link>
             <div className="hidden items-center lg:flex">
@@ -62,7 +62,7 @@ const Header = () => {
           </div>
 
           {/* right side */}
-          <div className="flex flex-row items-center space-x-4">
+          <div className="mx-auto flex flex-row items-center space-x-2 sm:mx-0 md:space-x-4">
             <SubaccountSelect />
             <Settings />
             <ConnectWallet />
