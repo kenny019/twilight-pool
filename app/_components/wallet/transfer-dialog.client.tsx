@@ -29,7 +29,6 @@ import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
-import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { createZkAccountWithBalance } from "@/lib/twilight/zk";
 import {
@@ -58,15 +57,17 @@ const TransferDialog = ({
   const { mainWallet } = useWallet();
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
-
-  const privateKey = useSessionStore((state) => state.privateKey);
-
+  const addTransactionHistory = useTwilightStore(
+    (state) => state.history.addTransaction
+  );
   const selectedZkAccountIndex = useTwilightStore(
     (state) => state.zk.selectedZkAccount
   );
-
   const selectedZkAccount = zkAccounts[selectedZkAccountIndex];
+
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
@@ -75,7 +76,7 @@ const TransferDialog = ({
   );
 
   const [selectedTradingAccountFrom, setSelectedTradingAccountFrom] = useState(
-    tradingAccountAddress
+    selectedZkAccount.address
   );
 
   const [selectedTradingAccountTo, setSelectedTradingAccountTo] = useState("");
@@ -192,11 +193,22 @@ const TransferDialog = ({
           value: transferAmount,
         });
 
-        updateZkAccount(selectedZkAccount.address, {
+        updateZkAccount(selectedTradingAccountTo, {
           tag: newTradingAccount.tag,
           address: newTradingAccount.address,
           scalar: newTradingAccount.scalar,
           isOnChain: true,
+          value: transferAmount,
+        });
+
+        addTransactionHistory({
+          date: new Date(),
+          from: twilightAddress,
+          fromTag: "Funding",
+          to: newTradingAccount.address,
+          toTag: newTradingAccount.tag,
+          tx_hash: res.transactionHash,
+          type: "Lit",
           value: transferAmount,
         });
 
@@ -297,6 +309,7 @@ const TransferDialog = ({
             .convert("BTC")
             .toString()} BTC to ${depositZkAccount.tag}`,
         });
+
         setIsSubmitLoading(false);
       }
     } catch (err) {
@@ -372,28 +385,19 @@ const TransferDialog = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        disabled={
-                          selectedTradingAccountTo === tradingAccountAddress &&
-                          toAccountValue === "trading"
-                        }
-                        value={tradingAccountAddress || ""}
-                      >
-                        Trading account
-                      </SelectItem>
-                      {zkAccounts.map((subAccount, index) => {
-                        if (index === ZK_ACCOUNT_INDEX.MAIN) {
-                          return null;
-                        }
+                      {zkAccounts.map((subAccount) => {
                         return (
                           <SelectItem
                             disabled={
-                              selectedTradingAccountTo === subAccount.address
+                              selectedTradingAccountTo === subAccount.address &&
+                              toAccountValue === "trading"
                             }
                             value={subAccount.address}
                             key={subAccount.address}
                           >
-                            {subAccount.tag}
+                            {subAccount.tag === "main"
+                              ? "Trading Account"
+                              : subAccount.tag}
                           </SelectItem>
                         );
                       })}
@@ -455,28 +459,20 @@ const TransferDialog = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        disabled={
-                          selectedTradingAccountFrom ===
-                            tradingAccountAddress &&
-                          fromAccountValue === "trading"
-                        }
-                        value={tradingAccountAddress || ""}
-                      >
-                        Trading account
-                      </SelectItem>
-
-                      {zkAccounts.map((subAccount, index) => {
-                        if (index === ZK_ACCOUNT_INDEX.MAIN) return null;
+                      {zkAccounts.map((subAccount) => {
                         return (
                           <SelectItem
                             disabled={
-                              selectedTradingAccountFrom === subAccount.address
+                              selectedTradingAccountFrom ===
+                                subAccount.address &&
+                              fromAccountValue === "trading"
                             }
                             value={subAccount.address}
                             key={subAccount.address}
                           >
-                            {subAccount.tag}
+                            {subAccount.tag === "main"
+                              ? "Trading Account"
+                              : subAccount.tag}
                           </SelectItem>
                         );
                       })}

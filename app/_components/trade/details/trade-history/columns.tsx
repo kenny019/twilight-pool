@@ -16,8 +16,6 @@ type Trade = {
   date: Date;
 };
 
-const columnHelper = createColumnHelper();
-
 function capitaliseFirstLetter(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
