@@ -11,18 +11,22 @@ import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
-import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
-import { redirect } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { TransactionHistoryDataTable } from "./transaction-history/data-table";
+import { transactionHistoryColumns } from "./transaction-history/columns";
+import { useWallet } from "@cosmos-kit/react-lite";
 
 const Page = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
-
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+
+  const transactionHistory = useTwilightStore(
+    (state) => state.history.transactions
+  );
 
   const tradingAccount = zkAccounts[ZK_ACCOUNT_INDEX.MAIN] as
     | ZkAccount
@@ -30,7 +34,7 @@ const Page = () => {
 
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
 
-  if (!tradingAccountAddress) redirect("/");
+  const { status } = useWallet();
 
   const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
 
@@ -56,16 +60,6 @@ const Page = () => {
   useRedirectUnconnected();
   useGetTradingBTCBalance();
 
-  const totalSatsBalance = Big(twilightSats).plus(totalTradingSatsBalance || 0);
-
-  const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
-    .convert("BTC")
-    .toFixed(8);
-
-  const totalBalanceUSDString = Big(totalBTCBalanceString)
-    .mul(currentPrice)
-    .toFixed(2);
-
   const twilightBTCBalanceString = new BTC("sats", Big(twilightSats))
     .convert("BTC")
     .toFixed(8);
@@ -87,6 +81,20 @@ const Page = () => {
   const zkAccountBTCUSDString = Big(zkAccountBTCString)
     .mul(currentPrice)
     .toFixed(2);
+
+  const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
+
+  const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
+    .convert("BTC")
+    .toFixed(8);
+
+  const totalBalanceUSDString = Big(totalBTCBalanceString)
+    .mul(currentPrice)
+    .toFixed(2);
+
+  if (!tradingAccountAddress) {
+    return <></>;
+  }
 
   return (
     <div className="mx-8 mt-4 space-y-8">
@@ -185,7 +193,17 @@ const Page = () => {
           </div>
         </div>
       </div>
-      <div className="h-full min-h-[500px] w-full rounded-md border"></div>
+      <div className="space-y-2">
+        <Text heading="h2" className="text-2xl font-normal">
+          Account History
+        </Text>
+        <div className="h-full min-h-[500px] w-full rounded-md border py-1">
+          <TransactionHistoryDataTable
+            columns={transactionHistoryColumns}
+            data={transactionHistory}
+          />
+        </div>
+      </div>
     </div>
   );
 };

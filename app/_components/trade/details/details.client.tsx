@@ -9,8 +9,6 @@ const DetailsPanel = () => {
 
   const trade = useSessionStore((state) => state.trade.trades);
 
-  console.log("tradeData", trade);
-
   return (
     <div className="flex h-full w-full flex-col space-y-2 overflow-auto py-2">
       <div className="flex w-full items-center border-b pl-3">

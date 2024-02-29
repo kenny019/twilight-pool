@@ -25,3 +25,14 @@ export const LendOrderSchema = z.object({
   uuid: z.string(),
   orderStatus: z.string(),
 });
+
+export const TransactionHistorySchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  fromTag: z.string(),
+  toTag: z.string(),
+  tx_hash: z.string(),
+  value: z.number(),
+  date: z.date(),
+  type: z.string(),
+});

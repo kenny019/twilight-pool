@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { LendOrderSchema, TradeOrderSchema, ZkAccountSchema } from "./schema";
+import {
+  LendOrderSchema,
+  TradeOrderSchema,
+  TransactionHistorySchema,
+  ZkAccountSchema,
+} from "./schema";
 
 export const btcAddressSchema = z
   .string()
@@ -30,6 +35,7 @@ export type TwilightApiResponse<Result> = {
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
 export type TradeOrder = z.infer<typeof TradeOrderSchema>;
 export type LendOrder = z.infer<typeof LendOrderSchema>;
+export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;
 
 export type PositionTypes = "LONG" | "SHORT";
 export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";

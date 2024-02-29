@@ -13,6 +13,7 @@ import {
   createSessionTradeSlice,
   initialSessionTradeData,
 } from "./session/trade";
+import { createHistorySlice, initialHistorySliceState } from "./local/history";
 
 export const createTwilightStore = () => {
   return createStore<
@@ -24,12 +25,13 @@ export const createTwilightStore = () => {
         zk: createZkAccountSlice(...actions),
         lend: createLendSlice(...actions),
         trade: createTradeSlice(...actions),
+        history: createHistorySlice(...actions),
       })),
       {
         name: "twilight-",
         storage: createJSONStorage(() => localStorage),
         skipHydration: true,
-        version: 0.1,
+        version: 0.2,
         migrate: (persistedState, version) => {
           if (version === 0) {
             const newState = persistedState as AccountSlices;
@@ -52,6 +54,10 @@ export const createTwilightStore = () => {
             lend: {
               ...currentState.lend,
               ...initialLendSliceState,
+            },
+            history: {
+              ...currentState.history,
+              ...initialHistorySliceState,
             },
           };
 
