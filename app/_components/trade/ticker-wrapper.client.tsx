@@ -34,7 +34,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
 
   const { rate: fundingRate, timestamp: fundingTimestamp } = fundingTickerData;
 
-  const [countdownString, setCountdownString] = useState("");
+  const [countdownString, setCountdownString] = useState("00:00:00");
 
   function useFundingCountdown() {
     useEffect(() => {
