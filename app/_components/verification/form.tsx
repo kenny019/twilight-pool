@@ -43,7 +43,7 @@ const WalletVerificationForm = ({
 
   return (
     <div className="space-y-6">
-      <Text heading="h2" className="font-medium">
+      <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
         Verify Ownership
       </Text>
       <div className="space-y-1">

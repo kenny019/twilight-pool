@@ -42,8 +42,8 @@ const Page = () => {
   } = data;
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="mx-auto my-16 grid h-full w-full max-w-5xl grid-cols-2 gap-16">
+    <div className="flex h-full w-full flex-col px-4 md:px-0">
+      <div className="mx-auto my-8 flex h-full w-full max-w-5xl grid-cols-2 flex-col gap-8 sm:my-16 sm:grid md:gap-16">
         <WalletVerificationForm
           btcDepositAddress={btcDepositAddress}
           btcSatoshiTestAmount={btcSatoshiTestAmount}

@@ -2,7 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { ChainProvider } from "@cosmos-kit/react-lite";
-import { wallets as keplr } from "@cosmos-kit/keplr-extension";
+import { wallets as keplr } from "@cosmos-kit/keplr";
 import { wallets as cosmos } from "@cosmos-kit/cosmostation-extension";
 import { wallets as leap } from "@cosmos-kit/leap-extension";
 

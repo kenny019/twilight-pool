@@ -93,16 +93,16 @@ const Page = () => {
   }
 
   return (
-    <div className="mx-8 mt-4 space-y-8">
-      <div className="flex w-full max-w-4xl flex-row items-baseline justify-between">
-        <div className="space-y-2">
-          <Text heading="h1" className="text-2xl font-normal">
+    <div className="mx-4 mt-4 space-y-8 md:mx-8">
+      <div className="flex w-full max-w-4xl flex-row items-baseline justify-between space-x-6 md:space-x-0">
+        <div className="md:space-y-2">
+          <Text heading="h1" className="mb-0 text-xl font-normal sm:text-2xl">
             Assets Overview
           </Text>
           <div className="space-y-1">
-            <Text className="text-4xl">
+            <Text className="text-base md:text-4xl">
               {totalBTCBalanceString}
-              <span className="ml-1 inline-flex text-sm">BTC</span>
+              <span className="ml-0 inline-flex text-sm md:ml-1">BTC</span>
             </Text>
             <Text className="text-xs text-primary-accent">
               = {totalBalanceUSDString} USD
@@ -110,12 +110,12 @@ const Page = () => {
           </div>
         </div>
         <div className="flex w-full max-w-sm flex-col">
-          <Text heading="h2" className="text-2xl font-normal">
+          <Text heading="h2" className="text-xl font-normal sm:text-2xl">
             My Assets
           </Text>
           <div className="space-y-4">
             <div className="flex w-full justify-between">
-              <Text>Funding</Text>
+              <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
                   isLoaded={!!twilightSats}
@@ -126,7 +126,7 @@ const Page = () => {
                     </>
                   }
                 >
-                  <Text className="text-primary/80">
+                  <Text className="text-sm text-primary/80 md:text-base">
                     {twilightBTCBalanceString} BTC
                   </Text>
                   <Text className="text-xs text-primary-accent">
@@ -152,7 +152,7 @@ const Page = () => {
             <Separator />
 
             <div className="flex w-full justify-between">
-              <Text>Trading</Text>
+              <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
                   isLoaded={zkAccountSatsBalance > 0}
@@ -163,7 +163,7 @@ const Page = () => {
                     </>
                   }
                 >
-                  <Text className="text-primary/80">
+                  <Text className="text-sm text-primary/80 md:text-base">
                     {zkAccountBTCString} BTC
                   </Text>
                   <Text className="text-xs text-primary-accent">
@@ -190,7 +190,7 @@ const Page = () => {
         </div>
       </div>
       <div className="space-y-2">
-        <Text heading="h2" className="text-2xl font-normal">
+        <Text heading="h2" className="text-xl font-normal sm:text-2xl">
           Account History
         </Text>
         <div className="h-full min-h-[500px] w-full overflow-auto rounded-md border py-1">

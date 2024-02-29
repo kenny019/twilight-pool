@@ -136,7 +136,7 @@ const WalletRegistrationForm = () => {
 
   return (
     <form method="get" onSubmit={submitForm} className="space-y-6">
-      <Text heading="h2" className="font-medium">
+      <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
         Register Bitcoin Address
       </Text>
       <div className="space-y-1">

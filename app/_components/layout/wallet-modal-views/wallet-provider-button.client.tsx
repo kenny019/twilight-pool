@@ -51,8 +51,8 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
 
     if (!depositAddress) {
       return toast({
-        title: "Error getting wallet address",
-        description: "Please allow this website to connect to your wallet",
+        title: "Error getting wallet ",
+        description: `Please install ${wallet.name} before connecting!`,
         variant: "error",
       });
     }
