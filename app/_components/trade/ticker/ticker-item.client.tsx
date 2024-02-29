@@ -12,7 +12,7 @@ type Props = {
 const TickerItem = ({ className, title, border = true, children }: Props) => {
   return (
     <div className="flex flex-row items-center">
-      <div className="flex flex-col px-4">
+      <div className="flex flex-col px-2">
         <p className="text-sm opacity-50">
           <small>{title}</small>
         </p>

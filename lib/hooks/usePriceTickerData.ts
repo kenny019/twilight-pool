@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getHistoricalPrice } from "../twilight/ticker";
-import { getCandleData } from "../api/rest";
+import { getCandleData, getFundingRate } from "../api/rest";
 
 type PriceTickerData = {
   high: number;
   low: number;
   turnover: number;
   change: number;
+};
+
+type FundingTickerData = {
+  timestamp: string;
+  rate: string;
 };
 
 export default function usePriceTickerData(currentPrice: number) {
@@ -17,74 +22,116 @@ export default function usePriceTickerData(currentPrice: number) {
     change: 0,
   });
 
-  useEffect(() => {
-    async function getPriceTickerData() {
-      const date = new Date();
-      date.setDate(date.getDate() - 1);
+  // const matchedAddress = searchZkAccount({
+  //   inputAddresses: ["0x...", "0x..."],
+  //   outputAddress: ["...", "..."],
+  //   tx_hash: "",
+  // })
 
-      const yesterday = date.toISOString();
+  const [shouldFetchFunding, setShouldFetchFunding] = useState(true);
 
-      const candleResponse = await getCandleData({
-        since: yesterday,
-        interval: "ONE_DAY",
-        limit: 1,
-        offset: 0,
-      });
-
-      if (!candleResponse.success || candleResponse.error) {
-        return;
-      }
-
-      const { result } = candleResponse.data;
-
-      const candleData = result[0];
-
-      if (!candleData) {
-        return;
-      }
-
-      const { high, low, close, usd_volume: turnover } = candleData;
-
-      // const priceData = await getHistoricalPrice(
-      //   yesterday,
-      //   999, // todo: get all entries
-      //   0
-      // );
-
-      // const newTickerData = priceData.reduce<Omit<PriceTickerData, "change">>(
-      //   (acc, entry) => {
-      //     acc.high = Math.max(acc.high, parseFloat(entry.price));
-      //     acc.low =
-      //       acc.low === 0
-      //         ? parseFloat(entry.price)
-      //         : Math.min(acc.low, parseFloat(entry.price));
-
-      //     return acc;
-      //   },
-      //   {
-      //     high: 0,
-      //     low: 0,
-      //     turnover: 0,
-      //   }
-      // );
-
-      const changeAmount = currentPrice - parseFloat(close);
-      const changePercent = (changeAmount / currentPrice) * 100;
-
-      const tickerData = {
-        high: parseInt(high),
-        low: parseInt(low),
-        turnover: parseInt(turnover),
-        change: changePercent,
-      };
-
-      setPriceTickerData(tickerData);
+  const [fundingTickerData, setFundingTickerData] = useState<FundingTickerData>(
+    {
+      timestamp: "",
+      rate: "",
     }
+  );
 
-    if (currentPrice === 0) return;
+  const resetFunding = useCallback(() => {
+    setFundingTickerData({
+      timestamp: "",
+      rate: "",
+    });
+    setShouldFetchFunding(true);
+  }, []);
 
-    getPriceTickerData();
-  }, [currentPrice]);
+  function useGetPriceTickerData() {
+    useEffect(() => {
+      async function getPriceTickerData() {
+        const date = new Date();
+        date.setDate(date.getDate() - 1);
 
-  return priceTickerData;
+        const yesterday = date.toISOString();
+
+        try {
+          const candleResponse = await getCandleData({
+            since: yesterday,
+            interval: "ONE_DAY",
+            limit: 1,
+            offset: 0,
+            revalidate: 3600,
+          });
+
+          if (!candleResponse.success || candleResponse.error) {
+            console.error(candleResponse);
+            return;
+          }
+
+          const { result } = candleResponse.data;
+
+          const candleData = result[0];
+
+          if (!candleData) {
+            return;
+          }
+
+          const { high, low, close, usd_volume: turnover } = candleData;
+
+          const changeAmount = currentPrice - parseFloat(close);
+          const changePercent = (changeAmount / currentPrice) * 100;
+
+          const tickerData = {
+            high: parseInt(high),
+            low: parseInt(low),
+            turnover: parseInt(turnover),
+            change: changePercent,
+          };
+
+          setPriceTickerData(tickerData);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      if (currentPrice === 0) return;
+
+      getPriceTickerData();
+    }, [currentPrice]);
+  }
+
+  function useGetFundingRate() {
+    useEffect(() => {
+      async function getFunding() {
+        if (!shouldFetchFunding) return;
+
+        const fundingRes = await getFundingRate();
+
+        if (!fundingRes.success || fundingRes.error) {
+          console.error(fundingRes);
+          return;
+        }
+
+        const { result: fundingData } = fundingRes.data;
+
+        // console.log({
+        //   rate: parseFloat(fundingData.rate).toFixed(5),
+        //   timestamp: fundingData.timestamp,
+        // });
+
+        setFundingTickerData({
+          rate: parseFloat(fundingData.rate).toFixed(5),
+          timestamp: fundingData.timestamp,
+        });
+
+        setShouldFetchFunding(false);
+      }
+
+      getFunding();
+    }, [shouldFetchFunding]);
+  }
+
+  useGetFundingRate();
+  useGetPriceTickerData();
+
+  return { priceTickerData, fundingTickerData, resetFunding };
 }

@@ -136,7 +136,6 @@ async function getZkAccountBalance({
       zkAccountHex,
     });
 
-    console.log("decryptedValue", Number(accountValue));
     return {
       address: zkAccountAddress,
       value: Number(accountValue),

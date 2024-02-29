@@ -16,6 +16,7 @@ import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
 import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
+import { redirect } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const Page = () => {
@@ -28,6 +29,8 @@ const Page = () => {
     | undefined;
 
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
+
+  if (!tradingAccountAddress) redirect("/");
 
   const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
 

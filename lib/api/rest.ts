@@ -122,15 +122,17 @@ async function getCandleData({
   limit = 15,
   offset = 0,
   interval,
+  revalidate,
 }: {
   since: string;
   interval: keyof typeof CandleInterval;
+  revalidate?: number;
   limit?: number;
   offset?: number;
 }) {
   const response = await wfetch(priceURL, {
     next: {
-      revalidate: 10,
+      revalidate: revalidate ? revalidate : 10,
     },
   })
     .post({
@@ -150,6 +152,32 @@ async function getCandleData({
       },
     })
     .json<TwilightApiResponse<CandleData[]>>();
+
+  return response;
+}
+
+type FundingData = {
+  id: number;
+  price: string;
+  rate: string;
+  timestamp: string;
+};
+
+async function getFundingRate() {
+  const response = await wfetch(priceURL, {
+    next: {
+      revalidate: 1,
+    },
+  })
+    .post({
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "get_funding_rate",
+        id: 123,
+        params: null,
+      }),
+    })
+    .json<TwilightApiResponse<FundingData>>();
 
   return response;
 }
@@ -195,4 +223,5 @@ export {
   getBTCPrice,
   queryTransactionHashes,
   getCandleData,
+  getFundingRate,
 };
