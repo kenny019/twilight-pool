@@ -114,7 +114,7 @@ const Page = () => {
             My Assets
           </Text>
           <div className="space-y-4">
-            <div className="flex w-full justify-between">
+            <div className="flex w-full justify-between space-x-2">
               <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
@@ -151,11 +151,11 @@ const Page = () => {
 
             <Separator />
 
-            <div className="flex w-full justify-between">
+            <div className="flex w-full justify-between space-x-2">
               <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={zkAccountSatsBalance > 0}
+                  isLoaded={!!zkAccountSatsBalance}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
