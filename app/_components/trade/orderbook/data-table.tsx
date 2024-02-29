@@ -58,7 +58,7 @@ export function OrderBookDataTable<TData, TValue>({
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <tr
-                className="hover:bg-theme/20 data-[state=selected]:bg-theme cursor-pointer text-xs"
+                className="cursor-pointer text-xs hover:bg-theme/20 data-[state=selected]:bg-theme"
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
               >
@@ -81,9 +81,7 @@ export function OrderBookDataTable<TData, TValue>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center">
-                No results.
-              </td>
+              <td colSpan={columns.length} className="h-24 text-center"></td>
             </tr>
           )}
         </tbody>
