@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
@@ -12,6 +12,7 @@ import {
 import ChartWrapper from "./chart/chart-wrapper.client";
 import { CandleData } from "@/lib/api/rest";
 import DetailsPanel from "./details/details.client";
+import Skeleton from "@/components/skeleton";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
@@ -45,6 +46,8 @@ type Props = {
 };
 
 const TradeWrapper = ({ candleData }: Props) => {
+  const [hasMounted, setHasMounted] = useState(false);
+
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
       const gridDimensions = calculateGridDimensions(
@@ -60,10 +63,25 @@ const TradeWrapper = ({ candleData }: Props) => {
     })
   );
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return (
+      <div className="grid h-full w-full grid-cols-4 gap-4 p-4 md:grid-cols-12">
+        <Skeleton className="col-span-4 h-[430px] w-full md:col-span-2" />
+        <Skeleton className="col-span-2 h-[430px] w-full md:col-span-8" />
+        <Skeleton className="col-span-2 h-[430px] w-full" />
+        <Skeleton className="col-span-4 h-[190px] w-full md:col-span-8" />
+      </div>
+    );
+  }
+
   return (
     <ResponsiveGridLayout
       layouts={{ lg: layout, sm: layoutSmall }}
-      cols={{ lg: 12, md: 12, sm: 8, xs: 4, xxs: 4 }}
+      cols={{ lg: 12, md: 12, sm: 4, xs: 4, xxs: 4 }}
       rowHeight={GRID_ROW_HEIGHT}
       className="pb-4"
       draggableHandle=".draggable"

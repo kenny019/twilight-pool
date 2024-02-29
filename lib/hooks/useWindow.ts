@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 
 function useWindow() {
   const [windowDimension, setWindowDimension] = useState({
-    width: typeof window !== "undefined" ? window.innerWidth : 1280,
-    height: typeof window !== "undefined" ? window.innerHeight : 1280,
+    width: 0,
+    height: 0,
   });
 
   useEffect(() => {
@@ -18,6 +18,8 @@ function useWindow() {
     if (typeof window === "undefined") {
       return;
     }
+
+    update();
 
     window.addEventListener("resize", update);
 

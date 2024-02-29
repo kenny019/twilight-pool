@@ -31,7 +31,7 @@ const ExchangeResource = ({ children }: Props) => {
       <DialogTrigger asChild disabled={status === WalletStatus.Disconnected}>
         {children}
       </DialogTrigger>
-      <DialogContent className="top-[35%]">
+      <DialogContent className="top-[35%] max-w-sm sm:max-w-lg">
         {hasRegisteredBTC ? (
           <DialogTitle>Verify BTC Address</DialogTitle>
         ) : (

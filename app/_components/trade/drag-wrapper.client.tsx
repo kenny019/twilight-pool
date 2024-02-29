@@ -15,6 +15,7 @@ const DragWrapper = forwardRef<
   React.PropsWithoutRef<Props> & React.ComponentPropsWithoutRef<"div">
 >(({ title, name, dimension, children, className, ...props }, ref) => {
   const { width: windowWidth } = useWindow();
+
   return (
     <div
       className={cn(
@@ -26,8 +27,8 @@ const DragWrapper = forwardRef<
     >
       <div
         className={cn(
-          windowWidth < 800 ? "" : "draggable",
-          "min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing"
+          "min-h-[38px] w-full cursor-grab select-none border-b py-2 pl-3 text-sm active:cursor-grabbing",
+          windowWidth < 500 ? "" : "draggable"
         )}
       >
         {title}
