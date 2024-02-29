@@ -14,7 +14,7 @@ import { useTwilightStore } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
-import { ArrowDownToLine, ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
@@ -33,10 +33,6 @@ const Page = () => {
     | undefined;
 
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
-
-  const { status } = useWallet();
-
-  const [totalTradingSatsBalance, setTotalTradingSatsBalance] = useState(0);
 
   const { currentPrice } = usePriceFeed();
 
@@ -139,9 +135,9 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
+                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
-                </Button>
+                </Button> */}
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="funding"
@@ -176,9 +172,9 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
+                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
-                </Button>
+                </Button> */}
 
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
@@ -197,7 +193,7 @@ const Page = () => {
         <Text heading="h2" className="text-2xl font-normal">
           Account History
         </Text>
-        <div className="h-full min-h-[500px] w-full rounded-md border py-1">
+        <div className="h-full min-h-[500px] w-full overflow-auto rounded-md border py-1">
           <TransactionHistoryDataTable
             columns={transactionHistoryColumns}
             data={transactionHistory}

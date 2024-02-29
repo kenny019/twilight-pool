@@ -12,6 +12,7 @@ import {
   getTradingAddressFromTradingAccount,
   createZkOSLendOrder,
   coinAddressMonitoring,
+  createBurnMessageTx,
 } from "./zkos";
 import {
   getUtxosFromDB,
@@ -149,6 +150,73 @@ async function getZkAccountBalance({
   }
 }
 
+async function createZkBurnTx({
+  zkAccount,
+  signature,
+}: {
+  zkAccount: ZkAccount;
+  signature: string;
+}) {
+  if (!zkAccount.value) {
+    return {
+      success: false,
+    };
+  }
+  const zkAccountAddress = zkAccount.address;
+
+  const utxoData = await queryUtxoForAddress(zkAccountAddress);
+
+  if (!Object.hasOwn(utxoData, "output_index")) {
+    console.error("no utxoData");
+    return {
+      success: false,
+    };
+  }
+
+  const utxoString = JSON.stringify(utxoData);
+
+  const utxoHex = await utxoStringToHex({
+    utxoString,
+  });
+
+  const output = await queryUtxoForOutput(utxoHex);
+
+  if (!Object.hasOwn(output, "out_type")) {
+    console.error("no output");
+    return {
+      success: false,
+    };
+  }
+
+  const outputString = JSON.stringify(output);
+
+  const inputString = await createInputCoinFromOutput({
+    outputString,
+    utxoString,
+  });
+
+  const burnMsg = await createBurnMessageTx({
+    inputString,
+    address: zkAccount.address,
+    amount: zkAccount.value,
+    scalar: zkAccount.scalar,
+    signature,
+  });
+
+  console.log({
+    inputString,
+    address: zkAccount.address,
+    amount: zkAccount.value,
+    scalar: zkAccount.scalar,
+    signature,
+  });
+
+  return {
+    success: true,
+    msg: burnMsg,
+  };
+}
+
 async function createZkOrder({
   zkAccount,
   signature,
@@ -173,7 +241,6 @@ async function createZkOrder({
 
   const utxoData = await queryUtxoForAddress(zkAccountAddress);
 
-  console.log("utxoData", utxoData);
   if (!Object.hasOwn(utxoData, "output_index")) {
     console.error("no utxoData");
     return {
@@ -340,4 +407,5 @@ export {
   createZkAccountWithBalance,
   createZkLendOrder,
   syncOnChainZkAccounts,
+  createZkBurnTx,
 };

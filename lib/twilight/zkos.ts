@@ -207,6 +207,29 @@ async function createQueryLendOrderMsg({
   return zkos.queryLendOrderZkos(address, signature, "PENDING");
 }
 
+async function createBurnMessageTx({
+  inputString,
+  amount,
+  scalar,
+  signature,
+  address,
+}: {
+  inputString: string;
+  amount: number;
+  scalar: string;
+  signature: string;
+  address: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.createBurnMessageTransaction(
+    inputString,
+    BigInt(amount),
+    scalar,
+    signature,
+    address
+  );
+}
+
 async function executeTradeLendOrderMsg({
   outputMemo,
   signature,
@@ -269,4 +292,5 @@ export {
   createZkOSLendOrder,
   executeTradeLendOrderMsg,
   coinAddressMonitoring,
+  createBurnMessageTx,
 };

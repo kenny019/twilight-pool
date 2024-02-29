@@ -78,12 +78,13 @@ async function queryUtxoForOutput(
 }
 
 async function broadcastTradingTx(
-  txHex: string
+  txHex: string,
+  ...extra: string[]
 ): Promise<Record<string, never> | string> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "txCommit",
-    params: [txHex],
+    params: [txHex, ...extra],
     id: 1,
   });
 

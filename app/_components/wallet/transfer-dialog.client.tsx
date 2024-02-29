@@ -1,4 +1,5 @@
 import Button from "@/components/button";
+import Long from "long";
 import {
   Dialog,
   DialogContent,
@@ -24,13 +25,13 @@ import {
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
-import { createZkAccountWithBalance } from "@/lib/twilight/zk";
+import { createZkAccountWithBalance, createZkBurnTx } from "@/lib/twilight/zk";
 import {
   broadcastTradingTx,
   queryUtxoForAddress,
@@ -40,6 +41,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import Link from "next/link";
 import { useSessionStore } from "@/lib/providers/session";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
+import { twilightproject } from "twilightjs";
 
 type Props = {
   children: React.ReactNode;
@@ -62,12 +65,10 @@ const TransferDialog = ({
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
-  const selectedZkAccountIndex = useTwilightStore(
-    (state) => state.zk.selectedZkAccount
-  );
-  const selectedZkAccount = zkAccounts[selectedZkAccountIndex];
 
   const privateKey = useSessionStore((state) => state.privateKey);
+
+  const { twilightSats } = useGetTwilightBTCBalance();
 
   const [fromAccountValue, setFromAccountValue] =
     useState<string>(defaultAccount);
@@ -85,6 +86,32 @@ const TransferDialog = ({
   const depositRef = useRef<HTMLInputElement>(null);
 
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+
+  useEffect(() => {
+    if (
+      toAccountValue === "funding" &&
+      fromAccountValue === "trading" &&
+      selectedTradingAccountFrom
+    ) {
+      const selectedTradingAccount = zkAccounts.find(
+        (account) => account.address === selectedTradingAccountFrom
+      );
+
+      if (
+        !selectedTradingAccount ||
+        !selectedTradingAccount.value ||
+        !depositRef.current
+      )
+        return;
+
+      depositRef.current.value = new BTC(
+        "sats",
+        Big(selectedTradingAccount.value)
+      )
+        .convert(depositDenom as BTCDenoms)
+        .toString();
+    }
+  }, [toAccountValue, fromAccountValue, selectedTradingAccountFrom]);
 
   async function updateTransferredAccount(newAccountData: ZkAccount) {
     switch (fromAccountValue) {
@@ -135,6 +162,7 @@ const TransferDialog = ({
         const depositZkAccount = zkAccounts.filter(
           (account) => account.address === selectedTradingAccountTo
         )[0];
+
         console.log("depositZkAccount", depositZkAccount.tag);
 
         if (!depositZkAccount) {
@@ -208,7 +236,7 @@ const TransferDialog = ({
           to: newTradingAccount.address,
           toTag: newTradingAccount.tag,
           tx_hash: res.transactionHash,
-          type: "Lit",
+          type: "Transfer",
           value: transferAmount,
         });
 
@@ -239,76 +267,170 @@ const TransferDialog = ({
           (account) => account.address === selectedTradingAccountFrom
         )[0];
 
-        const depositZkAccount = zkAccounts.filter(
-          (account) => account.address === selectedTradingAccountTo
-        )[0];
+        if (toAccountValue === "trading") {
+          const depositZkAccount = zkAccounts.filter(
+            (account) => account.address === selectedTradingAccountTo
+          )[0];
 
-        if (!senderZkAccount || !Object.hasOwn(senderZkAccount, "value")) {
-          console.error("error cant find depositZkAccount", depositZkAccount);
-          return;
+          if (!senderZkAccount || !Object.hasOwn(senderZkAccount, "value")) {
+            console.error("error cant find depositZkAccount", depositZkAccount);
+            return;
+          }
+
+          const utxoData = await queryUtxoForAddress(senderZkAccount.address);
+
+          if (!Object.hasOwn(utxoData, "output_index")) {
+            setIsSubmitLoading(false);
+            console.error("no utxoData");
+            return;
+          }
+
+          const utxoString = JSON.stringify(utxoData);
+
+          const utxoHex = await utxoStringToHex({
+            utxoString,
+          });
+
+          const output = await queryUtxoForOutput(utxoHex);
+
+          if (!Object.hasOwn(output, "out_type")) {
+            setIsSubmitLoading(false);
+            console.error("no Output");
+            return;
+          }
+
+          const outputString = JSON.stringify(output);
+
+          const inputString = await createInputCoinFromOutput({
+            outputString,
+            utxoString,
+          });
+
+          console.log("receiverAddress", depositZkAccount.address);
+
+          const msgStruct = await createTradingTxSingle({
+            signature: privateKey,
+            senderInput: inputString,
+            receiverAddress: depositZkAccount.address,
+            amount: transferAmount,
+            updatedSenderBalance:
+              (senderZkAccount.value as number) - transferAmount,
+          });
+
+          const { encrypt_scalar_hex, tx } = JSON.parse(msgStruct) as {
+            tx: string;
+            encrypt_scalar_hex: string;
+          };
+
+          const txId = await broadcastTradingTx(tx);
+          console.log("broadcasted", txId);
+
+          updateZkAccount(depositZkAccount.address, {
+            ...depositZkAccount,
+            scalar: encrypt_scalar_hex,
+            value: transferAmount,
+            isOnChain: true,
+          });
+
+          toast({
+            title: "Success",
+            description: `Successfully sent ${new BTC(
+              "sats",
+              Big(transferAmount)
+            )
+              .convert("BTC")
+              .toString()} BTC to ${depositZkAccount.tag}`,
+          });
+        } else {
+          if (!senderZkAccount.value) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Account does not have enough value to send",
+            });
+            setIsSubmitLoading(false);
+            return;
+          }
+
+          const { success, msg: zkBurnMsg } = await createZkBurnTx({
+            signature: privateKey,
+            zkAccount: senderZkAccount,
+          });
+
+          if (!success || !zkBurnMsg) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Please try again later.",
+            });
+            console.error("error creating zkBurnTx msg");
+            setIsSubmitLoading(false);
+            return;
+          }
+
+          const tradingTxRes = await broadcastTradingTx(
+            zkBurnMsg,
+            twilightAddress
+          );
+
+          if (
+            typeof tradingTxRes === "string" ||
+            Object.hasOwn(tradingTxRes, "error")
+          ) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Please try again later.",
+            });
+            console.error("error broadcasting zkBurnTx msg", tradingTxRes);
+            setIsSubmitLoading(false);
+            return;
+          }
+
+          console.log("tradingTxRes", tradingTxRes);
+
+          const { mintBurnTradingBtc } =
+            twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
+
+          const stargateClient = await chainWallet.getSigningStargateClient();
+          const mintBurnMsg = mintBurnTradingBtc({
+            btcValue: Long.fromNumber(senderZkAccount.value),
+            encryptScalar: senderZkAccount.scalar,
+            mintOrBurn: false,
+            qqAccount: senderZkAccount.address,
+            twilightAddress,
+          });
+
+          const mintBurnRes = await stargateClient.signAndBroadcast(
+            twilightAddress,
+            [mintBurnMsg],
+            100
+          );
+
+          updateZkAccount(senderZkAccount.address, {
+            ...senderZkAccount,
+            isOnChain: false,
+            value: 0,
+          });
+
+          addTransactionHistory({
+            date: new Date(),
+            from: senderZkAccount.address,
+            fromTag: senderZkAccount.tag,
+            to: twilightAddress,
+            toTag: "Funding",
+            tx_hash: mintBurnRes.transactionHash,
+            type: "Burn",
+            value: transferAmount,
+          });
+
+          console.log(
+            "sent sats from trading to funding",
+            senderZkAccount.value
+          );
+
+          console.log("mintBurnRes", mintBurnRes);
         }
-
-        const utxoData = await queryUtxoForAddress(senderZkAccount.address);
-
-        if (!Object.hasOwn(utxoData, "output_index")) {
-          setIsSubmitLoading(false);
-          console.error("no utxoData");
-          return;
-        }
-
-        const utxoString = JSON.stringify(utxoData);
-
-        const utxoHex = await utxoStringToHex({
-          utxoString,
-        });
-
-        const output = await queryUtxoForOutput(utxoHex);
-
-        if (!Object.hasOwn(output, "out_type")) {
-          setIsSubmitLoading(false);
-          console.error("no Output");
-          return;
-        }
-
-        const outputString = JSON.stringify(output);
-
-        const inputString = await createInputCoinFromOutput({
-          outputString,
-          utxoString,
-        });
-
-        console.log("receiverAddress", depositZkAccount.address);
-
-        const msgStruct = await createTradingTxSingle({
-          signature: privateKey,
-          senderInput: inputString,
-          receiverAddress: depositZkAccount.address,
-          amount: transferAmount,
-          updatedSenderBalance:
-            (senderZkAccount.value as number) - transferAmount,
-        });
-
-        const { encrypt_scalar_hex, tx } = JSON.parse(msgStruct) as {
-          tx: string;
-          encrypt_scalar_hex: string;
-        };
-
-        const txId = await broadcastTradingTx(tx);
-        console.log("broadcasted", txId);
-
-        updateZkAccount(depositZkAccount.address, {
-          ...depositZkAccount,
-          scalar: encrypt_scalar_hex,
-          value: transferAmount,
-          isOnChain: true,
-        });
-
-        toast({
-          title: "Success",
-          description: `Successfully sent ${new BTC("sats", Big(transferAmount))
-            .convert("BTC")
-            .toString()} BTC to ${depositZkAccount.tag}`,
-        });
 
         setIsSubmitLoading(false);
       }
@@ -364,6 +486,15 @@ const TransferDialog = ({
                     <SelectItem value="trading">Trading</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {fromAccountValue === "funding" && (
+                  <Text className="text-xs text-primary/80">
+                    {new BTC("sats", Big(twilightSats || 0))
+                      .convert(depositDenom as BTCDenoms)
+                      .toString()}
+                    {` ${depositDenom}`}
+                  </Text>
+                )}
               </div>
               {fromAccountValue === "trading" && (
                 <div className="space-y-1">
@@ -376,7 +507,9 @@ const TransferDialog = ({
                   <Select
                     defaultValue={selectedTradingAccountFrom}
                     value={selectedTradingAccountFrom}
-                    onValueChange={setSelectedTradingAccountFrom}
+                    onValueChange={(newAddress) => {
+                      setSelectedTradingAccountFrom(newAddress);
+                    }}
                   >
                     <SelectTrigger
                       id="dropdown-trading-account-from"
@@ -403,6 +536,25 @@ const TransferDialog = ({
                       })}
                     </SelectContent>
                   </Select>
+
+                  {zkAccounts.find(
+                    (account) => account.address === selectedTradingAccountFrom
+                  )?.value && (
+                    <Text className="text-xs text-primary/80">
+                      {new BTC(
+                        "sats",
+                        Big(
+                          zkAccounts.find(
+                            (account) =>
+                              account.address === selectedTradingAccountFrom
+                          )?.value || 0
+                        )
+                      )
+                        .convert(depositDenom as BTCDenoms)
+                        .toString()}
+                      {` ${depositDenom}`}
+                    </Text>
+                  )}
                 </div>
               )}
             </div>
@@ -424,6 +576,31 @@ const TransferDialog = ({
                     }
 
                     setToAccountValue(newToAccountValue);
+
+                    // if (
+                    //   newToAccountValue === "funding" &&
+                    //   fromAccountValue === "trading" &&
+                    //   selectedTradingAccountFrom
+                    // ) {
+                    //   const selectedTradingAccount = zkAccounts.find(
+                    //     (account) =>
+                    //       account.address === selectedTradingAccountFrom
+                    //   );
+
+                    //   if (
+                    //     !selectedTradingAccount ||
+                    //     !selectedTradingAccount.value ||
+                    //     !depositRef.current
+                    //   )
+                    //     return;
+
+                    //   depositRef.current.value = new BTC(
+                    //     "sats",
+                    //     Big(selectedTradingAccount.value)
+                    //   )
+                    //     .convert(depositDenom as BTCDenoms)
+                    //     .toString();
+                    // }
                   }}
                 >
                   <SelectTrigger
@@ -438,6 +615,15 @@ const TransferDialog = ({
                     <SelectItem value="trading">Trading</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {toAccountValue === "funding" && (
+                  <Text className="text-xs text-primary/80">
+                    {new BTC("sats", Big(twilightSats || 0))
+                      .convert("BTC")
+                      .toFixed(8)}{" "}
+                    BTC
+                  </Text>
+                )}
               </div>
 
               {toAccountValue === "trading" && (
@@ -478,6 +664,25 @@ const TransferDialog = ({
                       })}
                     </SelectContent>
                   </Select>
+
+                  {zkAccounts.find(
+                    (account) => account.address === selectedTradingAccountTo
+                  )?.value && (
+                    <Text className="text-xs text-primary/80">
+                      {new BTC(
+                        "sats",
+                        Big(
+                          zkAccounts.find(
+                            (account) =>
+                              account.address === selectedTradingAccountTo
+                          )?.value || 0
+                        )
+                      )
+                        .convert(depositDenom as BTCDenoms)
+                        .toString()}
+                      {` ${depositDenom}`}
+                    </Text>
+                  )}
                 </div>
               )}
             </div>
@@ -513,6 +718,7 @@ const TransferDialog = ({
               setSelected={setDepositDenom}
               selected={depositDenom}
               ref={depositRef}
+              readOnly={toAccountValue === "funding"}
             />
           </div>
 
