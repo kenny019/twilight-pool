@@ -17,6 +17,7 @@ const OrderMyTrades = () => {
   const { toast } = useToast();
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const addTradeHistory = useSessionStore((state) => state.trade.addTrade);
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
@@ -51,6 +52,19 @@ const OrderMyTrades = () => {
       await executeTradeOrder(msg);
 
       removeTrade(tradeOrder);
+
+      // tradeOrder.
+      addTradeHistory({
+        accountAddress: tradeOrder.accountAddress,
+        date: new Date(),
+        orderStatus: "CLOSED",
+        orderType: tradeOrder.orderType,
+        positionType: tradeOrder.positionType,
+        tx_hash: tradeOrder.tx_hash,
+        uuid: tradeOrder.uuid,
+        value: tradeOrder.value,
+        output: tradeOrder.output,
+      });
 
       toast({
         title: "Success",
