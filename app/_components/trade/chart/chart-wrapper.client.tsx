@@ -83,11 +83,6 @@ const ChartWrapper = ({ candleData }: Props) => {
         ) as UTCTimestamp;
 
         if (!seriesRef.current || seriesRef.current === null) {
-          console.log(
-            "where the fuck is seriesRef.current",
-            seriesRef,
-            seriesRef.current
-          );
           return;
         }
 
