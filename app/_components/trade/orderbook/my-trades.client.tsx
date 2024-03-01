@@ -2,12 +2,14 @@
 import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import { executeTradeOrder } from "@/lib/api/client";
+import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
+import { getZkAccountBalance } from "@/lib/twilight/zk";
 import { executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
 import { TradeOrder } from "@/lib/types";
 import Big from "big.js";
@@ -19,11 +21,35 @@ const OrderMyTrades = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
   const addTradeHistory = useSessionStore((state) => state.trade.addTrade);
 
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
 
   async function settleOrder(tradeOrder: TradeOrder) {
-    if (!tradeOrder.output) return;
+    if (!tradeOrder.output) {
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Error with settling trade order",
+      });
+      return;
+    }
+
+    const currentAccount = zkAccounts.find(
+      (account) => account.address === tradeOrder.accountAddress
+    );
+
+    if (!currentAccount) {
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Error account associated with this order is missing",
+      });
+
+      removeTrade(tradeOrder);
+      return;
+    }
 
     try {
       console.log({
@@ -51,9 +77,34 @@ const OrderMyTrades = () => {
       console.log("msg", msg);
       await executeTradeOrder(msg);
 
+      toast({
+        title: "Closing order",
+        description: "Action is being processed...",
+      });
+
+      const { value: newAccountBalance } = await getZkAccountBalance({
+        zkAccountAddress: tradeOrder.accountAddress,
+        signature: privateKey,
+      });
+
+      if (!newAccountBalance) {
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Error with settling trade order",
+        });
+        return;
+      }
+
+      console.log("settle account balance", newAccountBalance);
+
+      updateZkAccount(tradeOrder.accountAddress, {
+        ...currentAccount,
+        value: newAccountBalance,
+      });
+
       removeTrade(tradeOrder);
 
-      // tradeOrder.
       addTradeHistory({
         accountAddress: tradeOrder.accountAddress,
         date: new Date(),
@@ -72,6 +123,11 @@ const OrderMyTrades = () => {
       });
     } catch (err) {
       console.error(err);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Error with settling trade order",
+      });
     }
   }
 

@@ -114,7 +114,7 @@ async function getZkAccountBalance({
   signature: string;
 }): Promise<{
   address: string;
-  value: number;
+  value?: number;
 }> {
   try {
     const output = await getOutputFromZkAddress({ zkAccountAddress });
@@ -122,7 +122,6 @@ async function getZkAccountBalance({
     if (!Object.hasOwn(output, "out_type")) {
       return {
         address: zkAccountAddress,
-        value: 0,
       };
     }
 

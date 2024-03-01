@@ -7,20 +7,22 @@ import { ColumnDef } from "@tanstack/react-table";
 import Big from "big.js";
 import Link from "next/link";
 
+export function convertDate(toParse: Date | string) {
+  return typeof toParse === "string" ? new Date(toParse) : toParse;
+}
+
 export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
   {
     accessorKey: "date",
     header: "Date & Time",
-    accessorFn: (row) =>
-      typeof row.date === "string"
-        ? new Date(row.date).toLocaleString()
-        : row.date.toLocaleString(),
+    accessorFn: (row) => convertDate(row.date).toLocaleString(),
   },
   {
     accessorKey: "value",
     header: "Amount (BTC)",
     accessorFn: (row) =>
       new BTC("sats", Big(row.value)).convert("BTC").toString(),
+    enableSorting: true,
   },
   {
     accessorKey: "type",

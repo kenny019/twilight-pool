@@ -1,9 +1,10 @@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/dialog";
 import React, { createContext, useContext, useMemo, useState } from "react";
 import SubaccountListView from "./subaccount-modal-views/subaccount-list.client";
-import SubaccountCreateView from "./subaccount-modal-views/subaccount-view.client";
+import SubaccountCreateView from "./subaccount-modal-views/subaccount-create.client";
+import SubaccountEditView from "./subaccount-modal-views/subaccount-edit.client";
 
-type availableViews = "list" | "create";
+type availableViews = "list" | "create" | "edit";
 
 type Props = {
   open: boolean;
@@ -16,6 +17,8 @@ type DialogContext = {
   setOpen: (val: boolean) => void;
   view: availableViews;
   setView: (val: availableViews) => void;
+  selectedSubaccount: string;
+  setSelectedSubaccount: (val: string) => void;
 };
 
 const dialogContext = createContext<DialogContext>({
@@ -23,13 +26,16 @@ const dialogContext = createContext<DialogContext>({
   setOpen: () => {},
   view: "list",
   setView: () => {},
+  selectedSubaccount: "",
+  setSelectedSubaccount: () => {},
 });
 
 export const useSubaccountDialog = () =>
   useContext<DialogContext>(dialogContext);
 
 const SubaccountModal = ({ open, setOpen }: Props) => {
-  const [view, setView] = useState<"list" | "create">("list");
+  const [view, setView] = useState<availableViews>("list");
+  const [selectedSubaccount, setSelectedSubaccount] = useState("");
 
   const providerValue = useMemo(() => {
     return {
@@ -37,6 +43,8 @@ const SubaccountModal = ({ open, setOpen }: Props) => {
       setOpen,
       view,
       setView,
+      selectedSubaccount,
+      setSelectedSubaccount,
     };
   }, [open, view, setOpen, setView]);
 
@@ -47,6 +55,9 @@ const SubaccountModal = ({ open, setOpen }: Props) => {
       }
       case "create": {
         return <SubaccountCreateView />;
+      }
+      case "edit": {
+        return <SubaccountEditView />;
       }
     }
   }

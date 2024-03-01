@@ -6,6 +6,7 @@ import {
   SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
@@ -20,7 +21,7 @@ export function TradeHistoryDataTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "date", desc: false },
+    { id: "date", desc: true },
   ]);
 
   const table = useReactTable({
@@ -30,6 +31,7 @@ export function TradeHistoryDataTable<TData, TValue>({
     initialState: {
       sorting: sorting,
     },
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (

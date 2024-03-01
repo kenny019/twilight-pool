@@ -1,14 +1,17 @@
 "use client";
 
 import cn from "@/lib/cn";
+import { WalletStatus } from "@cosmos-kit/core";
+import { useWallet } from "@cosmos-kit/react-lite";
 import {
   ColumnDef,
   SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -20,7 +23,7 @@ export function TransactionHistoryDataTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "date", desc: false },
+    { id: "date", desc: true },
   ]);
 
   const table = useReactTable({
@@ -28,8 +31,9 @@ export function TransactionHistoryDataTable<TData, TValue>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     initialState: {
-      sorting: sorting,
+      sorting,
     },
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (

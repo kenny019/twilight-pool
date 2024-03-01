@@ -35,6 +35,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         }}
         signerOptions={signerOptions}
+        // walletConnectOptions={{ // todo: implement for keplr wallet
+        //   signClient:
+        // }}
       >
         <TwilightProvider>
           <SessionStoreProvider>

@@ -5,39 +5,48 @@ import { useSubaccountDialog } from "../subaccount-modal.client";
 import { Text } from "@/components/typography";
 import { Input } from "@/components/input";
 import Button from "@/components/button";
-import { useTwilight } from "@/lib/providers/twilight";
-import { z } from "zod";
-import { useWallet } from "@cosmos-kit/react-lite";
-import { createZkAccount } from "@/lib/twilight/zk";
 import { useTwilightStore } from "@/lib/providers/store";
-import { useSessionStore } from "@/lib/providers/session";
+import { useWallet } from "@cosmos-kit/react-lite";
+import { useToast } from "@/lib/hooks/useToast";
+import { z } from "zod";
 
-const SubaccountCreateView = () => {
-  const { setView } = useSubaccountDialog();
+const SubaccountEditView = () => {
+  const { setView, selectedSubaccount } = useSubaccountDialog();
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
-  const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
 
-  const privateKey = useSessionStore((state) => state.privateKey);
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const selectedZkAccount = zkAccounts.find(
+    (account) => account.address === selectedSubaccount
+  );
 
   const { mainWallet } = useWallet();
+  const { toast } = useToast();
 
   const subaccountTagRef = useRef<HTMLInputElement>(null);
 
-  async function SubmitCreateSubaccount(e: React.FormEvent<HTMLFormElement>) {
+  async function SubmitEditSubaccount(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const chainWallet = mainWallet?.getChainWallet("nyks");
 
-    if (!chainWallet) {
-      // todo: add toast
+    if (!chainWallet || !selectedZkAccount) {
+      toast({
+        variant: "error",
+        title: "Wallet Not Connected",
+        description: "Connect your wallet before editing a subaccount",
+      });
       return;
     }
 
     const twilightAddress = chainWallet.address;
 
     if (!subaccountTagRef.current || !twilightAddress) {
-      // todo: add toast
+      toast({
+        variant: "error",
+        title: "Wallet Not Connected",
+        description: "Connect your wallet before editing a subaccount",
+      });
       return;
     }
 
@@ -48,25 +57,31 @@ const SubaccountCreateView = () => {
       .min(1)
       .max(16)
       .safeParse(subaccountTag);
+
     if (parseSubaccountTagRes.success === false) {
-      // todo: add toast
+      toast({
+        variant: "error",
+        title: "Invalid Tag",
+        description: "Subaccount tag should be under 16 characters",
+      });
       return;
     }
 
-    const newZkAccount = await createZkAccount({
+    updateZkAccount(selectedZkAccount.address, {
+      ...selectedZkAccount,
       tag: subaccountTag,
-      signature: privateKey,
-    });
-
-    addZkAccount({
-      ...newZkAccount,
-      isOnChain: false,
-      value: 0,
     });
 
     setView("list");
 
-    // todo: add toast
+    toast({
+      title: "Edited Subaccount",
+      description: `Successfully edited ${subaccountTag}`,
+    });
+  }
+
+  if (!selectedZkAccount) {
+    return <></>;
   }
 
   return (
@@ -80,27 +95,27 @@ const SubaccountCreateView = () => {
           }}
           className="h-4 w-4 cursor-pointer hover:text-primary-accent"
         />
-        <span>Create Subaccount</span>
+        <span>Edit Subaccount</span>
       </DialogTitle>
-      <form onSubmit={SubmitCreateSubaccount} className="space-y-4">
+      <form onSubmit={SubmitEditSubaccount} className="space-y-4">
         <div className="space-y-1">
           <Text className="text-sm text-primary-accent" asChild>
             <label htmlFor="subaccount-tag-input">Subaccount Name</label>
           </Text>
           <Input
             id="subaccount-tag-input"
-            placeholder={`Subaccount ${zkAccounts.length}`}
-            defaultValue={`Subaccount ${zkAccounts.length}`}
+            placeholder={"Subaccount Tag"}
+            defaultValue={selectedZkAccount.tag}
             ref={subaccountTagRef}
             value={subaccountTagRef.current?.value}
           />
         </div>
         <Button type="submit" size="small">
-          Create
+          Edit
         </Button>
       </form>
     </>
   );
 };
 
-export default SubaccountCreateView;
+export default SubaccountEditView;

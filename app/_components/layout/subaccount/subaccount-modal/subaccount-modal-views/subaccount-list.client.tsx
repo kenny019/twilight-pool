@@ -19,7 +19,7 @@ type AccountRowProps = {
 };
 
 const SubaccountListView = () => {
-  const { setView } = useSubaccountDialog();
+  const { setView, setSelectedSubaccount } = useSubaccountDialog();
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const selectedZkAccount = useTwilightStore(
@@ -52,7 +52,21 @@ const SubaccountListView = () => {
             </Text>
           </div>
           <div className="flex flex-row space-x-2">
-            <Button variant="link">Edit</Button>
+            {account.tag !== "main" && (
+              <Button
+                onClick={(e) => {
+                  e.preventDefault();
+
+                  setSelectedSubaccount(account.address);
+                  console.log(account.address);
+                  setView("edit");
+                }}
+                variant="link"
+              >
+                Edit
+              </Button>
+            )}
+
             <Button
               variant="link"
               onClick={(e) => {
@@ -100,7 +114,7 @@ const SubaccountListView = () => {
               >
                 New <Plus className="h-2 w-2" />
               </Button>
-              <Text>Search</Text>
+              {/* <Text>Search</Text> */}
             </div>
           </div>
           <Separator className="mt-2" />

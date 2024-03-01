@@ -1,5 +1,6 @@
 "use client";
 
+import { convertDate } from "@/app/(main)/wallet/transaction-history/columns";
 import Button from "@/components/button";
 import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
@@ -75,7 +76,7 @@ export const tradeHistoryColumns: ColumnDef<Trade, any>[] = [
   },
   {
     accessorKey: "date",
-    header: "Order Time",
-    accessorFn: (row) => formatDate(new Date(row.date)), // note: as date is stored as string in session storage. it needs to be converted back to date
+    header: "Date & Time",
+    accessorFn: (row) => convertDate(row.date).toLocaleString(),
   },
 ];
