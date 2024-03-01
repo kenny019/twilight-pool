@@ -1,6 +1,6 @@
 import { Separator } from "@/components/seperator";
 import TradeWrapper from "../_components/trade/trade-wrapper.client";
-import { getBTCPrice, getCandleData } from "@/lib/api/rest";
+import { getCandleData } from "@/lib/api/rest";
 import TickerWrapper from "../_components/trade/ticker-wrapper.client";
 import { CandleInterval } from "@/lib/types";
 
@@ -31,14 +31,10 @@ async function getChartCandleData() {
 }
 
 export default async function Home() {
-  const btcPriceResponse = await getBTCPrice();
-
   const chartData = await getChartCandleData();
 
   // todo: fallback to alternative price data or maybe show skeleton if price is not valid
-  const btcPrice = btcPriceResponse.success
-    ? parseFloat(btcPriceResponse.data.result.price)
-    : 0;
+  const btcPrice = parseInt(chartData[chartData.length - 1].close);
 
   return (
     <main>

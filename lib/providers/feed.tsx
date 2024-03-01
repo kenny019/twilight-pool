@@ -1,31 +1,26 @@
 "use client";
-import { createContext, useContext, useMemo, useState } from "react";
-import { z } from "zod";
-import useWebSocket from "../hooks/useWebsocket";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 type PriceFeedProviderProps = {
   children: React.ReactNode;
 };
 
-const FeedDataSchema = z.object({
-  jsonrpc: z.string(),
-  method: z.string(),
-  params: z.object({
-    subscription: z.number(),
-    result: z.tuple([z.number(), z.string()]),
-  }),
-});
-
-type FeedData = z.infer<typeof FeedDataSchema>;
-
 type UsePriceFeedProps = {
-  feed: FeedData[];
+  feed: number[];
   currentPrice: number;
+  addPrice: (price: number) => void;
 };
 
 const defaultContext: UsePriceFeedProps = {
   feed: [],
   currentPrice: 49980, // todo: fetch initial price
+  addPrice: () => {},
 };
 
 const feedContext = createContext<UsePriceFeedProps | undefined>(undefined);
@@ -37,55 +32,34 @@ export const PriceFeedProvider: React.FC<PriceFeedProviderProps> = (props) => {
 };
 
 const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
-  const [feed, setFeed] = useState<FeedData[]>([]);
+  const [feed, setFeed] = useState<number[]>([]);
 
-  useWebSocket({
-    url: process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS as string,
-    onOpen: onOpen,
-    onMessage: onMessage,
-    onClose: onClose,
-  });
-
-  function onOpen(ws: WebSocket) {
-    console.log("ws", ws);
-    ws.send(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        method: "subscribe_live_price_data",
-        id: 123,
-        params: null,
-      })
-    );
-  }
-
-  function onMessage(message: any) {
-    try {
-      const parsedMessage = JSON.parse(message.data);
-
-      const feedDataRes = FeedDataSchema.safeParse(parsedMessage);
-
-      if (!feedDataRes.success) {
-        console.log("non feed data detected >> ", parsedMessage);
+  const addPrice = useCallback<(price: number) => void>(
+    (price) => {
+      if (feed.length < 1) {
+        const newFeed = [price];
+        setFeed(newFeed);
         return;
       }
 
-      setFeed((oldFeed) => {
-        return [oldFeed[oldFeed.length - 1], feedDataRes.data];
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  }
+      const newFeed = [...feed];
 
-  function onClose() {
-    console.log("price feed closed");
-  }
+      newFeed.push(price);
+
+      if (feed.length > 2) {
+        newFeed.shift();
+      }
+
+      setFeed(newFeed);
+    },
+    [feed]
+  );
 
   const value = useMemo(() => {
     return {
       feed: feed,
-      currentPrice:
-        feed.length > 0 ? feed[feed.length - 1].params.result[0] : 0,
+      currentPrice: feed[feed.length - 1] || 0,
+      addPrice,
     };
   }, [feed]);
 

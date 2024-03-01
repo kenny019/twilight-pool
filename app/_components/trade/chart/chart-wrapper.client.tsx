@@ -5,6 +5,7 @@ import Series from "./series.client";
 import { ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import useWebSocket from "@/lib/hooks/useWebsocket";
 import { CandleData } from "@/lib/api/rest";
+import { usePriceFeed } from "@/lib/providers/feed";
 
 type ContainerRef = HTMLElement | null;
 
@@ -25,6 +26,7 @@ type Props = {
 };
 
 const ChartWrapper = ({ candleData }: Props) => {
+  const { addPrice } = usePriceFeed();
   const [container, setContainer] = useState<ContainerRef>(null);
   const lastUpdatedTime = useRef(0);
   const handleRef = useCallback((ref: ContainerRef) => setContainer(ref), []);
@@ -93,6 +95,7 @@ const ChartWrapper = ({ candleData }: Props) => {
 
         lastUpdatedTime.current = time;
 
+        addPrice(parseInt(priceData.close));
         seriesRef.current.update({
           close: parseInt(priceData.close),
           open: parseInt(priceData.open),

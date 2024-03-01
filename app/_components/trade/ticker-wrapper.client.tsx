@@ -20,10 +20,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
   const { feed, currentPrice } = usePriceFeed();
 
   const priceDelta = useMemo(
-    () =>
-      feed[feed.length - 2]
-        ? currentPrice - feed[feed.length - 2].params.result[0]
-        : 0,
+    () => (feed[feed.length - 2] ? currentPrice - feed[feed.length - 2] : 0),
     [feed.length]
   );
 
