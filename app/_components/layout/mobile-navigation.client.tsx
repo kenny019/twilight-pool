@@ -39,8 +39,8 @@ const MobileNav = () => {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="left-auto right-0 min-h-screen max-w-xs translate-x-0 rounded-none border-r-0">
-        <div className="mt-6 space-y-4">
+      <DialogContent className="left-[20%] top-0 min-h-screen max-w-xs translate-x-0 translate-y-[0%] rounded-none border-r-0">
+        <div className="space-y-4">
           <div className="space-y-1">
             <Text className="font-ui text-xs uppercase text-primary/80">
               Trade
