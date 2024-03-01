@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/dialog";
 import { Menu } from "lucide-react";
 import React, { useState } from "react";
-import ConnectWallet from "./connect-wallet.client";
 import SubaccountSelect from "./subaccount/subaccount-select.client";
 import { Text } from "@/components/typography";
 import Link from "next/link";
-import Button from "@/components/button";
 import { usePathname } from "next/navigation";
 import cn from "@/lib/cn";
 
@@ -47,7 +40,7 @@ const MobileNav = () => {
       </DialogTrigger>
 
       <DialogContent className="left-auto right-0 min-h-screen max-w-xs translate-x-0 rounded-none border-r-0">
-        <div className="space-y-4">
+        <div className="mt-6 space-y-4">
           <div className="space-y-1">
             <Text className="font-ui text-xs uppercase text-primary/80">
               Trade
