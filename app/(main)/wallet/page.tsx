@@ -18,7 +18,6 @@ import { ArrowLeftRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
-import { useWallet } from "@cosmos-kit/react-lite";
 
 const Page = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
@@ -96,11 +95,11 @@ const Page = () => {
     <div className="mx-4 mt-4 space-y-8 md:mx-8">
       <div className="flex w-full max-w-4xl flex-row items-baseline justify-between space-x-6 md:space-x-0">
         <div className="md:space-y-2">
-          <Text heading="h1" className="mb-0 text-xl font-normal sm:text-2xl">
+          <Text heading="h1" className="mb-0 text-lg font-normal sm:text-2xl">
             Assets Overview
           </Text>
           <div className="space-y-1">
-            <Text className="text-base md:text-4xl">
+            <Text className="text-sm md:text-4xl">
               {totalBTCBalanceString}
               <span className="ml-0 inline-flex text-sm md:ml-1">BTC</span>
             </Text>
@@ -110,7 +109,7 @@ const Page = () => {
           </div>
         </div>
         <div className="flex w-full max-w-sm flex-col">
-          <Text heading="h2" className="text-xl font-normal sm:text-2xl">
+          <Text heading="h2" className="text-lg font-normal sm:text-2xl">
             My Assets
           </Text>
           <div className="space-y-4">
@@ -155,7 +154,7 @@ const Page = () => {
               <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={!!zkAccountSatsBalance}
+                  isLoaded={typeof zkAccountSatsBalance === "number"}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
@@ -189,7 +188,7 @@ const Page = () => {
           </div>
         </div>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1 md:space-y-2">
         <Text heading="h2" className="text-xl font-normal sm:text-2xl">
           Account History
         </Text>

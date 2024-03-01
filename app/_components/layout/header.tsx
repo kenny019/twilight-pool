@@ -7,6 +7,7 @@ import { ArrowUpRight } from "lucide-react";
 import ConnectWallet from "./connect-wallet.client";
 import Settings from "./settings.client";
 import SubaccountSelect from "./subaccount/subaccount-select.client";
+import MobileNav from "./mobile-navigation.client";
 
 const marketSubLinks = [
   {
@@ -38,7 +39,7 @@ const Header = () => {
   return (
     <nav className="border-b">
       <div className="mx-auto px-1 py-2 md:px-4 md:py-4">
-        <div className="relative flex items-center justify-between">
+        <div className="relative hidden items-center justify-between md:flex">
           <div className="flex items-center space-x-2 md:space-x-4">
             <Link className="hidden sm:block" href="/">
               <Logo className="hover:opacity-80" />
@@ -66,6 +67,15 @@ const Header = () => {
             <SubaccountSelect />
             <Settings />
             <ConnectWallet />
+          </div>
+        </div>
+        <div className="relative flex items-center justify-between px-2 md:hidden">
+          <Link href="/">
+            <Logo className="w-6" />
+          </Link>
+          <div className="flex space-x-4">
+            <ConnectWallet />
+            <MobileNav />
           </div>
         </div>
       </div>

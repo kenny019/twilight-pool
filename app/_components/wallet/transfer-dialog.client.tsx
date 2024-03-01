@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/select";
 import { Text } from "@/components/typography";
-import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import {
   createInputCoinFromOutput,
@@ -62,6 +61,8 @@ const TransferDialog = ({
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const removeZkAccount = useTwilightStore((state) => state.zk.removeZkAccount);
+
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
@@ -308,13 +309,15 @@ const TransferDialog = ({
 
           console.log("receiverAddress", depositZkAccount.address);
 
+          const updatedSenderBalance =
+            (senderZkAccount.value as number) - transferAmount;
+
           const msgStruct = await createTradingTxSingle({
             signature: privateKey,
             senderInput: inputString,
             receiverAddress: depositZkAccount.address,
             amount: transferAmount,
-            updatedSenderBalance:
-              (senderZkAccount.value as number) - transferAmount,
+            updatedSenderBalance,
           });
 
           const { encrypt_scalar_hex, tx } = JSON.parse(msgStruct) as {
@@ -324,6 +327,12 @@ const TransferDialog = ({
 
           const txId = await broadcastTradingTx(tx);
           console.log("broadcasted", txId);
+
+          updateZkAccount(senderZkAccount.address, {
+            ...senderZkAccount,
+            value: updatedSenderBalance,
+            isOnChain: updatedSenderBalance === 0 ? false : true,
+          });
 
           updateZkAccount(depositZkAccount.address, {
             ...depositZkAccount,

@@ -148,6 +148,8 @@ const OrderMarketForm = () => {
           return;
         }
 
+        console.log("orderData", orderData);
+
         toast({
           title: "Success",
           description: (

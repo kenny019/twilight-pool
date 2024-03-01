@@ -1,4 +1,5 @@
 "use client";
+import cn from "@/lib/cn";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
@@ -16,11 +17,20 @@ const Logo = ({ className }: Props) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
   return (
     <>
       <Image
-        className={className}
+        className={cn("hidden md:block", className)}
         src={`/images/${logoName}.png`}
+        alt="Logo"
+        width={108}
+        height={24}
+      />
+
+      <Image
+        className={cn("block md:hidden", className)}
+        src={`/images/twilight.svg`}
         alt="Logo"
         width={108}
         height={24}

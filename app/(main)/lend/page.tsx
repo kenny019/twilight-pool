@@ -135,15 +135,15 @@ const Page = () => {
   }
 
   return (
-    <div className="mx-8 mt-4 space-y-8">
+    <div className="mx-8 mt-4 space-y-4 md:space-y-8">
       <div className="flex flex-row justify-between">
         <div className="flex w-full max-w-4xl flex-row items-baseline justify-between">
           <div className="space-y-2">
-            <Text heading="h1" className="text-2xl font-normal">
+            <Text heading="h1" className="mb-0 text-2xl font-normal md:mb-4">
               Assets Overview
             </Text>
-            <div className="space-y-1">
-              <Text className="text-4xl">
+            <div className="md:space-y-1">
+              <Text className="text-lg md:text-4xl">
                 {totalBTCBalanceString}
                 <span className="ml-1 inline-flex text-sm">BTC</span>
               </Text>
@@ -158,8 +158,8 @@ const Page = () => {
       <div className="flex w-full">
         <div className="w-full space-y-2">
           <Text className="text-md font-normal tracking-tight">My Assets</Text>
-          <div className="flex w-full flex-row justify-between border-b py-6 pr-2">
-            <div className="flex w-full max-w-md flex-row justify-between">
+          <div className="flex w-full flex-row justify-between border-b py-4 pr-2 md:py-6">
+            <div className="flex w-full max-w-md flex-row space-x-6 md:justify-between">
               <div className="flex flex-row items-center space-x-2">
                 <div className="rounded-full bg-button-secondary p-2">
                   <Wallet className="h-5 w-5" />
@@ -191,8 +191,8 @@ const Page = () => {
             </TransferDialog>
           </div>
 
-          <div className="flex w-full flex-row items-center justify-between border-b py-6 pr-2">
-            <div className="flex w-full max-w-md flex-row justify-between">
+          <div className="flex w-full flex-row items-center justify-between border-b py-4 pr-2 md:py-6">
+            <div className="flex w-full max-w-md flex-row space-x-6 md:justify-between">
               <div className="flex flex-row items-center space-x-2">
                 <div className="rounded-full bg-button-secondary p-2">
                   <ArrowLeftRight className="h-5 w-5" />
@@ -225,8 +225,8 @@ const Page = () => {
 
           <div className="pt-4">
             <Text className="text-md font-normal tracking-tight">Loan</Text>
-            <div className="flex w-full flex-row items-center justify-between py-6 pr-2">
-              <div className="flex w-full max-w-md flex-row justify-between">
+            <div className="flex w-full flex-col space-y-4 py-4 pr-2 md:flex-row md:items-center md:justify-between md:space-y-0 md:py-6">
+              <div className="flex w-full max-w-md flex-row space-x-6 md:justify-between">
                 <div className="flex flex-row items-center space-x-2">
                   <div className="rounded-full bg-button-secondary p-2">
                     <ArrowDown className="h-5 w-5" />
