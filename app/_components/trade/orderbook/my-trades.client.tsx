@@ -2,12 +2,12 @@
 import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import { executeTradeOrder } from "@/lib/api/client";
-import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
+import { queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
+import { retry } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
-import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
 import { getZkAccountBalance } from "@/lib/twilight/zk";
 import { executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
@@ -75,12 +75,60 @@ const OrderMyTrades = () => {
       });
 
       console.log("msg", msg);
-      await executeTradeOrder(msg);
-
       toast({
         title: "Closing order",
         description: "Action is being processed...",
       });
+
+      const executeTradeRes = await executeTradeOrder(msg);
+
+      console.log("executeTradeRes", executeTradeRes);
+
+      const transactionHashCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
+        if (txHashResult.result) {
+          const transactionHashes = txHashResult.result;
+
+          let hasSettled = false;
+          transactionHashes.forEach((result) => {
+            if (result.order_status !== "SETTLED") {
+              return;
+            }
+
+            hasSettled =
+              result.order_id === tradeOrder.uuid &&
+              !result.tx_hash.includes("Error");
+          });
+
+          return hasSettled;
+        }
+        return false;
+      };
+
+      const transactionHashRes = await retry<
+        ReturnType<typeof queryTransactionHashes>,
+        string
+      >(
+        queryTransactionHashes,
+        4,
+        tradeOrder.accountAddress,
+        transactionHashCondition
+      );
+
+      if (!transactionHashRes.success) {
+        console.error("settling order failed to get transaction_hashes");
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Error with settling trade order",
+        });
+        return;
+      }
+
+      console.log("tx_hashes return", transactionHashRes.data.result);
+      // note: we have to make sure chain has settled before requesting balance
+      // as input is memo and not yet coin
 
       const { value: newAccountBalance } = await getZkAccountBalance({
         zkAccountAddress: tradeOrder.accountAddress,
