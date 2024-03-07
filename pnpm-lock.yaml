@@ -16,22 +16,22 @@ dependencies:
     version: 0.31.1
   '@cosmos-kit/core':
     specifier: ^2.7.0
-    version: 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+    version: 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
   '@cosmos-kit/cosmostation-extension':
     specifier: ^2.5.0
-    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
   '@cosmos-kit/keplr':
     specifier: ^2.6.9
     version: 2.6.9(@cosmjs/amino@0.32.2)(@cosmjs/proto-signing@0.31.1)(@walletconnect/types@2.11.0)
   '@cosmos-kit/leap-extension':
     specifier: ^2.5.0
-    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
   '@cosmos-kit/react-lite':
     specifier: ^2.5.0
-    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)(react-dom@18.2.0)(react@18.2.0)
+    version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)(react-dom@18.2.0)(react@18.2.0)
   '@kenny019/zkos-wasm':
-    specifier: ^0.2.17
-    version: 0.2.17
+    specifier: ^0.2.18
+    version: 0.2.18
   '@next/font':
     specifier: ^13.5.4
     version: 13.5.4
@@ -296,26 +296,6 @@ packages:
       '@cosmjs/encoding': 0.32.2
       '@cosmjs/math': 0.32.2
       '@cosmjs/utils': 0.32.2
-    dev: false
-
-  /@cosmjs/cosmwasm-stargate@0.31.1:
-    resolution: {integrity: sha512-5hwv4oztFnpqnFaXhYxZc93na3qdxylT2kqms4pLzD8CWMEQmrwhdM4KpZimrsyZK55WiMQtTPsdSh7M8KLOow==}
-    dependencies:
-      '@cosmjs/amino': 0.31.1
-      '@cosmjs/crypto': 0.31.1
-      '@cosmjs/encoding': 0.31.1
-      '@cosmjs/math': 0.31.1
-      '@cosmjs/proto-signing': 0.31.1
-      '@cosmjs/stargate': 0.31.1
-      '@cosmjs/tendermint-rpc': 0.31.1
-      '@cosmjs/utils': 0.31.1
-      cosmjs-types: 0.8.0
-      long: 4.0.0
-      pako: 2.1.0
-    transitivePeerDependencies:
-      - bufferutil
-      - debug
-      - utf-8-validate
     dev: false
 
   /@cosmjs/cosmwasm-stargate@0.32.2:
@@ -655,7 +635,7 @@ packages:
     resolution: {integrity: sha512-Gg5t+eR7vPJMAmhkFt6CZrzPd0EKpAslWwk5rFVYZpJsM8JG5KT9XQ99hgNM3Ov6ScNoIWbXkpX27F6A9cXR4Q==}
     dev: false
 
-  /@cosmos-kit/core@2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0):
+  /@cosmos-kit/core@2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0):
     resolution: {integrity: sha512-9BLe9D3To3nAGSffCXcvwhTzzPW1E3gih3c5yNdfYkl9QIymbPqNqfbLv4tx8nXHYprXighQWLSP5M09MQty6Q==}
     peerDependencies:
       '@cosmjs/amino': '>= 0.28'
@@ -666,12 +646,12 @@ packages:
     dependencies:
       '@chain-registry/types': 0.17.0
       '@cosmjs/amino': 0.32.2
-      '@cosmjs/cosmwasm-stargate': 0.31.1
+      '@cosmjs/cosmwasm-stargate': 0.32.2
       '@cosmjs/proto-signing': 0.31.1
       '@cosmjs/stargate': 0.31.1
       '@walletconnect/types': 2.7.2
       bowser: 2.11.0
-      cosmjs-types: 0.8.0
+      cosmjs-types: 0.9.0
       events: 3.3.0
       uuid: 9.0.1
     transitivePeerDependencies:
@@ -714,7 +694,7 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@cosmos-kit/cosmostation-extension@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0):
+  /@cosmos-kit/cosmostation-extension@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0):
     resolution: {integrity: sha512-IAoAa2mC57Id8FuomSiNuv143C/avpsbX3X52Qf50tD3Q/0wVNdolHzq1h9wS7ixeqPDcRogf1NgSqQY6oxEIg==}
     peerDependencies:
       '@cosmjs/amino': '>= 0.28'
@@ -723,7 +703,7 @@ packages:
       '@chain-registry/cosmostation': 1.23.0
       '@cosmjs/amino': 0.32.2
       '@cosmjs/proto-signing': 0.31.1
-      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
     transitivePeerDependencies:
       - '@cosmjs/cosmwasm-stargate'
       - '@cosmjs/stargate'
@@ -826,7 +806,7 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@cosmos-kit/leap-extension@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0):
+  /@cosmos-kit/leap-extension@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0):
     resolution: {integrity: sha512-zA6cZk+sondFEGTg56EMobLTBVCnB4Uz4CFpqxbDAHCJn7CV22/h5mbhFwC4WiaG7tqygyWH0C84KLDL2LSP8Q==}
     peerDependencies:
       '@cosmjs/amino': '>= 0.28'
@@ -835,7 +815,7 @@ packages:
       '@chain-registry/keplr': 1.25.0
       '@cosmjs/amino': 0.32.2
       '@cosmjs/proto-signing': 0.31.1
-      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
     transitivePeerDependencies:
       - '@cosmjs/cosmwasm-stargate'
       - '@cosmjs/stargate'
@@ -844,14 +824,14 @@ packages:
       - lokijs
     dev: false
 
-  /@cosmos-kit/react-lite@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)(react-dom@18.2.0)(react@18.2.0):
+  /@cosmos-kit/react-lite@2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-xXdUCemGfhVwsluk9bU3jUU2MEzlR2VzGvycvbmmf3270QUeJH2CNapM5RDzIp0H0THvgT3KPkvwW4DGZ4dsgA==}
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
       '@chain-registry/types': 0.17.0
-      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.31.1)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.8.0)
+      '@cosmos-kit/core': 2.7.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     transitivePeerDependencies:
@@ -1058,8 +1038,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kenny019/zkos-wasm@0.2.17:
-    resolution: {integrity: sha512-IIZW9T3JCyVLzpKc9KUoRQlODJmXbZVnwk4lc9me/mQGidK+UvKgKcX6GkJfeLP5uAoazk4+vHQqJwK91UTUoQ==}
+  /@kenny019/zkos-wasm@0.2.18:
+    resolution: {integrity: sha512-szVFepEtqShDJy8Dk4DgVteQgWcjtasyMVdRnFS7uYN035NB2KKNZANm4D3t8poIjiBxUUHKIzLWzP1IZVwicw==}
     dev: false
 
   /@keplr-wallet/common@0.12.28:
@@ -1343,6 +1323,7 @@ packages:
     dependencies:
       is-glob: 4.0.3
       micromatch: 4.0.5
+      napi-wasm: 1.1.0
     dev: false
     bundledDependencies:
       - napi-wasm
@@ -4850,6 +4831,10 @@ packages:
     resolution: {integrity: sha512-BGcqMMJuToF7i1rt+2PWSNVnWIkGCU78jBG3RxO/bZlnZPK2Cmi2QaffxGO/2RvWi9sL+FAiRiXMgsyxQ1DIDA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
+
+  /napi-wasm@1.1.0:
+    resolution: {integrity: sha512-lHwIAJbmLSjF9VDRm9GoVOy9AGp3aIvkjv+Kvz9h16QR3uSVYH78PNQUnT2U4X53mhlnV2M7wrhibQ3GHicDmg==}
+    dev: false
 
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}

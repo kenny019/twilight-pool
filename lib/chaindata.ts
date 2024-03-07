@@ -97,11 +97,11 @@ export const signerOptions: SignerOptions = {
       gasPrice: GasPrice.fromString("0.0001nyks"),
     } as unknown as SigningStargateClientOptions; // https://github.com/cosmology-tech/cosmos-kit/issues/234
   },
-  signingCosmwasm: () => {
-    return {
-      gasPrice: GasPrice.fromString("0.0001nyks"),
-    };
-  },
+  // signingCosmwasm: (chain) => {
+  //   return {
+  //     gasPrice: GasPrice.fromString("0.0001nyks") as GasPrice,
+  //   }
+  // },
   preferredSignType: () => {
     return "direct";
   },

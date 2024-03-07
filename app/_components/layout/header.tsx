@@ -47,7 +47,7 @@ const Header = () => {
             <div className="hidden items-center lg:flex">
               <div className="flex items-center space-x-1">
                 <MultiLink title="Trade" subLinks={marketSubLinks} />
-                <MultiLink title="Bitcoin" subLinks={btcSubLinks} />
+                <MultiLink title="Funds" subLinks={btcSubLinks} />
               </div>
               <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-6">
@@ -65,8 +65,8 @@ const Header = () => {
           {/* right side */}
           <div className="mx-auto flex flex-row items-center space-x-2 sm:mx-0 md:space-x-4">
             <SubaccountSelect />
-            <Settings />
             <ConnectWallet />
+            <Settings />
           </div>
         </div>
         <div className="relative flex items-center justify-between px-2 md:hidden">

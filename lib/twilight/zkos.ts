@@ -273,6 +273,11 @@ async function coinAddressMonitoring({
   return zkos.coinAddressMonitoring(utxoOutputString, signature);
 }
 
+async function mutateZkAccount({ zkAccountHex }: { zkAccountHex: string }) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.updateZkAccount(zkAccountHex);
+}
+
 export {
   generatePublicKey,
   generateHexAddressFromPublicKey,
