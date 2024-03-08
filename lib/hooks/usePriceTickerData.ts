@@ -59,7 +59,7 @@ export default function usePriceTickerData(currentPrice: number) {
             interval: "ONE_DAY",
             limit: 1,
             offset: 0,
-            revalidate: 3600,
+            revalidate: 0,
           });
 
           if (!candleResponse.success || candleResponse.error) {

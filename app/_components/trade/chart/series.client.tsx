@@ -45,6 +45,8 @@ const Series = forwardRef<ISeriesApi<"Candlestick"> | void, Props>(
             wickDownColor: "#F84952",
           });
 
+          parent._api?.timeScale().fitContent();
+
           const chartData = data.map((candleData) => {
             const time = Math.floor(
               Date.parse(candleData.start) / 1000

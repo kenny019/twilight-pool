@@ -89,7 +89,7 @@ const Chart = forwardRef<IChartApi | void, Props>(
                   ? "rgba(0, 0, 0, 0.6)"
                   : "rgba(255, 255, 255, 0.12)",
               timeVisible: true,
-              secondsVisible: true,
+              secondsVisible: false,
             },
           });
           this._api.timeScale().fitContent();

@@ -6,6 +6,7 @@ import { ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import useWebSocket from "@/lib/hooks/useWebsocket";
 import { CandleData } from "@/lib/api/rest";
 import { usePriceFeed } from "@/lib/providers/feed";
+import { CandleInterval } from "@/lib/types";
 
 type ContainerRef = HTMLElement | null;
 
@@ -54,7 +55,7 @@ const ChartWrapper = ({ candleData }: Props) => {
         method: "subscribe_candle_data",
         id: 123,
         params: {
-          interval: "ONE_MINUTE",
+          interval: CandleInterval.ONE_MINUTE,
         },
       })
     );
@@ -77,9 +78,9 @@ const ChartWrapper = ({ candleData }: Props) => {
           Date.parse(left.end) / 1000 - Date.parse(right.end) / 1000
       );
 
-      data.forEach((priceData: CandlestickData, index) => {
+      data.forEach((priceData: CandlestickData) => {
         const time = Math.floor(
-          Date.parse(priceData.start) / 1000
+          Date.parse(priceData.end) / 1000
         ) as UTCTimestamp;
 
         if (!seriesRef.current || seriesRef.current === null) {
@@ -91,6 +92,7 @@ const ChartWrapper = ({ candleData }: Props) => {
         lastUpdatedTime.current = time;
 
         addPrice(parseInt(priceData.close));
+
         seriesRef.current.update({
           close: parseInt(priceData.close),
           open: parseInt(priceData.open),

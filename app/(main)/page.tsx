@@ -7,11 +7,12 @@ import { CandleInterval } from "@/lib/types";
 async function getChartCandleData() {
   try {
     const since = new Date();
-    since.setMinutes(since.getMinutes() - 15);
+    since.setMinutes(since.getMinutes() - 120);
 
     const candleDataResponse = await getCandleData({
       since: since.toISOString(),
       interval: CandleInterval.ONE_MINUTE,
+      limit: 120,
     });
 
     const candleData = candleDataResponse.success

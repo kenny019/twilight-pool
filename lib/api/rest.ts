@@ -130,9 +130,22 @@ async function getCandleData({
   limit?: number;
   offset?: number;
 }) {
+  console.log("body", {
+    body: {
+      jsonrpc: "2.0",
+      method: "candle_data",
+      id: 1,
+      params: {
+        interval,
+        since,
+        limit,
+        offset,
+      },
+    },
+  });
   const response = await wfetch(priceURL, {
     next: {
-      revalidate: revalidate ? revalidate : 10,
+      revalidate: revalidate ? revalidate : 0,
     },
   })
     .post({
@@ -166,7 +179,7 @@ type FundingData = {
 async function getFundingRate() {
   const response = await wfetch(priceURL, {
     next: {
-      revalidate: 1,
+      revalidate: 0,
     },
   })
     .post({
