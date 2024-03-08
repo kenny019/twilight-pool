@@ -53,7 +53,7 @@ const MobileNav = () => {
           </div>
           <div className="space-y-1">
             <Text className="font-ui text-xs uppercase text-primary/80">
-              Bitcoin
+              Funds
             </Text>
 
             <div className="space-y-2">
