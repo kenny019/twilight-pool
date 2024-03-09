@@ -273,9 +273,20 @@ async function coinAddressMonitoring({
   return zkos.coinAddressMonitoring(utxoOutputString, signature);
 }
 
-async function mutateZkAccount({ zkAccountHex }: { zkAccountHex: string }) {
+/**
+ *
+ * @param param0
+ * @returns stringified tuple of addresses, 0 index is sender 1 index is receiver
+ */
+async function getUpdatedAddressFromTransaction({
+  signature,
+  txHex,
+}: {
+  signature: string;
+  txHex: string;
+}) {
   const zkos = await import("@kenny019/zkos-wasm");
-  return zkos.updateZkAccount(zkAccountHex);
+  return zkos.getUpdatedAddressesFromTransaction(signature, txHex);
 }
 
 export {
@@ -298,4 +309,5 @@ export {
   executeTradeLendOrderMsg,
   coinAddressMonitoring,
   createBurnMessageTx,
+  getUpdatedAddressFromTransaction,
 };

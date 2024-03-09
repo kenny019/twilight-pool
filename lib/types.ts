@@ -32,6 +32,36 @@ export type TwilightApiResponse<Result> = {
   result: Result;
 };
 
+export type SuccessResult<T> = {
+  success: true;
+  data: T;
+};
+
+export type FailureResult = {
+  success: false;
+  message: string;
+};
+
+type OutputTypeValues<OutputType extends string> = {
+  [key in OutputType]: {
+    encrypt: {
+      c: number[];
+      d: number[];
+    };
+    owner: string;
+  };
+};
+
+export type OutputData<OutputType extends string> = {
+  out_type: OutputType;
+  output: OutputTypeValues<OutputType>;
+};
+
+export type UtxoData = {
+  output_index: number;
+  txid: number[];
+};
+
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
 export type TradeOrder = z.infer<typeof TradeOrderSchema>;
 export type LendOrder = z.infer<typeof LendOrderSchema>;

@@ -1,12 +1,7 @@
 import wfetch from "../http";
-import { TwilightApiResponse } from "../types";
+import { OutputData, TwilightApiResponse, UtxoData } from "../types";
 
 const ZK_URL = process.env.NEXT_PUBLIC_ZKOS_API_ENDPOINT as string;
-
-type UtxoData = {
-  output_index: number;
-  txid: number[];
-};
 
 async function queryUtxoForAddress(
   zkAddress: string
@@ -35,21 +30,6 @@ async function queryUtxoForAddress(
 
   return result[0];
 }
-
-type OutputData<OutputType extends string> = {
-  out_type: OutputType;
-  output: OutputTypeValues<OutputType>;
-};
-
-type OutputTypeValues<OutputType extends string> = {
-  [key in OutputType]: {
-    encrypt: {
-      c: number[];
-      d: number[];
-    };
-    owner: string;
-  };
-};
 
 async function queryUtxoForOutput(
   utxoHex: string
@@ -87,6 +67,8 @@ async function broadcastTradingTx(
     params: [txHex, ...extra],
     id: 1,
   });
+
+  console.log("txCommit", body);
 
   const { success, data, error } = await wfetch(ZK_URL)
     .post({ body })

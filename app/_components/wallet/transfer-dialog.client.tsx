@@ -42,6 +42,7 @@ import Link from "next/link";
 import { useSessionStore } from "@/lib/providers/session";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { twilightproject } from "twilightjs";
+import { ZkPrivateAccount } from "@/lib/zk/account";
 
 type Props = {
   children: React.ReactNode;
@@ -269,75 +270,78 @@ const TransferDialog = ({
         )[0];
 
         if (toAccountValue === "trading") {
-          const depositZkAccount = zkAccounts.filter(
+          const depositZkAccount = zkAccounts.find(
             (account) => account.address === selectedTradingAccountTo
-          )[0];
+          );
 
-          if (!senderZkAccount || !Object.hasOwn(senderZkAccount, "value")) {
-            console.error("error cant find depositZkAccount", depositZkAccount);
+          if (!depositZkAccount) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Unable to transfer to invalid address",
+            });
             return;
           }
 
-          const utxoData = await queryUtxoForAddress(senderZkAccount.address);
-
-          if (!Object.hasOwn(utxoData, "output_index")) {
-            setIsSubmitLoading(false);
-            console.error("no utxoData");
-            return;
-          }
-
-          const utxoString = JSON.stringify(utxoData);
-
-          const utxoHex = await utxoStringToHex({
-            utxoString,
-          });
-
-          const output = await queryUtxoForOutput(utxoHex);
-
-          if (!Object.hasOwn(output, "out_type")) {
-            setIsSubmitLoading(false);
-            console.error("no Output");
-            return;
-          }
-
-          const outputString = JSON.stringify(output);
-
-          const inputString = await createInputCoinFromOutput({
-            outputString,
-            utxoString,
-          });
-
-          console.log("receiverAddress", depositZkAccount.address);
-
-          const updatedSenderBalance =
-            (senderZkAccount.value as number) - transferAmount;
-
-          const msgStruct = await createTradingTxSingle({
+          const senderZkPrivateAccount = await ZkPrivateAccount.create({
             signature: privateKey,
-            senderInput: inputString,
-            receiverAddress: depositZkAccount.address,
-            amount: transferAmount,
-            updatedSenderBalance,
+            existingAccount: senderZkAccount,
+          });
+          const privateTxSingleResult =
+            await senderZkPrivateAccount.privateTxSingle(
+              transferAmount,
+              depositZkAccount.address
+            );
+
+          if (!privateTxSingleResult.success) {
+            console.error(privateTxSingleResult.message);
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: privateTxSingleResult.message,
+            });
+            return;
+          }
+
+          const {
+            scalar: depositAccountScalar,
+            txId,
+            updatedAddress,
+          } = privateTxSingleResult.data;
+
+          console.log("txId", txId, "updatedAddess", updatedAddress);
+          const updatedSenderAccount = senderZkPrivateAccount.get();
+
+          const depositZkPrivateAccount = await ZkPrivateAccount.create({
+            signature: privateKey,
+            existingAccount: depositZkAccount,
           });
 
-          const { encrypt_scalar_hex, tx } = JSON.parse(msgStruct) as {
-            tx: string;
-            encrypt_scalar_hex: string;
-          };
+          const depositAccountBalanceResult =
+            await depositZkPrivateAccount.getAccountBalance();
 
-          const txId = await broadcastTradingTx(tx);
-          console.log("broadcasted", txId);
+          if (!depositAccountBalanceResult.success) {
+            console.error(depositAccountBalanceResult.message);
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: depositAccountBalanceResult.message,
+            });
+            return;
+          }
+
+          const depositAccountBalance = depositAccountBalanceResult.data;
 
           updateZkAccount(senderZkAccount.address, {
             ...senderZkAccount,
-            value: updatedSenderBalance,
-            isOnChain: updatedSenderBalance === 0 ? false : true,
+            value: updatedSenderAccount.value,
+            isOnChain: updatedSenderAccount.isOnChain,
           });
 
           updateZkAccount(depositZkAccount.address, {
             ...depositZkAccount,
-            scalar: encrypt_scalar_hex,
-            value: transferAmount,
+            scalar: depositAccountScalar,
+            value: depositAccountBalance,
             isOnChain: true,
           });
 
