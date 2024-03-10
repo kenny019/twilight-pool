@@ -35,7 +35,8 @@ export default async function Home() {
   const chartData = await getChartCandleData();
 
   // todo: fallback to alternative price data or maybe show skeleton if price is not valid
-  const btcPrice = parseInt(chartData[chartData.length - 1].close);
+  const btcPrice =
+    chartData.length > 0 ? parseInt(chartData[chartData.length - 1].close) : 0;
 
   return (
     <main>

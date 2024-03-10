@@ -275,7 +275,6 @@ async function coinAddressMonitoring({
 
 /**
  *
- * @param param0
  * @returns stringified tuple of addresses, 0 index is sender 1 index is receiver
  */
 async function getUpdatedAddressFromTransaction({
@@ -287,6 +286,34 @@ async function getUpdatedAddressFromTransaction({
 }) {
   const zkos = await import("@kenny019/zkos-wasm");
   return zkos.getUpdatedAddressesFromTransaction(signature, txHex);
+}
+
+async function createShuffleTransactionSingle({
+  signature,
+  senderInput,
+  receiverAddress,
+  amount,
+  updatedSenderBalance,
+  anonymitySet,
+}: {
+  signature: string;
+  senderInput: string;
+  receiverAddress: string;
+  amount: number;
+  updatedSenderBalance: number;
+  anonymitySet: string;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.createQuisQuisTransactionSingle(
+    signature,
+    senderInput,
+    receiverAddress,
+    BigInt(amount),
+    false,
+    BigInt(updatedSenderBalance),
+    anonymitySet,
+    BigInt(1)
+  );
 }
 
 export {
@@ -310,4 +337,5 @@ export {
   coinAddressMonitoring,
   createBurnMessageTx,
   getUpdatedAddressFromTransaction,
+  createShuffleTransactionSingle,
 };

@@ -1,5 +1,6 @@
 import {
   broadcastTradingTx,
+  getUtxosFromDB,
   queryUtxoForAddress,
   queryUtxoForOutput,
 } from "../api/zkos";
@@ -7,6 +8,7 @@ import {
 import {
   createBurnMessageTx,
   createInputCoinFromOutput,
+  createShuffleTransactionSingle,
   createTradingTxSingle,
   decryptZKAccountHexValue,
   generatePublicKey,
@@ -410,7 +412,7 @@ export class ZkPrivateAccount {
     | SuccessResult<{
         scalar: string;
         txId: string;
-        updatedAddress: string[];
+        updatedAddress: string;
       }>
     | FailureResult
   > {
@@ -487,21 +489,107 @@ export class ZkPrivateAccount {
 
       const updatedAddress = JSON.parse(updatedAddressStringified) as string[];
 
+      this.address = updatedAddress[0];
       this.value = updatedBalance;
       this.updateStatus(true);
-
-      console.log("tradingTxSingle updatedAddress", updatedAddress);
 
       return {
         success: true,
         data: {
           scalar: encrypt_scalar_hex,
           txId: txId,
-          updatedAddress: updatedAddress,
+          updatedAddress: updatedAddress[1],
         },
       };
     } catch (err) {
       console.error(err);
+      return {
+        success: false,
+        message: `${err}`,
+      };
+    }
+  }
+
+  public async shuffleTxSingle(
+    amount: number,
+    receiverAddress: string,
+    startBlock: number,
+    endBlock: number
+  ): Promise<SuccessResult<string> | FailureResult> {
+    const updatedBalance = this.value - amount;
+
+    if (amount < 0) {
+      return {
+        success: false,
+        message: `Unable to transfer ${amount} sats, due to lack of funds ${this.value}`,
+      };
+    }
+
+    const utxoResult = await getUtxoFromAddress(this.address);
+
+    if (!utxoResult.success) {
+      this.updateStatus(false);
+      return {
+        success: false,
+        message: utxoResult.message,
+      };
+    }
+
+    const coinOutputResult = await getCoinOutputFromAddress(this.address);
+
+    if (!coinOutputResult.success) {
+      return {
+        success: false,
+        message: coinOutputResult.message,
+      };
+    }
+
+    const utxoData = utxoResult.data;
+    const utxoString = JSON.stringify(utxoData);
+
+    const coinOutput = coinOutputResult.data;
+    const outputString = JSON.stringify(coinOutput);
+
+    const inputString = await createInputCoinFromOutput({
+      outputString,
+      utxoString,
+    });
+
+    try {
+      const utxoOutputs = await getUtxosFromDB(startBlock, endBlock, 0);
+
+      if (!utxoOutputs) {
+        return {
+          success: false,
+          message: "Unable to get utxos from db",
+        };
+      }
+
+      const shuffleTxMsg = await createShuffleTransactionSingle({
+        senderInput: inputString,
+        receiverAddress: receiverAddress,
+        updatedSenderBalance: updatedBalance,
+        amount,
+        signature: this.signature,
+        anonymitySet: utxoOutputs,
+      });
+
+      const txCommitResult = await this.txCommit(shuffleTxMsg);
+
+      if (!txCommitResult.success) {
+        return {
+          success: false,
+          message: txCommitResult.message,
+        };
+      }
+
+      return {
+        success: true,
+        data: txCommitResult.data,
+      };
+    } catch (err) {
+      console.error(err);
+
       return {
         success: false,
         message: `${err}`,

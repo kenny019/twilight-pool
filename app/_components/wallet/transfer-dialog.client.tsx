@@ -280,6 +280,17 @@ const TransferDialog = ({
               title: "An error has occurred",
               description: "Unable to transfer to invalid address",
             });
+            setIsSubmitLoading(false);
+            return;
+          }
+
+          if (depositZkAccount.value && depositZkAccount.value > 0) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Unable to transfer account with balance",
+            });
+            setIsSubmitLoading(false);
             return;
           }
 
@@ -287,6 +298,7 @@ const TransferDialog = ({
             signature: privateKey,
             existingAccount: senderZkAccount,
           });
+
           const privateTxSingleResult =
             await senderZkPrivateAccount.privateTxSingle(
               transferAmount,
@@ -300,6 +312,7 @@ const TransferDialog = ({
               title: "An error has occurred",
               description: privateTxSingleResult.message,
             });
+            setIsSubmitLoading(false);
             return;
           }
 
@@ -327,10 +340,22 @@ const TransferDialog = ({
               title: "An error has occurred",
               description: depositAccountBalanceResult.message,
             });
+            setIsSubmitLoading(false);
             return;
           }
 
           const depositAccountBalance = depositAccountBalanceResult.data;
+
+          addTransactionHistory({
+            date: new Date(),
+            from: senderZkAccount.address,
+            fromTag: senderZkAccount.tag,
+            to: updatedAddress,
+            toTag: "Trading",
+            tx_hash: txId,
+            type: "Transfer",
+            value: transferAmount,
+          });
 
           updateZkAccount(senderZkAccount.address, {
             ...senderZkAccount,
@@ -340,6 +365,7 @@ const TransferDialog = ({
 
           updateZkAccount(depositZkAccount.address, {
             ...depositZkAccount,
+            address: updatedAddress,
             scalar: depositAccountScalar,
             value: depositAccountBalance,
             isOnChain: true,
