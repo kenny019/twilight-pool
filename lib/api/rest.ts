@@ -130,19 +130,6 @@ async function getCandleData({
   limit?: number;
   offset?: number;
 }) {
-  console.log("body", {
-    body: {
-      jsonrpc: "2.0",
-      method: "candle_data",
-      id: 1,
-      params: {
-        interval,
-        since,
-        limit,
-        offset,
-      },
-    },
-  });
   const response = await wfetch(priceURL, {
     next: {
       revalidate: revalidate ? revalidate : 0,

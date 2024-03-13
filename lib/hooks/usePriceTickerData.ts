@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { getHistoricalPrice } from "../twilight/ticker";
 import { getCandleData, getFundingRate } from "../api/rest";
 
 type PriceTickerData = {
@@ -54,12 +53,13 @@ export default function usePriceTickerData(currentPrice: number) {
         const yesterday = date.toISOString();
 
         try {
+          console.log(yesterday);
           const candleResponse = await getCandleData({
             since: yesterday,
             interval: "ONE_DAY",
             limit: 1,
             offset: 0,
-            revalidate: 0,
+            revalidate: 3600, // 1 hour
           });
 
           if (!candleResponse.success || candleResponse.error) {
@@ -81,9 +81,9 @@ export default function usePriceTickerData(currentPrice: number) {
           const changePercent = (changeAmount / currentPrice) * 100;
 
           const tickerData = {
-            high: parseInt(high),
-            low: parseInt(low),
-            turnover: parseInt(turnover),
+            high: parseFloat(high),
+            low: parseFloat(low),
+            turnover: parseFloat(turnover),
             change: changePercent,
           };
 

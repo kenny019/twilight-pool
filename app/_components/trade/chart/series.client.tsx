@@ -52,10 +52,10 @@ const Series = forwardRef<ISeriesApi<"Candlestick"> | void, Props>(
               Date.parse(candleData.start) / 1000
             ) as UTCTimestamp;
             return {
-              close: parseInt(candleData.close),
-              open: parseInt(candleData.open),
-              high: parseInt(candleData.high),
-              low: parseInt(candleData.low),
+              close: parseFloat(candleData.close),
+              open: parseFloat(candleData.open),
+              high: parseFloat(candleData.high),
+              low: parseFloat(candleData.low),
               time,
             };
           });

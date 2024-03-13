@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 type WebSocketHookOptions = {
   url: string;
   onOpen?: (socket: WebSocket) => void;
-  onClose?: () => void;
+  onClose?: (socket: WebSocket) => void;
   onMessage?: (data: any) => void;
   onError?: (error: Event) => void;
 };
@@ -23,7 +23,7 @@ const useWebSocket = (options: WebSocketHookOptions) => {
 
     socketRef.current.onclose = function () {
       if (onClose) {
-        onClose();
+        onClose(this);
       }
     };
 

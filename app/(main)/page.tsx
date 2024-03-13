@@ -36,7 +36,9 @@ export default async function Home() {
 
   // todo: fallback to alternative price data or maybe show skeleton if price is not valid
   const btcPrice =
-    chartData.length > 0 ? parseInt(chartData[chartData.length - 1].close) : 0;
+    chartData.length > 0
+      ? parseFloat(chartData[chartData.length - 1].close)
+      : 0;
 
   return (
     <main>

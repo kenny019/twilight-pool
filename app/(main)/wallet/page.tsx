@@ -14,7 +14,7 @@ import { useTwilightStore } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
@@ -134,9 +134,6 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
-                  <ArrowDownToLine className="h-4 w-4" />
-                </Button> */}
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="funding"
@@ -171,9 +168,13 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
+                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
-                </Button> */}
+                </Button>
+
+                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
+                  <Wallet className="h-4 w-4" />
+                </Button>
 
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
