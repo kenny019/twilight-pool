@@ -16,7 +16,9 @@ type Props = {
 };
 
 const TickerWrapper = ({ btcPrice }: Props) => {
-  const { feed, currentPrice } = usePriceFeed();
+  const { feed } = usePriceFeed();
+
+  const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
   const priceDelta = feed[feed.length - 2]
     ? currentPrice - feed[feed.length - 2]

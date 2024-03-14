@@ -24,7 +24,8 @@ const Page = () => {
   useRedirectUnconnected();
 
   const { toast } = useToast();
-  const { currentPrice } = usePriceFeed();
+  const { feed } = usePriceFeed();
+  const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
   const { twilightSats } = useGetTwilightBTCBalance();
 

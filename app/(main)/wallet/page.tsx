@@ -33,7 +33,8 @@ const Page = () => {
 
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
 
-  const { currentPrice } = usePriceFeed();
+  const { feed } = usePriceFeed();
+  const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
   // note: incomplete
   function useGetTradingBTCBalance() {

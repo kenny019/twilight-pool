@@ -43,15 +43,6 @@ const ChartWrapper = ({ candleData }: Props) => {
 
   const lastUpdatedTime = useRef<number>(0);
 
-  const latestCandleData = useRef<minCandleData>({
-    close: 0,
-    high: 0,
-    low: 0,
-    open: 0,
-  });
-
-  const firstCandlePrice = useRef<number>(0);
-
   const seriesRef = useRef<ISeriesApi<"Candlestick">>(null);
 
   useWebSocket({
@@ -103,61 +94,15 @@ const ChartWrapper = ({ candleData }: Props) => {
         low: parseFloat(candleStickData.low),
       };
 
-      if (currentMinuteInMs > lastUpdatedTime.current) {
-        if (lastUpdatedTime.current > 0) {
-          // note: we close the previous candle
-          seriesRef.current.update({
-            open: firstCandlePrice.current,
-            close: close,
-            high: Math.max(latestCandleData.current.high || high, high),
-            low: Math.min(latestCandleData.current.low || low, low),
-            time: lastUpdatedTime.current as UTCTimestamp,
-          });
-        }
-
-        // note: we open the new candle
-        seriesRef.current.update({
-          open: open,
-          close: close,
-          high: high,
-          low: low,
-          time: currentMinuteInMs as UTCTimestamp,
-        });
-
-        // note: also store latest candle data
-        latestCandleData.current = {
-          open: open,
-          close: close,
-          high: high,
-          low: low,
-        };
-
-        // note: new timespan so update first and last
-        lastUpdatedTime.current = currentMinuteInMs;
-
-        // note: update open price
-        firstCandlePrice.current = close;
-
-        addPrice(close);
-        return;
-      }
-
       addPrice(close);
 
       seriesRef.current.update({
         close: close,
-        open: firstCandlePrice.current,
-        high: Math.max(latestCandleData.current.high || high, high),
-        low: Math.min(latestCandleData.current.low || low, low),
+        open: open,
+        high: high,
+        low: low,
         time: currentMinuteInMs as UTCTimestamp,
       });
-
-      latestCandleData.current = {
-        close: close,
-        open: firstCandlePrice.current,
-        high: Math.max(latestCandleData.current.high || high, high),
-        low: Math.min(latestCandleData.current.low || low, low),
-      };
     } catch (err) {
       console.error(err);
     }

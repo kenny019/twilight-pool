@@ -27,7 +27,8 @@ const OrderMarketForm = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
 
   const { hasRegisteredBTC } = useTwilight();
-  const { currentPrice } = usePriceFeed();
+  const { feed } = usePriceFeed();
+  const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
   const { toast } = useToast();
 
