@@ -168,13 +168,13 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
+                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
 
                 <Button variant="ui" size="icon" disabled={twilightSats < 1}>
                   <Wallet className="h-4 w-4" />
-                </Button>
+                </Button> */}
 
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
