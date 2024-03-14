@@ -91,9 +91,10 @@ const ChartWrapper = ({ candleData }: Props) => {
 
       const candleStickData = candleStickDataArr[0];
 
-      const currentMinuteInMs = Math.floor(
-        dayjs.utc(candleStickData.end).startOf("m").unix()
-      );
+      const currentMinuteInMs = dayjs
+        .utc(candleStickData.end)
+        .startOf("m")
+        .unix();
 
       const { close, open, high, low } = {
         close: parseFloat(candleStickData.close),

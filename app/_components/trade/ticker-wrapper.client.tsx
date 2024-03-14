@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
 import React, { useEffect, useMemo, useState } from "react";
-
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
@@ -19,10 +18,9 @@ type Props = {
 const TickerWrapper = ({ btcPrice }: Props) => {
   const { feed, currentPrice } = usePriceFeed();
 
-  const priceDelta = useMemo(
-    () => (feed[feed.length - 2] ? currentPrice - feed[feed.length - 2] : 0),
-    [feed.length]
-  );
+  const priceDelta = feed[feed.length - 2]
+    ? currentPrice - feed[feed.length - 2]
+    : 0;
 
   const { priceTickerData, fundingTickerData, resetFunding } =
     usePriceTickerData(currentPrice || btcPrice);
