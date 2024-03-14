@@ -53,7 +53,6 @@ export default function usePriceTickerData(currentPrice: number) {
         const yesterday = date.toISOString();
 
         try {
-          console.log(yesterday);
           const candleResponse = await getCandleData({
             since: yesterday,
             interval: "ONE_DAY",
