@@ -13,6 +13,13 @@ async function queryUtxoForAddress(
     id: 1,
   });
 
+  console.log(ZK_URL, {
+    jsonrpc: "2.0",
+    method: "getUtxos",
+    params: [zkAddress],
+    id: 1,
+  });
+
   const { success, data, error } = await wfetch(ZK_URL)
     .post({ body })
     .json<TwilightApiResponse<UtxoData[]>>();

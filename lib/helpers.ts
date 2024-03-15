@@ -7,49 +7,51 @@ type RetryErrorResponse = {
   success: false;
 };
 
+const sleep = (delay: number) => new Promise((res) => setTimeout(res, delay));
+
 export async function retry<QueryReturn, QueryArgs = void>(
   query: (...args: QueryArgs[]) => QueryReturn,
   retries: number,
   args: QueryArgs,
+  delay: number,
   condition?: (data: Awaited<QueryReturn>) => boolean
 ): Promise<RetrySuccessResponse<Awaited<QueryReturn>> | RetryErrorResponse> {
   let outputData: NonNullable<Awaited<QueryReturn>> | undefined = undefined;
   let tryCount = 0;
 
-  while (!outputData) {
+  while (!outputData || tryCount < retries) {
     try {
-      if (tryCount > retries) break;
-
       tryCount += 1;
+
+      console.log(`retrying ${tryCount} / ${retries}`);
 
       const response = await query(args);
 
       if (!response) {
+        await sleep(delay);
         continue;
       }
 
       outputData = response;
 
-      if (!condition) {
+      if (outputData && !condition) {
         break;
+      }
+
+      if (!condition) {
+        continue;
       }
 
       const conditionResult = condition(outputData);
 
-      console.log("conditionResult", conditionResult);
-
       if (conditionResult) {
-        return {
-          success: true,
-          data: outputData,
-        };
+        break;
       }
 
-      console.log("not conditionResult retrying", conditionResult, tryCount);
-
+      await sleep(delay);
       continue;
     } catch (err) {
-      console.error("error", err);
+      console.error("retry >> error", err);
       break;
     }
   }

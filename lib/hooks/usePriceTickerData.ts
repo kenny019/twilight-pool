@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { getCandleData, getFundingRate } from "../api/rest";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CandleData, getCandleData, getFundingRate } from "../api/rest";
+import { CandleInterval } from "../types";
 
 type PriceTickerData = {
   high: number;
@@ -55,7 +56,7 @@ export default function usePriceTickerData(currentPrice: number) {
         try {
           const candleResponse = await getCandleData({
             since: yesterday,
-            interval: "ONE_DAY",
+            interval: CandleInterval.ONE_DAY,
             limit: 1,
             offset: 0,
             revalidate: 3600, // 1 hour

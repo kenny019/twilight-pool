@@ -155,7 +155,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
         title="Funding Rate / Countdown"
       >
         <Resource
-          isLoaded={!!fundingRate}
+          isLoaded={!!fundingRate || fundingRate === "00:00:00"}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           <div className="mr-2 inline-flex items-center space-x-2 text-theme">

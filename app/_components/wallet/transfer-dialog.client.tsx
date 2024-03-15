@@ -299,6 +299,17 @@ const TransferDialog = ({
             existingAccount: senderZkAccount,
           });
 
+          if (senderZkPrivateAccount.get().value - transferAmount !== 0) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description:
+                "You must transfer the full amount in the sender account.",
+            });
+            setIsSubmitLoading(false);
+            return;
+          }
+
           const privateTxSingleResult =
             await senderZkPrivateAccount.privateTxSingle(
               transferAmount,
@@ -317,17 +328,23 @@ const TransferDialog = ({
           }
 
           const {
-            scalar: depositAccountScalar,
+            scalar: updatedDepositScalar,
             txId,
-            updatedAddress,
+            updatedAddress: updatedDepositAddress,
           } = privateTxSingleResult.data;
 
-          console.log("txId", txId, "updatedAddess", updatedAddress);
+          console.log("txId", txId, "updatedAddess", updatedDepositAddress);
           const updatedSenderAccount = senderZkPrivateAccount.get();
+
+          const updatedZkAccount = {
+            ...depositZkAccount,
+            address: updatedDepositAddress,
+            scalar: updatedDepositScalar,
+          };
 
           const depositZkPrivateAccount = await ZkPrivateAccount.create({
             signature: privateKey,
-            existingAccount: depositZkAccount,
+            existingAccount: updatedZkAccount,
           });
 
           const depositAccountBalanceResult =
@@ -346,12 +363,18 @@ const TransferDialog = ({
 
           const depositAccountBalance = depositAccountBalanceResult.data;
 
+          console.log(
+            "test >>",
+            depositZkPrivateAccount.get(),
+            depositAccountBalance
+          );
+
           addTransactionHistory({
             date: new Date(),
             from: senderZkAccount.address,
             fromTag: senderZkAccount.tag,
-            to: updatedAddress,
-            toTag: "Trading",
+            to: updatedDepositAddress,
+            toTag: depositZkAccount.tag,
             tx_hash: txId,
             type: "Transfer",
             value: transferAmount,
@@ -363,11 +386,13 @@ const TransferDialog = ({
             isOnChain: updatedSenderAccount.isOnChain,
           });
 
+          const rawDepositZkAccountData = depositZkPrivateAccount.get();
+
           updateZkAccount(depositZkAccount.address, {
             ...depositZkAccount,
-            address: updatedAddress,
-            scalar: depositAccountScalar,
-            value: depositAccountBalance,
+            address: rawDepositZkAccountData.address,
+            scalar: rawDepositZkAccountData.scalar,
+            value: rawDepositZkAccountData.value,
             isOnChain: true,
           });
 

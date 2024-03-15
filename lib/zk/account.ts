@@ -4,6 +4,7 @@ import {
   queryUtxoForAddress,
   queryUtxoForOutput,
 } from "../api/zkos";
+import { retry } from "../helpers";
 
 import {
   createBurnMessageTx,
@@ -57,6 +58,19 @@ async function getUtxoFromAddress(
   address: string
 ): Promise<SuccessResult<UtxoData> | FailureResult> {
   try {
+    const utxoDataResult = await retry<
+      ReturnType<typeof queryUtxoForAddress>,
+      string
+    >(queryUtxoForAddress, 4, address, 1000, (utxoObj) =>
+      Object.hasOwn(utxoObj, "output_index")
+    );
+
+    if (!utxoDataResult.success) {
+      return {
+        success: false,
+        message: `Error with querying zkos endpoint`,
+      };
+    }
     const utxoData = await queryUtxoForAddress(address);
 
     if (!Object.hasOwn(utxoData, "output_index")) {
@@ -306,9 +320,11 @@ export class ZkPrivateAccount {
       });
 
       this.updateStatus(true);
+
+      this.value = Number(accountValue);
       return {
         success: true,
-        data: Number(accountValue),
+        data: this.value,
       };
     } catch (err) {
       this.updateStatus(false);
