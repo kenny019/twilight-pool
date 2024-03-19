@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import WalletVerificationForm from "@/app/_components/verification/form";
 import { Text } from "@/components/typography";
 import { useWallet } from "@cosmos-kit/react-lite";
@@ -14,6 +14,7 @@ const noticeData = [
 
 const Page = () => {
   const { mainWallet } = useWallet();
+
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
   const registeredBtcResponse = useGetRegisteredBTCAddress(
@@ -21,25 +22,13 @@ const Page = () => {
     chainWallet
   );
 
-  if (!registeredBtcResponse) {
-    console.log("wallet ext has not mounted");
-    // todo: make skeleton layout till wallet has mounted
-    return <></>;
-  }
+  const btcDepositAddress = useMemo(() => {
+    return registeredBtcResponse?.data?.btcDepositAddress || "";
+  }, [registeredBtcResponse?.data]);
 
-  const { data, error, success } = registeredBtcResponse;
-
-  if (!success) {
-    console.error(error);
-    redirect("/registration");
-  }
-
-  const {
-    btcDepositAddress,
-    // CreationTwilightBlockHeight // todo: calculate expiry time
-    btcSatoshiTestAmount,
-    // isConfirmed // todo: create dialog to show user has already verified
-  } = data;
+  const btcSatoshiTestAmount = useMemo(() => {
+    return registeredBtcResponse?.data?.btcSatoshiTestAmount || "";
+  }, [registeredBtcResponse?.data]);
 
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">

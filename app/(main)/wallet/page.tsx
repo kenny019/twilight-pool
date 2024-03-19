@@ -18,6 +18,8 @@ import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
+import { WalletStatus } from "@cosmos-kit/core";
+import { useWallet } from "@cosmos-kit/react-lite";
 
 const Page = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
@@ -53,6 +55,7 @@ const Page = () => {
 
   const { twilightSats } = useGetTwilightBTCBalance();
 
+  const { status } = useWallet();
   useRedirectUnconnected();
   useGetTradingBTCBalance();
 
@@ -88,10 +91,6 @@ const Page = () => {
     .mul(currentPrice)
     .toFixed(2);
 
-  if (!tradingAccountAddress) {
-    return <></>;
-  }
-
   return (
     <div className="mx-4 mt-4 space-y-8 md:mx-8">
       <div className="flex w-full max-w-4xl flex-row items-baseline justify-between space-x-6 md:space-x-0">
@@ -118,7 +117,7 @@ const Page = () => {
               <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={!!twilightSats}
+                  isLoaded={status === WalletStatus.Connected}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
@@ -152,7 +151,7 @@ const Page = () => {
               <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={typeof zkAccountSatsBalance === "number"}
+                  isLoaded={status === WalletStatus.Connected}
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />

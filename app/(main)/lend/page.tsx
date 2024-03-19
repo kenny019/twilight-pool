@@ -3,7 +3,9 @@
 import LendDialog from "@/app/_components/trade/lend/lend-dialog.client";
 import TransferDialog from "@/app/_components/wallet/transfer-dialog.client";
 import Button from "@/components/button";
+import Resource from "@/components/resource";
 import { Separator } from "@/components/seperator";
+import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { executeLendOrder } from "@/lib/api/client";
 import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
@@ -16,6 +18,8 @@ import { useTwilightStore } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
 import { executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
+import { WalletStatus } from "@cosmos-kit/core";
+import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { ArrowDown, ArrowLeftRight, Loader2, Wallet } from "lucide-react";
 import React, { useState } from "react";
@@ -36,6 +40,9 @@ const Page = () => {
   const removeLend = useTwilightStore((state) => state.lend.removeLend);
 
   const [isRedeemLoading, setIsRedeemLoading] = useState(false);
+
+  const { status } = useWallet();
+
   const totalTradingSatsBalance = zKAccounts.reduce(
     (acc, account) => (acc += account.value || 0),
     0
@@ -168,12 +175,22 @@ const Page = () => {
                 <Text>Funding</Text>
               </div>
               <div className="w-[150px]">
-                <Text className="text-primary/80">
-                  {twilightSatsBalanceString} USD
-                </Text>
-                <Text className="text-xs text-primary-accent">
-                  = {twilightBTCBalanceString} BTC
-                </Text>
+                <Resource
+                  isLoaded={status === WalletStatus.Connected}
+                  placeholder={
+                    <>
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="mt-1 h-4 w-full" />
+                    </>
+                  }
+                >
+                  <Text className="text-primary/80">
+                    {twilightSatsBalanceString} USD
+                  </Text>
+                  <Text className="text-xs text-primary-accent">
+                    = {twilightBTCBalanceString} BTC
+                  </Text>
+                </Resource>
               </div>
             </div>
 
@@ -201,12 +218,22 @@ const Page = () => {
                 <Text>Trading</Text>
               </div>
               <div className="w-[150px]">
-                <Text className="text-primary/80">
-                  {totalTradingBTCValueString} USD
-                </Text>
-                <Text className="text-xs text-primary-accent">
-                  = {totalTradingBTCBalanceString} BTC
-                </Text>
+                <Resource
+                  isLoaded={status === WalletStatus.Connected}
+                  placeholder={
+                    <>
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="mt-1 h-4 w-full" />
+                    </>
+                  }
+                >
+                  <Text className="text-primary/80">
+                    {totalTradingBTCValueString} USD
+                  </Text>
+                  <Text className="text-xs text-primary-accent">
+                    = {totalTradingBTCBalanceString} BTC
+                  </Text>
+                </Resource>
               </div>
             </div>
             <TransferDialog
@@ -235,12 +262,22 @@ const Page = () => {
                   <Text>Lending</Text>
                 </div>
                 <div className="w-[150px]">
-                  <Text className="text-primary/80">
-                    {totalLentUSDString} USD
-                  </Text>
-                  <Text className="text-xs text-primary-accent">
-                    = {totalLentBTC} BTC
-                  </Text>
+                  <Resource
+                    isLoaded={status === WalletStatus.Connected}
+                    placeholder={
+                      <>
+                        <Skeleton className="h-6 w-full" />
+                        <Skeleton className="mt-1 h-4 w-full" />
+                      </>
+                    }
+                  >
+                    <Text className="text-primary/80">
+                      {totalLentUSDString} USD
+                    </Text>
+                    <Text className="text-xs text-primary-accent">
+                      = {totalLentBTC} BTC
+                    </Text>
+                  </Resource>
                 </div>
               </div>
 
