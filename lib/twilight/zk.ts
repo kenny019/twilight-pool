@@ -1,3 +1,4 @@
+import relayerProgram from "./relayerprogram.json";
 import { OrderTypes, PositionTypes, ZkAccount } from "../types";
 import {
   decryptZKAccountHexValue,
@@ -281,7 +282,7 @@ async function createZkOrder({
 
   const orderString = await createTraderOrder({
     inputString,
-    scriptAddress: "1860eef63edee1078178b3adb63e9f86921caa16b5",
+    programContract: JSON.stringify(relayerProgram),
     signature,
     scalar,
     value,

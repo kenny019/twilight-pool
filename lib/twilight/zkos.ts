@@ -95,7 +95,7 @@ async function createInputCoinFromOutput({
 
 async function createTraderOrder({
   inputString,
-  scriptAddress,
+  programContract,
   signature,
   scalar,
   value,
@@ -106,7 +106,7 @@ async function createTraderOrder({
   timebounds,
 }: {
   inputString: string;
-  scriptAddress: string;
+  programContract: string;
   signature: string;
   scalar: string;
   value: number;
@@ -121,9 +121,10 @@ async function createTraderOrder({
   }
 
   const zkos = await import("@kenny019/zkos-wasm");
+
   return zkos.createZkOSTraderOrder(
     inputString,
-    scriptAddress,
+    programContract,
     signature,
     scalar,
     BigInt(value),

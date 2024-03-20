@@ -30,8 +30,8 @@ dependencies:
     specifier: ^2.5.0
     version: 2.5.0(@cosmjs/amino@0.32.2)(@cosmjs/cosmwasm-stargate@0.32.2)(@cosmjs/proto-signing@0.31.1)(@cosmjs/stargate@0.31.1)(cosmjs-types@0.9.0)(react-dom@18.2.0)(react@18.2.0)
   '@kenny019/zkos-wasm':
-    specifier: ^0.2.18
-    version: 0.2.18
+    specifier: ^0.2.20
+    version: 0.2.20
   '@next/font':
     specifier: ^13.5.4
     version: 13.5.4
@@ -1041,8 +1041,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kenny019/zkos-wasm@0.2.18:
-    resolution: {integrity: sha512-szVFepEtqShDJy8Dk4DgVteQgWcjtasyMVdRnFS7uYN035NB2KKNZANm4D3t8poIjiBxUUHKIzLWzP1IZVwicw==}
+  /@kenny019/zkos-wasm@0.2.20:
+    resolution: {integrity: sha512-64TmZ+pEpt3NGa1FhQ9HfZvkKYQUYAhN74qLIwyrKpgCe8obIwVQq6Sba84d946WJ4iNftAR9uAyMkwfHE4cCg==}
     dev: false
 
   /@keplr-wallet/common@0.12.28:
