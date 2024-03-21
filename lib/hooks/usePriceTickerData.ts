@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CandleData, getCandleData, getFundingRate } from "../api/rest";
 import { CandleInterval } from "../types";
+import { useInterval } from "./useInterval";
 
 type PriceTickerData = {
   high: number;
@@ -22,6 +23,8 @@ export default function usePriceTickerData(currentPrice: number) {
     change: 0,
   });
 
+  const [candleYesterdayData, setCandleYesterdayData] = useState<CandleData>();
+
   // const matchedAddress = searchZkAccount({
   //   inputAddresses: ["0x...", "0x..."],
   //   outputAddress: ["...", "..."],
@@ -37,6 +40,34 @@ export default function usePriceTickerData(currentPrice: number) {
     }
   );
 
+  async function updateCandleData() {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+
+    const yesterday = date.toISOString();
+
+    try {
+      const candleResponse = await getCandleData({
+        since: yesterday,
+        interval: CandleInterval.ONE_DAY_CHANGE,
+        limit: 1,
+        offset: 0,
+      });
+
+      if (!candleResponse.success || candleResponse.error) {
+        console.error(candleResponse);
+        return;
+      }
+      const { result } = candleResponse.data;
+
+      const candleData = result[0];
+
+      setCandleYesterdayData(candleData);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   const resetFunding = useCallback(() => {
     setFundingTickerData({
       timestamp: "",
@@ -45,52 +76,33 @@ export default function usePriceTickerData(currentPrice: number) {
     setShouldFetchFunding(true);
   }, []);
 
+  useEffect(() => {
+    if (candleYesterdayData) return;
+    updateCandleData();
+  }, []);
+
+  useInterval(() => {
+    updateCandleData();
+  }, 36000);
+
   function useGetPriceTickerData() {
     useEffect(() => {
       async function getPriceTickerData() {
-        const date = new Date();
-        date.setDate(date.getDate() - 1);
+        if (!candleYesterdayData) return;
 
-        const yesterday = date.toISOString();
+        const { high, low, close, usd_volume: turnover } = candleYesterdayData;
 
-        try {
-          const candleResponse = await getCandleData({
-            since: yesterday,
-            interval: CandleInterval.ONE_DAY,
-            limit: 1,
-            offset: 0,
-            revalidate: 3600, // 1 hour
-          });
+        const changeAmount = currentPrice - parseFloat(close);
+        const changePercent = (changeAmount / currentPrice) * 100;
 
-          if (!candleResponse.success || candleResponse.error) {
-            console.error(candleResponse);
-            return;
-          }
+        const tickerData = {
+          high: parseFloat(high),
+          low: parseFloat(low),
+          turnover: parseFloat(turnover),
+          change: changePercent,
+        };
 
-          const { result } = candleResponse.data;
-
-          const candleData = result[0];
-
-          if (!candleData) {
-            return;
-          }
-
-          const { high, low, close, usd_volume: turnover } = candleData;
-
-          const changeAmount = currentPrice - parseFloat(close);
-          const changePercent = (changeAmount / currentPrice) * 100;
-
-          const tickerData = {
-            high: parseFloat(high),
-            low: parseFloat(low),
-            turnover: parseFloat(turnover),
-            change: changePercent,
-          };
-
-          setPriceTickerData(tickerData);
-        } catch (err) {
-          console.error(err);
-        }
+        setPriceTickerData(tickerData);
       }
 
       if (currentPrice === 0) return;

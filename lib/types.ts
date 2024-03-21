@@ -79,4 +79,5 @@ export enum CandleInterval {
   EIGHT_HOUR = "EIGHT_HOUR",
   TWELVE_HOUR = "TWELVE_HOUR",
   ONE_DAY = "ONE_DAY",
+  ONE_DAY_CHANGE = "ONE_DAY_CHANGE",
 }

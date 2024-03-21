@@ -9,6 +9,7 @@ import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { executeLendOrder } from "@/lib/api/client";
 import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
+import { retry } from "@/lib/helpers";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
@@ -100,13 +101,36 @@ const Page = () => {
     try {
       for (const lendOrder of lendOrders) {
         setIsRedeemLoading(true);
-        const lendOrderRes = await queryTransactionHashes(
-          lendOrder.accountAddress
+
+        const lendOrderRes = await retry<
+          ReturnType<typeof queryTransactionHashes>,
+          string
+        >(
+          queryTransactionHashes,
+          4,
+          lendOrder.accountAddress,
+          1000,
+          (txHash) => {
+            const found = txHash.result.find(
+              (tx) => tx.order_status === "SETTLED"
+            );
+
+            return found ? true : false;
+          }
         );
 
-        const lendOrderData = (lendOrderRes.result as TransactionHash[])[0];
+        if (!lendOrderRes.success) {
+          console.error("lend order redeem not successful");
+          setIsRedeemLoading(false);
+          continue;
+        }
 
-        console.log(lendOrderData);
+        const lendOrders = lendOrderRes.data;
+
+        console.log(lendOrders);
+        const lendOrderData = lendOrders.result.find(
+          (tx) => tx.order_status === "SETTLED"
+        );
         if (!lendOrderData) {
           setIsRedeemLoading(false);
           continue;
