@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type WebSocketHookOptions = {
   url: string;
@@ -11,6 +11,8 @@ type WebSocketHookOptions = {
 const useWebSocket = (options: WebSocketHookOptions) => {
   const { url, onOpen, onClose, onMessage, onError } = options;
   const socketRef = useRef<WebSocket | null>(null);
+
+  const [shouldReconnect, setShouldReconnect] = useState(true);
 
   const connect = useCallback(() => {
     socketRef.current = new WebSocket(url);
@@ -41,7 +43,21 @@ const useWebSocket = (options: WebSocketHookOptions) => {
     };
   }, [url, onOpen, onClose, onMessage, onError]);
 
+  const reconnect = useCallback(() => {
+    setShouldReconnect(true);
+  }, []);
+
   useEffect(() => {
+    if (
+      shouldReconnect &&
+      socketRef.current &&
+      socketRef.current.readyState !== WebSocket.CLOSED
+    ) {
+      socketRef.current.close();
+    }
+
+    setShouldReconnect(false);
+
     connect();
 
     return () => {
@@ -49,9 +65,12 @@ const useWebSocket = (options: WebSocketHookOptions) => {
         socketRef.current.close();
       }
     };
-  }, []);
+  }, [connect, shouldReconnect]);
 
-  return socketRef.current;
+  return {
+    socket: socketRef.current,
+    reconnect,
+  };
 };
 
 export default useWebSocket;

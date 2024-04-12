@@ -30,7 +30,7 @@ type ChartApi = {
 };
 
 const CHART_X_PADDING = 20;
-const CHART_Y_PADDING = 40;
+const CHART_Y_PADDING = 80;
 
 type Props = {
   container: HTMLElement;
