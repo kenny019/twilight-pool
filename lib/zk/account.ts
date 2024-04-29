@@ -61,7 +61,7 @@ async function getUtxoFromAddress(
     const utxoDataResult = await retry<
       ReturnType<typeof queryUtxoForAddress>,
       string
-    >(queryUtxoForAddress, 4, address, 1000, (utxoObj) =>
+    >(queryUtxoForAddress, 9, address, 2500, (utxoObj) =>
       Object.hasOwn(utxoObj, "output_index")
     );
 
@@ -71,18 +71,10 @@ async function getUtxoFromAddress(
         message: `Error with querying zkos endpoint`,
       };
     }
-    const utxoData = await queryUtxoForAddress(address);
-
-    if (!Object.hasOwn(utxoData, "output_index")) {
-      return {
-        success: false,
-        message: `Utxo not found for ${address}`,
-      };
-    }
 
     return {
       success: true,
-      data: utxoData as UtxoData,
+      data: utxoDataResult.data as UtxoData,
     };
   } catch (err) {
     return {

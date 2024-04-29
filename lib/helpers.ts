@@ -1,3 +1,5 @@
+import { FailureResult, SuccessResult } from "./types";
+
 type RetrySuccessResponse<T> = {
   success: true;
   data: T;
@@ -62,8 +64,34 @@ export async function retry<QueryReturn, QueryArgs = void>(
     };
   }
 
+  const isSuccess = condition ? condition(outputData) : !!outputData;
+
+  if (isSuccess) {
+    return {
+      success: true,
+      data: outputData,
+    };
+  }
+
   return {
-    success: true,
-    data: outputData,
+    success: false,
   };
+}
+
+export function safeJSONParse<T>(
+  toParse: string
+): SuccessResult<T> | FailureResult {
+  try {
+    const result = JSON.parse(toParse);
+    return {
+      success: true,
+      data: result as T,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      success: false,
+      message: "failed to parse json",
+    };
+  }
 }

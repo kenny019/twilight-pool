@@ -20,6 +20,7 @@ import {
   queryUtxoForAddress,
   queryUtxoForOutput,
 } from "../api/zkos";
+import { retry } from "../helpers";
 
 async function createZkAccount({
   tag,
@@ -153,27 +154,37 @@ async function getZkAccountBalance({
 async function createZkBurnTx({
   zkAccount,
   signature,
+  initZkAccountAddress,
 }: {
   zkAccount: ZkAccount;
   signature: string;
+  initZkAccountAddress: string;
 }) {
   if (!zkAccount.value) {
     return {
       success: false,
     };
   }
+
   const zkAccountAddress = zkAccount.address;
 
-  const utxoData = await queryUtxoForAddress(zkAccountAddress);
+  const utxoDataResult = await retry<
+    ReturnType<typeof queryUtxoForAddress>,
+    string
+  >(queryUtxoForAddress, 9, zkAccountAddress, 2500, (utxoObj) =>
+    Object.hasOwn(utxoObj, "output_index")
+  );
 
-  if (!Object.hasOwn(utxoData, "output_index")) {
+  if (!utxoDataResult.success) {
     console.error("no utxoData");
+
     return {
       success: false,
+      message: `Error with querying zkos endpoint`,
     };
   }
 
-  const utxoString = JSON.stringify(utxoData);
+  const utxoString = JSON.stringify(utxoDataResult.data);
 
   const utxoHex = await utxoStringToHex({
     utxoString,
@@ -197,7 +208,7 @@ async function createZkBurnTx({
 
   const burnMsgPromise = createBurnMessageTx({
     inputString,
-    address: zkAccount.address,
+    address: initZkAccountAddress,
     amount: zkAccount.value,
     scalar: zkAccount.scalar,
     signature,

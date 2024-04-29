@@ -21,6 +21,8 @@ import {
   createInputCoinFromOutput,
   createTradingTxSingle,
   utxoStringToHex,
+  verifyAccount,
+  verifyQuisQuisTransaction,
 } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -30,7 +32,11 @@ import Resource from "@/components/resource";
 import { Loader2 } from "lucide-react";
 import { ZkAccount } from "@/lib/types";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
-import { createZkAccountWithBalance, createZkBurnTx } from "@/lib/twilight/zk";
+import {
+  createZkAccount,
+  createZkAccountWithBalance,
+  createZkBurnTx,
+} from "@/lib/twilight/zk";
 import {
   broadcastTradingTx,
   queryUtxoForAddress,
@@ -43,6 +49,7 @@ import { useSessionStore } from "@/lib/providers/session";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { twilightproject } from "twilightjs";
 import { ZkPrivateAccount } from "@/lib/zk/account";
+import { safeJSONParse } from "@/lib/helpers";
 
 type Props = {
   children: React.ReactNode;
@@ -416,13 +423,84 @@ const TransferDialog = ({
             return;
           }
 
+          const transientZkAccount = await createZkAccount({
+            tag: "transient",
+            signature: privateKey,
+          });
+
+          const senderZkPrivateAccount = await ZkPrivateAccount.create({
+            signature: privateKey,
+            existingAccount: senderZkAccount,
+          });
+
+          const privateTxSingleResult =
+            await senderZkPrivateAccount.privateTxSingle(
+              transferAmount,
+              transientZkAccount.address
+            );
+
+          if (!privateTxSingleResult.success) {
+            console.error(privateTxSingleResult.message);
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: privateTxSingleResult.message,
+            });
+            setIsSubmitLoading(false);
+            return;
+          }
+
+          const {
+            scalar: updatedTransientScalar,
+            txId,
+            updatedAddress: updatedTransientAddress,
+          } = privateTxSingleResult.data;
+
+          console.log("txId", txId, "updatedAddess", updatedTransientAddress);
+
+          const transientZkPrivateAccount = await ZkPrivateAccount.create({
+            signature: privateKey,
+            existingAccount: {
+              address: updatedTransientAddress,
+              scalar: updatedTransientScalar,
+              tag: "transient",
+              value: transferAmount,
+            },
+          });
+
+          const transientAccountBalanceResult =
+            await transientZkPrivateAccount.getAccountBalance();
+
+          if (!transientAccountBalanceResult.success) {
+            toast({
+              variant: "error",
+              title: "An error has occurred",
+              description: "Please try again later.",
+            });
+            setIsSubmitLoading(false);
+
+            return;
+          }
+
+          console.log(
+            "transient zkAccount balance =",
+            transientAccountBalanceResult.data
+          );
+
           const {
             success,
             msg: zkBurnMsg,
             zkAccountHex,
           } = await createZkBurnTx({
             signature: privateKey,
-            zkAccount: senderZkAccount,
+            zkAccount: {
+              tag: senderZkAccount.tag,
+              address: updatedTransientAddress,
+              scalar: updatedTransientScalar,
+              isOnChain: true,
+              value: transferAmount,
+            },
+            initZkAccountAddress: transientZkAccount.address,
           });
 
           if (!success || !zkBurnMsg || !zkAccountHex) {
@@ -432,9 +510,29 @@ const TransferDialog = ({
               description: "Please try again later.",
             });
             console.error("error creating zkBurnTx msg");
+            console.error({
+              success,
+              zkBurnMsg,
+              zkAccountHex,
+            });
             setIsSubmitLoading(false);
             return;
           }
+
+          console.log({
+            zkAccountHex: zkAccountHex,
+            balance: transferAmount,
+            signature: privateKey,
+            initZkAccountAddress: transientZkAccount.address,
+          });
+
+          const isAccountValid = await verifyAccount({
+            zkAccountHex: zkAccountHex,
+            balance: transferAmount,
+            signature: privateKey,
+          });
+
+          console.log("isAccountValid", isAccountValid);
 
           toast({
             title: "Broadcasting transfer",
@@ -442,14 +540,22 @@ const TransferDialog = ({
               "Please wait while your transfer is being submitted...",
           });
 
+          const txValidMessage = await verifyQuisQuisTransaction({
+            tx: zkBurnMsg,
+          });
+
+          console.log("txValidMessage", txValidMessage);
+
           const tradingTxResString = await broadcastTradingTx(
             zkBurnMsg,
             twilightAddress
           );
 
-          const tradingTxRes = JSON.parse(tradingTxResString as string);
+          console.log("zkBurnMsg tradingTxResString >>"), tradingTxResString;
 
-          if (Object.hasOwn(tradingTxRes, "error")) {
+          const tradingTxRes = safeJSONParse(tradingTxResString as string);
+
+          if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
             toast({
               variant: "error",
               title: "An error has occurred",
@@ -466,9 +572,18 @@ const TransferDialog = ({
             twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
 
           const stargateClient = await chainWallet.getSigningStargateClient();
+
+          console.log({
+            btcValue: Long.fromNumber(transferAmount),
+            encryptScalar: updatedTransientScalar,
+            mintOrBurn: false,
+            qqAccount: zkAccountHex,
+            twilightAddress,
+          });
+
           const mintBurnMsg = mintBurnTradingBtc({
-            btcValue: Long.fromNumber(senderZkAccount.value as number),
-            encryptScalar: senderZkAccount.scalar,
+            btcValue: Long.fromNumber(transferAmount),
+            encryptScalar: updatedTransientScalar,
             mintOrBurn: false,
             qqAccount: zkAccountHex,
             twilightAddress,

@@ -111,9 +111,9 @@ const OrderMyTrades = () => {
         string
       >(
         queryTransactionHashes,
-        4,
+        9,
         tradeOrder.accountAddress,
-        1000,
+        2500,
         transactionHashCondition
       );
 

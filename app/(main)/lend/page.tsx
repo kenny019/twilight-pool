@@ -107,9 +107,9 @@ const Page = () => {
           string
         >(
           queryTransactionHashes,
-          4,
+          9,
           lendOrder.accountAddress,
-          1000,
+          2500,
           (txHash) => {
             const found = txHash.result.find(
               (tx) => tx.order_status === "SETTLED"

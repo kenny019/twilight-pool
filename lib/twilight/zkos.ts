@@ -208,6 +208,24 @@ async function createQueryLendOrderMsg({
   return zkos.queryLendOrderZkos(address, signature, "PENDING");
 }
 
+async function verifyAccount({
+  zkAccountHex,
+  signature,
+  balance,
+}: {
+  zkAccountHex: string;
+  signature: string;
+  balance: number;
+}) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.verifyZkAccount(signature, zkAccountHex, balance);
+}
+
+async function verifyQuisQuisTransaction({ tx }: { tx: string }) {
+  const zkos = await import("@kenny019/zkos-wasm");
+  return zkos.verifyQuisQuisTransaction(tx);
+}
+
 async function createBurnMessageTx({
   inputString,
   amount,
@@ -339,4 +357,6 @@ export {
   createBurnMessageTx,
   getUpdatedAddressFromTransaction,
   createShuffleTransactionSingle,
+  verifyQuisQuisTransaction,
+  verifyAccount,
 };
