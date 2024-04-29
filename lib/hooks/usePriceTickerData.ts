@@ -126,8 +126,8 @@ export default function usePriceTickerData(currentPrice: number) {
         const { result: fundingData } = fundingRes.data;
 
         setFundingTickerData({
-          rate: parseFloat(fundingData.rate).toFixed(5),
-          timestamp: fundingData.timestamp,
+          rate: parseFloat(fundingData?.rate || "0").toFixed(5),
+          timestamp: fundingData?.timestamp || "",
         });
 
         setShouldFetchFunding(false);

@@ -102,6 +102,7 @@ const WalletRegistrationForm = () => {
 
     try {
       await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], 100);
+
       toast({
         title: "Submitting Bitcoin address",
         description:
