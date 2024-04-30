@@ -90,17 +90,21 @@ const TickerWrapper = ({ btcPrice }: Props) => {
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
       <div className="flex items-center">
-        <p
-          className={cn(
-            priceDelta > 0 ? "text-green-medium" : "text-red",
-            priceDelta === 0 && "text-primary",
-            "w-[140px] pr-2 text-center text-2xl font-semibold tracking-tighter transition-colors"
-          )}
-        >
-          {currentPrice
-            ? formatCurrency(currentPrice)
-            : formatCurrency(btcPrice)}
-        </p>
+        {currentPrice === 0 || btcPrice === 0 ? (
+          <Skeleton className="mr-2 h-[32px] w-[120px]" />
+        ) : (
+          <p
+            className={cn(
+              priceDelta > 0 ? "text-green-medium" : "text-red",
+              priceDelta === 0 && "text-primary",
+              "w-[140px] pr-2 text-center text-2xl font-semibold tracking-tighter transition-colors"
+            )}
+          >
+            {currentPrice
+              ? formatCurrency(currentPrice)
+              : formatCurrency(btcPrice)}
+          </p>
+        )}
 
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
