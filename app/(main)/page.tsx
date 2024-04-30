@@ -9,15 +9,23 @@ async function getChartCandleData() {
     const since = new Date();
     since.setMinutes(since.getMinutes() - 60);
 
-    const candleDataResponse = await getCandleData({
+    const candleDataPromise = getCandleData({
       since: since.toISOString(),
       interval: CandleInterval.ONE_MINUTE,
       limit: 60,
     });
 
-    const candleData = candleDataResponse.success
-      ? candleDataResponse.data.result
-      : [];
+    const timeoutPromise = new Promise((res) =>
+      setTimeout(() => res(false), 3000)
+    );
+
+    const result = (await Promise.any([candleDataPromise, timeoutPromise])) as
+      | false
+      | Awaited<ReturnType<typeof getCandleData>>;
+
+    if (!result) return [];
+
+    const candleData = result.success ? result.data.result : [];
 
     candleData.sort(
       (left, right) =>
@@ -45,7 +53,7 @@ export default async function Home() {
       <TickerWrapper btcPrice={btcPrice} />
       <Separator orientation="horizontal" />
       <div className="relative h-full w-full">
-        <TradeWrapper candleData={chartData} />
+        <TradeWrapper initialCandleData={chartData} />
       </div>
     </main>
   );

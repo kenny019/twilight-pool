@@ -10,9 +10,11 @@ import {
   GRID_WIDTH_OFFSET,
 } from "@/lib/constants";
 import ChartWrapper from "./chart/chart-wrapper.client";
-import { CandleData } from "@/lib/api/rest";
+import { CandleData, getCandleData } from "@/lib/api/rest";
 import DetailsPanel from "./details/details.client";
 import Skeleton from "@/components/skeleton";
+import dayjs from "dayjs";
+import { CandleInterval } from "@/lib/types";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
@@ -42,11 +44,12 @@ function calculateGridDimensions(
 }
 
 type Props = {
-  candleData: CandleData[];
+  initialCandleData: CandleData[];
 };
 
-const TradeWrapper = ({ candleData }: Props) => {
+const TradeWrapper = ({ initialCandleData }: Props) => {
   const [hasMounted, setHasMounted] = useState(false);
+  const [candleData, setCandleData] = useState(initialCandleData);
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
@@ -62,6 +65,28 @@ const TradeWrapper = ({ candleData }: Props) => {
       };
     })
   );
+
+  useEffect(() => {
+    async function fetchCandleData() {
+      const since = dayjs().subtract(1, "hour");
+
+      const candleDataResponse = await getCandleData({
+        since: since.toISOString(),
+        interval: CandleInterval.ONE_MINUTE,
+        limit: 60,
+      });
+
+      const candleData = candleDataResponse.success
+        ? candleDataResponse.data.result
+        : [];
+
+      setCandleData(candleData);
+    }
+
+    if (initialCandleData.length > 0) return;
+
+    fetchCandleData();
+  }, [initialCandleData]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -135,7 +160,13 @@ const TradeWrapper = ({ candleData }: Props) => {
         title="Chart"
         key="chart"
       >
-        <ChartWrapper candleData={candleData} />
+        {candleData.length > 0 ? (
+          <ChartWrapper candleData={candleData} />
+        ) : (
+          <div className="h-full w-full p-4">
+            <Skeleton className="h-full w-full" />
+          </div>
+        )}
       </DragWrapper>
       <DragWrapper
         dimension={gridDimensionRefs.current}
