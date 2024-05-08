@@ -127,6 +127,11 @@ const OrderMyTrades = () => {
         return;
       }
 
+      toast({
+        title: "Success",
+        description: `Successfully closed ${tradeOrder.orderType.toLowerCase()} order`,
+      });
+
       console.log("tx_hashes return", transactionHashRes.data.result);
       // note: we have to make sure chain has settled before requesting balance
       // as input is memo and not yet coin
@@ -192,11 +197,6 @@ const OrderMyTrades = () => {
         uuid: tradeOrder.uuid,
         value: tradeOrder.value,
         output: tradeOrder.output,
-      });
-
-      toast({
-        title: "Success",
-        description: `Successfully closed ${tradeOrder.orderType.toLowerCase()} order`,
       });
     } catch (err) {
       console.error(err);
