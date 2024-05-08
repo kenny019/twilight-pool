@@ -24,7 +24,7 @@ const TickerWrapper = () => {
     : 0;
 
   const { priceTickerData, fundingTickerData, resetFunding } =
-    usePriceTickerData(currentPrice || btcPrice);
+    usePriceTickerData(currentPrice ? currentPrice : btcPrice);
 
   const { high, low, change, turnover } = priceTickerData;
 
