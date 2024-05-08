@@ -196,20 +196,22 @@ const OrderMyTrades = () => {
             .toString();
           return (
             <div
-              className="flex space-x-2 px-2 font-ui text-xs"
+              className="flex items-center space-x-2 px-2 font-ui text-xs"
               key={trade.accountAddress}
             >
-              <Text>BTCUSD</Text>
-              <Text
-                className={cn(
-                  trade.positionType === "LONG"
-                    ? "text-green-medium"
-                    : "text-red"
-                )}
-              >
-                {quantity}
-              </Text>
-              <Text>{trade.orderType}</Text>
+              <div className="flex space-x-2">
+                <Text>BTCUSD</Text>
+                <Text
+                  className={cn(
+                    trade.positionType === "LONG"
+                      ? "text-green-medium"
+                      : "text-red"
+                  )}
+                >
+                  {quantity}
+                </Text>
+                <Text>{trade.orderType}</Text>
+              </div>
               <Button
                 onClick={async (e) => {
                   e.preventDefault();
