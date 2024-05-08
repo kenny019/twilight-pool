@@ -15,6 +15,7 @@ import DetailsPanel from "./details/details.client";
 import Skeleton from "@/components/skeleton";
 import dayjs from "dayjs";
 import { CandleInterval } from "@/lib/types";
+import { useTwilightStore } from "@/lib/providers/store";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
@@ -43,13 +44,11 @@ function calculateGridDimensions(
   };
 }
 
-type Props = {
-  initialCandleData: CandleData[];
-};
-
-const TradeWrapper = ({ initialCandleData }: Props) => {
+const TradeWrapper = () => {
   const [hasMounted, setHasMounted] = useState(false);
-  const [candleData, setCandleData] = useState(initialCandleData);
+  const [candleData, setCandleData] = useState<CandleData[]>([]);
+
+  const setPrice = useTwilightStore((state) => state.price.setPrice);
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
@@ -81,12 +80,12 @@ const TradeWrapper = ({ initialCandleData }: Props) => {
         : [];
 
       setCandleData(candleData);
+
+      setPrice(parseInt(candleData[candleData.length - 1].close) || 0);
     }
 
-    if (initialCandleData.length > 0) return;
-
     fetchCandleData();
-  }, [initialCandleData]);
+  }, [setPrice]);
 
   useEffect(() => {
     setHasMounted(true);

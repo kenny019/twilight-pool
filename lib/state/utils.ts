@@ -4,12 +4,14 @@ import { LendSlice } from "./local/lend";
 import { TradeSlice } from "./local/trade";
 import { TradeSessionSlice } from "./session/trade";
 import { HistorySlice } from "./local/history";
+import { PriceSlice } from "./local/price";
 
 export interface AccountSlices {
   zk: ZkAccountSlice;
   lend: LendSlice;
   trade: TradeSlice;
   history: HistorySlice;
+  price: PriceSlice;
 }
 
 export interface SessionSlices {

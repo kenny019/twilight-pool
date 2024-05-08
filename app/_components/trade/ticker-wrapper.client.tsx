@@ -10,15 +10,14 @@ import { formatCurrency } from "@/lib/twilight/ticker";
 import usePriceTickerData from "@/lib/hooks/usePriceTickerData";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
+import { useTwilightStore } from "@/lib/providers/store";
 
-type Props = {
-  btcPrice: number;
-};
-
-const TickerWrapper = ({ btcPrice }: Props) => {
+const TickerWrapper = () => {
   const { feed } = usePriceFeed();
 
   const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
+
+  const btcPrice = useTwilightStore((state) => state.price.btcPrice);
 
   const priceDelta = feed[feed.length - 2]
     ? currentPrice - feed[feed.length - 2]
@@ -90,7 +89,7 @@ const TickerWrapper = ({ btcPrice }: Props) => {
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
       <div className="flex items-center">
-        {currentPrice === 0 || btcPrice === 0 ? (
+        {currentPrice === 0 && btcPrice === 0 ? (
           <Skeleton className="mr-2 h-[32px] w-[120px]" />
         ) : (
           <p
