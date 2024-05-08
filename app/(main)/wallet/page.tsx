@@ -127,7 +127,7 @@ const Page = () => {
                   isLoaded={
                     status === WalletStatus.Connected &&
                     isMounted &&
-                    !!finalPrice
+                    finalPrice !== 0
                   }
                   placeholder={
                     <>
@@ -165,7 +165,7 @@ const Page = () => {
                   isLoaded={
                     status === WalletStatus.Connected &&
                     isMounted &&
-                    !!finalPrice
+                    finalPrice !== 0
                   }
                   placeholder={
                     <>
