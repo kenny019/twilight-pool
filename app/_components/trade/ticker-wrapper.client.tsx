@@ -10,14 +10,14 @@ import { formatCurrency } from "@/lib/twilight/ticker";
 import usePriceTickerData from "@/lib/hooks/usePriceTickerData";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
-import { useTwilightStore } from "@/lib/providers/store";
+import { useSessionStore } from "@/lib/providers/session";
 
 const TickerWrapper = () => {
   const { feed } = usePriceFeed();
 
   const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
-  const btcPrice = useTwilightStore((state) => state.price.btcPrice);
+  const btcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const priceDelta = feed[feed.length - 2]
     ? currentPrice - feed[feed.length - 2]

@@ -1,4 +1,4 @@
-import { AccountSlices, StateImmerCreator } from "../utils";
+import { AccountSlices, SessionSlices, StateImmerCreator } from "../utils";
 
 export interface PriceSlice {
   btcPrice: number;
@@ -9,7 +9,7 @@ export const initialPriceSliceState = {
   btcPrice: 0,
 };
 
-export const createPriceSlice: StateImmerCreator<AccountSlices, PriceSlice> = (
+export const createPriceSlice: StateImmerCreator<SessionSlices, PriceSlice> = (
   set
 ) => ({
   ...initialPriceSliceState,

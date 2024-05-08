@@ -340,7 +340,7 @@ const OrderMarketForm = () => {
               "Sell"
             )}
           </Button>
-          {/* <Button
+          <Button
             onClick={() => {
               toast({
                 title: "Success",
@@ -377,7 +377,7 @@ const OrderMarketForm = () => {
             }}
           >
             Test
-          </Button> */}
+          </Button>
         </div>
       </ExchangeResource>
     </form>

@@ -16,12 +16,13 @@ import Skeleton from "@/components/skeleton";
 import dayjs from "dayjs";
 import { CandleInterval } from "@/lib/types";
 import { useTwilightStore } from "@/lib/providers/store";
+import { useSessionStore } from "@/lib/providers/session";
 
 const layout = [
   { i: "order", x: 10, y: 0, w: 2, h: 11, minW: 2, minH: 11 },
   { i: "chart", x: 2, y: 0, w: 8, h: 11, minW: 2, minH: 8 },
   { i: "orderbook", x: 0, y: 0, w: 2, h: 11, minW: 2 },
-  { i: "details", x: 0, y: 12, w: 8, h: 5, minW: 4, minH: 4 },
+  { i: "details", x: 0, y: 12, w: 12, h: 5, minW: 4, minH: 4 },
 ];
 
 const layoutSmall = [
@@ -48,7 +49,7 @@ const TradeWrapper = () => {
   const [hasMounted, setHasMounted] = useState(false);
   const [candleData, setCandleData] = useState<CandleData[]>([]);
 
-  const setPrice = useTwilightStore((state) => state.price.setPrice);
+  const setPrice = useSessionStore((state) => state.price.setPrice);
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
@@ -97,7 +98,7 @@ const TradeWrapper = () => {
         <Skeleton className="col-span-4 h-[430px] w-full md:col-span-2" />
         <Skeleton className="col-span-2 h-[430px] w-full md:col-span-8" />
         <Skeleton className="col-span-2 h-[430px] w-full" />
-        <Skeleton className="col-span-4 h-[190px] w-full md:col-span-8" />
+        <Skeleton className="col-span-4 h-[190px] w-full md:col-span-12" />
       </div>
     );
   }

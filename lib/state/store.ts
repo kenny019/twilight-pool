@@ -14,7 +14,7 @@ import {
   initialSessionTradeData,
 } from "./session/trade";
 import { createHistorySlice, initialHistorySliceState } from "./local/history";
-import { createPriceSlice } from "./local/price";
+import { createPriceSlice, initialPriceSliceState } from "./session/price";
 
 export const createTwilightStore = () => {
   return createStore<
@@ -27,7 +27,6 @@ export const createTwilightStore = () => {
         lend: createLendSlice(...actions),
         trade: createTradeSlice(...actions),
         history: createHistorySlice(...actions),
-        price: createPriceSlice(...actions),
       })),
       {
         name: "twilight-",
@@ -91,6 +90,7 @@ export const createSessionStore = () => {
             state.privateKey = privateKey;
           });
         },
+        price: createPriceSlice(...actions),
       })),
       {
         name: "twilight-session-",
@@ -107,6 +107,10 @@ export const createSessionStore = () => {
               twilightAddress: currentState.twilightAddress,
               setPrivateKey: currentState.setPrivateKey,
               privateKey: "",
+              price: {
+                ...currentState.price,
+                ...initialPriceSliceState,
+              },
             },
             persistedState as AccountSlices
           );
