@@ -81,7 +81,7 @@ const TradeWrapper = () => {
 
       setCandleData(candleData);
 
-      setPrice(parseInt(candleData[candleData.length - 1].close) || 0);
+      setPrice(parseFloat(candleData[candleData.length - 1].close) || 0);
     }
 
     fetchCandleData();
