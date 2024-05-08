@@ -23,8 +23,10 @@ const TickerWrapper = () => {
     ? currentPrice - feed[feed.length - 2]
     : 0;
 
-  const { priceTickerData, fundingTickerData, resetFunding } =
-    usePriceTickerData(currentPrice ? currentPrice : btcPrice);
+  const finalPrice = currentPrice ? currentPrice : btcPrice;
+
+  const { priceTickerData, fundingTickerData, resetFunding, hasInit } =
+    usePriceTickerData(finalPrice);
 
   const { high, low, change, turnover } = priceTickerData;
 
@@ -89,7 +91,7 @@ const TickerWrapper = () => {
         <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
       </div>
       <div className="flex items-center">
-        {currentPrice === 0 && btcPrice === 0 ? (
+        {!hasInit ? (
           <Skeleton className="mr-2 h-[32px] w-[120px]" />
         ) : (
           <p
@@ -116,7 +118,7 @@ const TickerWrapper = () => {
         )}
       >
         <Resource
-          isLoaded={high !== 0}
+          isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-[60px]" />}
         >
           {change === 0
@@ -130,7 +132,7 @@ const TickerWrapper = () => {
 
       <TickerItem className="min-w-[90px]" title="24H High">
         <Resource
-          isLoaded={high !== 0}
+          isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           {formatCurrency(high)}
@@ -138,7 +140,7 @@ const TickerWrapper = () => {
       </TickerItem>
       <TickerItem className="min-w-[90px]" title="24H Low">
         <Resource
-          isLoaded={low !== 0}
+          isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           {formatCurrency(low)}
@@ -146,7 +148,7 @@ const TickerWrapper = () => {
       </TickerItem>
       <TickerItem title="24H Turnover">
         <Resource
-          isLoaded={turnover !== 0}
+          isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           {formatCurrency(turnover)}

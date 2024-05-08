@@ -23,13 +23,9 @@ export default function usePriceTickerData(currentPrice: number) {
     change: 0,
   });
 
-  const [candleYesterdayData, setCandleYesterdayData] = useState<CandleData>();
+  const [hasInit, setHasInit] = useState(false);
 
-  // const matchedAddress = searchZkAccount({
-  //   inputAddresses: ["0x...", "0x..."],
-  //   outputAddress: ["...", "..."],
-  //   tx_hash: "",
-  // })
+  const [candleYesterdayData, setCandleYesterdayData] = useState<CandleData>();
 
   const [shouldFetchFunding, setShouldFetchFunding] = useState(true);
 
@@ -63,6 +59,9 @@ export default function usePriceTickerData(currentPrice: number) {
       const candleData = result[0];
 
       setCandleYesterdayData(candleData);
+      if (!hasInit) {
+        setHasInit(true);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -79,7 +78,7 @@ export default function usePriceTickerData(currentPrice: number) {
   useEffect(() => {
     if (candleYesterdayData) return;
     updateCandleData();
-  }, []);
+  }, [candleYesterdayData]);
 
   useInterval(() => {
     updateCandleData();
@@ -108,7 +107,7 @@ export default function usePriceTickerData(currentPrice: number) {
       if (currentPrice === 0) return;
 
       getPriceTickerData();
-    }, [currentPrice]);
+    }, [currentPrice, candleYesterdayData]);
   }
 
   function useGetFundingRate() {
@@ -140,5 +139,5 @@ export default function usePriceTickerData(currentPrice: number) {
   useGetFundingRate();
   useGetPriceTickerData();
 
-  return { priceTickerData, fundingTickerData, resetFunding };
+  return { priceTickerData, fundingTickerData, resetFunding, hasInit };
 }
