@@ -131,10 +131,38 @@ const OrderMyTrades = () => {
       // note: we have to make sure chain has settled before requesting balance
       // as input is memo and not yet coin
 
-      const { value: newAccountBalance } = await getZkAccountBalance({
-        zkAccountAddress: tradeOrder.accountAddress,
-        signature: privateKey,
-      });
+      const getZkAccountBalanceResult = await retry<
+        ReturnType<typeof getZkAccountBalance>,
+        {
+          zkAccountAddress: string;
+          signature: string;
+        }
+      >(
+        getZkAccountBalance,
+        9,
+        {
+          zkAccountAddress: tradeOrder.accountAddress,
+          signature: privateKey,
+        },
+        2500,
+        (result) => {
+          if (result.value) return true;
+
+          return false;
+        }
+      );
+
+      if (!getZkAccountBalanceResult.success) {
+        console.error("settling order failed to get balance");
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Error with getting balance after settling order.",
+        });
+        return;
+      }
+
+      const { value: newAccountBalance } = getZkAccountBalanceResult.data;
 
       if (!newAccountBalance) {
         toast({
