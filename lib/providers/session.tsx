@@ -84,7 +84,12 @@ export const SessionStoreProvider = ({
             name: `twilight-session-`,
           });
 
-          storeRef.current.setState(storeRef.current.getInitialState());
+          const oldPrice = storeRef.current.getState().price;
+          storeRef.current.setState({
+            ...storeRef.current.getInitialState(),
+            price: oldPrice,
+          });
+
           return;
         }
 
@@ -101,7 +106,11 @@ export const SessionStoreProvider = ({
         const newState = storeRef.current.getState();
 
         if (oldState === newState) {
-          storeRef.current.setState(storeRef.current.getInitialState());
+          const oldPrice = storeRef.current.getState().price;
+          storeRef.current.setState({
+            ...storeRef.current.getInitialState(),
+            price: oldPrice,
+          });
         }
 
         setIsHydrated(true);
