@@ -70,10 +70,10 @@ export default function usePriceTickerData(currentPrice: number) {
   const resetFunding = useCallback(() => {
     setFundingTickerData({
       timestamp: "",
-      rate: "",
+      rate: fundingTickerData.rate,
     });
     setShouldFetchFunding(true);
-  }, []);
+  }, [fundingTickerData]);
 
   useEffect(() => {
     if (candleYesterdayData) return;

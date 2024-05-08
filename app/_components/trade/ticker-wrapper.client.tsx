@@ -11,6 +11,7 @@ import usePriceTickerData from "@/lib/hooks/usePriceTickerData";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
 import { useSessionStore } from "@/lib/providers/session";
+import dayjs from "dayjs";
 
 const TickerWrapper = () => {
   const { feed } = usePriceFeed();
@@ -39,18 +40,17 @@ const TickerWrapper = () => {
       if (!fundingTimestamp) return;
 
       const timer = setInterval(() => {
-        const now = Date.now();
-        const nextFunding = new Date(fundingTimestamp);
-        nextFunding.setHours(nextFunding.getHours() + 1);
+        const now = dayjs();
+        const fundingTime = dayjs(fundingTimestamp);
 
-        const targetDateInMs = nextFunding.getTime();
+        const nextFunding = fundingTime.add(1, "hour");
 
-        const timeLeftInMs = targetDateInMs - now;
+        const fundingTimeDelta = nextFunding.diff(now, "ms");
 
-        if (timeLeftInMs > 0) {
-          const hours = Math.floor((timeLeftInMs / (1000 * 60 * 60)) % 24);
-          const minutes = Math.floor((timeLeftInMs / 1000 / 60) % 60);
-          const seconds = Math.floor((timeLeftInMs / 1000) % 60);
+        if (fundingTimeDelta > 0) {
+          const hours = Math.floor((fundingTimeDelta / (1000 * 60 * 60)) % 24);
+          const minutes = Math.floor((fundingTimeDelta / 1000 / 60) % 60);
+          const seconds = Math.floor((fundingTimeDelta / 1000) % 60);
 
           setCountdownString(
             `${hours.toString().padStart(2, "0")}:${minutes
@@ -160,7 +160,7 @@ const TickerWrapper = () => {
         title="Funding Rate / Countdown"
       >
         <Resource
-          isLoaded={!!fundingRate || fundingRate === "00:00:00"}
+          isLoaded={hasInit && fundingRate !== "00:00:00"}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           <div className="mr-2 inline-flex items-center space-x-2 text-theme">

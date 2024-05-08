@@ -14,14 +14,17 @@ import { useTwilightStore } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
-import { ArrowDownToLine, ArrowLeftRight, Wallet } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
+import useIsMounted from "@/lib/hooks/useIsMounted";
 
 const Page = () => {
+  const isMounted = useIsMounted();
+
   const privateKey = useSessionStore((state) => state.privateKey);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
@@ -37,6 +40,7 @@ const Page = () => {
   const tradingAccountAddress = tradingAccount ? tradingAccount.address : "";
 
   const { feed } = usePriceFeed();
+
   const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
   const finalPrice = currentPrice ? currentPrice : btcPrice;
@@ -120,7 +124,11 @@ const Page = () => {
               <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={status === WalletStatus.Connected}
+                  isLoaded={
+                    status === WalletStatus.Connected &&
+                    isMounted &&
+                    !!finalPrice
+                  }
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
@@ -154,7 +162,11 @@ const Page = () => {
               <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={status === WalletStatus.Connected}
+                  isLoaded={
+                    status === WalletStatus.Connected &&
+                    isMounted &&
+                    !!finalPrice
+                  }
                   placeholder={
                     <>
                       <Skeleton className="h-5 w-[140px]" />
