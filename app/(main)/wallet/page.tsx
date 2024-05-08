@@ -124,21 +124,21 @@ const Page = () => {
               <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
+                  isLoaded={status === WalletStatus.Connected && isMounted}
+                  placeholder={<Skeleton className="h-5 w-[140px]" />}
+                >
+                  <Text className="text-sm text-primary/80 md:text-base">
+                    {twilightBTCBalanceString} BTC
+                  </Text>
+                </Resource>
+                <Resource
                   isLoaded={
                     status === WalletStatus.Connected &&
                     isMounted &&
                     finalPrice !== 0
                   }
-                  placeholder={
-                    <>
-                      <Skeleton className="h-5 w-[140px]" />
-                      <Skeleton className="mt-1 h-4 w-[80px]" />
-                    </>
-                  }
+                  placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
-                  <Text className="text-sm text-primary/80 md:text-base">
-                    {twilightBTCBalanceString} BTC
-                  </Text>
                   <Text className="text-xs text-primary-accent">
                     = {twilightBalanceUSDString} USD
                   </Text>
@@ -162,21 +162,21 @@ const Page = () => {
               <Text className="text-sm md:text-base">Trading</Text>
               <div className="min-w-[140px]">
                 <Resource
+                  isLoaded={status === WalletStatus.Connected && isMounted}
+                  placeholder={<Skeleton className="h-5 w-[140px]" />}
+                >
+                  <Text className="text-sm text-primary/80 md:text-base">
+                    {zkAccountBTCString} BTC
+                  </Text>
+                </Resource>
+                <Resource
                   isLoaded={
                     status === WalletStatus.Connected &&
                     isMounted &&
                     finalPrice !== 0
                   }
-                  placeholder={
-                    <>
-                      <Skeleton className="h-5 w-[140px]" />
-                      <Skeleton className="mt-1 h-4 w-[80px]" />
-                    </>
-                  }
+                  placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
-                  <Text className="text-sm text-primary/80 md:text-base">
-                    {zkAccountBTCString} BTC
-                  </Text>
                   <Text className="text-xs text-primary-accent">
                     = {zkAccountBTCUSDString} USD
                   </Text>
