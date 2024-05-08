@@ -107,10 +107,7 @@ export const createSessionStore = () => {
               twilightAddress: currentState.twilightAddress,
               setPrivateKey: currentState.setPrivateKey,
               privateKey: "",
-              price: {
-                ...currentState.price,
-                ...initialPriceSliceState,
-              },
+              price: currentState.price,
             },
             persistedState as AccountSlices
           );
