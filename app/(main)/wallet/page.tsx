@@ -23,6 +23,7 @@ import { useWallet } from "@cosmos-kit/react-lite";
 
 const Page = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
+  const btcPrice = useSessionStore((state) => state.price.btcPrice);
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
   const transactionHistory = useTwilightStore(
@@ -37,6 +38,8 @@ const Page = () => {
 
   const { feed } = usePriceFeed();
   const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
+
+  const finalPrice = currentPrice ? currentPrice : btcPrice;
 
   // note: incomplete
   function useGetTradingBTCBalance() {
@@ -64,7 +67,7 @@ const Page = () => {
     .toFixed(8);
 
   const twilightBalanceUSDString = Big(twilightBTCBalanceString)
-    .mul(currentPrice)
+    .mul(finalPrice)
     .toFixed(2);
 
   const zkAccountSatsBalance = zkAccounts.reduce((acc, account) => {
@@ -78,7 +81,7 @@ const Page = () => {
     .toFixed(8);
 
   const zkAccountBTCUSDString = Big(zkAccountBTCString)
-    .mul(currentPrice)
+    .mul(finalPrice)
     .toFixed(2);
 
   const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
@@ -88,7 +91,7 @@ const Page = () => {
     .toFixed(8);
 
   const totalBalanceUSDString = Big(totalBTCBalanceString)
-    .mul(currentPrice)
+    .mul(finalPrice)
     .toFixed(2);
 
   return (
