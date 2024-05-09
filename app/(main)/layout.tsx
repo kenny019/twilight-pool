@@ -30,13 +30,15 @@ export default function RootLayout({
                 href={
                   "https://github.com/twilight-project/testnets/blob/main/open-testnet-1/dockerize/readme.md"
                 }
+                target="_blank"
               >
                 running a node <ArrowUpRight className="h-3 w-3" />
               </Link>
-              , or{" "}
+              <span>, or </span>
               <Link
                 className="inline-flex whitespace-nowrap underline"
                 href={"/btc-deposit-flow"}
+                target="_blank"
               >
                 depositing and withdrawing BTC{" "}
                 <ArrowUpRight className="h-3 w-3" />
