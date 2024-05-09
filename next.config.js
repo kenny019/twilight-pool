@@ -12,6 +12,11 @@ const nextConfig = {
         destination: "/design",
         permanent: true,
       },
+      {
+        source: "/setup-guide",
+        destination: "/setup-guide.html",
+        permanent: false,
+      },
     ];
   },
   transpilePackages: ["lightweight-charts"],

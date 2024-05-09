@@ -52,11 +52,22 @@ const Header = () => {
               <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-6">
                 <Link
-                  href="https://docs.twilight.finance/"
+                  href={
+                    process.env.NODE_ENV === "development"
+                      ? "http://localhost:3000/setup-guide"
+                      : `https://${process.env.VERCEL_URL}/setup-guide`
+                  }
                   className="flex dark:text-gray-400 dark:hover:text-primary"
                   target="_blank"
                 >
-                  Docs <ArrowUpRight className="h-4 w-4" />
+                  Setup Guide <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="https://docs.twilight.org/"
+                  className="flex dark:text-gray-400 dark:hover:text-primary"
+                  target="_blank"
+                >
+                  Specs <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
