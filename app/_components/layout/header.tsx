@@ -35,6 +35,13 @@ const btcSubLinks = [
   },
 ] as const;
 
+const SetupGuideLinks = [
+  {
+    href: "/btc-deposit-flow",
+    title: "BTC Deposit",
+  },
+];
+
 const Header = () => {
   return (
     <nav className="border-b">
@@ -50,22 +57,15 @@ const Header = () => {
                 <MultiLink title="Funds" subLinks={btcSubLinks} />
               </div>
               <Separator className="mr-6 h-5" orientation="vertical" />
-              <div className="flex items-center space-x-6">
-                <Link
-                  href={
-                    process.env.NODE_ENV === "development"
-                      ? `http://${process.env.VERCEL_URL}/setup-guide`
-                      : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/setup-guide`
-                  }
-                  className="flex dark:text-gray-400 dark:hover:text-primary"
-                  target="_blank"
-                >
-                  Setup Guide <ArrowUpRight className="h-4 w-4" />
-                </Link>
+              <div className="flex items-center space-x-4">
+                <MultiLink
+                  target={"_blank"}
+                  title="Setup Guides"
+                  subLinks={SetupGuideLinks}
+                />
                 <Link
                   href="https://docs.twilight.org/"
                   className="flex dark:text-gray-400 dark:hover:text-primary"
-                  target="_blank"
                 >
                   Specs <ArrowUpRight className="h-4 w-4" />
                 </Link>

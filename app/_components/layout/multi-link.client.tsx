@@ -12,10 +12,11 @@ type SubLink = {
 type Props = {
   title: string;
   subLinks: Readonly<SubLink[]>;
+  target?: React.HTMLAttributeAnchorTarget;
 };
 
 // todo: repurpose for select menu
-const MultiLink = ({ title, subLinks }: Props) => {
+const MultiLink = ({ title, subLinks, target }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -50,6 +51,7 @@ const MultiLink = ({ title, subLinks }: Props) => {
             className="flex w-full rounded-md px-5 py-1 hover:bg-green hover:text-black"
             key={link.title}
             href={link.href}
+            target={target}
           >
             {link.title}
           </Link>

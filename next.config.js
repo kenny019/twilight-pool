@@ -13,8 +13,8 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: "/setup-guide",
-        destination: "/setup-guide.html",
+        source: "/btc-deposit-flow",
+        destination: "/guides/btc-deposit-flow.html",
         permanent: false,
       },
     ];
