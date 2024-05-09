@@ -54,8 +54,8 @@ const Header = () => {
                 <Link
                   href={
                     process.env.NODE_ENV === "development"
-                      ? "http://localhost:3000/setup-guide"
-                      : `https://${process.env.VERCEL_URL}/setup-guide`
+                      ? `http://${process.env.VERCEL_URL}/setup-guide`
+                      : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/setup-guide`
                   }
                   className="flex dark:text-gray-400 dark:hover:text-primary"
                   target="_blank"
