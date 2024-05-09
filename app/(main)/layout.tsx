@@ -4,6 +4,8 @@ import { instrumentSerif, inter, robotoMono } from "@/lib/fonts";
 import Header from "../_components/layout/header";
 import { baseMetadata } from "@/lib/metadata";
 import LayoutMountWrapper from "../_components/layout/layout-mount.client";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 export const metadata = baseMetadata;
 
@@ -20,10 +22,31 @@ export default function RootLayout({
     >
       <body>
         <Providers>
-          <Header />
-          <div className="flex flex-1 flex-col">
-            <LayoutMountWrapper>{children}</LayoutMountWrapper>
-          </div>
+          <>
+            <div className="block bg-orange p-2 text-center">
+              <span>Participate in the Twilight Open Testnet 1 by </span>
+              <Link
+                className="inline-flex whitespace-nowrap underline"
+                href={
+                  "https://github.com/twilight-project/testnets/blob/main/open-testnet-1/dockerize/readme.md"
+                }
+              >
+                running a node <ArrowUpRight className="h-3 w-3" />
+              </Link>
+              , or{" "}
+              <Link
+                className="inline-flex whitespace-nowrap underline"
+                href={"/btc-deposit-flow"}
+              >
+                depositing and withdrawing BTC{" "}
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <Header />
+            <div className="flex flex-1 flex-col">
+              <LayoutMountWrapper>{children}</LayoutMountWrapper>
+            </div>
+          </>
         </Providers>
       </body>
     </html>

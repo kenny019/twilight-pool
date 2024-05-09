@@ -12,22 +12,26 @@ type SubLink = {
 type Props = {
   title: string;
   subLinks: Readonly<SubLink[]>;
+  className?: string;
   target?: React.HTMLAttributeAnchorTarget;
 };
 
 // todo: repurpose for select menu
-const MultiLink = ({ title, subLinks, target }: Props) => {
+const MultiLink = ({ title, subLinks, className, target }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div
-      className="relative z-10 bg-background"
+      className={cn("relative z-10 bg-background", className)}
       data-state={isOpen ? "open" : "closed"}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
-        className="flex items-center justify-start gap-[6px] rounded-md rounded-b-none border border-b-0 border-transparent px-5 py-2 focus-visible:outline-none data-[state=open]:border-primary"
+        className={cn(
+          "flex items-center justify-start gap-[6px] rounded-md rounded-b-none border border-b-0 border-transparent px-5 py-2 focus-visible:outline-none data-[state=open]:border-primary",
+          className
+        )}
         data-state={isOpen ? "open" : "closed"}
         onClick={() => setIsOpen(!isOpen)}
       >

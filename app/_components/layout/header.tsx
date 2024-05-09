@@ -38,7 +38,11 @@ const btcSubLinks = [
 const SetupGuideLinks = [
   {
     href: "/btc-deposit-flow",
-    title: "BTC Deposit",
+    title: "BTC Deposit Flow",
+  },
+  {
+    href: "/dex-operations",
+    title: "DEX Operations",
   },
 ];
 
@@ -59,6 +63,7 @@ const Header = () => {
               <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-4">
                 <MultiLink
+                  className={"min-w-[180px]"}
                   target={"_blank"}
                   title="Setup Guides"
                   subLinks={SetupGuideLinks}

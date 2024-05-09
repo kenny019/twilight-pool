@@ -17,6 +17,11 @@ const nextConfig = {
         destination: "/guides/btc-deposit-flow.html",
         permanent: false,
       },
+      {
+        source: "/dex-operations",
+        destination: "/guides/dex-operations.html",
+        permanent: false,
+      },
     ];
   },
   transpilePackages: ["lightweight-charts"],

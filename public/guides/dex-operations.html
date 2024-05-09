@@ -1,0 +1,677 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>DEX Operations</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 3px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+    margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-block;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1.25em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(55, 53, 47, 1);
+}
+.highlight-gray {
+	color: rgba(120, 119, 116, 1);
+	fill: rgba(120, 119, 116, 1);
+}
+.highlight-brown {
+	color: rgba(159, 107, 83, 1);
+	fill: rgba(159, 107, 83, 1);
+}
+.highlight-orange {
+	color: rgba(217, 115, 13, 1);
+	fill: rgba(217, 115, 13, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 145, 47, 1);
+	fill: rgba(203, 145, 47, 1);
+}
+.highlight-teal {
+	color: rgba(68, 131, 97, 1);
+	fill: rgba(68, 131, 97, 1);
+}
+.highlight-blue {
+	color: rgba(51, 126, 169, 1);
+	fill: rgba(51, 126, 169, 1);
+}
+.highlight-purple {
+	color: rgba(144, 101, 176, 1);
+	fill: rgba(144, 101, 176, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(212, 76, 71, 1);
+	fill: rgba(212, 76, 71, 1);
+}
+.highlight-gray_background {
+	background: rgba(241, 241, 239, 1);
+}
+.highlight-brown_background {
+	background: rgba(244, 238, 238, 1);
+}
+.highlight-orange_background {
+	background: rgba(251, 236, 221, 1);
+}
+.highlight-yellow_background {
+	background: rgba(251, 243, 219, 1);
+}
+.highlight-teal_background {
+	background: rgba(237, 243, 236, 1);
+}
+.highlight-blue_background {
+	background: rgba(231, 243, 248, 1);
+}
+.highlight-purple_background {
+	background: rgba(244, 240, 247, 0.8);
+}
+.highlight-pink_background {
+	background: rgba(249, 238, 243, 0.8);
+}
+.highlight-red_background {
+	background: rgba(253, 235, 236, 1);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(120, 119, 116, 1);
+	fill: rgba(120, 119, 116, 1);
+}
+.block-color-brown {
+	color: rgba(159, 107, 83, 1);
+	fill: rgba(159, 107, 83, 1);
+}
+.block-color-orange {
+	color: rgba(217, 115, 13, 1);
+	fill: rgba(217, 115, 13, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 145, 47, 1);
+	fill: rgba(203, 145, 47, 1);
+}
+.block-color-teal {
+	color: rgba(68, 131, 97, 1);
+	fill: rgba(68, 131, 97, 1);
+}
+.block-color-blue {
+	color: rgba(51, 126, 169, 1);
+	fill: rgba(51, 126, 169, 1);
+}
+.block-color-purple {
+	color: rgba(144, 101, 176, 1);
+	fill: rgba(144, 101, 176, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(212, 76, 71, 1);
+	fill: rgba(212, 76, 71, 1);
+}
+.block-color-gray_background {
+	background: rgba(241, 241, 239, 1);
+}
+.block-color-brown_background {
+	background: rgba(244, 238, 238, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 236, 221, 1);
+}
+.block-color-yellow_background {
+	background: rgba(251, 243, 219, 1);
+}
+.block-color-teal_background {
+	background: rgba(237, 243, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(231, 243, 248, 1);
+}
+.block-color-purple_background {
+	background: rgba(244, 240, 247, 0.8);
+}
+.block-color-pink_background {
+	background: rgba(249, 238, 243, 0.8);
+}
+.block-color-red_background {
+	background: rgba(253, 235, 236, 1);
+}
+.select-value-color-uiBlue { background-color: rgba(35, 131, 226, .07); }
+.select-value-color-pink { background-color: rgba(245, 224, 233, 1); }
+.select-value-color-purple { background-color: rgba(232, 222, 238, 1); }
+.select-value-color-green { background-color: rgba(219, 237, 219, 1); }
+.select-value-color-gray { background-color: rgba(227, 226, 224, 1); }
+.select-value-color-transparentGray { background-color: rgba(227, 226, 224, 0); }
+.select-value-color-translucentGray { background-color: rgba(255, 255, 255, 0.0375); }
+.select-value-color-orange { background-color: rgba(250, 222, 201, 1); }
+.select-value-color-brown { background-color: rgba(238, 224, 218, 1); }
+.select-value-color-red { background-color: rgba(255, 226, 221, 1); }
+.select-value-color-yellow { background-color: rgba(253, 236, 200, 1); }
+.select-value-color-blue { background-color: rgba(211, 229, 239, 1); }
+.select-value-color-pageGlass { background-color: undefined; }
+.select-value-color-washGlass { background-color: undefined; }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="3f166ac1-af81-4508-a04b-dfb8d49eb731" class="page sans"><header><img class="page-cover-image" src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&amp;q=85&amp;fm=jpg&amp;crop=entropy&amp;cs=srgb" style="object-position:center 50%"/><h1 class="page-title">DEX Operations</h1><p class="page-description"></p></header><div class="page-body"><p id="40948148-5a0d-47eb-80f5-5241db6ea132" class=""><strong>Video Tutorial: </strong><a href="https://drive.google.com/file/d/1sp7TFu8ovId34boT6QxlMjyWqGVu_SpM/view">Watch Here</a></p><h2 id="a3c4fec8-1231-4b98-a65f-4ca9f7ed31e7" class="">Prerequisites</h2><hr id="96c81c41-8f89-4eb1-8862-cd99113fcb20"/><ol type="1" id="d39254e6-41c7-4b64-8501-6be7616c9f52" class="numbered-list" start="1"><li>Completed the BTC deposit guide.</li></ol><ol type="1" id="029bc2c8-fa70-4331-9349-2e840eb3758c" class="numbered-list" start="2"><li>Nyks tokens in your wallet.</li></ol><ol type="1" id="3ab43e85-6924-47e5-8353-0075dc03d3bc" class="numbered-list" start="3"><li>Deposited BTC into your Twilight wallet.</li></ol><h2 id="0924e590-ed2e-41df-8493-0f5e6b213f75" class="">Create Subaccounts</h2><hr id="278d09a9-3330-4a09-93f7-5eb97898e928"/><p id="80c20861-dd9e-4cef-99e2-304771ee1de2" class=""><em>Creating separate Subaccounts for each trade is highly recommended, as active orders render the account unusable. Note that exchange operations can also be conducted on the “Trading Account”.</em></p><ol type="1" id="38b45f75-f563-430f-90ad-79310b2da409" class="numbered-list" start="1"><li>Connect your Keplr wallet from the top right corner of the navigation bar.</li></ol><ol type="1" id="3e65edce-e978-4770-9934-d1f9108636c9" class="numbered-list" start="2"><li>Once connected, select “Manage Subaccounts” from the <em>Trading Account</em> dropdown menu.</li></ol><figure id="3fce65a8-e7b9-4c9e-96da-5a29fa3b8bef" class="image"><a href="images/Screenshot_2024-03-15_at_12.31.36_AM.png"><img style="width:1080px" src="images/Screenshot_2024-03-15_at_12.31.36_AM.png"/></a></figure><ol type="1" id="53089df9-b402-48d3-8b7d-84a4d8d6fd5c" class="numbered-list" start="3"><li>Hover and click on “Manage Subaccounts”<figure id="ff1202b5-75ac-4527-86cc-b8fe5651fa2c" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.32.29_AM.png"><img style="width:362px" src="images/Screenshot_2024-03-15_at_12.32.29_AM.png"/></a></figure></li></ol><ol type="1" id="09fabaf3-b059-41aa-87d4-e52fd5197aed" class="numbered-list" start="4"><li>Open the accounts dialog and click on “New” to create a new Subaccount.<figure id="1b785cc7-80f3-4c6f-a223-80a0181ca475" class="image"><a href="images/Screenshot_2024-03-15_at_12.32.52_AM.png"><img style="width:1058px" src="images/Screenshot_2024-03-15_at_12.32.52_AM.png"/></a></figure><ol type="1" id="c177bb00-0ad4-405a-8ad6-9455d6a2015d" class="numbered-list" start="5"><li>Enter a name for your Subaccount and click “Create.”</li></ol><figure id="055e8bfa-dedd-4077-a061-7786dab9be63" class="image"><a href="images/Screenshot_2024-03-15_at_12.33.29_AM.png"><img style="width:1050px" src="images/Screenshot_2024-03-15_at_12.33.29_AM.png"/></a></figure></li></ol><p id="86dc7dd5-1cc6-49ac-8da2-4a50c2643b4c" class="">Once the new Subaccount is created, you can now transfer BTC into it.</p><h2 id="cc586f28-5cd1-486b-b042-be9751cf815e" class="">Funding to Trading Transfer </h2><hr id="44e9f6bf-f965-487d-8d6d-b46453a73127"/><p id="51203fd2-8deb-4303-a6cd-80904f9c2d8e" class="">The Subaccount can now be funded with SATS using the Funding to Trading account transfer menu:<br/>1. Hover over the “Trade” menu on the navigation bar and click on “Wallet.” <br/></p><figure id="d781d301-4ca7-4501-bd1a-ddd99a094f29" class="image" style="text-align:center"><a href="images/b7526239-7497-4b51-a690-b29ecd56224d.png"><img style="width:720px" src="images/b7526239-7497-4b51-a690-b29ecd56224d.png"/></a></figure><ol type="1" id="4ccd83fb-2242-4cf8-9047-58d48dc76703" class="numbered-list" start="2"><li>Under “Funding”, click on the highlighted button to open the transfer dialog.<figure id="17b20781-947c-46e7-abe2-ff9f379ab284" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.36.50_AM.png"><img style="width:624px" src="images/Screenshot_2024-03-15_at_12.36.50_AM.png"/></a></figure></li></ol><ol type="1" id="0d25a9a4-04f7-4471-ad5e-8b036126976c" class="numbered-list" start="3"><li>In the transfer dialog, select the Subaccount you created from the “Account To” dropdown.<figure id="3448e9a4-a79d-4d0a-bd5d-7b720d8df240" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.37.34_AM.png"><img style="width:624px" src="images/Screenshot_2024-03-15_at_12.37.34_AM.png"/></a></figure></li></ol><ol type="1" id="8ab555bf-3c5b-42ca-93e9-2bb7be632c70" class="numbered-list" start="4"><li>Enter the appropriate amount of BTC to transfer into your Subaccount and click “Transfer.”</li></ol><ol type="1" id="d7cf2213-9d6a-4fee-ada9-97d05ff16c11" class="numbered-list" start="5"><li>Approve the request to confirm the transaction.</li></ol><figure id="4d54727c-9e5b-46f5-8bc4-1c76a4a7f776" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.38.58_AM.png"><img style="width:240px" src="images/Screenshot_2024-03-15_at_12.38.58_AM.png"/></a></figure><p id="9b364e3e-b7cb-46e7-9b1a-64825f95f11c" class="">After approval, the transferred amount will be reflected in your Subaccount.<div class="indented"><figure id="1adbf7fe-f57d-44d9-9913-132c08930744" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.40.52_AM.png"><img style="width:720px" src="images/Screenshot_2024-03-15_at_12.40.52_AM.png"/></a></figure></div></p><h2 id="31df4b8f-89f8-4cd1-b078-aed3d4f5fc80" class="">Opening a Market Order</h2><hr id="d0446c89-d930-4ff7-9ab2-fd0f34964b4a"/><ol type="1" id="79a49e47-6fde-445a-92ce-b8c355b5148a" class="numbered-list" start="1"><li>On the home page, select an account with a balance, such as &quot;Subaccount 1&quot;.</li></ol><figure id="55f5c3bd-e640-4a0e-984e-b844c62825b3" class="image"><a href="images/Screenshot_2024-03-15_at_12.42.51_AM.png"><img style="width:708px" src="images/Screenshot_2024-03-15_at_12.42.51_AM.png"/></a></figure><ol type="1" id="ab707591-2fb4-4f59-86aa-225f56f001fa" class="numbered-list" start="2"><li>Once your account is selected, place an order in the &quot;Orders&quot; panel, typically located on the right of the screen.</li></ol><figure id="6e0ac8f4-1299-4f09-bfe6-912e8233e578" class="image"><a href="images/Screenshot_2024-03-15_at_12.44.13_AM.png"><img style="width:708px" src="images/Screenshot_2024-03-15_at_12.44.13_AM.png"/></a></figure><ol type="1" id="e4dd5f31-2553-4379-b621-e734aa8e0066" class="numbered-list" start="3"><li>Enter the amount in BTC and set the leverage.</li></ol><figure id="4c86fd9c-795f-448c-a642-e47d58755d3f" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.45.22_AM.png"><img style="width:240px" src="images/Screenshot_2024-03-15_at_12.45.22_AM.png"/></a></figure><ol type="1" id="ee527c63-5433-497d-b000-6a8dc866bf5d" class="numbered-list" start="4"><li>Create an order by selecting Buy/Sell. A notification will appear at the bottom right if the order is successfully created.</li></ol><figure id="ba736f23-8f16-4444-9fd8-7fa0b4bbf553" class="image"><a href="images/Screenshot_2024-03-15_at_12.46.26_AM.png"><img style="width:844px" src="images/Screenshot_2024-03-15_at_12.46.26_AM.png"/></a></figure><ol type="1" id="cef7ba01-74d5-4568-a34d-a2fdce278279" class="numbered-list" start="5"><li>View your open orders in the &quot;Orderbook&quot; panel under &quot;My Trades&quot;.<figure id="c7125694-3a6a-4c8b-b632-3bccf4e05325" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.47.22_AM.png"><img style="width:336px" src="images/Screenshot_2024-03-15_at_12.47.22_AM.png"/></a></figure></li></ol><h2 id="92cf38e9-1c8b-42e6-98d6-6ec4759cae90" class="">Closing a Market Order</h2><hr id="eb3ec1b8-904c-42c5-a761-e5f56c0fb289"/><ol type="1" id="579d6688-2f39-4e04-bf11-453376d09311" class="numbered-list" start="1"><li>On the home page, in the &quot;Orderbook&quot; panel, select &quot;My Trades&quot;.</li></ol><figure id="4019f84d-c23a-42df-9725-5bf7d3efc842" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.47.22_AM.png"><img style="width:336px" src="images/Screenshot_2024-03-15_at_12.47.22_AM.png"/></a></figure><ol type="1" id="f361519b-232b-443b-894a-f037681fae4b" class="numbered-list" start="2"><li>Click on the &quot;Close&quot; button to close your order. A notification will confirm the successful closure of the order.<figure id="54eff935-5169-43ff-a68b-60536297c001" class="image" style="text-align:center"><a href="images/Screenshot_2024-03-15_at_12.49.25_AM.png"><img style="width:482px" src="images/Screenshot_2024-03-15_at_12.49.25_AM.png"/></a></figure></li></ol><h2 id="91a99d3e-907d-4493-a677-4a7e42514733" class="">Trading to Trading Transfer</h2><hr id="97ae4fcd-4ea1-4fbc-82ad-3f319bd2995f"/><p id="3498d4cd-c8c3-4bbb-b637-7c47005ad504" class="">This operation allows for the private transfer of BTC among Subaccounts:</p><ol type="1" id="6f1c2cd2-ef81-4b6b-8f06-ec5dc2f565b4" class="numbered-list" start="1"><li>Create a new Subaccount for the BTC to be transferred to.</li></ol><ol type="1" id="6e7492d7-cbeb-41f0-a566-7878616eee36" class="numbered-list" start="2"><li>Navigate to &quot;Wallet&quot; under the &quot;Trade&quot; menu on the navigation bar to access the wallet page. <figure id="0b5c1d62-16f2-47c4-9706-ba4db20e7fd7" class="image"><a href="images/Screenshot_2024-03-15_at_12.34.49_AM.png"><img style="width:2874px" src="images/Screenshot_2024-03-15_at_12.34.49_AM.png"/></a></figure></li></ol><ol type="1" id="c92dc334-57a4-4771-b1b3-40c039bb3414" class="numbered-list" start="3"><li>In the &quot;Trading&quot; section, click the button to open the transfer dialog.</li></ol><figure id="a0ec777f-eba6-467d-b72e-fa01fc46fb8f" class="image"><a href="images/Screenshot_2024-05-08_at_10.08.12_PM.png"><img style="width:504px" src="images/Screenshot_2024-05-08_at_10.08.12_PM.png"/></a></figure><ol type="1" id="cb167c78-4196-49cb-9590-0cfa3fd55f8c" class="numbered-list" start="4"><li>In the transfer dialog, select the source and destination Subaccounts and enter the amount to be transferred.<figure id="a54cf560-4039-43b9-9848-962dedaa02fe" class="image" style="text-align:center"><a href="images/Screenshot_2024-05-08_at_10.27.25_PM.jpg"><img style="width:498px" src="images/Screenshot_2024-05-08_at_10.27.25_PM.jpg"/></a></figure></li></ol><ol type="1" id="bc7b1e20-ee41-4933-81f1-087fa94010bb" class="numbered-list" start="5"><li>Confirm the transfer. The transferred amount will reflect in the destination Subaccount and transaction details will appear in &quot;Account History&quot;.</li></ol><figure id="041102cf-085f-403b-8364-04260d279db1" class="image"><a href="images/Screenshot_2024-05-09_at_12.49.36_AM.jpg"><img style="width:640px" src="images/Screenshot_2024-05-09_at_12.49.36_AM.jpg"/></a></figure><h2 id="b5aaa351-0a30-44b7-b315-92d57f921c43" class="">Trading to Funding Transfer</h2><hr id="bfa506df-f8ce-420e-a091-a7f74d2df4fe"/><p id="b158cafa-38af-4bf2-8a06-d2e9f1800748" class="">This function returns BTC from Subaccounts to the Funding Account:</p><ol type="1" id="2c93b59b-7b7b-41d3-a23a-76b39413817e" class="numbered-list" start="1"><li>Access the Wallet page.</li></ol><ol type="1" id="62cebacc-b269-4262-8348-72ceae38db37" class="numbered-list" start="2"><li>In the &quot;Trading&quot; section, click the button to open the transfer dialog.</li></ol><ol type="1" id="f2ab6e65-fbc1-4c90-953e-46fc3c6c978b" class="numbered-list" start="3"><li>In the dialog, select &quot;Trading to Funding&quot;, choose the relevant Subaccount, and click on &quot;Transfer&quot;.</li></ol><ol type="1" id="28079b16-8377-4737-8105-3201a28826f8" class="numbered-list" start="4"><li>The BTC will appear in the Funding account upon successful transfer.</li></ol></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>
