@@ -44,6 +44,10 @@ const SetupGuideLinks = [
     href: "/dex-operations",
     title: "DEX Operations",
   },
+  {
+    href: "/lend-to-twilight-pool",
+    title: "Lend To Twilight Pool",
+  },
 ];
 
 const Header = () => {
@@ -63,7 +67,7 @@ const Header = () => {
               <Separator className="mr-6 h-5" orientation="vertical" />
               <div className="flex items-center space-x-4">
                 <MultiLink
-                  className={"min-w-[180px]"}
+                  className={"min-w-[200px] justify-between"}
                   target={"_blank"}
                   title="Setup Guides"
                   subLinks={SetupGuideLinks}

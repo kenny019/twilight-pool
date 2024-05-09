@@ -22,6 +22,11 @@ const nextConfig = {
         destination: "/guides/dex-operations.html",
         permanent: false,
       },
+      {
+        source: "/lend-to-twilight-pool",
+        destination: "/guides/lend-to-twilight-pool.html",
+        permanent: false,
+      },
     ];
   },
   transpilePackages: ["lightweight-charts"],
