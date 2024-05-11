@@ -122,6 +122,19 @@ async function createTraderOrder({
 
   const zkos = await import("@kenny019/zkos-wasm");
 
+  console.log("createTraderOrder Inputs", {
+    inputString,
+    programContract,
+    signature,
+    scalar,
+    value: BigInt(value),
+    positionType,
+    orderType,
+    leverage,
+    entrpyPrice: entryPrice || 0,
+    timebounds,
+  });
+
   return zkos.createZkOSTraderOrder(
     inputString,
     programContract,

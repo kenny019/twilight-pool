@@ -79,6 +79,10 @@ const OrderLimitForm = () => {
         } BTC`;
       }
 
+      if (orderPrice <= 0) {
+        throw `Unable to create limit order with price lower than 0`;
+      }
+
       const leverage = parseInt(leverageRef.current?.value || "1");
       const positionType = action === "sell" ? "SHORT" : "LONG";
 
@@ -96,6 +100,7 @@ const OrderLimitForm = () => {
       setIsSubmitting(false);
 
       if (!success || !msg) {
+        console.error("limit msg error");
         throw "Error with creating limit order";
       }
 
@@ -106,7 +111,8 @@ const OrderLimitForm = () => {
 
       const data = await sendTradeOrder(msg);
 
-      if (!data.result || data.result.id_key) {
+      if (!data.result || !data.result.id_key) {
+        console.error("sendTradeOrderResult", data);
         throw "Error with creating limit order";
       }
 
@@ -144,6 +150,8 @@ const OrderLimitForm = () => {
       }
 
       const orderData = transactionHashRes.data.result[0];
+
+      console.log("success limit order");
 
       toast({
         title: "Success",
