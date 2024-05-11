@@ -237,8 +237,6 @@ const OrderLimitForm = () => {
                       return;
                     }
 
-                    setIsSubmitting(true);
-
                     btcAmountRef.current.value = new BTC(
                       "sats",
                       Big(currentZkAccount.value).mul(value).div(100)

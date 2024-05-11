@@ -11,7 +11,7 @@ const InputComponentPage = () => {
         <Text asChild>
           <label htmlFor="number-input">Number input</label>
         </Text>
-        <NumberInput id="number-input" />
+        {/* <NumberInput /> */}
       </div>
     </div>
   );
