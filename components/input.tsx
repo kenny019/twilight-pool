@@ -27,6 +27,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = "Input";
 
 interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  inputValue: number;
+  setInputValue: (val: number) => void;
   step?: number;
   minValue?: number;
   maxValue?: number;
@@ -38,11 +40,11 @@ const NumberInput = ({
   defaultValue,
   minValue = 0,
   maxValue = Number.MAX_SAFE_INTEGER,
+  inputValue,
+  setInputValue,
   ...props
 }: NumberInputProps) => {
   const id = useId();
-
-  const [inputValue, setInputValue] = useState(0);
 
   const inputRef = useCallback(
     (node: HTMLInputElement) => {

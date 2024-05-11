@@ -22,7 +22,6 @@ import React, { useRef, useState } from "react";
 
 const OrderMarketForm = () => {
   const { width } = useGrid();
-  // todo: fix bug with ref getting reset on window size change
 
   const privateKey = useSessionStore((state) => state.privateKey);
 
@@ -87,13 +86,14 @@ const OrderMarketForm = () => {
         value: satsValue,
       });
 
+      setIsSubmitting(false);
+
       if (!success || !msg) {
         toast({
           variant: "error",
           title: "Unable to submit trade order",
           description: "An error has occurred, try again later.",
         });
-        setIsSubmitting(false);
         return;
       }
 
