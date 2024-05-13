@@ -30,7 +30,7 @@ export const orderbookColumns: ColumnDef<DisplayLimitOrderData>[] = [
     accessorKey: "total",
     header: "Total",
     accessorFn: (row) => {
-      return Intl.NumberFormat(navigator.languages).format(row.total);
+      return Intl.NumberFormat(navigator.language).format(row.total);
     },
   },
 ];
