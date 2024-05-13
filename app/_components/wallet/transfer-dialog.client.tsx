@@ -186,6 +186,7 @@ const TransferDialog = ({
 
         const stargateClient = await chainWallet.getSigningStargateClient();
 
+        console.log("funding transfer signature", privateKey);
         const { account: newTradingAccount, accountHex: newTradingAccountHex } =
           await createZkAccountWithBalance({
             tag: depositZkAccount.tag,
