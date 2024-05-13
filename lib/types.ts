@@ -81,3 +81,20 @@ export enum CandleInterval {
   ONE_DAY = "ONE_DAY",
   ONE_DAY_CHANGE = "ONE_DAY_CHANGE",
 }
+
+export type LimitOrderData = {
+  id: string;
+  positionsize: number;
+  price: number;
+};
+
+export type DisplayLimitOrderData = {
+  price: number;
+  size: number;
+  total: number;
+};
+
+export type OpenLimitOrderData = {
+  ask: LimitOrderData[];
+  bid: LimitOrderData[];
+};

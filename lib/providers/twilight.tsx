@@ -6,10 +6,10 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { useLocalStorage } from "../hooks";
 import { useWallet } from "@cosmos-kit/react-lite";
 import useGetRegisteredBTCAddress from "../hooks/useGetRegisteredBtcAddress";
 import { createTwilightStore } from "../state/store";
+import useLocalStorage from "../hooks/useLocalStorage";
 
 interface UseTwilightProps {
   hasInit: string;

@@ -1,6 +1,7 @@
 import wfetch from "../http";
 import {
   CandleInterval,
+  OpenLimitOrderData,
   TwilightApiResponse,
   twilightRegistedBtcAddressStruct,
 } from "../types";
@@ -156,6 +157,24 @@ async function getCandleData({
   return response;
 }
 
+async function getOpenLimitOrders() {
+  const response = await wfetch(priceURL, {
+    next: {
+      revalidate: 0,
+    },
+  })
+    .post({
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "open_limit_orders",
+        id: 123,
+      }),
+    })
+    .json<TwilightApiResponse<OpenLimitOrderData>>();
+
+  return response;
+}
+
 type FundingData = {
   id: number;
   price: string;
@@ -224,4 +243,5 @@ export {
   queryTransactionHashes,
   getCandleData,
   getFundingRate,
+  getOpenLimitOrders,
 };

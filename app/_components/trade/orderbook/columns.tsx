@@ -1,6 +1,9 @@
 "use client";
 
+import BTC from "@/lib/twilight/denoms";
+import { DisplayLimitOrderData } from "@/lib/types";
 import { ColumnDef } from "@tanstack/react-table";
+import Big from "big.js";
 
 export type Order = {
   price: number;
@@ -8,45 +11,26 @@ export type Order = {
   total: number;
 };
 
-export const orderAsks: Order[] = [
-  // {
-  //   price: 37206,
-  //   size: 1,
-  //   total: 37206,
-  // },
-  // {
-  //   price: 37185,
-  //   size: 0.30105,
-  //   total: 11194,
-  // },
-  // {
-  //   price: 37170,
-  //   size: 8.37,
-  //   total: 311112.9,
-  // },
-  // {
-  //   price: 37191,
-  //   size: 0.18,
-  //   total: 6694.38,
-  // },
-  // {
-  //   price: 37201,
-  //   size: 11.37,
-  //   total: 422975.37,
-  // },
-];
-
-export const orderbookColumns: ColumnDef<Order>[] = [
+export const orderbookColumns: ColumnDef<DisplayLimitOrderData>[] = [
   {
     accessorKey: "price",
     header: "Price (USD)",
+    cell: (col) => {
+      return (col.getValue() as number).toFixed(2);
+    },
   },
   {
     accessorKey: "size",
     header: "Size (BTC)",
+    accessorFn: (row) => {
+      return new BTC("sats", Big(row.size)).convert("BTC").toFixed(5);
+    },
   },
   {
     accessorKey: "total",
     header: "Total",
+    accessorFn: (row) => {
+      return Intl.NumberFormat(navigator.languages).format(row.total);
+    },
   },
 ];

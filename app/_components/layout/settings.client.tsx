@@ -19,6 +19,9 @@ import {
 import { ThemeColors, useTwilight } from "@/lib/providers/twilight";
 import cn from "@/lib/cn";
 import { useTheme } from "next-themes";
+import Button from "@/components/button";
+import { useToast } from "@/lib/hooks/useToast";
+import { useSessionStore } from "@/lib/providers/session";
 
 // workaround for tailwind css
 enum ColorBG {
@@ -31,6 +34,9 @@ const Settings = () => {
   // todo: refactor into seperate files
   const { colorTheme, setColorTheme } = useTwilight();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+
+  const privateKey = useSessionStore((state) => state.privateKey);
 
   return (
     <Dialog>
@@ -90,6 +96,29 @@ const Settings = () => {
                 </DropdownContent>
               </DropdownMenu>
             </div>
+          </div>
+          <div className="space-y-1">
+            <Button
+              onClick={() => {
+                if (!privateKey) {
+                  toast({
+                    title: "Error getting seed",
+                    description:
+                      "Wallet must be connected to export seed to clipboard",
+                    variant: "error",
+                  });
+                  return;
+                }
+
+                navigator.clipboard.writeText(privateKey);
+                toast({
+                  title: "Copied to clipboard",
+                  description: "Seed has been exported to clipboard",
+                });
+              }}
+            >
+              Export Seed to Clipboard
+            </Button>
           </div>
         </div>
       </DialogContent>

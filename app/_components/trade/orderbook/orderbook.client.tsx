@@ -1,7 +1,8 @@
+"use client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { OrderBookDataTable } from "./data-table";
-import { orderAsks, orderbookColumns } from "./columns";
+import { orderbookColumns } from "./columns";
 import OrderbookSplitIcon from "@/components/icons/orderbook-split";
 import OrderbookBidsIcon from "@/components/icons/orderbook-bids";
 import OrderbookAsksIcon from "@/components/icons/orderbook-asks";
@@ -15,9 +16,28 @@ import {
 import { ChevronDown } from "lucide-react";
 import cn from "@/lib/cn";
 import OrderMyTrades from "./my-trades.client";
+import { getOpenLimitOrders } from "@/lib/api/rest";
+import { DisplayLimitOrderData, LimitOrderData } from "@/lib/types";
+import Big from "big.js";
+import BTC from "@/lib/twilight/denoms";
 
 type OrderbookTabs = "market" | "trades";
 type OrderbookLayout = "split" | "asks" | "bids";
+
+function convertDisplayLimitData(
+  limitData: LimitOrderData
+): DisplayLimitOrderData {
+  const size = Big(limitData.positionsize).div(Big(limitData.price)).toNumber();
+  const total = new BTC("sats", Big(size))
+    .convert("BTC")
+    .mul(Big(limitData.price))
+    .toNumber();
+  return {
+    price: limitData.price,
+    total,
+    size,
+  };
+}
 
 const Orderbook = () => {
   const [currentTab, setCurrentTab] = useState<OrderbookTabs>("market");
@@ -25,6 +45,34 @@ const Orderbook = () => {
     useState<OrderbookLayout>("split");
 
   const [currentOrderbookPage, setCurrentOrderbookPage] = useState(1);
+  const [asksData, setAsksData] = useState<DisplayLimitOrderData[]>([]);
+  const [bidsData, setBidsData] = useState<DisplayLimitOrderData[]>([]);
+
+  function useGetOrderbookData() {
+    useEffect(() => {
+      async function getOrderbookData() {
+        const result = await getOpenLimitOrders();
+
+        if (!result.success) {
+          console.error(result.error);
+          return;
+        }
+
+        setBidsData(
+          result.data.result.bid.map((limitData) =>
+            convertDisplayLimitData(limitData)
+          )
+        );
+        setAsksData(
+          result.data.result.ask.map((limitData) =>
+            convertDisplayLimitData(limitData)
+          )
+        );
+      }
+
+      getOrderbookData();
+    }, []);
+  }
 
   function OrderbookLayouts() {
     switch (orderbookLayout) {
@@ -33,13 +81,13 @@ const Orderbook = () => {
           <>
             <OrderBookDataTable
               columns={orderbookColumns}
-              data={orderAsks}
+              data={asksData}
               type="asks"
               header
             />
             <OrderBookDataTable
               columns={orderbookColumns}
-              data={orderAsks}
+              data={bidsData}
               type="bids"
             />
           </>
@@ -49,7 +97,7 @@ const Orderbook = () => {
         return (
           <OrderBookDataTable
             columns={orderbookColumns}
-            data={orderAsks}
+            data={asksData}
             type="asks"
             header
           />
@@ -59,7 +107,7 @@ const Orderbook = () => {
         return (
           <OrderBookDataTable
             columns={orderbookColumns}
-            data={orderAsks}
+            data={bidsData}
             type="bids"
             header
           />
@@ -97,7 +145,7 @@ const Orderbook = () => {
                 </DropdownTrigger>
                 <DropdownContent className="mt-2 min-w-[48px] before:mt-[7px]">
                   <DropdownGroup>
-                    {Array(5)
+                    {Array(1)
                       .fill(0)
                       .map((_, index) => (
                         <DropdownItem
@@ -126,6 +174,8 @@ const Orderbook = () => {
       }
     }
   }
+
+  useGetOrderbookData();
 
   return (
     <div className="flex h-full w-full flex-col space-y-2 overflow-auto py-2">
