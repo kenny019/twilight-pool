@@ -114,7 +114,10 @@ export const SessionStoreProvider = ({
 
           storeRef.current.setState({
             ...storeRef.current.getInitialState(),
-            price: oldPrice,
+            price:
+              oldPrice.btcPrice === 0
+                ? storeRef.current.getState().price
+                : oldPrice,
             privateKey: newPrivateKey as string,
           });
         }
