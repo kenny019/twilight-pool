@@ -35,39 +35,35 @@ export const SessionStoreProvider = ({
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
+  async function generateTwilightPrivateKey() {
+    if (status !== WalletStatus.Connected || !storeRef.current || !isHydrated)
+      return;
+
+    const chainWallet = mainWallet?.getChainWallet("nyks");
+    const existingPrivateKey = storeRef.current.getState().privateKey;
+
+    if (!chainWallet || existingPrivateKey) {
+      return;
+    }
+
+    const twilightAddress = chainWallet.address;
+
+    if (!twilightAddress) {
+      return;
+    }
+
+    const [_, newPrivateKey] = await generateSignMessage(
+      chainWallet,
+      twilightAddress,
+      "Hello Twilight!"
+    );
+
+    storeRef.current.getState().setPrivateKey(newPrivateKey as string);
+    setIsHydrated(false);
+  }
+
   function useGenerateTwilightPrivateKey() {
     useEffect(() => {
-      async function generateTwilightPrivateKey() {
-        if (
-          status !== WalletStatus.Connected ||
-          !storeRef.current ||
-          !isHydrated
-        )
-          return;
-
-        const chainWallet = mainWallet?.getChainWallet("nyks");
-        const existingPrivateKey = storeRef.current.getState().privateKey;
-
-        if (!chainWallet || existingPrivateKey) {
-          return;
-        }
-
-        const twilightAddress = chainWallet.address;
-
-        if (!twilightAddress) {
-          return;
-        }
-
-        const [_, newPrivateKey] = await generateSignMessage(
-          chainWallet,
-          twilightAddress,
-          "Hello Twilight!"
-        );
-
-        storeRef.current.getState().setPrivateKey(newPrivateKey as string);
-        setIsHydrated(false);
-      }
-
       generateTwilightPrivateKey();
     }, [isHydrated]);
   }
@@ -95,6 +91,8 @@ export const SessionStoreProvider = ({
 
         const chainAddress = chainWallet.address;
 
+        if (!chainAddress) return;
+
         storeRef.current.persist.setOptions({
           name: `twilight-session-${chainAddress}`,
         });
@@ -107,9 +105,17 @@ export const SessionStoreProvider = ({
 
         if (oldState === newState) {
           const oldPrice = storeRef.current.getState().price;
+
+          const [_, newPrivateKey] = await generateSignMessage(
+            chainWallet,
+            chainAddress,
+            "Hello Twilight!"
+          );
+
           storeRef.current.setState({
             ...storeRef.current.getInitialState(),
             price: oldPrice,
+            privateKey: newPrivateKey as string,
           });
         }
 

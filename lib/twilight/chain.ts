@@ -8,13 +8,18 @@ async function generateSignMessage(
   const client = chainWallet.client;
   if (!client || !client.signArbitrary) return [];
 
-  const { pub_key, signature } = await client.signArbitrary(
-    "nyks",
-    twAddress,
-    message
-  );
+  try {
+    const { pub_key, signature } = await client.signArbitrary(
+      "nyks",
+      twAddress,
+      message
+    );
 
-  return [pub_key, signature];
+    return [pub_key, signature];
+  } catch (err) {
+    console.error(err);
+    return ["", ""];
+  }
 }
 
 async function getBlockHeight(chainWallet: ChainWalletBase) {
