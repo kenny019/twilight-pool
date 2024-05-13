@@ -119,7 +119,7 @@ const SubaccountListView = () => {
           </div>
           <Separator className="mt-2" />
         </div>
-        <div className="flex max-h-[70%] w-full flex-col space-y-2 overflow-y-auto">
+        <div className="flex max-h-[200px] w-full flex-col space-y-2 overflow-y-auto">
           {/* todo: add pagination */}
           {zkAccounts.map((subAccount, index) => {
             if (index === ZK_ACCOUNT_INDEX.MAIN) {

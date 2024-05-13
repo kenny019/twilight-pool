@@ -87,7 +87,7 @@ const SubaccountSelect = () => {
             <p>{getSelectMenuText(selectedZkAccount, zkAccounts)}</p>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[200px] overflow-auto">
           {zkAccounts.length < 1 ? (
             // todo: should block adding subaccounts into current value
             <>
