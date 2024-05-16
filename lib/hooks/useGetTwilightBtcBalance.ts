@@ -3,10 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 export default function useGetTwilightBTCBalance() {
   const [twilightSats, setTwilightSats] = useState(0);
-
-  const sats = useMemo(() => {
-    return twilightSats;
-  }, [twilightSats]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { status, mainWallet } = useWallet();
 
@@ -29,11 +26,13 @@ export default function useGetTwilightBTCBalance() {
       }
 
       try {
+        setIsLoading(true);
         const stargateClient = await chainWallet.getSigningStargateClient();
         const satsBalance = await stargateClient.getBalance(
           twilightAddress,
           "sats"
         );
+        setIsLoading(false);
 
         const { amount } = satsBalance;
 
@@ -50,10 +49,11 @@ export default function useGetTwilightBTCBalance() {
     }, 15000);
 
     return () => clearInterval(intervalId);
-  }, [status]);
+  }, [status, mainWallet]);
 
   return {
-    twilightSats: sats,
+    twilightSats,
     setTwilightSats,
+    isLoading,
   };
 }

@@ -60,7 +60,8 @@ const Page = () => {
     }, [privateKey]);
   }
 
-  const { twilightSats } = useGetTwilightBTCBalance();
+  const { twilightSats, isLoading: twilightSatsLoading } =
+    useGetTwilightBTCBalance();
 
   const { status } = useWallet();
   useRedirectUnconnected();
@@ -124,7 +125,9 @@ const Page = () => {
               <Text className="text-sm md:text-base">Funding</Text>
               <div className="min-w-[140px]">
                 <Resource
-                  isLoaded={status === WalletStatus.Connected && isMounted}
+                  isLoaded={
+                    status === WalletStatus.Connected && !twilightSatsLoading
+                  }
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
                 >
                   <Text className="text-sm text-primary/80 md:text-base">
@@ -134,8 +137,8 @@ const Page = () => {
                 <Resource
                   isLoaded={
                     status === WalletStatus.Connected &&
-                    isMounted &&
-                    finalPrice !== 0
+                    finalPrice !== 0 &&
+                    !twilightSatsLoading
                   }
                   placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
@@ -183,14 +186,6 @@ const Page = () => {
                 </Resource>
               </div>
               <div className="flex flex-row space-x-2">
-                {/* <Button variant="ui" size="icon" disabled={twilightSats < 1}>
-                  <ArrowDownToLine className="h-4 w-4" />
-                </Button>
-
-                <Button variant="ui" size="icon" disabled={twilightSats < 1}>
-                  <Wallet className="h-4 w-4" />
-                </Button> */}
-
                 <TransferDialog
                   tradingAccountAddress={tradingAccountAddress}
                   defaultAccount="trading"

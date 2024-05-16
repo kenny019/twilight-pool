@@ -7,6 +7,10 @@ import { createSessionStore } from "../state/store";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { WalletStatus } from "@cosmos-kit/core";
 import { generateSignMessage } from "../twilight/chain";
+import useIsMounted from "../hooks/useIsMounted";
+import dayjs from "dayjs";
+import { CandleInterval } from "../types";
+import { getCandleData } from "../api/rest";
 
 export const sessionStoreContext =
   createContext<StoreApi<SessionSlices> | null>(null);
@@ -34,6 +38,7 @@ export const SessionStoreProvider = ({
   const [isHydrated, setIsHydrated] = useState(false);
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
+  const isMounted = useIsMounted();
 
   async function generateTwilightPrivateKey() {
     if (status !== WalletStatus.Connected || !storeRef.current || !isHydrated)
@@ -129,6 +134,37 @@ export const SessionStoreProvider = ({
     }, [chainWallet?.address]);
   }
 
+  function useOnMount() {
+    useEffect(() => {
+      if (!isMounted) return;
+
+      const hasPrice = storeRef.current?.getState().price.btcPrice;
+
+      if (!!hasPrice) return;
+
+      async function setBtcPrice() {
+        const candleDataResponse = await getCandleData({
+          since: dayjs().subtract(1, "m").toISOString(),
+          interval: CandleInterval.ONE_MINUTE,
+          limit: 1,
+        });
+
+        const candleData = candleDataResponse.success
+          ? candleDataResponse.data.result
+          : [];
+
+        storeRef.current
+          ?.getState()
+          .price.setPrice(
+            parseFloat(candleData[candleData.length - 1].close) || 0
+          );
+      }
+
+      setBtcPrice();
+    }, [isMounted]);
+  }
+
+  useOnMount();
   useGenerateTwilightPrivateKey();
   useRehydrateSessionStore();
 

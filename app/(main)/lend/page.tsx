@@ -8,15 +8,13 @@ import { Separator } from "@/components/seperator";
 import Skeleton from "@/components/skeleton";
 import { Text } from "@/components/typography";
 import { executeLendOrder } from "@/lib/api/client";
-import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
+import { queryTransactionHashes } from "@/lib/api/rest";
 import { retry } from "@/lib/helpers";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
-import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
-import { useTwilight } from "@/lib/providers/twilight";
 import BTC from "@/lib/twilight/denoms";
 import { executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
 import { WalletStatus } from "@cosmos-kit/core";
@@ -29,11 +27,11 @@ const Page = () => {
   useRedirectUnconnected();
 
   const { toast } = useToast();
-  const { feed } = usePriceFeed();
-  const currentPrice = feed.length > 1 ? feed[feed.length - 1] : 0;
 
-  const { twilightSats } = useGetTwilightBTCBalance();
+  const { twilightSats, isLoading: twilightSatsLoading } =
+    useGetTwilightBTCBalance();
 
+  const currentPrice = useSessionStore((state) => state.price.btcPrice);
   const privateKey = useSessionStore((state) => state.privateKey);
   const zKAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
@@ -200,7 +198,9 @@ const Page = () => {
               </div>
               <div className="w-[150px]">
                 <Resource
-                  isLoaded={status === WalletStatus.Connected}
+                  isLoaded={
+                    status === WalletStatus.Connected && !twilightSatsLoading
+                  }
                   placeholder={
                     <>
                       <Skeleton className="h-6 w-full" />

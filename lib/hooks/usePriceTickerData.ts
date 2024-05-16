@@ -37,29 +37,24 @@ export default function usePriceTickerData(currentPrice: number) {
     }
   );
 
-  async function updateCandleData() {
-    const yesterday = dayjs().subtract(2, "d").toISOString();
-
+  async function fetchCandleData(date: string) {
     try {
       const candleResponse = await getCandleData({
-        since: yesterday,
+        since: date,
         interval: CandleInterval.ONE_DAY_CHANGE,
         limit: 1,
         offset: 0,
       });
 
       if (!candleResponse.success || candleResponse.error) {
-        console.error(candleResponse);
+        console.error("error getting candle data >>", candleResponse);
         return;
       }
       const { result } = candleResponse.data;
 
       const candleData = result[0];
 
-      setCandleYesterdayData(candleData);
-      if (!hasInit) {
-        setHasInit(true);
-      }
+      return candleData;
     } catch (err) {
       console.error(err);
     }
@@ -73,10 +68,34 @@ export default function usePriceTickerData(currentPrice: number) {
     setShouldFetchFunding(true);
   }, [fundingTickerData]);
 
+  const updateCandleData = useCallback(async () => {
+    const yesterday = dayjs().subtract(2, "d").toISOString();
+    const today = dayjs().subtract(1, "d").toISOString();
+
+    const [yesterdayCandleRes, todayCandleRes] = await Promise.all([
+      fetchCandleData(yesterday),
+      fetchCandleData(today),
+    ]);
+
+    if (!yesterdayCandleRes || !todayCandleRes) return;
+
+    const latestCandledata: CandleData = {
+      ...todayCandleRes,
+      close: yesterdayCandleRes.close,
+    };
+
+    setCandleYesterdayData(latestCandledata);
+
+    if (hasInit) return;
+
+    setHasInit(true);
+  }, [hasInit, setHasInit, setCandleYesterdayData]);
+
   useEffect(() => {
     if (candleYesterdayData) return;
+
     updateCandleData();
-  }, [candleYesterdayData]);
+  }, [candleYesterdayData, hasInit, setHasInit, updateCandleData]);
 
   useInterval(() => {
     updateCandleData();
