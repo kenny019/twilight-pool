@@ -17,13 +17,7 @@ import {
 } from "@/components/select";
 import { Text } from "@/components/typography";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
-import {
-  createInputCoinFromOutput,
-  createTradingTxSingle,
-  utxoStringToHex,
-  verifyAccount,
-  verifyQuisQuisTransaction,
-} from "@/lib/twilight/zkos";
+import { verifyAccount, verifyQuisQuisTransaction } from "@/lib/twilight/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import React, { useEffect, useRef, useState } from "react";
@@ -37,11 +31,7 @@ import {
   createZkAccountWithBalance,
   createZkBurnTx,
 } from "@/lib/twilight/zk";
-import {
-  broadcastTradingTx,
-  queryUtxoForAddress,
-  queryUtxoForOutput,
-} from "@/lib/api/zkos";
+import { broadcastTradingTx } from "@/lib/api/zkos";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import Link from "next/link";
@@ -121,22 +111,6 @@ const TransferDialog = ({
         .toString();
     }
   }, [toAccountValue, fromAccountValue, selectedTradingAccountFrom]);
-
-  async function updateTransferredAccount(newAccountData: ZkAccount) {
-    switch (fromAccountValue) {
-      case "funding": {
-        const chainWallet = mainWallet?.getChainWallet("nyks");
-
-        if (!chainWallet) return;
-
-        const twilightAddress = chainWallet.address;
-
-        if (!twilightAddress) return;
-      }
-      default: {
-      }
-    }
-  }
 
   async function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

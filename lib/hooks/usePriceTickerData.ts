@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CandleData, getCandleData, getFundingRate } from "../api/rest";
 import { CandleInterval } from "../types";
 import { useInterval } from "./useInterval";
+import dayjs from "dayjs";
 
 type PriceTickerData = {
   high: number;
@@ -37,10 +38,7 @@ export default function usePriceTickerData(currentPrice: number) {
   );
 
   async function updateCandleData() {
-    const date = new Date();
-    date.setDate(date.getDate() - 1);
-
-    const yesterday = date.toISOString();
+    const yesterday = dayjs().subtract(2, "d").toISOString();
 
     try {
       const candleResponse = await getCandleData({

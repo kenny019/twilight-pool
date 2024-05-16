@@ -111,6 +111,7 @@ const Settings = () => {
                 }
 
                 navigator.clipboard.writeText(privateKey);
+
                 toast({
                   title: "Copied to clipboard",
                   description: "Seed has been exported to clipboard",
