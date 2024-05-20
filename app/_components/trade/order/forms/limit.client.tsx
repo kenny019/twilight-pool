@@ -122,11 +122,14 @@ const OrderLimitForm = () => {
         if (txHashResult.result) {
           const transactionHashes = txHashResult.result;
 
-          let txResult = true;
+          let txResult = false;
+
           transactionHashes.forEach((result) => {
             if (result.tx_hash.includes("Error")) {
-              return false;
+              return;
             }
+
+            txResult = !!result.tx_hash && result.order_status === "PENDING";
           });
 
           return txResult;
@@ -150,7 +153,10 @@ const OrderLimitForm = () => {
       }
 
       const orderData = transactionHashRes.data.result[0];
-      console.log(orderData);
+
+      if (!orderData) throw "Unable to get tx hash of order";
+
+      console.log("orderData", orderData);
 
       addTrade({
         accountAddress: currentZkAccount.address,

@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 
 import BTC from "@/lib/twilight/denoms";
-import { DisplayLimitOrderData } from "@/lib/types";
 import {
   ColumnDef,
   flexRender,
