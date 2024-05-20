@@ -102,18 +102,18 @@ const Orderbook = () => {
               Market
             </TabsTrigger>
             <TabsTrigger
-              onClick={() => setCurrentTab("recent")}
-              value={"recent"}
-              variant="underline"
-            >
-              Recent
-            </TabsTrigger>
-            <TabsTrigger
               onClick={() => setCurrentTab("trades")}
               value={"mine"}
               variant="underline"
             >
               My Trades
+            </TabsTrigger>
+            <TabsTrigger
+              onClick={() => setCurrentTab("recent")}
+              value={"recent"}
+              variant="underline"
+            >
+              Recent
             </TabsTrigger>
           </TabsList>
         </Tabs>
