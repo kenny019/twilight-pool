@@ -80,9 +80,7 @@ export function OrderBookDataTable<TData, TValue>({
               </tr>
             ))
           ) : (
-            <tr>
-              <td colSpan={columns.length} className="h-24 text-center"></td>
-            </tr>
+            <></>
           )}
         </tbody>
       </table>

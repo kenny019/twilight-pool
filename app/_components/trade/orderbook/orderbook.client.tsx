@@ -13,11 +13,10 @@ import {
 } from "@/components/dropdown";
 import { ChevronDown } from "lucide-react";
 import cn from "@/lib/cn";
-import OrderMyTrades from "./my-trades.client";
 import OrderRecentTrades from "./recent-trades.client";
 import { OrderbookLayouts } from "./limit-layout";
 
-type OrderbookTabs = "market" | "trades" | "recent";
+type OrderbookTabs = "market" | "recent";
 type OrderbookLayout = "split" | "asks" | "bids";
 
 const Orderbook = () => {
@@ -80,9 +79,6 @@ const Orderbook = () => {
           </>
         );
       }
-      case "trades": {
-        return <OrderMyTrades />;
-      }
       case "recent": {
         return <OrderRecentTrades />;
       }
@@ -100,13 +96,6 @@ const Orderbook = () => {
               variant="underline"
             >
               Market
-            </TabsTrigger>
-            <TabsTrigger
-              onClick={() => setCurrentTab("trades")}
-              value={"mine"}
-              variant="underline"
-            >
-              My Trades
             </TabsTrigger>
             <TabsTrigger
               onClick={() => setCurrentTab("recent")}
