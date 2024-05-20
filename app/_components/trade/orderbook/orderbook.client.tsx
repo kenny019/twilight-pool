@@ -1,8 +1,6 @@
 "use client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
-import React, { useEffect, useState } from "react";
-import { OrderBookDataTable } from "./data-table";
-import { orderbookColumns } from "./columns";
+import React, { useState } from "react";
 import OrderbookSplitIcon from "@/components/icons/orderbook-split";
 import OrderbookBidsIcon from "@/components/icons/orderbook-bids";
 import OrderbookAsksIcon from "@/components/icons/orderbook-asks";
@@ -16,23 +14,11 @@ import {
 import { ChevronDown } from "lucide-react";
 import cn from "@/lib/cn";
 import OrderMyTrades from "./my-trades.client";
-import { getOpenLimitOrders } from "@/lib/api/rest";
-import { DisplayLimitOrderData, LimitOrderData } from "@/lib/types";
-import Big from "big.js";
-import BTC from "@/lib/twilight/denoms";
-import { useInterval } from "@/lib/hooks/useInterval";
+import OrderRecentTrades from "./recent-trades.client";
+import { OrderbookLayouts } from "./limit-layout";
 
-type OrderbookTabs = "market" | "trades";
+type OrderbookTabs = "market" | "trades" | "recent";
 type OrderbookLayout = "split" | "asks" | "bids";
-
-function convertDisplayLimitData(
-  limitData: LimitOrderData
-): DisplayLimitOrderData {
-  return {
-    price: limitData.price,
-    size: limitData.positionsize,
-  };
-}
 
 const Orderbook = () => {
   const [currentTab, setCurrentTab] = useState<OrderbookTabs>("market");
@@ -40,80 +26,6 @@ const Orderbook = () => {
     useState<OrderbookLayout>("split");
 
   const [currentOrderbookPage, setCurrentOrderbookPage] = useState(1);
-  const [asksData, setAsksData] = useState<DisplayLimitOrderData[]>([]);
-  const [bidsData, setBidsData] = useState<DisplayLimitOrderData[]>([]);
-
-  async function getOrderbookData() {
-    const result = await getOpenLimitOrders();
-
-    if (!result.success) {
-      console.error(result.error);
-      return;
-    }
-
-    setBidsData(
-      result.data.result.bid.map((limitData) =>
-        convertDisplayLimitData(limitData)
-      )
-    );
-    setAsksData(
-      result.data.result.ask.map((limitData) =>
-        convertDisplayLimitData(limitData)
-      )
-    );
-  }
-
-  function useGetOrderbookData() {
-    useEffect(() => {
-      getOrderbookData();
-    }, []);
-  }
-
-  useInterval(() => {
-    getOrderbookData();
-  }, 1000);
-
-  function OrderbookLayouts() {
-    switch (orderbookLayout) {
-      case "split": {
-        return (
-          <>
-            <OrderBookDataTable
-              columns={orderbookColumns}
-              data={asksData}
-              type="asks"
-              header
-            />
-            <OrderBookDataTable
-              columns={orderbookColumns}
-              data={bidsData}
-              type="bids"
-            />
-          </>
-        );
-      }
-      case "asks": {
-        return (
-          <OrderBookDataTable
-            columns={orderbookColumns}
-            data={asksData}
-            type="asks"
-            header
-          />
-        );
-      }
-      case "bids": {
-        return (
-          <OrderBookDataTable
-            columns={orderbookColumns}
-            data={bidsData}
-            type="bids"
-            header
-          />
-        );
-      }
-    }
-  }
 
   function OrderbookViews() {
     switch (currentTab) {
@@ -163,7 +75,7 @@ const Orderbook = () => {
               </DropdownMenu>
             </div>
             <div>
-              <OrderbookLayouts />
+              <OrderbookLayouts layouts={orderbookLayout} />
             </div>
           </>
         );
@@ -171,10 +83,11 @@ const Orderbook = () => {
       case "trades": {
         return <OrderMyTrades />;
       }
+      case "recent": {
+        return <OrderRecentTrades />;
+      }
     }
   }
-
-  useGetOrderbookData();
 
   return (
     <div className="flex h-full w-full flex-col space-y-2 overflow-auto py-2">
@@ -187,6 +100,13 @@ const Orderbook = () => {
               variant="underline"
             >
               Market
+            </TabsTrigger>
+            <TabsTrigger
+              onClick={() => setCurrentTab("recent")}
+              value={"recent"}
+              variant="underline"
+            >
+              Recent
             </TabsTrigger>
             <TabsTrigger
               onClick={() => setCurrentTab("trades")}

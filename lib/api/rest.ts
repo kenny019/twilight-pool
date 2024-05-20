@@ -175,6 +175,24 @@ async function getOpenLimitOrders() {
   return response;
 }
 
+async function getRecentLimitOrders() {
+  const response = await wfetch(priceURL, {
+    next: {
+      revalidate: 0,
+    },
+  })
+    .post({
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "recent_trade_orders",
+        id: 123,
+      }),
+    })
+    .json<TwilightApiResponse<any>>();
+
+  return response;
+}
+
 type FundingData = {
   id: number;
   price: string;
@@ -244,4 +262,5 @@ export {
   getCandleData,
   getFundingRate,
   getOpenLimitOrders,
+  getRecentLimitOrders,
 };
