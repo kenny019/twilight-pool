@@ -150,29 +150,7 @@ const OrderLimitForm = () => {
       }
 
       const orderData = transactionHashRes.data.result[0];
-
-      console.log("success limit order");
-
-      toast({
-        title: "Success",
-        description: (
-          <div className="flex space-x-1 opacity-90">
-            Successfully submitted trade order.{" "}
-            <Button
-              variant="link"
-              className="inline-flex text-sm opacity-90 hover:opacity-100"
-              asChild
-            >
-              <Link
-                href={`https://nyks.twilight-explorer.com/transaction/${orderData.tx_hash}`}
-                target={"_blank"}
-              >
-                Explorer link
-              </Link>
-            </Button>
-          </div>
-        ),
-      });
+      console.log(orderData);
 
       addTrade({
         accountAddress: currentZkAccount.address,
@@ -195,6 +173,13 @@ const OrderLimitForm = () => {
         value: btcAmountInSats,
         output: orderData.output,
         date: new Date(),
+      });
+
+      console.log("success limit order");
+
+      toast({
+        title: "Success",
+        description: "Placed limit order successfully",
       });
     } catch (err) {
       if (typeof err === "string") {

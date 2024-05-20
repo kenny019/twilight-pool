@@ -91,7 +91,6 @@ export type LimitOrderData = {
 export type DisplayLimitOrderData = {
   price: number;
   size: number;
-  total: number;
 };
 
 export type OpenLimitOrderData = {

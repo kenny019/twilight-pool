@@ -20,6 +20,7 @@ import { getOpenLimitOrders } from "@/lib/api/rest";
 import { DisplayLimitOrderData, LimitOrderData } from "@/lib/types";
 import Big from "big.js";
 import BTC from "@/lib/twilight/denoms";
+import { useInterval } from "@/lib/hooks/useInterval";
 
 type OrderbookTabs = "market" | "trades";
 type OrderbookLayout = "split" | "asks" | "bids";
@@ -27,15 +28,9 @@ type OrderbookLayout = "split" | "asks" | "bids";
 function convertDisplayLimitData(
   limitData: LimitOrderData
 ): DisplayLimitOrderData {
-  const size = Big(limitData.positionsize).div(Big(limitData.price)).toNumber();
-  const total = new BTC("sats", Big(size))
-    .convert("BTC")
-    .mul(Big(limitData.price))
-    .toNumber();
   return {
     price: limitData.price,
-    total,
-    size,
+    size: limitData.positionsize,
   };
 }
 
@@ -48,31 +43,35 @@ const Orderbook = () => {
   const [asksData, setAsksData] = useState<DisplayLimitOrderData[]>([]);
   const [bidsData, setBidsData] = useState<DisplayLimitOrderData[]>([]);
 
+  async function getOrderbookData() {
+    const result = await getOpenLimitOrders();
+
+    if (!result.success) {
+      console.error(result.error);
+      return;
+    }
+
+    setBidsData(
+      result.data.result.bid.map((limitData) =>
+        convertDisplayLimitData(limitData)
+      )
+    );
+    setAsksData(
+      result.data.result.ask.map((limitData) =>
+        convertDisplayLimitData(limitData)
+      )
+    );
+  }
+
   function useGetOrderbookData() {
     useEffect(() => {
-      async function getOrderbookData() {
-        const result = await getOpenLimitOrders();
-
-        if (!result.success) {
-          console.error(result.error);
-          return;
-        }
-
-        setBidsData(
-          result.data.result.bid.map((limitData) =>
-            convertDisplayLimitData(limitData)
-          )
-        );
-        setAsksData(
-          result.data.result.ask.map((limitData) =>
-            convertDisplayLimitData(limitData)
-          )
-        );
-      }
-
       getOrderbookData();
     }, []);
   }
+
+  useInterval(() => {
+    getOrderbookData();
+  }, 1000);
 
   function OrderbookLayouts() {
     switch (orderbookLayout) {

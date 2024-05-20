@@ -26,11 +26,4 @@ export const orderbookColumns: ColumnDef<DisplayLimitOrderData>[] = [
       return new BTC("sats", Big(row.size)).convert("BTC").toFixed(5);
     },
   },
-  {
-    accessorKey: "total",
-    header: "Total",
-    accessorFn: (row) => {
-      return Intl.NumberFormat(navigator.language).format(row.total);
-    },
-  },
 ];
