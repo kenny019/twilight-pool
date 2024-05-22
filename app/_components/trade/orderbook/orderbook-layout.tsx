@@ -31,14 +31,14 @@ export function OrderbookLayouts({ layouts }: Props) {
     }
 
     setBidsData(
-      result.data.result.bid.map((limitData) =>
-        convertDisplayLimitData(limitData)
-      )
+      result.data.result.bid
+        .map((limitData) => convertDisplayLimitData(limitData))
+        .sort((left, right) => left.price - right.price)
     );
     setAsksData(
-      result.data.result.ask.map((limitData) =>
-        convertDisplayLimitData(limitData)
-      )
+      result.data.result.ask
+        .map((limitData) => convertDisplayLimitData(limitData))
+        .sort((left, right) => right.price - left.price)
     );
   }
 
@@ -86,7 +86,7 @@ export function OrderbookLayouts({ layouts }: Props) {
       return (
         <OrderBookDataTable
           columns={orderbookColumns}
-          data={bidsData}
+          data={bidsData.reverse()}
           type="bids"
           header
         />

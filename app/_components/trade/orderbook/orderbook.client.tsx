@@ -14,7 +14,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import cn from "@/lib/cn";
 import OrderRecentTrades from "./recent-trades.client";
-import { OrderbookLayouts } from "./limit-layout";
+import { OrderbookLayouts } from "./orderbook-layout";
 
 type OrderbookTabs = "market" | "recent";
 type OrderbookLayout = "split" | "asks" | "bids";
