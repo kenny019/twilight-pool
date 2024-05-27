@@ -1,6 +1,7 @@
 "use client";
 
 import cn from "@/lib/cn";
+import { DisplayLimitOrderData, LimitChange } from "@/lib/types";
 import {
   ColumnDef,
   flexRender,
@@ -8,19 +9,25 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+interface DataTableProps {
+  columns: ColumnDef<DisplayLimitOrderData, any>[];
+  data: DisplayLimitOrderData[];
   type: "asks" | "bids";
   header?: boolean;
 }
+
+const ChangeBackgroundColor = {
+  [LimitChange.EQUAL]: "bg-transparent",
+  [LimitChange.INCREASE]: "bg-green-medium/20",
+  [LimitChange.DECREASE]: "bg-red/30",
+};
 
 export function OrderBookDataTable<TData, TValue>({
   columns,
   data,
   type,
   header = false,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps) {
   const table = useReactTable({
     data,
     columns,
@@ -58,7 +65,10 @@ export function OrderBookDataTable<TData, TValue>({
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <tr
-                className="cursor-pointer text-xs hover:bg-theme/20 data-[state=selected]:bg-theme"
+                className={cn(
+                  "cursor-pointer text-xs hover:bg-theme/20 data-[state=selected]:bg-theme",
+                  ChangeBackgroundColor[row.original.change]
+                )}
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
               >

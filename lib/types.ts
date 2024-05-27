@@ -88,9 +88,16 @@ export type LimitOrderData = {
   price: number;
 };
 
+export enum LimitChange {
+  INCREASE = 1,
+  DECREASE = 0,
+  EQUAL = -1,
+}
+
 export type DisplayLimitOrderData = {
   price: number;
   size: number;
+  change: LimitChange;
 };
 
 export type OpenLimitOrderData = {

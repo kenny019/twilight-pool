@@ -1,4 +1,8 @@
-import { DisplayLimitOrderData, LimitOrderData } from "@/lib/types";
+import {
+  DisplayLimitOrderData,
+  LimitChange,
+  LimitOrderData,
+} from "@/lib/types";
 import { useEffect, useState } from "react";
 import { OrderBookDataTable } from "./data-table";
 import { orderbookColumns } from "./columns";
@@ -10,12 +14,41 @@ type Props = {
 };
 
 function convertDisplayLimitData(
-  limitData: LimitOrderData
-): DisplayLimitOrderData {
-  return {
-    price: limitData.price,
-    size: limitData.positionsize,
-  };
+  limitData: LimitOrderData[],
+  currentData: DisplayLimitOrderData[],
+  sort: boolean
+): DisplayLimitOrderData[] {
+  const sorted = limitData.sort((left, right) =>
+    sort ? left.price - right.price : right.price - left.price
+  );
+
+  if (currentData.length < 1) {
+    return sorted.map((order) => {
+      return {
+        price: order.price,
+        size: order.positionsize,
+        change: LimitChange.EQUAL,
+      };
+    });
+  }
+
+  return sorted.map((order, index) => {
+    // current data should have same sorting
+    const oldPrice = currentData[index]
+      ? currentData[index].price
+      : order.price;
+
+    return {
+      price: order.price,
+      size: order.positionsize,
+      change:
+        oldPrice === order.price
+          ? LimitChange.EQUAL
+          : order.price > oldPrice
+          ? LimitChange.INCREASE
+          : LimitChange.DECREASE,
+    };
+  });
 }
 
 export function OrderbookLayouts({ layouts }: Props) {
@@ -30,16 +63,19 @@ export function OrderbookLayouts({ layouts }: Props) {
       return;
     }
 
-    setBidsData(
-      result.data.result.bid
-        .map((limitData) => convertDisplayLimitData(limitData))
-        .sort((left, right) => left.price - right.price)
+    const bids = convertDisplayLimitData(
+      result.data.result.bid,
+      bidsData,
+      true
     );
-    setAsksData(
-      result.data.result.ask
-        .map((limitData) => convertDisplayLimitData(limitData))
-        .sort((left, right) => right.price - left.price)
+    const asks = convertDisplayLimitData(
+      result.data.result.ask,
+      asksData,
+      false
     );
+
+    setBidsData(bids);
+    setAsksData(asks);
   }
 
   function useGetOrderbookData() {
