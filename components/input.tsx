@@ -172,7 +172,7 @@ const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
                 <button
                   className={cn(
                     option === selected ? "hidden" : "",
-                    " w-full rounded-md px-1 py-1 text-start hover:bg-green hover:text-black"
+                    "w-full rounded-md px-1 py-1 text-start hover:bg-primary hover:text-background"
                   )}
                   key={index}
                   value={option}

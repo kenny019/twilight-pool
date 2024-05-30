@@ -52,7 +52,7 @@ const MultiLink = ({ title, subLinks, className, target }: Props) => {
       >
         {subLinks.map((link) => (
           <Link
-            className="flex w-full rounded-md px-5 py-1 hover:bg-green hover:text-black"
+            className="flex w-full rounded-md px-5 py-1 hover:bg-primary hover:text-background"
             key={link.title}
             href={link.href}
             target={target}

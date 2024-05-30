@@ -62,7 +62,7 @@ const ComponentsSidebar = () => {
                 <CategoryNav>Core</CategoryNav>
                 {coreItems.map((item, index) => (
                   <Link key={index} href={`/design/core/${item.href}`}>
-                    <div className="cursor-pointer rounded-md px-4 py-2 font-body text-sm text-accent-400 hover:bg-green dark:text-accent-300 dark:hover:text-black">
+                    <div className="cursor-pointer rounded-md px-4 py-2 font-body text-sm text-accent-400 hover:bg-primary hover:text-background dark:text-accent-300">
                       {item.title}
                     </div>
                   </Link>
@@ -72,7 +72,7 @@ const ComponentsSidebar = () => {
                 <CategoryNav>Components</CategoryNav>
                 {componentItems.map((item, index) => (
                   <Link key={index} href={`/design/components/${item.href}`}>
-                    <div className="cursor-pointer rounded-md px-4 py-2 font-body text-sm text-accent-400 hover:bg-green dark:text-accent-300 dark:hover:text-black">
+                    <div className="cursor-pointer rounded-md px-4 py-2 font-body text-sm text-accent-400 hover:bg-primary hover:text-background dark:text-accent-300">
                       {item.title}
                     </div>
                   </Link>

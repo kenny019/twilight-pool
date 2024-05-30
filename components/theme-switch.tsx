@@ -36,13 +36,13 @@ export function ThemeSwitch({ className, side, align }: Props) {
       </DropdownTrigger>
       <DropdownContent side={side} className={className} align={align}>
         <DropdownItem
-          className="cursor-pointer hover:bg-green hover:text-black"
+          className="cursor-pointer hover:bg-primary hover:text-background"
           onClick={() => setTheme("light")}
         >
           Light
         </DropdownItem>
         <DropdownItem
-          className="cursor-pointer hover:bg-green hover:text-black"
+          className="cursor-pointer hover:bg-primary hover:text-background"
           onClick={() => setTheme("dark")}
         >
           Dark
