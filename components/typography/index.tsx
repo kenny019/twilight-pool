@@ -18,7 +18,14 @@ const headingStyles = {
   h3: "text-2xl font-semibold",
 } as const;
 
-const Text = ({ heading, className, feature, asChild, children }: Props) => {
+const Text = ({
+  heading,
+  className,
+  feature,
+  asChild,
+  children,
+  ...props
+}: Props & React.ComponentPropsWithoutRef<"p">) => {
   if (heading) {
     return React.createElement(
       asChild ? Slot : heading,
@@ -29,6 +36,7 @@ const Text = ({ heading, className, feature, asChild, children }: Props) => {
           "scroll-m-20 tracking-tight mb-4",
           className
         ),
+        ...props,
       },
       children
     );
@@ -38,6 +46,7 @@ const Text = ({ heading, className, feature, asChild, children }: Props) => {
     asChild ? Slot : "p",
     {
       className: cn("font-body leading-6", className),
+      ...props,
     },
     children
   );

@@ -153,11 +153,13 @@ export const SessionStoreProvider = ({
           ? candleDataResponse.data.result
           : [];
 
-        storeRef.current
-          ?.getState()
-          .price.setPrice(
-            parseFloat(candleData[candleData.length - 1].close) || 0
-          );
+        if (candleData.length > 0) {
+          storeRef.current
+            ?.getState()
+            .price.setPrice(
+              parseFloat(candleData[candleData.length - 1].close) || 0
+            );
+        }
       }
 
       setBtcPrice();

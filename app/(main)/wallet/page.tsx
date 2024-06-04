@@ -21,9 +21,11 @@ import { transactionHistoryColumns } from "./transaction-history/columns";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import useIsMounted from "@/lib/hooks/useIsMounted";
+import { useToast } from "@/lib/hooks/useToast";
 
 const Page = () => {
   const isMounted = useIsMounted();
+  const { toast } = useToast();
 
   const privateKey = useSessionStore((state) => state.privateKey);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
@@ -63,7 +65,9 @@ const Page = () => {
   const { twilightSats, isLoading: twilightSatsLoading } =
     useGetTwilightBTCBalance();
 
-  const { status } = useWallet();
+  const { status, mainWallet } = useWallet();
+  const twilightAddress = mainWallet?.getChainWallet("nyks")?.address || "";
+
   useRedirectUnconnected();
   useGetTradingBTCBalance();
 
@@ -115,6 +119,27 @@ const Page = () => {
               = {totalBalanceUSDString} USD
             </Text>
           </div>
+
+          {twilightAddress && (
+            <div className="space-y-1">
+              <Text className="text-sm">Twilight Address</Text>
+              <Text
+                onClick={(e) => {
+                  if (!twilightAddress) return;
+                  e.preventDefault();
+                  toast({
+                    title: "Copied to clipboard",
+                    description:
+                      "Copied your twilight address to the clipboard",
+                  });
+                  navigator.clipboard.writeText(twilightAddress);
+                }}
+                className="cursor-pointer text-xs text-primary-accent"
+              >
+                {twilightAddress}
+              </Text>
+            </div>
+          )}
         </div>
         <div className="flex w-full max-w-sm flex-col">
           <Text heading="h2" className="text-lg font-normal sm:text-2xl">

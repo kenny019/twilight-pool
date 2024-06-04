@@ -5,6 +5,7 @@ import { ChainProvider } from "@cosmos-kit/react-lite";
 import { wallets as keplr } from "@cosmos-kit/keplr";
 import { wallets as cosmos } from "@cosmos-kit/cosmostation-extension";
 import { wallets as leap } from "@cosmos-kit/leap-extension";
+import { wallets as leapMetamaskCosmosSnap } from "@cosmos-kit/leap-metamask-cosmos-snap";
 
 import React from "react";
 import {
@@ -25,7 +26,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ChainProvider
         chains={[twilightTestnet]}
         assetLists={[twilightTestnetAssets]}
-        wallets={[...keplr, ...cosmos, ...leap] as unknown as MainWalletBase[]}
+        wallets={
+          [
+            ...keplr,
+            ...cosmos,
+            ...leap,
+            ...leapMetamaskCosmosSnap,
+          ] as unknown as MainWalletBase[]
+        }
         endpointOptions={{
           endpoints: {
             nyks: {

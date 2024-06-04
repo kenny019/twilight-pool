@@ -11,17 +11,10 @@ import {
 import Big from "big.js";
 import dayjs from "dayjs";
 import cn from "@/lib/cn";
-import { getRecentLimitOrders } from "@/lib/api/rest";
+import { RecentTrade, getRecentLimitOrders } from "@/lib/api/rest";
 import { useInterval } from "@/lib/hooks/useInterval";
 
-type DisplayRecentOrderData = {
-  timestamp: string;
-  side: "LONG" | "SHORT";
-  price: string;
-  positionsize: string;
-};
-
-export const orderbookColumns: ColumnDef<DisplayRecentOrderData>[] = [
+export const orderbookColumns: ColumnDef<RecentTrade>[] = [
   {
     accessorKey: "price",
     header: "Price (USD)",
@@ -40,14 +33,14 @@ export const orderbookColumns: ColumnDef<DisplayRecentOrderData>[] = [
     accessorKey: "timestamp",
     header: "Time",
     accessorFn: (row) => {
-      return dayjs(row.timestamp).format("hh:mm:ss");
+      return dayjs(row.timestamp).format("HH:mm:ss");
     },
   },
 ];
 
 interface DataTableProps {
-  columns: ColumnDef<DisplayRecentOrderData>[];
-  data: DisplayRecentOrderData[];
+  columns: ColumnDef<RecentTrade>[];
+  data: RecentTrade[];
   header?: boolean;
 }
 
@@ -128,9 +121,7 @@ function OrderRecentTradesTable({
 }
 
 function OrderRecentTrades() {
-  const [recentTradeData, setRecentTradeData] = useState<
-    DisplayRecentOrderData[]
-  >([]);
+  const [recentTradeData, setRecentTradeData] = useState<RecentTrade[]>([]);
 
   async function getRecentTradeData() {
     const result = await getRecentLimitOrders();
@@ -140,7 +131,11 @@ function OrderRecentTrades() {
       return;
     }
 
-    setRecentTradeData(result.data.result.reverse());
+    const sorted = result.data.result.sort(
+      (left, right) =>
+        dayjs(left.timestamp).unix() - dayjs(right.timestamp).unix()
+    );
+    setRecentTradeData(sorted);
   }
 
   useEffect(() => {

@@ -17,6 +17,7 @@
     "@cosmos-kit/cosmostation-extension": "^2.5.0",
     "@cosmos-kit/keplr": "^2.6.9",
     "@cosmos-kit/leap-extension": "^2.5.0",
+    "@cosmos-kit/leap-metamask-cosmos-snap": "^0.11.0",
     "@cosmos-kit/react-lite": "^2.5.0",
     "@kenny019/zkos-wasm": "^0.2.21",
     "@next/font": "^13.5.4",

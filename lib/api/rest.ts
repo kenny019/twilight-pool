@@ -175,6 +175,13 @@ async function getOpenLimitOrders() {
   return response;
 }
 
+export type RecentTrade = {
+  timestamp: string;
+  side: "LONG" | "SHORT";
+  price: string;
+  positionsize: string;
+};
+
 async function getRecentLimitOrders() {
   const response = await wfetch(priceURL, {
     next: {
@@ -188,7 +195,7 @@ async function getRecentLimitOrders() {
         id: 123,
       }),
     })
-    .json<TwilightApiResponse<any>>();
+    .json<TwilightApiResponse<RecentTrade[]>>();
 
   return response;
 }

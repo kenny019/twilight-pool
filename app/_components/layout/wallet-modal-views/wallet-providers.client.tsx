@@ -21,6 +21,11 @@ const availableWallets = [
     name: "Leap",
     src: "/images/leap-logo.png",
   },
+  {
+    id: "leap-metamask-cosmos-snap",
+    name: "Metamask",
+    src: "/images/metamask-logo.png",
+  },
 ] as const;
 
 const WalletProvidersView = ({}: WalletViewProps) => {
@@ -40,8 +45,7 @@ const WalletProvidersView = ({}: WalletViewProps) => {
               className={cn(
                 index === 0 && "rounded-t-md",
                 index % 2 === 0 && "border-b-0",
-                index === availableWallets.length - 1 &&
-                  "rounded-b-md border-b border-t-0"
+                index === availableWallets.length - 1 && "rounded-b-md border-t"
               )}
               wallet={wallet}
               key={index}

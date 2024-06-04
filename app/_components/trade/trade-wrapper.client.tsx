@@ -80,9 +80,11 @@ const TradeWrapper = () => {
         ? candleDataResponse.data.result
         : [];
 
-      setCandleData(candleData);
+      if (candleData.length > 0) {
+        setCandleData(candleData);
 
-      setPrice(parseFloat(candleData[candleData.length - 1].close) || 0);
+        setPrice(parseFloat(candleData[candleData.length - 1].close) || 0);
+      }
     }
 
     fetchCandleData();
