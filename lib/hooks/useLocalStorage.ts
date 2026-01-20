@@ -16,7 +16,7 @@ const useLocalStorage = (key: string): [string, (val: string) => void] => {
       console.error(`Error reading localStorage, key ${keyVal}`, err);
       return "";
     }
-  }, [key]);
+  }, [keyVal]);
 
   const setLocalData = useCallback(
     (val: string) => {
@@ -31,12 +31,12 @@ const useLocalStorage = (key: string): [string, (val: string) => void] => {
         console.error(err);
       }
     },
-    [key]
+    [keyVal]
   );
 
   useEffect(() => {
     setData(getData());
-  }, []);
+  }, [getData]);
 
   return [data, setLocalData];
 };

@@ -77,6 +77,7 @@ export const TwilightStoreProvider = ({
         setIsHydrated(true);
       }
       rehydrateLocalStore();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
 
@@ -102,6 +103,7 @@ export const TwilightStoreProvider = ({
       ) {
         updateSelectedZkAccount(ZK_ACCOUNT_INDEX.DISCONNECTED);
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isHydrated]);
   }
 
@@ -139,6 +141,7 @@ export const TwilightStoreProvider = ({
       }
 
       initZkAccount();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isHydrated, chainWallet?.address, privateKey]);
   }
 
@@ -164,6 +167,7 @@ export const TwilightStoreProvider = ({
       }
 
       syncZkAccounts();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isHydrated, chainWallet?.address, privateKey]);
   }
 

@@ -163,8 +163,8 @@ export default function ZKPassportComponent({
     };
 
     initializeZKPassport();
-
-  }, [onSuccess, onError, isMockPassport]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMockPassport]);
 
   // Separate effect to handle QR code generation
   useEffect(() => {

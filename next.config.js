@@ -39,6 +39,12 @@ const nextConfig = {
       "utf-8-validate"
     );
     config.experiments = { asyncWebAssembly: true, layers: true };
+    // Suppress warnings from third-party packages
+    config.ignoreWarnings = [
+      { module: /node_modules\/@selfxyz\/anon-aadhaar-core/ },
+      { module: /node_modules\/web-worker/ },
+      { module: /node_modules\/node-fetch/ },
+    ];
     return config;
   },
 };

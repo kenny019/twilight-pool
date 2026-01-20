@@ -83,7 +83,8 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
       subscribe,
       lastPrice,
     };
-  }, [addPrice, getCurrentPrice, subscribe]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addPrice, subscribe, lastPrice]);
 
   useSyncTrades()
   // useSyncBalance()

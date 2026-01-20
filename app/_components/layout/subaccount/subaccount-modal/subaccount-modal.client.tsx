@@ -46,6 +46,7 @@ const SubaccountModal = ({ open, setOpen }: Props) => {
       selectedSubaccount,
       setSelectedSubaccount,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, view, setOpen, setView]);
 
   function Views() {

@@ -70,6 +70,7 @@ export const SessionStoreProvider = ({
   function useGenerateTwilightPrivateKey() {
     useEffect(() => {
       generateTwilightPrivateKey();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isHydrated]);
   }
 
@@ -131,6 +132,7 @@ export const SessionStoreProvider = ({
       }
 
       rehydrateSessionStore();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
 
@@ -163,6 +165,7 @@ export const SessionStoreProvider = ({
       }
 
       setBtcPrice();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isMounted]);
   }
 

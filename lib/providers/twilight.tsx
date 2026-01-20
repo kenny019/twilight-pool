@@ -74,6 +74,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
     useEffect(() => {
       if (shouldRefetchBTCRegistration) return;
       // checkBTCRegistration();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
 
@@ -84,6 +85,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       root.classList.remove(...ThemeColors);
 
       root.classList.add(colorTheme);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [colorTheme]);
   }
 
@@ -115,6 +117,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       }
 
       updateTwilightStore();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
 
@@ -137,6 +140,7 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
 
       setHasRegisteredBTC(true);
       if (registeredBtcResponse.data.isConfirmed) setHasConfirmedBTC(true);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [registeredBtcResponse]);
   }
 

@@ -122,6 +122,7 @@ const TransferDialog = ({
       depositRef.current.value = amountString;
       setDepositAmount(amountString);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toAccountValue, fromAccountValue, selectedTradingAccountFrom, depositDenom]);
 
   async function submitTransfer(e: React.FormEvent<HTMLFormElement>) {

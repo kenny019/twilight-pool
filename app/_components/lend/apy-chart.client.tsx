@@ -129,6 +129,7 @@ const ApyChart = () => {
         chart.remove();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update data when period changes

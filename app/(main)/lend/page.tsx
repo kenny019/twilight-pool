@@ -85,14 +85,14 @@ const Page = () => {
       ...order,
       accountTag: getAccountTag(order.accountAddress)
     }));
-  }, [lendOrders]);
+  }, [lendOrders, getAccountTag]);
 
   const lendHistory = useMemo(() => {
     return lendHistoryData.map(order => ({
       ...order,
       accountTag: getAccountTag(order.accountAddress)
     }));
-  }, [lendHistoryData]);
+  }, [lendHistoryData, getAccountTag]);
 
   const getPoolSharePrice = () => poolInfo?.pool_share || 0
 

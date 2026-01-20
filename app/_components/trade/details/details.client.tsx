@@ -124,6 +124,7 @@ const DetailsPanel = () => {
         return next;
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privateKey, zkAccounts, toast, settlingOrders])
 
   const cancelOrder = useCallback(async (order: TradeOrder) => {
@@ -220,7 +221,7 @@ const DetailsPanel = () => {
     });
 
     await queryClient.invalidateQueries({ queryKey: ['sync-trades'] })
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privateKey, zkAccounts])
 
   function RenderTabs() {

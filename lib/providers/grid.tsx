@@ -41,11 +41,8 @@ export const GridProvider: React.FC<GridProviderProps> = ({
         width: callbackDimensions.width,
         height: callbackDimensions.height,
       });
-    }, [
-      callbackDimensions,
-      callbackDimensions?.width,
-      callbackDimensions?.height,
-    ]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [callbackDimensions?.width, callbackDimensions?.height]);
   }
 
   function useUpdateGridDimensions() {
@@ -58,11 +55,8 @@ export const GridProvider: React.FC<GridProviderProps> = ({
         width: clientWidth,
         height: clientHeight,
       });
-    }, [
-      gridRef.current,
-      gridRef.current?.clientHeight,
-      gridRef.current?.clientWidth,
-    ]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gridRef.current?.clientHeight, gridRef.current?.clientWidth]);
   }
 
   useUpdateGridDimensions();

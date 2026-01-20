@@ -36,7 +36,8 @@ const Dialog: React.FC<DialogProviderProps> = ({ children }) => {
     openLimitDialog,
     isOpenLimitDialog,
     account,
-  }), [isOpenLimitDialog, account])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isOpenLimitDialog, account, openLimitDialog])
 
   return (
     <dialogContext.Provider value={values}>

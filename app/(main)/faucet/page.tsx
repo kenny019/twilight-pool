@@ -97,6 +97,7 @@ const Page = () => {
 
       router.push("/verify-region");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVerified, MANDATORY_KYC])
 
   const markStepCompleted = (stepId: number) => {

@@ -248,8 +248,8 @@ const OrderMyTrades = () => {
     return {
       success: true,
     }
-
-  }, [toast, zkAccounts, privateKey, updateZkAccount, updateTrade, removeZkAccount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast, privateKey, removeZkAccount]);
 
   // Memoize the callback functions to prevent unnecessary re-renders
   const handleSettleOrder = useCallback(async (tradeOrder: TradeOrder) => {
@@ -724,7 +724,8 @@ const OrderMyTrades = () => {
         description: "Error with cancelling trade order",
       });
     }
-  }, [toast, zkAccounts, privateKey, removeTrade, updateZkAccount, updateTrade, cleanupTradeOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast, zkAccounts, privateKey, updateZkAccount, updateTrade, cleanupTradeOrder]);
 
   // Create enhanced columns with current price access
   const enhancedColumns = useMemo(() => {

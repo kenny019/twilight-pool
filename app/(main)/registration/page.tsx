@@ -32,6 +32,7 @@ const importantNotices = [
 ];
 
 const Page = () => {
+  const MANDATORY_KYC = process.env.NEXT_PUBLIC_MANDATORY_KYC === "true";
   const { isVerified } = useVerifyStatus();
   const { toast } = useToast();
   const router = useRouter();
@@ -40,7 +41,7 @@ const Page = () => {
   const isWalletConnected = status === WalletStatus.Connected;
 
   useEffect(() => {
-    if (isVerified !== undefined && isVerified === false) {
+    if (MANDATORY_KYC && isVerified !== undefined && isVerified === false) {
       toast({
         title: "Verification required",
         description:
@@ -49,7 +50,7 @@ const Page = () => {
 
       router.push("/verify-region");
     }
-  }, [isVerified, router, toast]);
+  }, [MANDATORY_KYC, isVerified, router, toast]);
 
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">

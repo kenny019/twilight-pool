@@ -20,6 +20,7 @@ const WalletViewController = () => {
     if (currentView !== "providers" && hasInit) {
       setCurrentView("providers");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasInit]);
 
   const walletViewProps = {

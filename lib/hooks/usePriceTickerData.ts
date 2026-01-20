@@ -124,6 +124,7 @@ export default function usePriceTickerData(currentPrice: number) {
       if (currentPrice === 0) return;
 
       getPriceTickerData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPrice, candleYesterdayData]);
   }
 
@@ -150,6 +151,7 @@ export default function usePriceTickerData(currentPrice: number) {
       }
 
       getFunding();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [shouldFetchFunding]);
   }
 
