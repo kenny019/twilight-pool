@@ -27,12 +27,14 @@ const TickerWrapper = () => {
     priceTickerData,
     fundingTickerData,
     openInterestData,
+    skewData,
     resetFunding,
     hasInit,
   } = usePriceTickerData(finalPrice);
 
   const { high, low, change, turnover } = priceTickerData;
   const { openInterest, openInterestBtc } = openInterestData;
+  const { longPercent, shortPercent } = skewData;
 
   const { rate: fundingRate, timestamp: fundingTimestamp } = fundingTickerData;
 
@@ -169,6 +171,28 @@ const TickerWrapper = () => {
               ({openInterestBtc.toFixed(0)} BTC)
             </span>
           </span>
+        </Resource>
+      </TickerItem>
+      <TickerItem title="Skew">
+        <Resource
+          isLoaded={hasInit}
+          placeholder={<Skeleton className="h-6 w-[120px]" />}
+        >
+          <div className="flex flex-col gap-0.5">
+            <div className="flex h-2 w-[120px] overflow-hidden rounded-sm">
+              <div
+                className="bg-green-medium"
+                style={{ width: `${longPercent}%` }}
+              />
+              <div className="bg-red" style={{ width: `${shortPercent}%` }} />
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-green-medium">
+                {longPercent.toFixed(0)}% L
+              </span>
+              <span className="text-red">{shortPercent.toFixed(0)}% S</span>
+            </div>
+          </div>
         </Resource>
       </TickerItem>
       <TickerItem

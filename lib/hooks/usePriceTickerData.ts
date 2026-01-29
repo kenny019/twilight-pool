@@ -26,6 +26,11 @@ type OpenInterestData = {
   openInterestBtc: number;
 };
 
+type SkewData = {
+  longPercent: number;
+  shortPercent: number;
+};
+
 async function fetchCandleData(date: string) {
   const candleResponse = await getCandleData({
     since: date,
@@ -137,6 +142,24 @@ export default function usePriceTickerData(currentPrice: number) {
     return { openInterest, openInterestBtc };
   }, [positionSizeQuery.data, currentPrice]);
 
+  const skewData = useMemo<SkewData>(() => {
+    if (!positionSizeQuery.data) {
+      return { longPercent: 50, shortPercent: 50 };
+    }
+
+    const { total_long, total_short } = positionSizeQuery.data;
+    const long = parseFloat(total_long);
+    const short = parseFloat(total_short);
+    const total = long + short;
+
+    if (total === 0) return { longPercent: 50, shortPercent: 50 };
+
+    return {
+      longPercent: (long / total) * 100,
+      shortPercent: (short / total) * 100,
+    };
+  }, [positionSizeQuery.data]);
+
   const resetFunding = useCallback(() => {
     setFundingEnabled(true);
     queryClient.invalidateQueries({ queryKey: ["funding-rate"] });
@@ -148,6 +171,7 @@ export default function usePriceTickerData(currentPrice: number) {
     priceTickerData,
     fundingTickerData,
     openInterestData,
+    skewData,
     resetFunding,
     hasInit,
   };
