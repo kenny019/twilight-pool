@@ -282,6 +282,31 @@ async function getLendPoolInfo() {
   return result;
 }
 
+export type PositionSizeData = {
+  total: string;
+  total_long: string;
+  total_short: string;
+};
+
+async function getPositionSize() {
+  const response = await wfetch(priceURL, {
+    next: {
+      revalidate: 0,
+    },
+  })
+    .post({
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "position_size",
+        id: 123,
+        params: null,
+      }),
+    })
+    .json<TwilightApiResponse<PositionSizeData>>();
+
+  return response;
+}
+
 async function queryTransactionHashes(
   address: string
 ): Promise<Record<string, never> | TwilightApiResponse<TransactionHash[]>> {
@@ -342,4 +367,5 @@ export {
   queryTransactionHashByRequestId,
   getPoolShareValue,
   getLendPoolInfo,
+  getPositionSize,
 };

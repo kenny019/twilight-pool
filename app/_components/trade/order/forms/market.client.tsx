@@ -190,6 +190,15 @@ const OrderMarketForm = () => {
       return;
     }
 
+    if (tradingAccountBalance <= 0) {
+      toast({
+        variant: "error",
+        title: "No funds available",
+        description: "Please transfer funds to your trading account before placing an order.",
+      });
+      return;
+    }
+
     if (!btcRef.current?.value) {
       toast({
         title: "Invalid amount",
@@ -489,6 +498,14 @@ const OrderMarketForm = () => {
         </div>
       })
 
+      // Clear form
+      setUsdAmount("");
+      setLeverage("1");
+      setPercent(0);
+      if (btcRef.current) btcRef.current.value = "";
+      if (usdRef.current) usdRef.current.value = "";
+      if (leverageRef.current) leverageRef.current.value = "";
+
     } catch (err) {
       console.error(err);
     }
@@ -574,7 +591,7 @@ const OrderMarketForm = () => {
               if (!tradingAccountBalance) return;
               updatePercent(Big(value).div(Big(tradingAccountBalanceString)).mul(100).toNumber());
             }}
-            disabled={!isPageLoaded}
+            disabled={!isPageLoaded || !tradingAccountBalance}
             autoComplete="off"
           />
 
@@ -613,7 +630,7 @@ const OrderMarketForm = () => {
                 .div(currentPrice || 1)
                 .toString();
             }}
-            disabled={!isPageLoaded}
+            disabled={!isPageLoaded || !tradingAccountBalance}
           />
 
         </div>
@@ -670,7 +687,7 @@ const OrderMarketForm = () => {
           }}
           placeholder="1"
           id="input-market-leverage"
-          disabled={!isPageLoaded}
+          disabled={!isPageLoaded || !tradingAccountBalance}
         />
       </div>
 

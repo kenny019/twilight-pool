@@ -1,11 +1,12 @@
 import { useTwilightStore } from '@/lib/providers/store';
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from './dialog';
-import { Input } from './input';
+import { NumberInput } from './input';
 import Button from './button';
 import { useToast } from '@/lib/hooks/useToast';
 import { settleOrder } from '@/lib/zk/trade';
 import { useSessionStore } from '@/lib/providers/session';
+import { usePriceFeed } from '@/lib/providers/feed';
 import Link from 'next/link';
 import Big from 'big.js';
 import dayjs from 'dayjs';
@@ -18,30 +19,24 @@ type Props = {
 }
 
 function SettleLimitDialog({ account, open, onOpenChange }: Props) {
-  const usdRef = useRef<HTMLInputElement>(null);
-
   const { toast } = useToast();
 
   const trades = useTwilightStore((state) => state.trade.trades);
   const updateTrade = useTwilightStore((state) => state.trade.updateTrade)
   const privateKey = useSessionStore((state) => state.privateKey);
+  const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
+
+  const { getCurrentPrice } = usePriceFeed();
+  const liveBtcPrice = getCurrentPrice();
+  const currentPrice = liveBtcPrice || storedBtcPrice;
+
+  const [limitPrice, setLimitPrice] = useState(currentPrice || 0);
 
   const selectedTrade = trades.find((trade) => trade.accountAddress === account);
 
   const queryClient = useQueryClient();
 
   async function handleSettleLimit() {
-    const limitPrice = parseFloat(usdRef.current?.value || "0");
-
-    if (isNaN(limitPrice)) {
-      toast({
-        title: "Invalid limit price",
-        description: "Please enter a valid limit price",
-        variant: "error",
-      });
-      return;
-    }
-
     if (limitPrice < 0) {
       toast({
         title: "Invalid limit price",
@@ -133,40 +128,12 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
         <div className="flex flex-col gap-6">
           <div className="space-y-1">
             <label className="text-sm font-medium text-primary-accent" htmlFor="input-limit-amount-usd">Limit Price (USD)</label>
-            <Input
-              type="text"
+            <NumberInput
               id="input-limit-amount-usd"
+              inputValue={limitPrice}
+              setInputValue={setLimitPrice}
+              currentPrice={currentPrice}
               placeholder="0.00"
-              ref={usdRef}
-              onChange={(e) => {
-                if (!usdRef.current) return;
-
-                let value = e.currentTarget.value;
-
-                // Remove any non-numeric characters except decimal point
-                value = value.replace(/[^0-9.]/g, '');
-
-                // Prevent multiple decimal points
-                const decimalCount = (value.match(/\./g) || []).length;
-                if (decimalCount > 1) {
-                  const firstDecimalIndex = value.indexOf('.');
-                  value = value.substring(0, firstDecimalIndex + 1) + value.substring(firstDecimalIndex + 1).replace(/\./g, '');
-                }
-
-                // Limit to 2 decimal places (USD precision)
-                const decimalIndex = value.indexOf('.');
-                if (decimalIndex !== -1 && value.substring(decimalIndex + 1).length > 2) {
-                  value = value.substring(0, decimalIndex + 3);
-                }
-
-                // Prevent leading zeros except for decimal values
-                if (value.length > 1 && value[0] === '0' && value[1] !== '.') {
-                  value = value.substring(1);
-                }
-
-                // Update the input field value
-                e.currentTarget.value = value;
-              }}
             />
           </div>
 

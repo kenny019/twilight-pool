@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CandleData, getCandleData, getFundingRate } from "../api/rest";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  CandleData,
+  getCandleData,
+  getFundingRate,
+  getPositionSize,
+} from "../api/rest";
 import { CandleInterval } from "../types";
-import { useInterval } from "./useInterval";
 import dayjs from "dayjs";
 
 type PriceTickerData = {
@@ -16,147 +21,134 @@ type FundingTickerData = {
   rate: string;
 };
 
-export default function usePriceTickerData(currentPrice: number) {
-  const [priceTickerData, setPriceTickerData] = useState<PriceTickerData>({
-    high: 0,
-    low: 0,
-    turnover: 0,
-    change: 0,
+type OpenInterestData = {
+  openInterest: number;
+  openInterestBtc: number;
+};
+
+async function fetchCandleData(date: string) {
+  const candleResponse = await getCandleData({
+    since: date,
+    interval: CandleInterval.ONE_DAY_CHANGE,
+    limit: 1,
+    offset: 0,
   });
 
-  const [hasInit, setHasInit] = useState(false);
-
-  const [candleYesterdayData, setCandleYesterdayData] = useState<CandleData>();
-
-  const [shouldFetchFunding, setShouldFetchFunding] = useState(true);
-
-  const [fundingTickerData, setFundingTickerData] = useState<FundingTickerData>(
-    {
-      timestamp: "",
-      rate: "",
-    }
-  );
-
-  async function fetchCandleData(date: string) {
-    try {
-      const candleResponse = await getCandleData({
-        since: date,
-        interval: CandleInterval.ONE_DAY_CHANGE,
-        limit: 1,
-        offset: 0,
-      });
-
-      if (!candleResponse.success || candleResponse.error) {
-        console.error("error getting candle data >>", candleResponse);
-        return;
-      }
-      const { result } = candleResponse.data;
-
-      const candleData = result[0];
-
-      return candleData;
-    } catch (err) {
-      console.error(err);
-    }
+  if (!candleResponse.success || candleResponse.error) {
+    throw new Error("Failed to fetch candle data");
   }
+
+  return candleResponse.data.result[0];
+}
+
+export default function usePriceTickerData(currentPrice: number) {
+  const queryClient = useQueryClient();
+  const [fundingEnabled, setFundingEnabled] = useState(true);
+
+  const yesterday = dayjs().subtract(2, "d").startOf("day").toISOString();
+  const today = dayjs().subtract(1, "d").startOf("day").toISOString();
+
+  const candleQuery = useQuery({
+    queryKey: ["candle-ticker"],
+    queryFn: async (): Promise<CandleData | null> => {
+      const [yesterdayCandle, todayCandle] = await Promise.all([
+        fetchCandleData(yesterday),
+        fetchCandleData(today),
+      ]);
+
+      if (!yesterdayCandle || !todayCandle) return null;
+
+      return {
+        ...todayCandle,
+        close: yesterdayCandle.close,
+      };
+    },
+    refetchInterval: 36000,
+    staleTime: 30000,
+  });
+
+  const fundingQuery = useQuery({
+    queryKey: ["funding-rate"],
+    queryFn: async () => {
+      const fundingRes = await getFundingRate();
+
+      if (!fundingRes.success || fundingRes.error) {
+        throw new Error("Failed to fetch funding rate");
+      }
+
+      return fundingRes.data.result;
+    },
+    enabled: fundingEnabled,
+    refetchInterval: false,
+  });
+
+  const positionSizeQuery = useQuery({
+    queryKey: ["position-size"],
+    queryFn: async () => {
+      const response = await getPositionSize();
+
+      if (!response.success || response.error) {
+        throw new Error("Failed to fetch position size");
+      }
+
+      return response.data.result;
+    },
+    refetchInterval: 10000,
+    staleTime: 8000,
+  });
+
+  const priceTickerData = useMemo<PriceTickerData>(() => {
+    if (!candleQuery.data || currentPrice === 0) {
+      return { high: 0, low: 0, turnover: 0, change: 0 };
+    }
+
+    const { high, low, close, usd_volume: turnover } = candleQuery.data;
+    const changeAmount = currentPrice - parseFloat(close);
+    const changePercent = (changeAmount / currentPrice) * 100;
+
+    return {
+      high: parseFloat(high),
+      low: parseFloat(low),
+      turnover: parseFloat(turnover),
+      change: changePercent,
+    };
+  }, [candleQuery.data, currentPrice]);
+
+  const fundingTickerData = useMemo<FundingTickerData>(() => {
+    if (!fundingQuery.data) {
+      return { timestamp: "", rate: "" };
+    }
+
+    return {
+      rate: parseFloat(fundingQuery.data?.rate || "0").toFixed(5),
+      timestamp: fundingQuery.data?.timestamp || "",
+    };
+  }, [fundingQuery.data]);
+
+  const openInterestData = useMemo<OpenInterestData>(() => {
+    if (!positionSizeQuery.data || currentPrice === 0) {
+      return { openInterest: 0, openInterestBtc: 0 };
+    }
+
+    const { total_long, total_short } = positionSizeQuery.data;
+    const openInterest = parseFloat(total_long) + parseFloat(total_short);
+    const openInterestBtc = openInterest / currentPrice;
+
+    return { openInterest, openInterestBtc };
+  }, [positionSizeQuery.data, currentPrice]);
 
   const resetFunding = useCallback(() => {
-    setFundingTickerData({
-      timestamp: "",
-      rate: fundingTickerData.rate,
-    });
-    setShouldFetchFunding(true);
-  }, [fundingTickerData]);
+    setFundingEnabled(true);
+    queryClient.invalidateQueries({ queryKey: ["funding-rate"] });
+  }, [queryClient]);
 
-  const updateCandleData = useCallback(async () => {
-    const yesterday = dayjs().subtract(2, "d").toISOString();
-    const today = dayjs().subtract(1, "d").toISOString();
+  const hasInit = !!candleQuery.data;
 
-    const [yesterdayCandleRes, todayCandleRes] = await Promise.all([
-      fetchCandleData(yesterday),
-      fetchCandleData(today),
-    ]);
-
-    if (!yesterdayCandleRes || !todayCandleRes) return;
-
-    const latestCandledata: CandleData = {
-      ...todayCandleRes,
-      close: yesterdayCandleRes.close,
-    };
-
-    setCandleYesterdayData(latestCandledata);
-
-    if (hasInit) return;
-
-    setHasInit(true);
-  }, [hasInit, setHasInit, setCandleYesterdayData]);
-
-  useEffect(() => {
-    if (candleYesterdayData) return;
-
-    updateCandleData();
-  }, [candleYesterdayData, hasInit, setHasInit, updateCandleData]);
-
-  useInterval(() => {
-    updateCandleData();
-  }, 36000);
-
-  function useGetPriceTickerData() {
-    useEffect(() => {
-      async function getPriceTickerData() {
-        if (!candleYesterdayData) return;
-
-        const { high, low, close, usd_volume: turnover } = candleYesterdayData;
-
-        const changeAmount = currentPrice - parseFloat(close);
-        const changePercent = (changeAmount / currentPrice) * 100;
-
-        const tickerData = {
-          high: parseFloat(high),
-          low: parseFloat(low),
-          turnover: parseFloat(turnover),
-          change: changePercent,
-        };
-
-        setPriceTickerData(tickerData);
-      }
-
-      if (currentPrice === 0) return;
-
-      getPriceTickerData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPrice, candleYesterdayData]);
-  }
-
-  function useGetFundingRate() {
-    useEffect(() => {
-      async function getFunding() {
-        if (!shouldFetchFunding) return;
-
-        const fundingRes = await getFundingRate();
-
-        if (!fundingRes.success || fundingRes.error) {
-          console.error(fundingRes);
-          return;
-        }
-
-        const { result: fundingData } = fundingRes.data;
-
-        setFundingTickerData({
-          rate: parseFloat(fundingData?.rate || "0").toFixed(5),
-          timestamp: fundingData?.timestamp || "",
-        });
-
-        setShouldFetchFunding(false);
-      }
-
-      getFunding();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldFetchFunding]);
-  }
-
-  useGetFundingRate();
-  useGetPriceTickerData();
-
-  return { priceTickerData, fundingTickerData, resetFunding, hasInit };
+  return {
+    priceTickerData,
+    fundingTickerData,
+    openInterestData,
+    resetFunding,
+    hasInit,
+  };
 }

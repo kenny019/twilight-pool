@@ -30,7 +30,8 @@ const MultiLink = ({ title, subLinks, className, target }: Props) => {
       <button
         className={cn(
           "flex items-center justify-start gap-[6px] rounded-md rounded-b-none border border-b-0 border-transparent px-5 py-2 focus-visible:outline-none data-[state=open]:border-primary",
-          className
+          className,
+          isOpen ? "text-primary" : "text-gray-400"
         )}
         data-state={isOpen ? "open" : "closed"}
         onClick={() => setIsOpen(!isOpen)}

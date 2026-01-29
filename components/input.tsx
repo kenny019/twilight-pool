@@ -101,11 +101,13 @@ const NumberInput = ({
         }}
         {...props}
       />
-      <div className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors">
-        <button onClick={(e) => {
+      <div className="">
+        <button className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-primary" onClick={(e) => {
           e.preventDefault();
           setInputValue(currentPrice);
-        }}>Mid</button>
+        }}
+          disabled={props.disabled}
+        >Bid</button>
       </div>
     </div>
   );

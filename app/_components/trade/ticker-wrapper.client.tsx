@@ -23,10 +23,16 @@ const TickerWrapper = () => {
 
   const finalPrice = currentPrice || btcPrice;
 
-  const { priceTickerData, fundingTickerData, resetFunding, hasInit } =
-    usePriceTickerData(finalPrice);
+  const {
+    priceTickerData,
+    fundingTickerData,
+    openInterestData,
+    resetFunding,
+    hasInit,
+  } = usePriceTickerData(finalPrice);
 
   const { high, low, change, turnover } = priceTickerData;
+  const { openInterest, openInterestBtc } = openInterestData;
 
   const { rate: fundingRate, timestamp: fundingTimestamp } = fundingTickerData;
 
@@ -150,6 +156,19 @@ const TickerWrapper = () => {
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           {formatCurrency(turnover)}
+        </Resource>
+      </TickerItem>
+      <TickerItem title="Open Interest">
+        <Resource
+          isLoaded={finalPrice !== 0 && hasInit}
+          placeholder={<Skeleton className="h-6 w-full" />}
+        >
+          <span>
+            {formatCurrency(openInterest, "short")}{" "}
+            <span className="text-xs text-gray-500">
+              ({openInterestBtc.toFixed(0)} BTC)
+            </span>
+          </span>
         </Resource>
       </TickerItem>
       <TickerItem

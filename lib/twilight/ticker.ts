@@ -1,11 +1,20 @@
 import { z } from "zod";
 import wfetch from "../http";
 
-function formatCurrency(input: unknown) {
+function formatCurrency(input: unknown, type: "short" | "long" = "long") {
   const value = Number(input);
 
   if (isNaN(value)) {
     return "";
+  }
+
+  if (type === "short") {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: "USD",
+      notation: "compact",
+      maximumFractionDigits: 2,
+    }).format(value);
   }
 
   return new Intl.NumberFormat("en", {

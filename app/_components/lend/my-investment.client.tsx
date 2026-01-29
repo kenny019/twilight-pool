@@ -54,7 +54,7 @@ const MyInvestment = () => {
             placeholder={<Skeleton className="h-4 w-20" />}
           >
             <Text className="font-medium">
-              {BTC.format(totalDepositsBTC, "BTC")}
+              {`${BTC.format(totalDepositsBTC, "BTC")} BTC`}
             </Text>
           </Resource>
         </div>

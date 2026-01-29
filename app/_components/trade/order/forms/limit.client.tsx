@@ -189,6 +189,15 @@ const OrderLimitForm = () => {
       return;
     }
 
+    if (tradingAccountBalance <= 0) {
+      toast({
+        variant: "error",
+        title: "No funds available",
+        description: "Please transfer funds to your trading account before placing an order.",
+      });
+      return;
+    }
+
     const twilightAddress = chainWallet.address;
 
     if (!twilightAddress || !tradingAccount) {
@@ -446,6 +455,15 @@ const OrderLimitForm = () => {
           }
         </div>
       })
+
+      // Clear form
+      setLeverage("1");
+      setPercent(0);
+      setOrderSats(0);
+      setOrderPrice(currentPrice);
+      if (btcAmountRef.current) btcAmountRef.current.value = "";
+      if (leverageRef.current) leverageRef.current.value = "";
+
     } catch (err) {
       if (typeof err === "string") {
         toast({
@@ -483,6 +501,7 @@ const OrderLimitForm = () => {
             id="input-order-price"
             name="price"
             currentPrice={currentPrice}
+            disabled={!tradingAccountBalance}
           />
         </div>
       </div>
@@ -542,6 +561,7 @@ const OrderLimitForm = () => {
               const convertedToSats = new BTC("BTC", Big(e.target.value)).convert("sats").toNumber();
               setOrderSats(convertedToSats)
             }}
+            disabled={!tradingAccountBalance}
           />
           <label
             className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-primary-accent"
@@ -598,6 +618,7 @@ const OrderLimitForm = () => {
           }}
           placeholder="1"
           id="input-limit-leverage"
+          disabled={!tradingAccountBalance}
         />
       </div>
 

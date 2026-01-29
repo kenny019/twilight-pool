@@ -13,6 +13,7 @@ import KycStatus from "./kyc-status";
 import { usePathname } from 'next/navigation';
 import cn from '@/lib/cn';
 import { TWILIGHT_NETWORK_TYPE } from '@/lib/constants';
+import MultiLink from './multi-link.client';
 
 const marketSubLinks = [
   {
@@ -32,11 +33,7 @@ const marketSubLinks = [
 const btcSubLinks = [
   {
     href: "/registration",
-    title: "Register",
-  },
-  {
-    href: "/verification",
-    title: "Verify",
+    title: "Deposit",
   },
   {
     href: "/withdrawal",
@@ -89,23 +86,12 @@ const Header = () => {
                   )
                     :
                     (
-
-                      <>
-                        <Link
-                          href="/registration"
-                          className="flex dark:text-gray-400 dark:hover:text-primary"
-                        >
-                          Register BTC Address
-                        </Link>
-                        <Link
-                          href="/verification"
-                          className="flex dark:text-gray-400 dark:hover:text-primary"
-                        >
-                          Verify BTC Address
-                        </Link>
-                      </>
-
+                      <MultiLink
+                        title="Deposit/Withdraw BTC"
+                        subLinks={btcSubLinks}
+                      />
                     )
+
                 }
               </div>
               <Separator className="mx-4 h-5" orientation="vertical" />

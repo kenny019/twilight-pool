@@ -13,7 +13,7 @@ export const twilightTestnet: Chain = {
   pretty_name: `Twilight ${TWILIGHT_NETWORK_TYPE.charAt(0).toUpperCase() + TWILIGHT_NETWORK_TYPE.slice(1)}`,
   chain_id: "nyks",
   bech32_prefix: "twilight",
-  slip44: 118, // testnet slip44 https://github.com/satoshilabs/slips/blob/master/slip-0044.md#registered-coin-types
+  slip44: TWILIGHT_NETWORK_TYPE === "testnet" ? 1 : 118, // https://github.com/satoshilabs/slips/blob/master/slip-0044.md#registered-coin-types
   apis: {
     // note: helpful information, /rest and /api are the same endpoint for twilight-explorer
     rest: [

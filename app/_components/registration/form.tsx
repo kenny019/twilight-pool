@@ -1,6 +1,5 @@
 "use client";
 import React, { useRef, useState } from "react";
-import Button from "@/components/button";
 import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
@@ -14,6 +13,7 @@ import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
+import Button from '@/components/button';
 
 const WalletRegistrationForm = () => {
   const { toast } = useToast();
@@ -190,10 +190,10 @@ const WalletRegistrationForm = () => {
         />
       </div>
 
-      <Button
-        type="submit"
+      <button
         disabled={!isWalletConnected || isLoading}
-        className="w-full justify-center"
+        className="w-full justify-center bg-primary text-background rounded-default px-4 py-2 hover:bg-primary/80 transition-colors"
+        type="submit"
       >
         {isLoading ? (
           <Loader2 className="animate-spin text-primary opacity-60" />
@@ -202,7 +202,7 @@ const WalletRegistrationForm = () => {
         ) : (
           "Register"
         )}
-      </Button>
+      </button>
     </form>
   );
 };

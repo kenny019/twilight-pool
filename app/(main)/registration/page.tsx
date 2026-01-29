@@ -23,7 +23,7 @@ const importantNotices = [
   },
   {
     icon: Clock,
-    text: "Complete the verification step by making a deposit from this address within 72 hours.",
+    text: "Complete the verification step by making a deposit from this address within 24 hours.",
   },
   {
     icon: CheckCircle2,
