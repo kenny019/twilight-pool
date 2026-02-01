@@ -67,7 +67,6 @@ const OrderMarketForm = () => {
 
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
-  const addTradeHistory = useTwilightStore((state) => state.trade_history.addTrade)
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
 
@@ -473,7 +472,6 @@ const OrderMarketForm = () => {
       }
 
       addTrade(newTradeData);
-      addTradeHistory(newTradeData);
 
       updateZkAccount(newZkAccount.address, {
         ...newZkAccount,

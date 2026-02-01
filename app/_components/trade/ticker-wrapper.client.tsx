@@ -71,7 +71,7 @@ const TickerWrapper = () => {
 
       return () => clearInterval(timer);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [fundingTimestamp, resetFunding]);
   }
 
   useFundingCountdown();
