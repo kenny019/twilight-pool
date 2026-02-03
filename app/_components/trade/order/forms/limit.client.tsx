@@ -160,6 +160,7 @@ const OrderLimitForm = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
+  const addTradeHistory = useTwilightStore((state) => state.trade_history.addTrade);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
@@ -428,8 +429,7 @@ const OrderLimitForm = () => {
       }
 
       addTrade(newTradeData);
-
-      console.log("success limit order");
+      addTradeHistory(newTradeData)
 
       updateZkAccount(newZkAccount.address, {
         ...newZkAccount,

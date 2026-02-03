@@ -8,7 +8,7 @@ import { Slider } from '@/components/slider';
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from '@/lib/api/relayer';
-import { TransactionHash, queryTransactionHashes } from "@/lib/api/rest";
+import { queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { retry } from '@/lib/helpers';
 import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
@@ -66,6 +66,7 @@ const OrderMarketForm = () => {
   const { mainWallet } = useWallet();
 
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
+  const addTradeHistory = useTwilightStore((state) => state.trade_history.addTrade);
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
@@ -379,7 +380,6 @@ const OrderMarketForm = () => {
         transactionHashCondition
       );
 
-
       if (!transactionHashRes.success) {
         toast({
           variant: "error",
@@ -472,6 +472,7 @@ const OrderMarketForm = () => {
       }
 
       addTrade(newTradeData);
+      addTradeHistory(newTradeData);
 
       updateZkAccount(newZkAccount.address, {
         ...newZkAccount,

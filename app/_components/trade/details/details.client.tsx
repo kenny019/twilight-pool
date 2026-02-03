@@ -156,6 +156,7 @@ const DetailsPanel = () => {
       })
       return;
     }
+
     // const result = await cleanupTradeOrder(privateKey, zkAccount);
 
     // if (!result.success) {

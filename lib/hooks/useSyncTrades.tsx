@@ -13,6 +13,7 @@ import { createZkAccount } from "../twilight/zk";
 import { useToast } from "./useToast";
 import Link from 'next/link';
 import BTC from '../twilight/denoms';
+import { queryTransactionHashes } from '../api/rest';
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -223,14 +224,20 @@ export const useSyncTrades = () => {
         });
 
         const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
+        const queryTxHashRes = await queryTransactionHashes(trade.accountAddress)
 
-        if (!queryTradeOrderRes) {
+        if (!queryTradeOrderRes || !queryTxHashRes.result) {
           continue;
         }
 
         const traderOrderInfo = queryTradeOrderRes.result;
+        const txHashData = queryTxHashRes.result;
 
-        const updatedTradeData: Record<string, any> = {};
+        const foundTxHashData = txHashData.filter((data) => data.order_status === traderOrderInfo.order_status)
+
+        const updatedTradeData: Record<string, any> = {
+          tx_hash: foundTxHashData[0] ? foundTxHashData[0].tx_hash : undefined
+        };
 
         for (const [key, value] of Object.entries(traderOrderInfo)) {
           const tradeKey =
