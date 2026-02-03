@@ -94,6 +94,13 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
     const deposit = new BTC(depositDenom as BTCDenoms, Big(depositValue));
     const depositSats = deposit.convert("sats").toNumber();
 
+    // Skip broadcast if already confirmed, just pass new amount
+    if (isConfirmed) {
+      setIsLoading(false);
+      onSuccess(depositAddress, depositSats.toString());
+      return;
+    }
+
     const stargateClient = await chainWallet.getSigningStargateClient();
 
     const { registerBtcDepositAddress } =
@@ -156,6 +163,8 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
           name="depositAddress"
           id="input-btc-address"
           placeholder="..."
+          defaultValue={btcAddress}
+          readOnly={!!btcAddress}
         />
       </div>
       <div className="space-y-1">
@@ -192,13 +201,15 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
 
       <Button
         disabled={!isWalletConnected || isLoading}
-        className="w-full"
+        className="w-full bg-primary text-background hover:bg-primary/90"
         type="submit"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : !isWalletConnected ? (
           "Connect Wallet to Register"
+        ) : isConfirmed ? (
+          "Continue"
         ) : (
           "Deposit"
         )}

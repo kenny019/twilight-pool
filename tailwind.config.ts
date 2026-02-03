@@ -16,6 +16,7 @@ const config: Config = {
       black: "hsl(var(--black) / <alpha-value>)",
       white: "hsl(var(--white) / <alpha-value>)",
       pink: "hsl(var(--pink) / <alpha-value>)",
+      yellow: colors.yellow,
       green: "hsl(var(--green) / <alpha-value>)",
       "green-medium": "hsl(var(--green-medium) / <alpha-value>)",
       orange: "hsl(var(--orange) / <alpha-value>)",

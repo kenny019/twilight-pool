@@ -1,5 +1,6 @@
 "use client";
 import Button from "@/components/button";
+import { Input } from "@/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/select';
 import { Text } from "@/components/typography";
 import { truncateHash } from '@/lib/helpers';
@@ -8,7 +9,7 @@ import useBtcReserves from "@/lib/hooks/useBtcReserves";
 import { useToast } from "@/lib/hooks/useToast";
 import BTC from '@/lib/twilight/denoms';
 import Big from 'big.js';
-import { RefreshCw, AlertTriangle, Loader2 } from "lucide-react";
+import { RefreshCw, AlertTriangle, Info, Loader2 } from "lucide-react";
 import QRCode from 'qrcode';
 import React, { useEffect, useRef, useState } from "react";
 import CopyField from "./copy-field";
@@ -17,17 +18,22 @@ type Props = {
   btcDepositAddress: string;
   btcSatoshiTestAmount: number;
   onSuccess: () => void;
+  onBack?: () => void;
+  isConfirmed?: boolean
 };
 
 // Bitcoin blocks until reserve unlocks - approx 1 day at 10min/block
 const NEXT_UNLOCK_HEIGHT_MODIFIER = 144;
 // Warning threshold for blocks remaining
 const LOW_BLOCKS_WARNING = 10;
+// Critical blocks warning - don't send deposits within this threshold
+const CRITICAL_BLOCKS_WARNING = 4;
 
 const VerificationStep = ({
   btcDepositAddress,
   btcSatoshiTestAmount,
-  onSuccess,
+  onBack,
+  isConfirmed
 }: Props) => {
   const { toast } = useToast();
 
@@ -105,6 +111,19 @@ const VerificationStep = ({
       <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
         Deposit Details
       </Text>
+      <div className="space-y-2">
+        <Text asChild>
+          <label className="text-primary-accent">Sender BTC Address</label>
+        </Text>
+        <Input
+          value={btcDepositAddress}
+          readOnly
+        />
+        <div className="flex items-center gap-2 text-xs text-yellow-500">
+          <Info className="h-3 w-3 shrink-0" />
+          <span>Oracles will only detect deposits sent from this address</span>
+        </div>
+      </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Text asChild>
@@ -215,6 +234,20 @@ const VerificationStep = ({
                 {/* Block Height Indicator */}
                 {selectedReserve && (
                   <div className="mt-3 space-y-1">
+                    {/* Critical blocks warning */}
+                    {(() => {
+                      const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+                      const blocksRemaining = btcBlockHeight != null ? unlockHeight - btcBlockHeight : null;
+                      if (blocksRemaining !== null && blocksRemaining <= CRITICAL_BLOCKS_WARNING && blocksRemaining > 0) {
+                        return (
+                          <div className="flex items-center gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 text-xs">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            <span>Do not send deposit when the reserve expiry is within 4 blocks, please create a new deposit when the reserve address has updated</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <Text asChild>
                       <label className="text-primary-accent text-sm">
                         Reserve Expiry
@@ -296,6 +329,14 @@ const VerificationStep = ({
 
       </div>
 
+      {isConfirmed && onBack && (
+        <Button
+          className="w-full"
+          onClick={onBack}
+        >
+          Back
+        </Button>
+      )}
     </div>
   );
 };

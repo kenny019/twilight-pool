@@ -74,7 +74,7 @@ const stepTitles: Record<DepositStep, { title: string; subtitle: string }> = {
 
 const DepositFlow = ({ registeredAddress, depositAmount, isConfirmed }: Props) => {
   // Determine initial step: go to payment if deposit started but not yet confirmed
-  const hasPendingDeposit = !isConfirmed && depositAmount > 0;
+  const hasPendingDeposit = registeredAddress && !isConfirmed && depositAmount > 0;
 
   const [step, setStep] = useState<DepositStep>(hasPendingDeposit ? "payment" : "registration");
   const [btcAddress, setBtcAddress] = useState<string>(registeredAddress || "");
@@ -140,6 +140,8 @@ const DepositFlow = ({ registeredAddress, depositAmount, isConfirmed }: Props) =
                   btcDepositAddress={btcAddress}
                   btcSatoshiTestAmount={btcAmount}
                   onSuccess={handleVerificationSuccess}
+                  onBack={() => setStep("registration")}
+                  isConfirmed={isConfirmed}
                 />
               )}
             </div>
