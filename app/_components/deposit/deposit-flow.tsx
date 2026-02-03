@@ -7,28 +7,28 @@ import RegistrationStep from "./registration-step";
 import VerificationStep from "./verification-step";
 import CompleteStep from "./complete-step";
 
-export type DepositStep = "registration" | "verification" | "complete";
+export type DepositStep = "registration" | "payment" | "complete";
 
 type Props = {
-  initialStep: DepositStep;
-  registeredAddress?: string;
-  registeredAmount?: string;
+  registeredAddress: string;
+  depositAmount: number;
+  isConfirmed: boolean;
 };
 
 const depositSteps = [
-  { id: "register", label: "Register" },
-  { id: "verify", label: "Verify" },
+  { id: "register", label: "Deposit" },
+  { id: "payment", label: "Payment" },
   { id: "complete", label: "Complete" },
 ];
 
 const registrationNotices = [
   {
     icon: Wallet,
-    text: "Register the Bitcoin address from which you plan to make deposits so funds can be directed to your account properly.",
+    text: "Enter the Bitcoin address from which you plan to make deposits so funds can be directed to your account properly.",
   },
   {
     icon: Clock,
-    text: "Complete the verification step by making a deposit from this address within 24 hours.",
+    text: "Send the deposit from your Bitcoin address within 24 hours.",
   },
   {
     icon: CheckCircle2,
@@ -53,18 +53,18 @@ const verificationNotices = [
 
 const stepToNumber: Record<DepositStep, number> = {
   registration: 1,
-  verification: 2,
+  payment: 2,
   complete: 3,
 };
 
 const stepTitles: Record<DepositStep, { title: string; subtitle: string }> = {
   registration: {
     title: "BTC Deposit",
-    subtitle: "Register your Bitcoin address to start trading on Twilight",
+    subtitle: "Deposit your Bitcoins directly into Twilight",
   },
-  verification: {
-    title: "Verify BTC Ownership",
-    subtitle: "Complete a small deposit to verify ownership of your Bitcoin address",
+  payment: {
+    title: "Verify BTC Deposit",
+    subtitle: "Deposit your Bitcoins directly into Twilight",
   },
   complete: {
     title: "Deposit Complete",
@@ -72,10 +72,13 @@ const stepTitles: Record<DepositStep, { title: string; subtitle: string }> = {
   },
 };
 
-const DepositFlow = ({ initialStep, registeredAddress, registeredAmount }: Props) => {
-  const [step, setStep] = useState<DepositStep>(initialStep);
+const DepositFlow = ({ registeredAddress, depositAmount, isConfirmed }: Props) => {
+  // Determine initial step: go to payment if deposit started but not yet confirmed
+  const hasPendingDeposit = !isConfirmed && depositAmount > 0;
+
+  const [step, setStep] = useState<DepositStep>(hasPendingDeposit ? "payment" : "registration");
   const [btcAddress, setBtcAddress] = useState<string>(registeredAddress || "");
-  const [btcAmount, setBtcAmount] = useState<string>(registeredAmount || "");
+  const [btcAmount, setBtcAmount] = useState<number>(depositAmount);
 
   const currentStepNumber = stepToNumber[step];
   const { title, subtitle } = stepTitles[step];
@@ -83,13 +86,13 @@ const DepositFlow = ({ initialStep, registeredAddress, registeredAmount }: Props
 
   const handleRegistrationSuccess = (address: string, amount: string) => {
     setBtcAddress(address);
-    setBtcAmount(amount);
-    setStep("verification");
+    setBtcAmount(Number(amount));
+    setStep("payment");
   };
 
   const handleAlreadyRegistered = (address: string) => {
     setBtcAddress(address);
-    setStep("verification");
+    setStep("payment");
   };
 
   const handleVerificationSuccess = () => {
@@ -131,7 +134,7 @@ const DepositFlow = ({ initialStep, registeredAddress, registeredAmount }: Props
                   onAlreadyRegistered={handleAlreadyRegistered}
                 />
               )}
-              {step === "verification" && (
+              {step === "payment" && (
                 <VerificationStep
                   btcDepositAddress={btcAddress}
                   btcSatoshiTestAmount={btcAmount}

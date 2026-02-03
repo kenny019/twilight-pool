@@ -18,7 +18,7 @@ type ApiError = {
   details: any[];
 };
 
-async function getRegisteredBTCDepositAddress() {
+async function getAllBTCDepositAddress() {
   const { success, data, error } = await wfetch(
     new URL(
       REST_URL + "twilight-project/nyks/bridge/registered_btc_deposit_addresses"
@@ -59,4 +59,4 @@ async function getRegisteredBTCAddress(twilightAddress: string) {
   }
 }
 
-export { getRegisteredBTCDepositAddress, getRegisteredBTCAddress };
+export { getAllBTCDepositAddress, getRegisteredBTCAddress };

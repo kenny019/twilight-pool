@@ -1,20 +1,28 @@
 "use client";
 import Button from "@/components/button";
-import { Input } from "@/components/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/select';
 import { Text } from "@/components/typography";
-import { BtcReserveStruct, getReserveData } from "@/lib/api/rest";
+import { truncateHash } from '@/lib/helpers';
+import useBtcBlockHeight from "@/lib/hooks/useBtcBlockHeight";
+import useBtcReserves from "@/lib/hooks/useBtcReserves";
 import { useToast } from "@/lib/hooks/useToast";
-import { useTwilight } from "@/lib/providers/twilight";
-import { WalletStatus } from "@cosmos-kit/core";
-import { useWallet } from "@cosmos-kit/react-lite";
-import { HelpCircle } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import BTC from '@/lib/twilight/denoms';
+import Big from 'big.js';
+import { RefreshCw, AlertTriangle, Loader2 } from "lucide-react";
+import QRCode from 'qrcode';
+import React, { useEffect, useRef, useState } from "react";
+import CopyField from "./copy-field";
 
 type Props = {
   btcDepositAddress: string;
-  btcSatoshiTestAmount: string;
+  btcSatoshiTestAmount: number;
   onSuccess: () => void;
 };
+
+// Bitcoin blocks until reserve unlocks - approx 1 day at 10min/block
+const NEXT_UNLOCK_HEIGHT_MODIFIER = 144;
+// Warning threshold for blocks remaining
+const LOW_BLOCKS_WARNING = 10;
 
 const VerificationStep = ({
   btcDepositAddress,
@@ -22,144 +30,272 @@ const VerificationStep = ({
   onSuccess,
 }: Props) => {
   const { toast } = useToast();
-  const { status } = useWallet();
 
-  const isWalletConnected = status === WalletStatus.Connected;
+  const {
+    data: btcReserves = [],
+    isLoading: reservesLoading,
+    isError: reservesError,
+    refetch: refetchReserves,
+    isFetching: reservesFetching,
+  } = useBtcReserves();
+  const {
+    data: btcBlockHeight,
+    isLoading: blockHeightLoading,
+    isError: blockHeightError,
+    refetch: refetchBlockHeight,
+  } = useBtcBlockHeight();
 
-  const { checkBTCRegistration, hasConfirmedBTC } = useTwilight();
+  const [selectedBtcReserve, setSelectedBtcReserve] = useState<number | undefined>();
+  const [qrGenerated, setQrGenerated] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hasShownExpiryToast = useRef(false);
 
-  const [btcReserves, setBtcReserves] = useState<BtcReserveStruct[]>([]);
+  const selectedReserve = selectedBtcReserve !== undefined
+    ? btcReserves.find(r => Number(r.ReserveId) === selectedBtcReserve)
+    : undefined;
+
+  const selectedReserveAddress = selectedReserve?.ReserveAddress;
+
+  // Auto-refresh on reserve expiry
+  useEffect(() => {
+    if (!btcBlockHeight || !selectedReserve) return;
+
+    const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+    if (btcBlockHeight >= unlockHeight && !hasShownExpiryToast.current) {
+      hasShownExpiryToast.current = true;
+      toast({
+        variant: "error",
+        title: "Reserve expired",
+        description: "The selected reserve has expired. Please select another.",
+      });
+      setSelectedBtcReserve(undefined);
+      refetchReserves();
+    }
+  }, [btcBlockHeight, selectedReserve, toast, refetchReserves]);
+
+  // Reset toast flag when reserve selection changes
+  useEffect(() => {
+    hasShownExpiryToast.current = false;
+  }, [selectedBtcReserve]);
 
   useEffect(() => {
-    async function populateReserveData() {
-      const { success, data } = await getReserveData();
+    const generateQRCode = async () => {
+      if (selectedReserveAddress && canvasRef.current) {
+        try {
+          setQrGenerated(false);
+          await QRCode.toCanvas(canvasRef.current, selectedReserveAddress);
+          setQrGenerated(true);
+        } catch {
+          setQrGenerated(false);
+        }
+      }
+    };
 
-      if (!success) return;
-
-      setBtcReserves(data.BtcReserves);
+    if (selectedReserveAddress) {
+      generateQRCode();
     }
+  }, [selectedReserveAddress]);
 
-    populateReserveData();
-  }, []);
+  const depositAmountInBTC = new BTC("sats", Big(btcSatoshiTestAmount))
+    .convert("BTC")
+    .toString()
 
   return (
     <div className="space-y-6">
       <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
-        Verify Ownership
+        Deposit Details
       </Text>
-      <div className="space-y-1">
-        <Text asChild>
-          <label
-            className="text-primary-accent"
-            htmlFor="input-btc-deposit-address"
-          >
-            BTC Wallet Address
-          </label>
-        </Text>
-        <div className="relative flex items-center justify-center">
-          <Input
-            id="input-btc-deposit-address"
-            readOnly={true}
-            defaultValue={btcDepositAddress}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Text asChild>
+            <label className="text-primary-accent" htmlFor="select-btc-reserve">
+              Select Twilight BTC Reserve
+            </label>
+          </Text>
+          {!reservesLoading && (
+            <button
+              type="button"
+              onClick={() => refetchReserves()}
+              disabled={reservesFetching}
+              className="p-1 rounded text-primary-accent hover:text-primary disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              aria-label="Refresh reserves"
+            >
+              <RefreshCw className={`h-4 w-4 ${reservesFetching ? "animate-spin" : ""}`} />
+            </button>
+          )}
+        </div>
+
+        {reservesLoading ? (
+          <div className="flex items-center gap-2 h-10 px-3 border rounded-default text-primary-accent">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Loading reserves...</span>
+          </div>
+        ) : reservesError ? (
+          <div className="flex items-center justify-between gap-2 h-10 px-3 border border-red-500/50 rounded-default text-red-500">
+            <span className="text-sm">Failed to load reserves</span>
+            <Button
+              variant="link"
+              size="small"
+              onClick={() => refetchReserves()}
+              className="text-red-500"
+            >
+              Retry
+            </Button>
+          </div>
+        ) : btcReserves.length === 0 ? (
+          <div className="flex items-center justify-between gap-2 h-10 px-3 border border-yellow-500/50 rounded-default text-yellow-500">
+            <span className="text-sm">No reserves available</span>
+            <Button
+              variant="link"
+              size="small"
+              onClick={() => refetchReserves()}
+            >
+              Refresh
+            </Button>
+          </div>
+        ) : (
+          <Select onValueChange={(value) => setSelectedBtcReserve(Number(value))}>
+            <SelectTrigger id="select-btc-reserve">
+              <SelectValue placeholder="Select a reserve" />
+              <SelectContent>
+                {btcReserves.map((reserve) => (
+                  <SelectItem key={reserve.ReserveId} value={reserve.ReserveId}>
+                    {`Reserve #${reserve.ReserveId} ${truncateHash(reserve.ReserveAddress)}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </SelectTrigger>
+          </Select>
+        )}
+
+        <div className="space-y-2">
+          <Text asChild>
+            <label className="text-primary-accent" htmlFor="input-deposit-amount">
+              BTC Amount
+            </label>
+          </Text>
+          <CopyField
+            id="input-deposit-amount"
+            value={depositAmountInBTC}
+            label="deposit amount"
           />
         </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
+        {selectedReserveAddress && (
+          <div className="space-y-2">
             <Text asChild>
-              <label
-                className="text-primary-accent"
-                htmlFor="input-deposit-amount"
-              >
-                Deposit Amount*
-              </label>
+              <label className="text-primary-accent">Deposit Details</label>
             </Text>
-
-            <HelpCircle className="h-4 w-4 text-primary-accent hover:text-primary" />
-          </div>
-          <div className="relative flex items-center justify-center">
-            <Input
-              required
-              id="input-deposit-amount"
-              className="select-all"
-              readOnly={true}
-              defaultValue={btcSatoshiTestAmount}
-              onClick={(e) => {
-                if (e.currentTarget) {
-                  e.currentTarget.select();
-                }
-              }}
-            />
-            <p className="absolute right-4 my-auto cursor-default font-ui text-xs">
-              SATS
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Button
-        disabled={!isWalletConnected || !btcDepositAddress}
-        onClick={() => {
-          if (!isWalletConnected) {
-            toast({
-              variant: "error",
-              title: "Wallet not connected",
-              description: "Please connect your wallet to verify your deposit.",
-            });
-            return;
-          }
-
-          checkBTCRegistration();
-
-          if (!hasConfirmedBTC) {
-            toast({
-              variant: "error",
-              title: "Error",
-              description: "Deposit has not been detected.",
-            });
-            return;
-          }
-
-          toast({
-            title: "Success",
-            description: "Deposit verified successfully!",
-          });
-
-          onSuccess();
-        }}
-        className="w-full justify-center"
-      >
-        {!isWalletConnected
-          ? "Connect Wallet to Verify"
-          : !btcDepositAddress
-            ? "Register BTC Address First"
-            : "Verify Deposit"}
-      </Button>
-      <div className="max-h-[250px] overflow-auto rounded-md border p-2">
-        <table className="w-full caption-bottom text-sm">
-          <thead className="[&_tr]:border-b">
-            <tr className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors">
-              <th className="h-10 px-2 text-left align-middle font-medium">
-                Reserve Address
-              </th>
-              <th className="h-10 px-2 text-left align-middle font-medium">
-                Reserve ID
-              </th>
-            </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
-            {btcReserves.map((reserve) => (
-              <tr
-                key={reserve.ReserveId}
-                className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+            <div className="flex flex-col items-center gap-4">
+              <div
+                className="relative"
+                role="img"
+                aria-label={`QR code for reserve address ${selectedReserveAddress}`}
               >
-                <td className="p-2 align-middle">{reserve.ReserveAddress}</td>
-                <td className="p-2 align-middle">{reserve.ReserveId}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <canvas
+                  ref={canvasRef}
+                  width={256}
+                  height={256}
+                  className="rounded-md max-w-[200px] sm:max-w-[256px]"
+                />
+                {!qrGenerated && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+                <Text className="mt-2 text-xs text-center text-primary-accent">
+                  Scan with wallet
+                </Text>
+              </div>
+              <div className="w-full space-y-2">
+                <Text asChild>
+                  <label className="text-primary-accent">Reserve Address</label>
+                </Text>
+                <CopyField value={selectedReserveAddress} label="reserve address" />
+                {/* Block Height Indicator */}
+                {selectedReserve && (
+                  <div className="mt-3 space-y-1">
+                    <Text asChild>
+                      <label className="text-primary-accent text-sm">
+                        Reserve Expiry
+                      </label>
+                    </Text>
+                    {blockHeightError ? (
+                      <div className="flex items-center gap-2 text-sm text-red-500">
+                        <span>Unable to fetch block height</span>
+                        <button
+                          onClick={() => refetchBlockHeight()}
+                          className="p-1 rounded text-primary-accent hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          aria-label="Retry fetching block height"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      (() => {
+                        const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+                        const blocksRemaining = btcBlockHeight != null
+                          ? unlockHeight - btcBlockHeight
+                          : null;
+                        const isExpired = blocksRemaining !== null && blocksRemaining <= 0;
+                        const isWarning = blocksRemaining !== null && blocksRemaining > 0 && blocksRemaining <= LOW_BLOCKS_WARNING;
+                        const colorClass = blocksRemaining === null
+                          ? "text-primary-accent"
+                          : isExpired
+                            ? "text-red-500"
+                            : isWarning
+                              ? "text-yellow-500"
+                              : "text-green-500";
+
+                        return (
+                          <div className="space-y-1">
+                            {blockHeightLoading ? (
+                              <div className="flex items-center gap-2 text-sm text-primary-accent">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Fetching block height...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className={`text-sm font-mono ${colorClass}`}>
+                                  {btcBlockHeight}/{unlockHeight}
+                                </div>
+                                <div className={`text-xs flex items-center gap-1 ${colorClass}`}>
+                                  {isWarning && <AlertTriangle className="h-3 w-3" />}
+                                  {isExpired ? (
+                                    <span className="flex items-center gap-2">
+                                      Expired — select another reserve
+                                      <button
+                                        onClick={() => {
+                                          setSelectedBtcReserve(undefined);
+                                          refetchReserves();
+                                        }}
+                                        className="underline hover:no-underline"
+                                      >
+                                        Refresh
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <span>
+                                      {blocksRemaining} block{blocksRemaining === 1 ? "" : "s"} remaining
+                                      {isWarning && " — complete soon"}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+
     </div>
   );
 };

@@ -120,33 +120,8 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
-
-  const registeredBtcResponse = useGetRegisteredBTCAddress(
-    mainWallet,
-    chainWallet,
-    shouldRefetchBTCRegistration
-  );
-
-  function useHandleBTCAddress() {
-    useEffect(() => {
-      console.log("useHandleBTCAddress", registeredBtcResponse);
-      if (
-        !registeredBtcResponse ||
-        !registeredBtcResponse.success ||
-        !registeredBtcResponse.data
-      ) {
-        return;
-      }
-
-      setHasRegisteredBTC(true);
-      if (registeredBtcResponse.data.isConfirmed) setHasConfirmedBTC(true);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registeredBtcResponse]);
-  }
-
   // useRehydrateTwilightStore();
   useOnWalletChange();
-  useHandleBTCAddress();
   // useCleanupAccountData();
   // useGetQuisPrivateKey();
   useUpdateColorTheme();

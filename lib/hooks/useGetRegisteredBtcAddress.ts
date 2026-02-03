@@ -1,89 +1,40 @@
-import { useEffect, useState } from "react";
-import { registeredBtcAddressStruct } from "../types";
-import { ChainWalletBase, MainWalletBase } from "@cosmos-kit/core";
-import { getRegisteredBTCDepositAddress } from "../twilight/rest";
+import {
+  getAllBTCDepositAddress,
+  getRegisteredBTCAddress,
+} from "../twilight/rest";
+import { useQuery } from "@tanstack/react-query";
 
-type SuccessResponse = {
-  success: true;
-  data: registeredBtcAddressStruct;
-  error: undefined;
-};
+export default function useGetRegisteredBTCAddress(twilightAddress?: string) {
+  const query = useQuery({
+    queryKey: ["btc-registration", twilightAddress],
+    queryFn: async () => {
+      if (!twilightAddress)
+        return {
+          depositAddress: "",
+          depositAmount: 0,
+          isConfirmed: false,
+        };
 
-type ErrorResponse = {
-  success: false;
-  data: undefined;
-  error: unknown;
-};
+      const result = await getAllBTCDepositAddress();
 
-export default function useGetRegisteredBTCAddress(
-  mainWallet?: MainWalletBase,
-  chainWallet?: ChainWalletBase,
-  shouldRefetch?: boolean
-): SuccessResponse | ErrorResponse | undefined {
-  const [response, setResponse] = useState<
-    SuccessResponse | ErrorResponse | undefined
-  >();
+      const foundRow = result.filter(
+        (row) => row.twilightAddress == twilightAddress
+      );
 
-  // useEffect(() => {
-  //   async function getRegisteredBTCAddresses() {
-  //     const allRegisteredAddress = await getRegisteredBTCDepositAddress();
+      if (!foundRow[0])
+        return {
+          depositAddress: "",
+          depositAmount: 0,
+          isConfirmed: false,
+        };
 
-  //     if (allRegisteredAddress.length < 1) {
-  //       setResponse({
-  //         success: false,
-  //         data: undefined,
-  //         error: "Could not query registered BTC Deposit Addresses",
-  //       });
-  //       return;
-  //     }
-
-  //     const twilightAddress = chainWallet?.address;
-  //     const filtered = allRegisteredAddress.filter(
-  //       (struct) => struct.twilightAddress === twilightAddress
-  //     );
-
-  //     if (filtered.length < 1) {
-  //       setResponse({
-  //         success: false,
-  //         data: undefined,
-  //         error: "BTC Address has not been registered",
-  //       });
-  //       return;
-  //     }
-
-  //     setResponse({
-  //       success: true,
-  //       data: filtered[0],
-  //       error: undefined,
-  //     });
-  //   }
-
-  //   if (mainWallet === undefined || shouldRefetch === false) return;
-
-  //   if (!mainWallet.isWalletConnected) {
-  //     setResponse({
-  //       success: false,
-  //       error: "Wallet is not connected", // todo: enum of standard error messages
-  //       data: undefined,
-  //     });
-
-  //     return;
-  //   }
-
-  //   getRegisteredBTCAddresses();
-  // }, [mainWallet, chainWallet, chainWallet?.address, shouldRefetch]);
-
-  return {
-    success: true,
-    data: {
-      btcDepositAddress: "",
-      btcSatoshiTestAmount: "",
-      twilightStakingAmount: "",
-      twilightAddress: "",
-      isConfirmed: false,
-      CreationTwilightBlockHeight: "",
+      return {
+        depositAddress: foundRow[0].btcDepositAddress,
+        depositAmount: Number(foundRow[0].btcSatoshiTestAmount),
+        isConfirmed: foundRow[0].isConfirmed,
+      };
     },
-    error: undefined,
-  };
-  return response;
+  });
+
+  return query;
 }

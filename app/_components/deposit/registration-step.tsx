@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import Button from "@/components/button";
 import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
@@ -12,7 +13,6 @@ import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
-import { getBTCDepositAddress } from "@/lib/api/rest";
 
 type Props = {
   onSuccess: (address: string, amount: string) => void;
@@ -30,29 +30,11 @@ const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
 
   const isWalletConnected = status === WalletStatus.Connected;
 
-  useEffect(() => {
-    async function checkRegistration() {
-      const chainWallet = mainWallet?.getChainWallet("nyks");
-      const twilightAddress = chainWallet?.address;
-      if (!twilightAddress) return;
-
-      const { success, data } = await getBTCDepositAddress(twilightAddress);
-      if (success && data?.depositAddress) {
-        onAlreadyRegistered(data.depositAddress);
-      }
-    }
-
-    if (isWalletConnected) {
-      checkRegistration();
-    }
-  }, [mainWallet, isWalletConnected, onAlreadyRegistered]);
-
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
 
     if (!mainWallet) {
-      console.error("no mainWallet");
       setIsLoading(false);
       return toast({
         title: "No wallet",
@@ -143,7 +125,6 @@ const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
       }, 1000);
     } catch (err) {
       setIsLoading(false);
-      console.error(err);
       const shouldInitialize =
         typeof err === "string"
           ? (err as string).includes("does not exist on chain")
@@ -161,7 +142,7 @@ const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
   return (
     <form method="get" onSubmit={submitForm} className="space-y-6">
       <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
-        Register Bitcoin Address
+        Enter Deposit Details
       </Text>
       <div className="space-y-1">
         <Text asChild>
@@ -208,19 +189,19 @@ const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
         />
       </div>
 
-      <button
+      <Button
         disabled={!isWalletConnected || isLoading}
-        className="w-full justify-center bg-primary text-background rounded-default px-4 py-2 hover:bg-primary/80 transition-colors"
+        className="w-full"
         type="submit"
       >
         {isLoading ? (
-          <Loader2 className="animate-spin text-primary opacity-60" />
+          <Loader2 className="h-5 w-5 animate-spin" />
         ) : !isWalletConnected ? (
           "Connect Wallet to Register"
         ) : (
           "Register"
         )}
-      </button>
+      </Button>
     </form>
   );
 };

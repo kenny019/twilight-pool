@@ -36,21 +36,6 @@ const Page = () => {
 
   const isWalletConnected = status === WalletStatus.Connected;
 
-  const registeredBtcResponse = useGetRegisteredBTCAddress(
-    mainWallet,
-    chainWallet
-  );
-
-  const btcDepositAddress = useMemo(() => {
-    return registeredBtcResponse?.data?.btcDepositAddress || "";
-  }, [registeredBtcResponse?.data]);
-
-  const btcSatoshiTestAmount = useMemo(() => {
-    return registeredBtcResponse?.data?.btcSatoshiTestAmount || "";
-  }, [registeredBtcResponse?.data]);
-
-  const hasRegisteredAddress = btcDepositAddress.length > 0;
-
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">
       <div className="mx-auto my-8 flex w-full max-w-4xl flex-col gap-8 sm:my-12">
@@ -88,7 +73,7 @@ const Page = () => {
         )}
 
         {/* No registered address warning */}
-        {isWalletConnected && !hasRegisteredAddress && (
+        {isWalletConnected && (
           <div className="flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
             <AlertCircle className="h-5 w-5 shrink-0 text-blue-500" />
             <div>
@@ -106,10 +91,10 @@ const Page = () => {
         <div className="grid gap-8 md:grid-cols-2">
           {/* Form section */}
           <div className="rounded-lg border bg-background p-6">
-            <WalletVerificationForm
+            {/* <WalletVerificationForm
               btcDepositAddress={btcDepositAddress}
               btcSatoshiTestAmount={btcSatoshiTestAmount}
-            />
+            /> */}
           </div>
 
           {/* Important notices section */}

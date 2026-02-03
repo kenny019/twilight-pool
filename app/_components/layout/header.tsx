@@ -32,7 +32,7 @@ const marketSubLinks = [
 
 const btcSubLinks = [
   {
-    href: "/registration",
+    href: "/deposit",
     title: "Deposit",
   },
   {
@@ -102,27 +102,27 @@ const Header = () => {
                   title="User Guides"
                   subLinks={UserGuideLinks}
                 /> */}
-                <Link
+                {/* <Link
                   href="https://user-guide.docs.twilight.rest/docs"
                   className="flex dark:text-gray-400 dark:hover:text-primary"
                   target="_blank"
                 >
                   User Guides <ArrowUpRight className="h-4 w-4" />
-                </Link>
+                </Link> */}
                 <Link
                   href="https://docs.twilight.org/"
                   className="flex dark:text-gray-400 dark:hover:text-primary"
                   target="_blank"
                 >
-                  Specs <ArrowUpRight className="h-4 w-4" />
+                  Docs <ArrowUpRight className="h-4 w-4" />
                 </Link>
-                <Link
+                {/* <Link
                   href="https://docs.twilight.rest/#introduction"
                   className="flex dark:text-gray-400 dark:hover:text-primary"
                   target="_blank"
                 >
                   Developer Docs<ArrowUpRight className="h-4 w-4" />
-                </Link>
+                </Link> */}
               </div>
             </div>
           </div>
