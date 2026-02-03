@@ -130,8 +130,9 @@ const DepositFlow = ({ registeredAddress, depositAmount, isConfirmed }: Props) =
             <div className="rounded-lg border bg-background p-6">
               {step === "registration" && (
                 <RegistrationStep
+                  btcAddress={btcAddress}
+                  isConfirmed={isConfirmed}
                   onSuccess={handleRegistrationSuccess}
-                  onAlreadyRegistered={handleAlreadyRegistered}
                 />
               )}
               {step === "payment" && (

@@ -263,7 +263,7 @@ const VerificationStep = ({
                                   {isWarning && <AlertTriangle className="h-3 w-3" />}
                                   {isExpired ? (
                                     <span className="flex items-center gap-2">
-                                      Expired — select another reserve
+                                      Expired — reserve sweeping in progress
                                       <button
                                         onClick={() => {
                                           setSelectedBtcReserve(undefined);

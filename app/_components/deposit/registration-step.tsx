@@ -16,10 +16,11 @@ import { twilightproject } from "twilightjs";
 
 type Props = {
   onSuccess: (address: string, amount: string) => void;
-  onAlreadyRegistered: (address: string) => void;
+  btcAddress?: string;
+  isConfirmed?: boolean;
 };
 
-const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
+const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -199,7 +200,7 @@ const RegistrationStep = ({ onSuccess, onAlreadyRegistered }: Props) => {
         ) : !isWalletConnected ? (
           "Connect Wallet to Register"
         ) : (
-          "Register"
+          "Deposit"
         )}
       </Button>
     </form>
