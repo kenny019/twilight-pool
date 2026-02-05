@@ -134,6 +134,16 @@ const Page = () => {
     .mul(finalPrice)
     .toFixed(2);
 
+  const lendingAccountBalance = lends.reduce((acc, lend) => acc + (lend.value || 0), 0);
+
+  const lendingAccountBTCString = new BTC("sats", Big(lendingAccountBalance))
+    .convert("BTC")
+    .toFixed(8);
+
+  const lendingAccountBTCUSDString = Big(lendingAccountBTCString)
+    .mul(finalPrice)
+    .toFixed(2);
+
   const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
 
   const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
@@ -551,6 +561,35 @@ const Page = () => {
               <div className="flex flex-row space-x-2 justify-end">
                 <FundingTradeButton type="icon" defaultTransferType="trade" />
               </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-3 w-full">
+              <Text className="text-sm md:text-base">Lending</Text>
+              <div className="mx-auto">
+                <Resource
+                  isLoaded={
+                    !satsLoading
+                  }
+                  placeholder={<Skeleton className="h-5 w-[140px]" />}
+                >
+                  <Text className="text-sm text-primary/80 md:text-base">
+                    {lendingAccountBTCString} BTC
+                  </Text>
+                </Resource>
+                <Resource
+                  isLoaded={
+                    !satsLoading
+                  }
+                  placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
+                >
+                  <Text className="text-xs text-primary-accent">
+                    = {lendingAccountBTCUSDString} USD
+                  </Text>
+                </Resource>
+              </div>
+              <div className="flex flex-row space-x-2 justify-end"></div>
             </div>
 
             <Separator />
