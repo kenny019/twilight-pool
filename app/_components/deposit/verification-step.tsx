@@ -1,9 +1,7 @@
 "use client";
 import Button from "@/components/button";
 import { Input } from "@/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/select';
 import { Text } from "@/components/typography";
-import { truncateHash } from '@/lib/helpers';
 import useBtcBlockHeight from "@/lib/hooks/useBtcBlockHeight";
 import useBtcReserves from "@/lib/hooks/useBtcReserves";
 import { useToast } from "@/lib/hooks/useToast";
@@ -12,6 +10,7 @@ import Big from 'big.js';
 import { RefreshCw, AlertTriangle, Info, Loader2 } from "lucide-react";
 import QRCode from 'qrcode';
 import React, { useEffect, useRef, useState } from "react";
+import BtcReserveSelect from "../btc-reserve-select";
 import CopyField from "./copy-field";
 
 type Props = {
@@ -37,13 +36,7 @@ const VerificationStep = ({
 }: Props) => {
   const { toast } = useToast();
 
-  const {
-    data: btcReserves = [],
-    isLoading: reservesLoading,
-    isError: reservesError,
-    refetch: refetchReserves,
-    isFetching: reservesFetching,
-  } = useBtcReserves();
+  const { data: btcReserves = [], refetch: refetchReserves } = useBtcReserves();
   const {
     data: btcBlockHeight,
     isLoading: blockHeightLoading,
@@ -125,67 +118,15 @@ const VerificationStep = ({
         </div>
       </div>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Text asChild>
-            <label className="text-primary-accent" htmlFor="select-btc-reserve">
-              Select Twilight BTC Reserve
-            </label>
-          </Text>
-          {!reservesLoading && (
-            <button
-              type="button"
-              onClick={() => refetchReserves()}
-              disabled={reservesFetching}
-              className="p-1 rounded text-primary-accent hover:text-primary disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-              aria-label="Refresh reserves"
-            >
-              <RefreshCw className={`h-4 w-4 ${reservesFetching ? "animate-spin" : ""}`} />
-            </button>
-          )}
-        </div>
-
-        {reservesLoading ? (
-          <div className="flex items-center gap-2 h-10 px-3 border rounded-default text-primary-accent">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Loading reserves...</span>
-          </div>
-        ) : reservesError ? (
-          <div className="flex items-center justify-between gap-2 h-10 px-3 border border-red-500/50 rounded-default text-red-500">
-            <span className="text-sm">Failed to load reserves</span>
-            <Button
-              variant="link"
-              size="small"
-              onClick={() => refetchReserves()}
-              className="text-red-500"
-            >
-              Retry
-            </Button>
-          </div>
-        ) : btcReserves.length === 0 ? (
-          <div className="flex items-center justify-between gap-2 h-10 px-3 border border-yellow-500/50 rounded-default text-yellow-500">
-            <span className="text-sm">No reserves available</span>
-            <Button
-              variant="link"
-              size="small"
-              onClick={() => refetchReserves()}
-            >
-              Refresh
-            </Button>
-          </div>
-        ) : (
-          <Select onValueChange={(value) => setSelectedBtcReserve(Number(value))}>
-            <SelectTrigger id="select-btc-reserve">
-              <SelectValue placeholder="Select a reserve" />
-              <SelectContent>
-                {btcReserves.map((reserve) => (
-                  <SelectItem key={reserve.ReserveId} value={reserve.ReserveId}>
-                    {`Reserve #${reserve.ReserveId} ${truncateHash(reserve.ReserveAddress)}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </SelectTrigger>
-          </Select>
-        )}
+        <Text asChild>
+          <label className="text-primary-accent" htmlFor="select-btc-reserve">
+            Select Twilight BTC Reserve
+          </label>
+        </Text>
+        <BtcReserveSelect
+          value={selectedBtcReserve}
+          onValueChange={setSelectedBtcReserve}
+        />
 
         <div className="space-y-2">
           <Text asChild>

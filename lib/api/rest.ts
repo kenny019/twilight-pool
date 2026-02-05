@@ -355,6 +355,35 @@ async function queryTransactionHashByRequestId(requestId: string) {
   return data;
 }
 
+export type WithdrawRequest = {
+  withdrawIdentifier: number;
+  withdrawAddress: string;
+  withdrawReserveId: string;
+  withdrawAmount: string;
+  twilightAddress: string;
+  isConfirmed: boolean;
+  CreationTwilightBlockHeight: string;
+};
+
+type WithdrawRequestsData = {
+  withdrawRequest: WithdrawRequest[];
+};
+
+async function getWithdrawRequests() {
+  const { success, data, error } = await wfetch(
+    new URL(REST_URL + "/twilight-project/nyks/bridge/withdraw_btc_request_all")
+  )
+    .get()
+    .json<WithdrawRequestsData>();
+
+  if (!success) {
+    console.error("getWithdrawRequests", error);
+    return { success, error };
+  }
+
+  return { success, data };
+}
+
 export {
   getBTCDepositAddress,
   getReserveData,
@@ -368,4 +397,5 @@ export {
   getPoolShareValue,
   getLendPoolInfo,
   getPositionSize,
+  getWithdrawRequests,
 };
