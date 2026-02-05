@@ -35,6 +35,7 @@ import Link from 'next/link';
 import FundingTradeButton from '@/components/fund-trade-button';
 import useGetNyksBalance from '@/lib/hooks/useGetNyksBalance';
 import dayjs from 'dayjs';
+import { calculateUpnl } from '@/app/_components/trade/orderbook/my-trades/columns';
 
 type TabType = "account-summary" | "transaction-history";
 
@@ -59,6 +60,7 @@ const Page = () => {
 
   const trades = useTwilightStore((state) => state.trade.trades);
   const lends = useTwilightStore((state) => state.lend.lends);
+  const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
 
   const activeAccounts = useMemo(() => {
     return zkAccounts.reduce<ActiveAccount[]>((acc, account) => {
@@ -143,6 +145,48 @@ const Page = () => {
   const lendingAccountBTCUSDString = Big(lendingAccountBTCString)
     .mul(finalPrice)
     .toFixed(2);
+
+  // Filter active trades by zkAccount type === "Memo" (utilized in open position)
+  const activeTrades = useMemo(() => {
+    const memoAccountAddresses = new Set(
+      zkAccounts.filter(acc => acc.type === "Memo").map(acc => acc.address)
+    );
+    return trades.filter(t => memoAccountAddresses.has(t.accountAddress));
+  }, [trades, zkAccounts]);
+
+  const totalPnl = useMemo(() => {
+    return activeTrades.reduce((acc, trade) => {
+      return acc + calculateUpnl(
+        trade.entryPrice,
+        finalPrice,
+        trade.positionType,
+        trade.positionSize
+      );
+    }, 0);
+  }, [activeTrades, finalPrice]);
+
+  const totalVolume = useMemo(() => {
+    return activeTrades.reduce((acc, trade) => acc + trade.positionSize, 0);
+  }, [activeTrades]);
+
+  // Filter active lends only
+  const activeLends = useMemo(() =>
+    lends.filter(l => l.orderStatus === "LENDED"), [lends]);
+
+  const poolSharePrice = poolInfo?.pool_share || 0;
+
+  const lendUnrealizedRewards = useMemo(() => {
+    if (!poolSharePrice) return 0;
+    return activeLends.reduce((acc, lend) => {
+      const shares = lend.npoolshare || 0;
+      const rewards = ((poolSharePrice * (shares / 10000)) - lend.value);
+      return acc + Math.max(0, rewards);
+    }, 0);
+  }, [activeLends, poolSharePrice]);
+
+  const totalPnlBTC = new BTC("sats", Big(totalPnl)).convert("BTC").toFixed(8);
+  const totalVolumeBTC = new BTC("sats", Big(totalVolume)).convert("BTC").toFixed(0);
+  const lendUnrealizedRewardsBTC = new BTC("sats", Big(lendUnrealizedRewards)).convert("BTC").toFixed(8);
 
   const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
 
@@ -442,11 +486,11 @@ const Page = () => {
 
   return (
     <div className="mx-4 mt-4 space-y-4 md:space-y-8 md:mx-8">
-      <div className="flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-8">
-        <div className="md:col-span-7 md:space-y-4 border rounded-md p-4 md:p-6">
+      <div className="flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-4">
+        <div className="md:col-span-4 md:space-y-4 border rounded-md p-4 md:p-4">
           <div className="space-y-1">
             <Text heading="h1" className="mb-0 text-lg font-normal">
-              Assets Overview
+              Asset Overview
             </Text>
             <div>
               <Resource
@@ -498,8 +542,45 @@ const Page = () => {
           </div>
 
         </div>
-        <div className="md:col-span-5 flex flex-col rounded-md p-4 md:p-6 border">
-          <Text heading="h2" className="text-lg font-normal">
+        <div className="md:col-span-3 border rounded-md p-4 md:p-4 space-y-4">
+          <Text heading="h2" className="text-sm text-primary-accent">
+            Trades + Lends
+          </Text>
+
+          <div className="flex justify-between">
+            <Text className="text-xs text-primary-accent">PNL</Text>
+            <Resource
+              isLoaded={!satsLoading}
+              placeholder={<Skeleton className="h-4 w-[80px]" />}
+            >
+              <Text className={`text-xs ${totalPnl >= 0 ? 'text-green-medium' : 'text-red'}`}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnlBTC} BTC
+              </Text>
+            </Resource>
+          </div>
+
+          <div className="flex justify-between">
+            <Text className="text-xs text-primary-accent">Volume</Text>
+            <Resource
+              isLoaded={!satsLoading}
+              placeholder={<Skeleton className="h-4 w-[80px]" />}
+            >
+              <Text className="text-xs">{totalVolumeBTC} BTC</Text>
+            </Resource>
+          </div>
+
+          <div className="flex justify-between">
+            <Text className="text-xs text-primary-accent">Lend U. Rewards</Text>
+            <Resource
+              isLoaded={!satsLoading && !!poolInfo}
+              placeholder={<Skeleton className="h-4 w-[80px]" />}
+            >
+              <Text className="text-xs">{lendUnrealizedRewardsBTC} BTC</Text>
+            </Resource>
+          </div>
+        </div>
+        <div className="md:col-span-5 flex flex-col rounded-md p-4 md:p-4 border">
+          <Text heading="h2" className="text-sm text-primary-accent">
             My Accounts
           </Text>
           <div className="space-y-4">
