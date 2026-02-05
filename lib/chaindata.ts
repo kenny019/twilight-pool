@@ -75,7 +75,7 @@ export const twilightTestnetAssets: AssetList = {
       denom_units: [
         {
           denom: "nyks",
-          exponent: 8,
+          exponent: 0,
           aliases: ["NYKS"],
         },
         {

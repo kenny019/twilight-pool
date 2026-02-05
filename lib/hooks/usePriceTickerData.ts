@@ -8,6 +8,7 @@ import {
 } from "../api/rest";
 import { CandleInterval } from "../types";
 import dayjs from "dayjs";
+import Big from "big.js";
 
 type PriceTickerData = {
   high: number;
@@ -135,11 +136,11 @@ export default function usePriceTickerData(currentPrice: number) {
       return { openInterest: 0, openInterestBtc: 0 };
     }
 
-    const { total_long, total_short } = positionSizeQuery.data;
-    const openInterest = parseFloat(total_long) + parseFloat(total_short);
-    const openInterestBtc = openInterest / currentPrice;
+    const { total } = positionSizeQuery.data;
+    const openInterest = Big(total).div(100_000_000);
+    const openInterestBtc = openInterest.div(currentPrice).toNumber();
 
-    return { openInterest, openInterestBtc };
+    return { openInterest: openInterest.toNumber(), openInterestBtc };
   }, [positionSizeQuery.data, currentPrice]);
 
   const skewData = useMemo<SkewData>(() => {

@@ -111,16 +111,16 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       const order = row.row.original;
       const meta = row.table.options.meta as LendOrdersTableMeta;
 
-      if (!order.npoolshare || !order.pool_share_price_entry) {
+      if (!order.npoolshare || !order.value) {
         return <Text className="font-medium">0.00000000 BTC</Text>;
       }
+      // no of shares * pool value - deposit_value
 
       const currentSharePrice = meta.getPoolSharePrice();
-      const entrySharePrice = order.pool_share_price_entry;
       const shareQty = order.npoolshare;
 
-      const accruedRewards = shareQty * (currentSharePrice - entrySharePrice);
-      const rewardsBTC = new BTC("sats", Big(Math.max(0, accruedRewards) * 100000000)).convert("BTC");
+      const accruedRewards = ((currentSharePrice * (shareQty / 10000)) - order.value)
+      const rewardsBTC = new BTC("sats", Big(accruedRewards)).convert("BTC");
 
       return (
         <Text className="font-medium">

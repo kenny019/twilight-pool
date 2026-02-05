@@ -47,6 +47,7 @@ const LendManagement = () => {
     (state) => state.history.addTransaction
   );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const btcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
@@ -253,7 +254,8 @@ const LendManagement = () => {
         timestamp: new Date(),
         apy: poolInfo?.apy,
         tx_hash: tx_hash,
-        npoolshare: Number(queryLendOrderRes.result.npoolshare)
+        npoolshare: Number(queryLendOrderRes.result.npoolshare),
+        pool_share_price_entry: btcPrice,
       }
 
       addLendOrder(newLendOrder);

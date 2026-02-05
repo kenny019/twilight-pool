@@ -13,6 +13,7 @@ import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
+import useGetNyksBalance from '@/lib/hooks/useGetNyksBalance';
 
 type Props = {
   onSuccess: (address: string, amount: string) => void;
@@ -31,6 +32,8 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
 
   const isWalletConnected = status === WalletStatus.Connected;
 
+  const { nyksBalance } = useGetNyksBalance();
+
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
@@ -40,6 +43,15 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
       return toast({
         title: "No wallet",
         description: "Please connect your wallet before registration",
+        variant: "error",
+      });
+    }
+
+    if (nyksBalance < 1) {
+      setIsLoading(false);
+      return toast({
+        title: "Insufficient NYKS",
+        description: "You need NYKS tokens to proceed with deposit",
         variant: "error",
       });
     }

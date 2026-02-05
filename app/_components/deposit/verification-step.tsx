@@ -331,7 +331,7 @@ const VerificationStep = ({
 
       {isConfirmed && onBack && (
         <Button
-          className="w-full"
+          className="w-full bg-primary text-background hover:bg-primary/90"
           onClick={onBack}
         >
           Back
