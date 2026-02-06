@@ -9,12 +9,11 @@ import {
   GRID_ROW_HEIGHT,
   GRID_WIDTH_OFFSET,
 } from "@/lib/constants";
-import ChartWrapper from "./chart/chart-wrapper.client";
-import { CandleData, getCandleData } from "@/lib/api/rest";
+import KLineChart from "./chart/kline-chart.client";
 import DetailsPanel from "./details/details.client";
 import Skeleton from "@/components/skeleton";
-import dayjs from "dayjs";
 import { CandleInterval } from "@/lib/types";
+import { useCandleData } from "@/lib/hooks/useCandleData";
 import { useSessionStore } from "@/lib/providers/session";
 
 const layout = [
@@ -46,9 +45,16 @@ function calculateGridDimensions(
 
 const TradeWrapper = () => {
   const [hasMounted, setHasMounted] = useState(false);
-  const [candleData, setCandleData] = useState<CandleData[]>([]);
 
   const setPrice = useSessionStore((state) => state.price.setPrice);
+  const { data: candleData } = useCandleData(CandleInterval.ONE_MINUTE);
+
+  const priceInitRef = useRef(false);
+  useEffect(() => {
+    if (!candleData || candleData.length === 0 || priceInitRef.current) return;
+    priceInitRef.current = true;
+    setPrice(parseFloat(candleData[candleData.length - 1].close) || 0);
+  }, [candleData, setPrice]);
 
   const gridDimensionRefs = useRef(
     layout.map((layoutVal) => {
@@ -64,31 +70,6 @@ const TradeWrapper = () => {
       };
     })
   );
-
-  useEffect(() => {
-    async function fetchCandleData() {
-      const since = dayjs().subtract(12, "hour");
-
-      const candleDataResponse = await getCandleData({
-        since: since.toISOString(),
-        interval: CandleInterval.ONE_MINUTE,
-        limit: 1000,
-      });
-
-      const candleData = candleDataResponse.success
-        ? candleDataResponse.data.result
-        : [];
-
-      if (candleData.length > 0) {
-        setCandleData(candleData);
-
-        setPrice(parseFloat(candleData[candleData.length - 1].close) || 0);
-      }
-    }
-
-    fetchCandleData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     setHasMounted(true);
@@ -164,13 +145,7 @@ const TradeWrapper = () => {
         key="chart"
         id="chart"
       >
-        {candleData.length > 0 ? (
-          <ChartWrapper candleData={candleData} />
-        ) : (
-          <div className="h-full w-full p-4">
-            <Skeleton className="h-full w-full" />
-          </div>
-        )}
+        <KLineChart />
       </DragWrapper>
       <DragWrapper
         dimension={gridDimensionRefs.current}

@@ -131,6 +131,9 @@ importers:
       immer:
         specifier: ^10.0.3
         version: 10.1.1
+      klinecharts:
+        specifier: 10.0.0-beta1
+        version: 10.0.0-beta1
       lightweight-charts:
         specifier: ^5.0.7
         version: 5.0.8
@@ -3015,6 +3018,9 @@ packages:
 
   keyvaluestorage-interface@1.0.0:
     resolution: {integrity: sha512-8t6Q3TclQ4uZynJY9IGr2+SsIGwK9JHcO6ootkHCGA0CrQCRy+VkouYNO2xicET6b9al7QKzpebNow+gkpCL8g==}
+
+  klinecharts@10.0.0-beta1:
+    resolution: {integrity: sha512-5ZxFGjJeZqt9+q45lZDhApC3kdgrk51i27uSpIELgXJLNgfSc0anlb8XkU+52LVrBYnTv9dFr8/Q7lG81vIV1w==}
 
   language-subtag-registry@0.3.23:
     resolution: {integrity: sha512-0K65Lea881pHotoGEa5gDlMxt3pctLi2RplBb7Ezh4rRdLEOtgi7n4EwK9lamnUCkKBqaeKRVebTq6BAxSkpXQ==}
@@ -8746,6 +8752,8 @@ snapshots:
       json-buffer: 3.0.1
 
   keyvaluestorage-interface@1.0.0: {}
+
+  klinecharts@10.0.0-beta1: {}
 
   language-subtag-registry@0.3.23: {}
 

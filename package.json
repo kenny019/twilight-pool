@@ -51,6 +51,7 @@
     "eslint": "8.47.0",
     "eslint-config-next": "13.4.16",
     "immer": "^10.0.3",
+    "klinecharts": "10.0.0-beta1",
     "lightweight-charts": "^5.0.7",
     "long": "^5.2.3",
     "lucide-react": "^0.274.0",
