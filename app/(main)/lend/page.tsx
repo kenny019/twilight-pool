@@ -7,6 +7,7 @@ import LendManagement from "@/app/_components/lend/lend-management.client";
 import LendOrdersTable from "@/app/_components/trade/details/tables/lend-orders/lend-orders-table.client";
 import LendHistoryTable from "@/app/_components/trade/details/tables/lend-history/lend-history-table.client";
 import Button from "@/components/button";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { Text } from "@/components/typography";
 import { Separator } from "@/components/seperator";
@@ -54,6 +55,7 @@ const Page = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("active-orders");
   const [isSettleLoading, setIsSettleLoading] = useState(false);
   const [settlingOrderId, setSettlingOrderId] = useState<string | null>(null);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
 
   const { getCurrentPrice } = usePriceFeed();
 
@@ -275,6 +277,7 @@ const Page = () => {
 
       updateZkAccount(selectedZkAccount.address, updatedSelectedZkAccount);
 
+      setIsWithdrawDialogOpen(true);
 
       const stargateClient = await chainWallet.getSigningStargateClient();
 
@@ -296,6 +299,7 @@ const Page = () => {
 
       if (!privateTxSingleResult.success) {
         console.error(privateTxSingleResult.message);
+        setIsWithdrawDialogOpen(false);
         return;
       }
 
@@ -329,6 +333,7 @@ const Page = () => {
           zkBurnMsg,
           zkAccountHex,
         });
+        setIsWithdrawDialogOpen(false);
         return;
       }
 
@@ -348,6 +353,7 @@ const Page = () => {
       if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
 
         console.error("error broadcasting zkBurnTx msg", tradingTxRes);
+        setIsWithdrawDialogOpen(false);
         return;
       }
 
@@ -402,12 +408,14 @@ const Page = () => {
         ),
       });
 
+      setIsWithdrawDialogOpen(false);
       removeZkAccount(selectedZkAccount);
       return
 
     } catch (err) {
       setIsSettleLoading(false);
       setSettlingOrderId(null);
+      setIsWithdrawDialogOpen(false);
       console.error(err);
       toast({
         variant: "error",
@@ -441,6 +449,17 @@ const Page = () => {
 
   return (
     <div className="mx-8 my-8 space-y-6 md:space-y-8">
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+        <DialogContent>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <DialogTitle>Withdrawal In Progress</DialogTitle>
+            <DialogDescription className="text-center">
+              A wallet signature is required to complete your withdrawal. Please approve the transaction when prompted.
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Pool Info */}
       <div className="rounded-lg bg-card border border-outline p-4 md:p-6">
         <Text heading="h2" className="mb-4 text-lg font-medium">
