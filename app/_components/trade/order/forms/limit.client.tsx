@@ -16,6 +16,7 @@ import { queryTradeOrder } from '@/lib/api/relayer';
 import { queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
+import useGetMarketStats from '@/lib/hooks/useGetMarketStats';
 import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from '@/lib/providers/feed';
@@ -40,6 +41,7 @@ const limitQtyOptions = [25, 50, 75, 100];
 const OrderLimitForm = () => {
   const { width } = useGrid();
   const { toast } = useToast();
+  const marketStats = useGetMarketStats();
 
   const btcAmountRef = useRef<HTMLInputElement>(null);
   const leverageRef = useRef<HTMLInputElement>(null);
@@ -238,6 +240,19 @@ const OrderLimitForm = () => {
         throw `Unable to create limit order with price lower than 0`;
       }
 
+      const leverageVal = parseInt(leverageRef.current?.value || "1");
+      const positionType = action === "sell" ? "SHORT" : "LONG";
+      const orderValue = btcAmountInSats * leverageVal;
+      const maxPosition = positionType === "LONG" ? marketStats.data?.max_long_btc : marketStats.data?.max_short_btc;
+      if (maxPosition !== undefined && orderValue > maxPosition) {
+        toast({
+          variant: "error",
+          title: "Order exceeds maximum position size",
+          description: `Maximum ${positionType.toLowerCase()} position size is ${(maxPosition / 1e8).toFixed(8)} BTC.`,
+        });
+        return;
+      }
+
       setIsSubmitting(true);
 
       toast({
@@ -314,7 +329,6 @@ const OrderLimitForm = () => {
       });
 
       const leverage = parseInt(leverageRef.current?.value || "1");
-      const positionType = action === "sell" ? "SHORT" : "LONG";
 
       const { success, msg } = await createZkOrder({
         leverage: leverage,

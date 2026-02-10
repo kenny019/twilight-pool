@@ -11,6 +11,7 @@ import { queryTradeOrder } from '@/lib/api/relayer';
 import { queryTransactionHashes } from "@/lib/api/rest";
 import cn from "@/lib/cn";
 import { retry } from '@/lib/helpers';
+import useGetMarketStats from '@/lib/hooks/useGetMarketStats';
 import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -39,6 +40,8 @@ const OrderMarketForm = () => {
 
   const { isLoading: isSatsLoading } =
     useGetTwilightBTCBalance();
+
+  const marketStats = useGetMarketStats();
 
   const { hasRegisteredBTC } = useTwilight();
   const { getCurrentPrice } = usePriceFeed();
@@ -234,6 +237,18 @@ const OrderMarketForm = () => {
           variant: "error",
           title: "Insufficient funds",
           description: "You do not have enough funds to submit this trade order",
+        });
+        return;
+      }
+
+      const leverageVal = parseInt(leverageRef.current?.value || "1");
+      const orderValue = satsValue * leverageVal;
+      const maxPosition = positionType === "LONG" ? marketStats.data?.max_long_btc : marketStats.data?.max_short_btc;
+      if (maxPosition !== undefined && orderValue > maxPosition) {
+        toast({
+          variant: "error",
+          title: "Order exceeds maximum position size",
+          description: `Maximum ${positionType.toLowerCase()} position size is ${(maxPosition / 1e8).toFixed(8)} BTC.`,
         });
         return;
       }
