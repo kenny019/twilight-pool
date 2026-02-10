@@ -110,7 +110,7 @@ const MyInvestment = () => {
             isLoaded={true}
             placeholder={<Skeleton className="h-4 w-20" />}
           >
-            <Text className="font-medium text-green-medium">
+            <Text className={cn("font-medium", Number(totalRewardsBTC) > 0 && "text-green-medium")}>
               {Number(totalRewardsBTC).toFixed(8)}
             </Text>
           </Resource>
@@ -139,7 +139,7 @@ const MyInvestment = () => {
             isLoaded={true}
             placeholder={<Skeleton className="h-4 w-20" />}
           >
-            <Text className="font-medium text-green-medium">
+            <Text className={cn("font-medium", Number(pendingRewardsBTC) > 0 && "text-green-medium")}>
               {Number(pendingRewardsBTC).toFixed(8)}
             </Text>
           </Resource>
