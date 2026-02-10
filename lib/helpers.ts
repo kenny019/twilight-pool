@@ -96,6 +96,24 @@ export function safeJSONParse<T>(
   }
 }
 
+const SECONDS_IN_YEAR = 31_536_000;
+
+export function calculateAPR(params: {
+  rewards: number;
+  principal: number;
+  timeElapsedSeconds: number;
+}): number {
+  const { rewards, principal, timeElapsedSeconds } = params;
+  if (principal <= 0 || timeElapsedSeconds <= 0 || rewards <= 0) return 0;
+  return (rewards / principal) * (SECONDS_IN_YEAR / timeElapsedSeconds) * 100;
+}
+
+export function isUserRejection(err: unknown): boolean {
+  const message =
+    err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  return /request rejected|user denied|rejected|declined/i.test(message);
+}
+
 export function capitaliseFirstLetter(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }

@@ -1,14 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CandleData,
-  getCandleData,
-  getFundingRate,
-  getPositionSize,
-} from "../api/rest";
+import { CandleData, getCandleData, getFundingRate } from "../api/rest";
 import { CandleInterval } from "../types";
 import dayjs from "dayjs";
-import Big from "big.js";
+import useGetMarketStats from "./useGetMarketStats";
 
 type PriceTickerData = {
   high: number;
@@ -88,20 +83,7 @@ export default function usePriceTickerData(currentPrice: number) {
     refetchInterval: false,
   });
 
-  const positionSizeQuery = useQuery({
-    queryKey: ["position-size"],
-    queryFn: async () => {
-      const response = await getPositionSize();
-
-      if (!response.success || response.error) {
-        throw new Error("Failed to fetch position size");
-      }
-
-      return response.data.result;
-    },
-    refetchInterval: 10000,
-    staleTime: 8000,
-  });
+  const marketStatsQuery = useGetMarketStats();
 
   const priceTickerData = useMemo<PriceTickerData>(() => {
     if (!candleQuery.data || currentPrice === 0) {
@@ -132,34 +114,26 @@ export default function usePriceTickerData(currentPrice: number) {
   }, [fundingQuery.data]);
 
   const openInterestData = useMemo<OpenInterestData>(() => {
-    if (!positionSizeQuery.data || currentPrice === 0) {
+    if (!marketStatsQuery.data || currentPrice === 0) {
       return { openInterest: 0, openInterestBtc: 0 };
     }
 
-    const { total } = positionSizeQuery.data;
-    const openInterest = Big(total).div(100_000_000);
-    const openInterestBtc = openInterest.div(currentPrice).toNumber();
+    const openInterestBtc = marketStatsQuery.data.open_interest_btc / 1e8;
+    const openInterest = openInterestBtc * currentPrice;
 
-    return { openInterest: openInterest.toNumber(), openInterestBtc };
-  }, [positionSizeQuery.data, currentPrice]);
+    return { openInterest, openInterestBtc };
+  }, [marketStatsQuery.data, currentPrice]);
 
   const skewData = useMemo<SkewData>(() => {
-    if (!positionSizeQuery.data) {
+    if (!marketStatsQuery.data) {
       return { longPercent: 50, shortPercent: 50 };
     }
 
-    const { total_long, total_short } = positionSizeQuery.data;
-    const long = parseFloat(total_long);
-    const short = parseFloat(total_short);
-    const total = long + short;
-
-    if (total === 0) return { longPercent: 50, shortPercent: 50 };
-
     return {
-      longPercent: (long / total) * 100,
-      shortPercent: (short / total) * 100,
+      longPercent: marketStatsQuery.data.long_pct * 100,
+      shortPercent: marketStatsQuery.data.short_pct * 100,
     };
-  }, [positionSizeQuery.data]);
+  }, [marketStatsQuery.data]);
 
   const resetFunding = useCallback(() => {
     setFundingEnabled(true);

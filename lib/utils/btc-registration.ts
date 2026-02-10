@@ -68,6 +68,14 @@ export const registerBTCAddress = async (
       txHash: result.transactionHash,
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : "";
+    if (/request rejected|user denied|rejected|declined/i.test(message)) {
+      return {
+        success: false,
+        error: "You declined the transaction in your wallet.",
+      };
+    }
     console.error("BTC registration error:", error);
     return {
       success: false,

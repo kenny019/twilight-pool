@@ -10,6 +10,7 @@ import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import { isUserRejection } from "@/lib/helpers";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
@@ -71,7 +72,7 @@ const WalletRegistrationForm = () => {
       setIsLoading(false);
       return toast({
         title: "Invalid Bitcoin address",
-        description: "Please enter a valid Bitcoin address",
+        description: "Only Native SegWit (bc1q...) addresses are supported",
         variant: "error",
       });
     }
@@ -124,6 +125,13 @@ const WalletRegistrationForm = () => {
       }, 1000);
     } catch (err) {
       setIsLoading(false);
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       console.error(err);
       const shouldInitialize =
         typeof err === "string"

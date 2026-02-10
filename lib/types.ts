@@ -4,12 +4,13 @@ import {
   PoolInfoSchema,
   TradeOrderSchema,
   TransactionHistorySchema,
+  WithdrawOrderSchema,
   ZkAccountSchema,
 } from "./schema";
 
 export const btcAddressSchema = z
   .string()
-  .regex(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/g);
+  .regex(/^bc1q[02-9ac-hj-np-z]{38}$|^bc1q[02-9ac-hj-np-z]{58}$/);
 
 export type btcAddressSchema = z.infer<typeof btcAddressSchema>;
 
@@ -68,6 +69,7 @@ export type TradeOrder = z.infer<typeof TradeOrderSchema>;
 export type LendOrder = z.infer<typeof LendOrderSchema>;
 export type PoolInfo = z.infer<typeof PoolInfoSchema>;
 export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;
+export type WithdrawOrder = z.infer<typeof WithdrawOrderSchema>;
 
 export type PositionTypes = "LONG" | "SHORT";
 export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";

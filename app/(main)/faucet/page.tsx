@@ -4,6 +4,7 @@ import Button from "@/components/button";
 import { Input } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
+import { isUserRejection } from "@/lib/helpers";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import wfetch from "@/lib/http";
 import { useWallet } from '@cosmos-kit/react-lite';
@@ -294,6 +295,13 @@ const Page = () => {
         console.log("result", result)
       }
       catch (err) {
+        if (isUserRejection(err)) {
+          toast({
+            title: "Transaction rejected",
+            description: "You declined the transaction in your wallet.",
+          });
+          return;
+        }
         console.error(err)
         toast({
           variant: "error",

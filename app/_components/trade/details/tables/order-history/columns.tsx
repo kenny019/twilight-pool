@@ -180,7 +180,9 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      const pnl = trade.realizedPnl || trade.unrealizedPnl || 0;
+      const pnl = trade.orderStatus === "LIQUIDATE"
+        ? -trade.initialMargin
+        : (trade.realizedPnl || trade.unrealizedPnl || 0);
 
       if (pnl === undefined || pnl === null) {
         return <span className="text-xs text-gray-500">0</span>;
@@ -234,7 +236,9 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      const pnl = trade.realizedPnl || trade.unrealizedPnl || 0;
+      const pnl = trade.orderStatus === "LIQUIDATE"
+        ? -trade.initialMargin
+        : (trade.realizedPnl || trade.unrealizedPnl || 0);
       const funding = trade.initialMargin - trade.availableMargin - trade.feeFilled - trade.feeSettled + pnl;
 
       const fundingBTC = new BTC("sats", Big(funding))

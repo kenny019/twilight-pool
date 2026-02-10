@@ -19,6 +19,10 @@ import {
   createTradeHistorySlice,
   initialTradeHistorySliceState,
 } from "./local/trade-history";
+import {
+  createWithdrawSlice,
+  initialWithdrawSliceState,
+} from "./local/withdraw";
 
 export const createTwilightStore = () => {
   return createStore<
@@ -32,6 +36,7 @@ export const createTwilightStore = () => {
         trade: createTradeSlice(...actions),
         history: createHistorySlice(...actions),
         trade_history: createTradeHistorySlice(...actions),
+        withdraw: createWithdrawSlice(...actions),
       })),
       {
         name: "twilight-",
@@ -83,6 +88,10 @@ export const createTwilightStore = () => {
             trade_history: {
               ...currentState.trade_history,
               ...initialTradeHistorySliceState,
+            },
+            withdraw: {
+              ...currentState.withdraw,
+              ...initialWithdrawSliceState,
             },
           };
 

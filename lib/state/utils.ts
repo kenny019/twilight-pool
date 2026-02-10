@@ -6,6 +6,7 @@ import { TradeSessionSlice } from "./session/trade";
 import { HistorySlice } from "./local/history";
 import { PriceSlice } from "./session/price";
 import { TradeHistorySlice } from "./local/trade-history";
+import { WithdrawSlice } from "./local/withdraw";
 
 export interface AccountSlices {
   zk: ZkAccountSlice;
@@ -13,6 +14,7 @@ export interface AccountSlices {
   trade: TradeSlice;
   history: HistorySlice;
   trade_history: TradeHistorySlice;
+  withdraw: WithdrawSlice;
 }
 
 export interface SessionSlices {

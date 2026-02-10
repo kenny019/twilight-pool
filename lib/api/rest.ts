@@ -282,13 +282,29 @@ async function getLendPoolInfo() {
   return result;
 }
 
-export type PositionSizeData = {
-  total: string;
-  total_long: string;
-  total_short: string;
+export type MarketStatsData = {
+  long_pct: number;
+  short_pct: number;
+  open_interest_btc: number;
+  total_long_btc: number;
+  total_short_btc: number;
+  net_exposure_btc: number;
+  pool_equity_btc: number;
+  max_long_btc: number;
+  max_short_btc: number;
+  utilization: number;
+  status: string;
+  status_reason: string | null;
+  params: {
+    max_leverage: number;
+    max_net_mult: number;
+    max_oi_mult: number;
+    max_position_pct: number;
+    min_position_btc: number;
+  };
 };
 
-async function getPositionSize() {
+async function getMarketStats() {
   const response = await wfetch(priceURL, {
     next: {
       revalidate: 0,
@@ -297,12 +313,12 @@ async function getPositionSize() {
     .post({
       body: JSON.stringify({
         jsonrpc: "2.0",
-        method: "position_size",
+        method: "get_market_stats",
         id: 123,
         params: null,
       }),
     })
-    .json<TwilightApiResponse<PositionSizeData>>();
+    .json<TwilightApiResponse<MarketStatsData>>();
 
   return response;
 }
@@ -396,6 +412,6 @@ export {
   queryTransactionHashByRequestId,
   getPoolShareValue,
   getLendPoolInfo,
-  getPositionSize,
+  getMarketStats,
   getWithdrawRequests,
 };

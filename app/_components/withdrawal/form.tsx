@@ -3,6 +3,7 @@ import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import { isUserRejection } from "@/lib/helpers";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import React, { useRef, useState } from "react";
@@ -12,6 +13,8 @@ import Long from "long";
 import { GasPrice, calculateFee } from "@cosmjs/stargate";
 import { Loader2 } from "lucide-react";
 import BtcReserveSelect from "../btc-reserve-select";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
+import { useTwilightStore } from "@/lib/providers/store";
 
 const BtcWithdrawalForm = () => {
   const { mainWallet } = useWallet();
@@ -23,11 +26,25 @@ const BtcWithdrawalForm = () => {
 
   const { toast } = useToast();
 
+  const { twilightSats } = useGetTwilightBTCBalance();
+  const addWithdrawal = useTwilightStore(
+    (state) => state.withdraw.addWithdrawal
+  );
+
   const depositRef = useRef<HTMLInputElement>(null);
 
-  const [selectedReserveId, setSelectedReserveId] = useState<number | undefined>();
+  const [selectedReserveId, setSelectedReserveId] = useState<
+    number | undefined
+  >();
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+
+  const maxValueString =
+    twilightSats > 0
+      ? new BTC("sats", Big(twilightSats))
+          .convert(depositDenom as BTCDenoms)
+          .toString()
+      : "0.00000000";
 
   async function submitWithdrawal() {
     try {
@@ -107,6 +124,7 @@ const BtcWithdrawalForm = () => {
       );
 
       setIsSubmitLoading(false);
+
       if (res.code !== 0) {
         toast({
           variant: "error",
@@ -117,11 +135,28 @@ const BtcWithdrawalForm = () => {
       }
       console.log("response", res);
 
+      addWithdrawal({
+        tx_hash: res.transactionHash,
+        created_at: Date.now(),
+        status: "queued",
+        amount: withdrawAmount,
+        withdrawAddress,
+        reserveId: selectedReserveId,
+      });
+
       toast({
         title: "Success",
         description: "Your withdrawal request has been successfully sent",
       });
     } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        setIsSubmitLoading(false);
+        return;
+      }
       console.error(err);
       setIsSubmitLoading(false);
       toast({
@@ -155,11 +190,22 @@ const BtcWithdrawalForm = () => {
           />
         </div>
         <div className="space-y-1">
-          <Text asChild>
-            <label className="text-primary-accent" htmlFor="input-btc-amount">
-              BTC Amount
+          <div className="flex items-center justify-between">
+            <Text asChild>
+              <label className="text-primary-accent" htmlFor="input-btc-amount">
+                BTC Amount
+              </label>
+            </Text>
+            <label
+              onClick={() => {
+                if (depositRef.current)
+                  depositRef.current.value = maxValueString;
+              }}
+              className="cursor-pointer select-none text-xs text-primary opacity-60 hover:opacity-100"
+            >
+              MAX: {maxValueString}
             </label>
-          </Text>
+          </div>
           <PopoverInput
             id="input-btc-amount"
             name="depositValue"
@@ -174,7 +220,9 @@ const BtcWithdrawalForm = () => {
                 Big(depositRef.current.value)
               );
 
-              depositRef.current.value = currentValue.convert(toDenom).toString();
+              depositRef.current.value = currentValue
+                .convert(toDenom)
+                .toString();
             }}
             type="number"
             step="any"
@@ -205,7 +253,7 @@ const BtcWithdrawalForm = () => {
             !registeredBtcData?.depositAddress ||
             !registeredBtcData?.isConfirmed
           }
-          className="w-full bg-primary text-background hover:bg-primary/90 !mt-12"
+          className="!mt-12 w-full bg-primary text-background hover:bg-primary/90"
           onClick={(e) => {
             e.preventDefault();
             submitWithdrawal();

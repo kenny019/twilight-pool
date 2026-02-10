@@ -28,7 +28,7 @@ import { createZkAccount, createZkBurnTx } from '@/lib/twilight/zk';
 import { ZkPrivateAccount } from '@/lib/zk/account';
 import { verifyAccount, verifyQuisQuisTransaction } from '@/lib/twilight/zkos';
 import { broadcastTradingTx } from '@/lib/api/zkos';
-import { safeJSONParse } from '@/lib/helpers';
+import { safeJSONParse, isUserRejection } from '@/lib/helpers';
 import { twilightproject } from 'twilightjs';
 import Long from 'long';
 import Link from 'next/link';
@@ -59,7 +59,9 @@ const Page = () => {
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
   const trades = useTwilightStore((state) => state.trade.trades);
+  const tradeHistory = useTwilightStore((state) => state.trade_history.trades);
   const lends = useTwilightStore((state) => state.lend.lends);
+  const lendHistory = useTwilightStore((state) => state.lend.lendHistory);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
 
   const activeAccounts = useMemo(() => {
@@ -123,10 +125,9 @@ const Page = () => {
     .mul(finalPrice)
     .toFixed(2);
 
-  const zkAccountSatsBalance = zkAccounts.filter((account) => account.tag !== "main").reduce((acc, account) => {
-    acc += account.value || 0;
-    return acc;
-  }, 0);
+  const zkAccountSatsBalance = zkAccounts
+    .filter((account) => account.tag !== "main" && account.type === "Memo")
+    .reduce((acc, account) => acc + (account.value || 0), 0);
 
   const zkAccountBTCString = new BTC("sats", Big(zkAccountSatsBalance))
     .convert("BTC")
@@ -166,8 +167,15 @@ const Page = () => {
   }, [activeTrades, finalPrice]);
 
   const totalVolume = useMemo(() => {
-    return activeTrades.reduce((acc, trade) => acc + trade.positionSize, 0);
-  }, [activeTrades]);
+    const seen = new Set<string>();
+    let total = 0;
+    for (const trade of [...trades, ...tradeHistory]) {
+      if (seen.has(trade.uuid)) continue;
+      seen.add(trade.uuid);
+      total += trade.initialMargin * trade.leverage;
+    }
+    return total;
+  }, [trades, tradeHistory]);
 
   // Filter active lends only
   const activeLends = useMemo(() =>
@@ -184,9 +192,16 @@ const Page = () => {
     }, 0);
   }, [activeLends, poolSharePrice]);
 
+  const lendPnl = useMemo(() => {
+    return lendHistory.reduce((acc, order) => acc + (order.payment || 0), 0);
+  }, [lendHistory]);
+
+  const pnlColor = (val: number) => val > 0 ? 'text-green-medium' : val < 0 ? 'text-red' : '';
+
   const totalPnlBTC = new BTC("sats", Big(totalPnl)).convert("BTC").toFixed(8);
-  const totalVolumeBTC = new BTC("sats", Big(totalVolume)).convert("BTC").toFixed(0);
+  const totalVolumeBTC = new BTC("sats", Big(totalVolume)).convert("BTC").toFixed(8);
   const lendUnrealizedRewardsBTC = new BTC("sats", Big(lendUnrealizedRewards)).convert("BTC").toFixed(8);
+  const lendPnlBTC = new BTC("sats", Big(lendPnl)).convert("BTC").toFixed(8);
 
   const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
 
@@ -210,6 +225,7 @@ const Page = () => {
       return;
     }
 
+    try {
     const transientZkAccount = await createZkAccount({
       tag: Math.random().toString(36).substring(2, 15),
       signature: privateKey,
@@ -380,6 +396,21 @@ const Page = () => {
       ),
     });
 
+    } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
+      console.error(err);
+      toast({
+        variant: "error",
+        title: "An error has occurred",
+        description: "Please try again later.",
+      });
+    }
 
   }, [toast, privateKey, twilightAddress, removeZkAccount, addTransactionHistory, chainWallet]);
 
@@ -536,7 +567,7 @@ const Page = () => {
               placeholder={<Skeleton className="h-4 w-[80px]" />}
             >
               <Text className="text-xs text-primary-accent">
-                {Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(nyksBalance)} NYKS
+                {Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 8 }).format(nyksBalance / 1e8)} NYKS
               </Text>
             </Resource>
           </div>
@@ -544,7 +575,7 @@ const Page = () => {
         </div>
         <div className="md:col-span-3 border rounded-md p-4 md:p-4 space-y-4">
           <Text heading="h2" className="text-sm text-primary-accent">
-            Trades + Lends
+            Trades
           </Text>
 
           <div className="flex justify-between">
@@ -553,8 +584,8 @@ const Page = () => {
               isLoaded={!satsLoading}
               placeholder={<Skeleton className="h-4 w-[80px]" />}
             >
-              <Text className={`text-xs ${totalPnl >= 0 ? 'text-green-medium' : 'text-red'}`}>
-                {totalPnl >= 0 ? '+' : ''}{totalPnlBTC} BTC
+              <Text className={`text-xs ${pnlColor(totalPnl)}`}>
+                {totalPnl > 0 ? '+' : ''}{totalPnlBTC} BTC
               </Text>
             </Resource>
           </div>
@@ -569,6 +600,12 @@ const Page = () => {
             </Resource>
           </div>
 
+          <Separator />
+
+          <Text heading="h2" className="text-sm text-primary-accent">
+            Lend
+          </Text>
+
           <div className="flex justify-between">
             <Text className="text-xs text-primary-accent">Lend U. Rewards</Text>
             <Resource
@@ -576,6 +613,18 @@ const Page = () => {
               placeholder={<Skeleton className="h-4 w-[80px]" />}
             >
               <Text className="text-xs">{lendUnrealizedRewardsBTC} BTC</Text>
+            </Resource>
+          </div>
+
+          <div className="flex justify-between">
+            <Text className="text-xs text-primary-accent">Lend PnL</Text>
+            <Resource
+              isLoaded={!satsLoading}
+              placeholder={<Skeleton className="h-4 w-[80px]" />}
+            >
+              <Text className={`text-xs ${pnlColor(lendPnl)}`}>
+                {lendPnl > 0 ? '+' : ''}{lendPnlBTC} BTC
+              </Text>
             </Resource>
           </div>
         </div>

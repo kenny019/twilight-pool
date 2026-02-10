@@ -8,6 +8,7 @@ import { usePriceFeed } from "@/lib/providers/feed";
 import cn from "@/lib/cn";
 import { formatCurrency } from "@/lib/twilight/ticker";
 import usePriceTickerData from "@/lib/hooks/usePriceTickerData";
+import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
 import { useSessionStore } from "@/lib/providers/session";
@@ -31,6 +32,8 @@ const TickerWrapper = () => {
     resetFunding,
     hasInit,
   } = usePriceTickerData(finalPrice);
+
+  const marketStats = useGetMarketStats();
 
   const { high, low, change, turnover } = priceTickerData;
   const { openInterest, openInterestBtc } = openInterestData;
@@ -176,10 +179,10 @@ const TickerWrapper = () => {
       <TickerItem title="Skew">
         <Resource
           isLoaded={hasInit}
-          placeholder={<Skeleton className="h-6 w-[120px]" />}
+          placeholder={<Skeleton className="h-6 w-[108px]" />}
         >
           <div className="flex flex-col gap-0.5">
-            <div className="flex h-2 w-[120px] overflow-hidden rounded-sm">
+            <div className="flex h-2 w-[108px] overflow-hidden rounded-sm">
               <div
                 className="bg-green-medium"
                 style={{ width: `${longPercent}%` }}
@@ -193,6 +196,23 @@ const TickerWrapper = () => {
               <span className="text-red">{shortPercent.toFixed(0)}% S</span>
             </div>
           </div>
+        </Resource>
+      </TickerItem>
+      <TickerItem title="Max Long / Short">
+        <Resource
+          isLoaded={!!marketStats.data}
+          placeholder={<Skeleton className="h-6 w-[80px]" />}
+        >
+          <span>
+            <span className="text-green-medium">
+              {((marketStats.data?.max_long_btc ?? 0) / 1e8).toFixed(2)}
+            </span>
+            <span className="text-xs text-gray-500">{" / "}</span>
+            <span className="text-red">
+              {((marketStats.data?.max_short_btc ?? 0) / 1e8).toFixed(2)}
+            </span>
+            <span className="text-xs text-gray-500">{" BTC"}</span>
+          </span>
         </Resource>
       </TickerItem>
       <TickerItem

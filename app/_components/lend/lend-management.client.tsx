@@ -6,7 +6,7 @@ import { Text } from "@/components/typography";
 import { sendLendOrder } from "@/lib/api/client";
 import { queryLendOrder } from '@/lib/api/relayer';
 import { queryTransactionHashByRequestId, queryTransactionHashes } from '@/lib/api/rest';
-import { retry } from '@/lib/helpers';
+import { retry, isUserRejection } from '@/lib/helpers';
 import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
@@ -119,175 +119,191 @@ const LendManagement = () => {
 
     console.log("msg", fundingTransferMsg);
 
-    const res = await stargateClient.signAndBroadcast(
-      twilightAddress,
-      [fundingTransferMsg],
-      "auto"
-    );
-
-    console.log("sent sats from funding to trading", transferAmount);
-    console.log("res", res);
-
-    const zkAccountToUse: ZkAccount = {
-      scalar: newTradingAccount.scalar,
-      type: "Coin",
-      address: newTradingAccount.address,
-      tag: tag,
-      isOnChain: true,
-      value: transferAmount,
-      createdAt: dayjs().unix(),
-    }
-
-    addZkAccount(zkAccountToUse);
-
-    // hack to make sure utxo exists on chain before creating the lend order
-    await ZkPrivateAccount.create({
-      signature: privateKey,
-      balance: transferAmount,
-      existingAccount: zkAccountToUse,
-    });
-
-    const { success, msg } = await createZkLendOrder({
-      zkAccount: zkAccountToUse,
-      deposit: transferAmount,
-      signature: privateKey,
-    });
-
-    if (!success || !msg) {
-      toast({
-        variant: "error",
-        title: "Unable to submit lend order",
-        description: "An error has occurred, try again later.",
-      });
-      setIsSubmitLoading(false);
-      return;
-    }
-
-    const data = await sendLendOrder(msg);
-
-    if (data.result && data.result.id_key) {
-      const lendOrderRes = await retry<
-        ReturnType<typeof queryTransactionHashes>,
-        string
-      >(
-        queryTransactionHashByRequestId,
-        30,
-        data.result.id_key,
-        1000,
-        (txHash) => {
-          const found = txHash.result.find(
-            (tx) => tx.order_status === "FILLED"
-          );
-
-          return found ? true : false;
-        }
+    try {
+      const res = await stargateClient.signAndBroadcast(
+        twilightAddress,
+        [fundingTransferMsg],
+        "auto"
       );
 
-      if (!lendOrderRes.success) {
-        console.error("lend order deposit not successful");
-        toast({
-          variant: "error",
-          title: "Unable to submit lend order",
-          description: "An error has occurred, try again later.",
-        });
-        setIsSubmitLoading(false);
-        return;
+      console.log("sent sats from funding to trading", transferAmount);
+      console.log("res", res);
+
+      const zkAccountToUse: ZkAccount = {
+        scalar: newTradingAccount.scalar,
+        type: "Coin",
+        address: newTradingAccount.address,
+        tag: tag,
+        isOnChain: true,
+        value: transferAmount,
+        createdAt: dayjs().unix(),
       }
 
-      const lendOrderData = lendOrderRes.data.result.find(
-        (tx) => tx.order_status === "FILLED"
-      );
+      addZkAccount(zkAccountToUse);
 
-      const tx_hash = lendOrderData?.tx_hash;
-
-      if (!tx_hash) {
-        toast({
-          variant: "error",
-          title: "Unable to submit lend order",
-          description: "An error has occurred, try again later.",
-        });
-        setIsSubmitLoading(false);
-        return;
-      }
-
-      toast({
-        title: "Success",
-        description: <div className="opacity-90">
-          {`Successfully submitted lend order for ${new BTC("sats", Big(transferAmount))
-            .convert("BTC")
-            .toString()} BTC. `}
-          <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${tx_hash}`}
-            target={"_blank"}
-            className="text-sm underline hover:opacity-100"
-          >
-            Explorer link
-          </Link>
-        </div>
-      });
-
-      const queryLendOrderMsg = await createQueryLendOrderMsg({
-        address: zkAccountToUse.address,
+      // hack to make sure utxo exists on chain before creating the lend order
+      await ZkPrivateAccount.create({
         signature: privateKey,
-        orderStatus: "FILLED",
+        balance: transferAmount,
+        existingAccount: zkAccountToUse,
       });
 
-      const queryLendOrderRes = await queryLendOrder(queryLendOrderMsg);
-      console.log(queryLendOrderRes);
+      const { success, msg } = await createZkLendOrder({
+        zkAccount: zkAccountToUse,
+        deposit: transferAmount,
+        signature: privateKey,
+      });
 
-      if (!queryLendOrderRes) {
-        console.error(queryLendOrderRes);
+      if (!success || !msg) {
         toast({
           variant: "error",
-          title: "Unable to query lend order",
+          title: "Unable to submit lend order",
           description: "An error has occurred, try again later.",
         });
         setIsSubmitLoading(false);
         return;
       }
 
-      const newLendOrder = {
-        accountAddress: zkAccountToUse.address,
-        uuid: data.result.id_key as string,
-        orderStatus: "LENDED",
-        value: transferAmount,
-        timestamp: new Date(),
-        apy: poolInfo?.apy,
-        tx_hash: tx_hash,
-        npoolshare: Number(queryLendOrderRes.result.npoolshare),
-        pool_share_price_entry: btcPrice,
+      const data = await sendLendOrder(msg);
+
+      if (data.result && data.result.id_key) {
+        const lendOrderRes = await retry<
+          ReturnType<typeof queryTransactionHashes>,
+          string
+        >(
+          queryTransactionHashByRequestId,
+          30,
+          data.result.id_key,
+          1000,
+          (txHash) => {
+            const found = txHash.result.find(
+              (tx) => tx.order_status === "FILLED"
+            );
+
+            return found ? true : false;
+          }
+        );
+
+        if (!lendOrderRes.success) {
+          console.error("lend order deposit not successful");
+          toast({
+            variant: "error",
+            title: "Unable to submit lend order",
+            description: "An error has occurred, try again later.",
+          });
+          setIsSubmitLoading(false);
+          return;
+        }
+
+        const lendOrderData = lendOrderRes.data.result.find(
+          (tx) => tx.order_status === "FILLED"
+        );
+
+        const tx_hash = lendOrderData?.tx_hash;
+
+        if (!tx_hash) {
+          toast({
+            variant: "error",
+            title: "Unable to submit lend order",
+            description: "An error has occurred, try again later.",
+          });
+          setIsSubmitLoading(false);
+          return;
+        }
+
+        toast({
+          title: "Success",
+          description: <div className="opacity-90">
+            {`Successfully submitted lend order for ${new BTC("sats", Big(transferAmount))
+              .convert("BTC")
+              .toString()} BTC. `}
+            <Link
+              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${tx_hash}`}
+              target={"_blank"}
+              className="text-sm underline hover:opacity-100"
+            >
+              Explorer link
+            </Link>
+          </div>
+        });
+
+        const queryLendOrderMsg = await createQueryLendOrderMsg({
+          address: zkAccountToUse.address,
+          signature: privateKey,
+          orderStatus: "FILLED",
+        });
+
+        const queryLendOrderRes = await queryLendOrder(queryLendOrderMsg);
+        console.log(queryLendOrderRes);
+
+        if (!queryLendOrderRes) {
+          console.error(queryLendOrderRes);
+          toast({
+            variant: "error",
+            title: "Unable to query lend order",
+            description: "An error has occurred, try again later.",
+          });
+          setIsSubmitLoading(false);
+          return;
+        }
+
+        const newLendOrder = {
+          accountAddress: zkAccountToUse.address,
+          uuid: data.result.id_key as string,
+          orderStatus: "LENDED",
+          value: transferAmount,
+          timestamp: new Date(),
+          apy: poolInfo?.apy,
+          tx_hash: tx_hash,
+          npoolshare: Number(queryLendOrderRes.result.npoolshare),
+          pool_share_price_entry: btcPrice,
+        }
+
+        addLendOrder(newLendOrder);
+        addLendHistory(newLendOrder);
+
+        addTransactionHistory({
+          date: new Date(),
+          from: zkAccountToUse.address,
+          fromTag: zkAccountToUse.tag,
+          to: zkAccountToUse.address,
+          toTag: zkAccountToUse.tag,
+          tx_hash: tx_hash,
+          type: "Deposit Lend",
+          value: transferAmount,
+        });
+
+        updateZkAccount(zkAccountToUse.address, {
+          ...zkAccountToUse,
+          type: "Memo",
+        });
+
+        // Reset form
+        if (depositRef.current) {
+          depositRef.current.value = "";
+        }
+
+      } else {
+        toast({
+          variant: "error",
+          title: "Unable to submit lend order",
+          description: "An error has occurred, try again later.",
+        });
       }
-
-      addLendOrder(newLendOrder);
-      addLendHistory(newLendOrder);
-
-      addTransactionHistory({
-        date: new Date(),
-        from: zkAccountToUse.address,
-        fromTag: zkAccountToUse.tag,
-        to: zkAccountToUse.address,
-        toTag: zkAccountToUse.tag,
-        tx_hash: tx_hash,
-        type: "Deposit Lend",
-        value: transferAmount,
-      });
-
-      updateZkAccount(zkAccountToUse.address, {
-        ...zkAccountToUse,
-        type: "Memo",
-      });
-
-      // Reset form
-      if (depositRef.current) {
-        depositRef.current.value = "";
+    } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+      } else {
+        console.error(err);
+        toast({
+          variant: "error",
+          title: "Unable to submit lend order",
+          description: "An error has occurred, try again later.",
+        });
       }
-
-    } else {
-      toast({
-        variant: "error",
-        title: "Unable to submit lend order",
-        description: "An error has occurred, try again later.",
-      });
     }
 
     setIsSubmitLoading(false);

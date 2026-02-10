@@ -38,7 +38,7 @@ import { useSessionStore } from "@/lib/providers/session";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { twilightproject } from "twilightjs";
 import { ZkPrivateAccount } from "@/lib/zk/account";
-import { safeJSONParse } from "@/lib/helpers";
+import { safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { getRegisteredBTCAddress } from '@/lib/twilight/rest';
 import { registerBTCAddress } from '@/lib/utils/btc-registration';
 import dayjs from "dayjs";
@@ -689,6 +689,14 @@ const TransferDialog = ({
         setIsSubmitLoading(false);
       }
     } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        setIsSubmitLoading(false);
+        return;
+      }
       toast({
         variant: "error",
         title: "An error has occurred",

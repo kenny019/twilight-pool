@@ -1,7 +1,7 @@
 "use client";
 import { executeTradeOrder } from "@/lib/api/client";
 import { queryTransactionHashByRequestId, queryTransactionHashes } from "@/lib/api/rest";
-import { retry, safeJSONParse } from "@/lib/helpers";
+import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
@@ -517,6 +517,13 @@ const OrderMyTrades = () => {
       }
 
     } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       console.error(err);
       toast({
         variant: "error",
@@ -717,6 +724,13 @@ const OrderMyTrades = () => {
         description: "Order has been successfully cancelled",
       });
     } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       console.error(err);
       toast({
         variant: "error",

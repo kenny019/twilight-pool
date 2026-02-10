@@ -10,6 +10,7 @@ import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
+import { isUserRejection } from "@/lib/helpers";
 import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
@@ -86,7 +87,7 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
       setIsLoading(false);
       return toast({
         title: "Invalid Bitcoin address",
-        description: "Please enter a valid Bitcoin address",
+        description: "Only Native SegWit (bc1q...) addresses are supported",
         variant: "error",
       });
     }
@@ -145,6 +146,13 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
       }, 1000);
     } catch (err) {
       setIsLoading(false);
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       const shouldInitialize =
         typeof err === "string"
           ? (err as string).includes("does not exist on chain")

@@ -13,7 +13,7 @@ import { Text } from "@/components/typography";
 import { Separator } from "@/components/seperator";
 import { executeLendOrder } from "@/lib/api/client";
 import { queryTransactionHashByRequestId, queryTransactionHashes } from "@/lib/api/rest";
-import { retry, safeJSONParse } from "@/lib/helpers";
+import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
@@ -416,6 +416,13 @@ const Page = () => {
       setIsSettleLoading(false);
       setSettlingOrderId(null);
       setIsWithdrawDialogOpen(false);
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       console.error(err);
       toast({
         variant: "error",

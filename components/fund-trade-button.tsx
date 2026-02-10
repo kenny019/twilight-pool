@@ -19,7 +19,7 @@ import { createFundingToTradingTransferMsg } from '@/lib/twilight/wallet';
 import { ZkPrivateAccount } from '@/lib/zk/account';
 import Link from 'next/link';
 import { broadcastTradingTx } from '@/lib/api/zkos';
-import { safeJSONParse } from '@/lib/helpers';
+import { safeJSONParse, isUserRejection } from '@/lib/helpers';
 import { twilightproject } from 'twilightjs';
 import Long from 'long';
 
@@ -459,6 +459,13 @@ function FundingTradeButton({
       }
     }
     catch (error) {
+      if (isUserRejection(error)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        return;
+      }
       console.error(error);
       toast({
         title: "An unexpected error has occurred",

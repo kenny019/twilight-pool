@@ -2,10 +2,19 @@ import { ColumnDef } from "@tanstack/react-table";
 import { WithdrawRequest } from "@/lib/api/rest";
 import { truncateHash } from "@/lib/helpers";
 import { toast } from "@/lib/hooks/useToast";
+import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
+import Button from "@/components/button";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
-export const withdrawRequestColumns: ColumnDef<WithdrawRequest, any>[] = [
+export type MergedWithdrawRequest = WithdrawRequest & {
+  tx_hash?: string;
+  status?: "queued" | "completed";
+};
+
+export const withdrawRequestColumns: ColumnDef<MergedWithdrawRequest, any>[] = [
   {
     accessorKey: "withdrawIdentifier",
     header: "ID",
@@ -46,11 +55,49 @@ export const withdrawRequestColumns: ColumnDef<WithdrawRequest, any>[] = [
     },
   },
   {
+    accessorKey: "tx_hash",
+    header: "Tx Hash",
+    cell: (row) => {
+      const hash = row.getValue() as string | undefined;
+      if (!hash) return <span className="text-primary-accent">-</span>;
+      return (
+        <Button className="justify-start gap-0 items-start" asChild variant="link">
+          <Link
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${hash}`}
+            target="_blank"
+          >
+            {truncateHash(hash)} <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </Button>
+      );
+    },
+  },
+  {
     accessorKey: "withdrawReserveId",
     header: "Reserve",
     cell: (row) => {
       const reserveId = row.getValue() as string;
       return <span>#{reserveId}</span>;
+    },
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: (row) => {
+      const status = row.getValue() as string | undefined;
+      if (!status) return <span className="text-primary-accent">-</span>;
+      return (
+        <span
+          className={cn(
+            "px-2 py-1 rounded text-xs font-medium",
+            status === "completed"
+              ? "bg-green-medium/10 text-green-medium"
+              : "bg-gray-500/10 text-gray-500"
+          )}
+        >
+          {status === "completed" ? "Completed" : "Queued"}
+        </span>
+      );
     },
   },
 ];

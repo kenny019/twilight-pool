@@ -9,6 +9,7 @@ import Big from "big.js";
 import BTC from "@/lib/twilight/denoms";
 import { Loader2 } from "lucide-react";
 import cn from "@/lib/cn";
+import { calculateAPR } from "@/lib/helpers";
 
 export interface LendOrdersTableMeta {
   getCurrentPrice: () => number;
@@ -17,7 +18,10 @@ export interface LendOrdersTableMeta {
   settlingOrderId: string | null;
 }
 
-export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, any>[] = [
+export const lendOrdersColumns: ColumnDef<
+  LendOrder & { accountTag: string },
+  any
+>[] = [
   {
     accessorKey: "timestamp",
     header: "Date",
@@ -29,11 +33,7 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
     cell: (row) => {
       const order = row.row.original;
       // Only show if user has multiple accounts
-      return (
-        <Text className="text-xs">
-          {order.accountTag}
-        </Text>
-      );
+      return <Text className="text-xs">{order.accountTag}</Text>;
     },
   },
   {
@@ -43,9 +43,7 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       const order = row.row.original;
       const amountBTC = new BTC("sats", Big(order.value)).convert("BTC");
       return (
-        <Text className="font-medium">
-          {BTC.format(amountBTC, "BTC")}
-        </Text>
+        <Text className="font-medium">{BTC.format(amountBTC, "BTC")}</Text>
       );
     },
   },
@@ -56,11 +54,7 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       const order = row.row.original;
 
       if (!order.npoolshare) {
-        return (
-          <Text className="font-medium">
-            -
-          </Text>
-        )
+        return <Text className="font-medium">-</Text>;
       }
 
       const shares = order.npoolshare / 10_000;
@@ -83,13 +77,9 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
         return <Text className="font-medium">0.00000000 BTC</Text>;
       }
 
-      const shareValue = Big(deposit).div(npoolshare).div(10_000)
+      const shareValue = Big(deposit).div(npoolshare).div(10_000);
 
-      return (
-        <Text className="font-medium">
-          {shareValue.toFixed(8)}
-        </Text>
-      );
+      return <Text className="font-medium">{shareValue.toFixed(8)}</Text>;
     },
   },
   {
@@ -97,9 +87,28 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
     header: "APR %",
     cell: (row) => {
       const order = row.row.original;
+      const meta = row.table.options.meta as LendOrdersTableMeta;
+
+      if (!order.npoolshare || !order.value) {
+        return <Text className="font-medium">0.00%</Text>;
+      }
+
+      const currentSharePrice = meta.getPoolSharePrice();
+      const orderTimestampMs = dayjs(order.timestamp).valueOf();
+
+      const rewards =
+        currentSharePrice * (order.npoolshare / 10000) - order.value;
+      const timeElapsedSeconds = (Date.now() - orderTimestampMs) / 1000;
+
+      const apr = calculateAPR({
+        rewards,
+        principal: order.value,
+        timeElapsedSeconds,
+      });
+
       return (
-        <Text className="font-medium">
-          {order.apy?.toFixed(2) || "0.00"}%
+        <Text className={cn("font-medium", apr > 0 && "text-green-medium")}>
+          {apr.toFixed(2)}%
         </Text>
       );
     },
@@ -119,13 +128,17 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       const currentSharePrice = meta.getPoolSharePrice();
       const shareQty = order.npoolshare;
 
-      const accruedRewards = ((currentSharePrice * (shareQty / 10000)) - order.value)
+      const accruedRewards =
+        currentSharePrice * (shareQty / 10000) - order.value;
+
+      if (accruedRewards < 100) {
+        return <Text className="font-medium">0</Text>;
+      }
+
       const rewardsBTC = new BTC("sats", Big(accruedRewards)).convert("BTC");
 
       return (
-        <Text className="font-medium">
-          {BTC.format(rewardsBTC, "BTC")}
-        </Text>
+        <Text className="font-medium">{BTC.format(rewardsBTC, "BTC")}</Text>
       );
     },
   },
@@ -148,7 +161,7 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       return (
         <span
           className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
+            "rounded px-2 py-1 text-xs font-medium",
             getStatusColor(order.orderStatus)
           )}
         >
@@ -170,8 +183,7 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       }
 
       return (
-
-        <div className="flex space-x-2 justify-start">
+        <div className="flex justify-start space-x-2">
           <Button
             size="small"
             onClick={() => meta.settleLendOrder(order)}
@@ -191,4 +203,4 @@ export const lendOrdersColumns: ColumnDef<LendOrder & { accountTag: string }, an
       );
     },
   },
-]; 
+];

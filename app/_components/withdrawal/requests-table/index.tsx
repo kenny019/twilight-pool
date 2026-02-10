@@ -3,6 +3,7 @@
 import { Text } from "@/components/typography";
 import cn from "@/lib/cn";
 import useWithdrawRequests from "@/lib/hooks/useWithdrawRequests";
+import { useTwilightStore } from "@/lib/providers/store";
 import {
   ColumnDef,
   flexRender,
@@ -10,7 +11,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
-import { withdrawRequestColumns } from "./columns";
+import { useMemo } from "react";
+import { withdrawRequestColumns, MergedWithdrawRequest } from "./columns";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -98,11 +100,33 @@ export default function WithdrawRequestsTable({
   twilightAddress,
 }: WithdrawRequestsTableProps) {
   const { data, isLoading, error } = useWithdrawRequests(twilightAddress);
+  const storeWithdrawals = useTwilightStore(
+    (state) => state.withdraw.withdrawals
+  );
+
+  const mergedData = useMemo((): MergedWithdrawRequest[] => {
+    if (!data) return [];
+    const unmatched = [...storeWithdrawals];
+    return data.map((row) => {
+      const amount = parseInt(row.withdrawAmount);
+      const idx = unmatched.findIndex(
+        (sw) =>
+          sw.amount === amount &&
+          (sw.withdrawAddress === undefined ||
+            sw.withdrawAddress === row.withdrawAddress) &&
+          (sw.reserveId === undefined ||
+            sw.reserveId === parseInt(row.withdrawReserveId))
+      );
+      if (idx === -1) return row;
+      const match = unmatched.splice(idx, 1)[0];
+      return { ...row, tx_hash: match.tx_hash, status: match.status };
+    });
+  }, [data, storeWithdrawals]);
 
   return (
     <div className="rounded-lg border bg-background p-6">
       <Text heading="h3" className="mb-4 font-medium">
-        Your Withdrawals
+        Your Withdrawal Requests
       </Text>
       {isLoading ? (
         <div className="flex h-24 items-center justify-center">
@@ -111,7 +135,7 @@ export default function WithdrawRequestsTable({
       ) : error ? (
         <div className="text-sm text-red">Failed to load withdrawal requests</div>
       ) : (
-        <DataTable columns={withdrawRequestColumns} data={data ?? []} />
+        <DataTable columns={withdrawRequestColumns} data={mergedData} />
       )}
     </div>
   );

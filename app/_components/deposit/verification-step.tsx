@@ -5,10 +5,10 @@ import { Text } from "@/components/typography";
 import useBtcBlockHeight from "@/lib/hooks/useBtcBlockHeight";
 import useBtcReserves from "@/lib/hooks/useBtcReserves";
 import { useToast } from "@/lib/hooks/useToast";
-import BTC from '@/lib/twilight/denoms';
-import Big from 'big.js';
+import BTC from "@/lib/twilight/denoms";
+import Big from "big.js";
 import { RefreshCw, AlertTriangle, Info, Loader2 } from "lucide-react";
-import QRCode from 'qrcode';
+import QRCode from "qrcode";
 import React, { useEffect, useRef, useState } from "react";
 import BtcReserveSelect from "../btc-reserve-select";
 import CopyField from "./copy-field";
@@ -16,42 +16,134 @@ import CopyField from "./copy-field";
 type Props = {
   btcDepositAddress: string;
   btcSatoshiTestAmount: number;
-  onSuccess: () => void;
   onBack?: () => void;
-  isConfirmed?: boolean
+  isConfirmed?: boolean;
 };
 
 // Bitcoin blocks until reserve unlocks - approx 1 day at 10min/block
 const NEXT_UNLOCK_HEIGHT_MODIFIER = 144;
-// Warning threshold for blocks remaining
-const LOW_BLOCKS_WARNING = 10;
 // Critical blocks warning - don't send deposits within this threshold
 const CRITICAL_BLOCKS_WARNING = 4;
+
+const SWEEP_CYCLE = 144;
+const RING_SIZE = 80;
+const RING_RADIUS = 34;
+const RING_STROKE = 6;
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+function SweepProgress({
+  currentBlock,
+  sweepBlock,
+  blocksRemaining,
+}: {
+  currentBlock: number;
+  sweepBlock: number;
+  blocksRemaining: number;
+}) {
+  const progress = Math.min(
+    Math.max((SWEEP_CYCLE - blocksRemaining) / SWEEP_CYCLE, 0),
+    1
+  );
+  const dashoffset = CIRCUMFERENCE * (1 - progress);
+  const isExpired = blocksRemaining <= 0;
+  const isCritical = blocksRemaining <= CRITICAL_BLOCKS_WARNING && !isExpired;
+  const isWarning = progress >= 0.5;
+
+  const strokeColor =
+    isExpired || isCritical ? "#ef4444" : isWarning ? "#eab308" : "#22c55e";
+
+  if (isExpired) {
+    return (
+      <div className="text-red-500 text-sm">
+        Expired — reserve sweeping in progress
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <div
+        className="relative shrink-0"
+        style={{ width: RING_SIZE, height: RING_SIZE }}
+      >
+        <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90">
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={RING_STROKE}
+            className="text-primary-accent/20"
+          />
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={RING_STROKE}
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={dashoffset}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dashoffset 0.5s ease" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className="text-sm font-semibold"
+            style={{ color: strokeColor }}
+          >
+            {blocksRemaining}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-primary-accent">Current Block</span>
+          <span className="font-mono">{currentBlock.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-primary-accent">Next Sweep Block</span>
+          <span className="font-mono">{sweepBlock.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const VerificationStep = ({
   btcDepositAddress,
   btcSatoshiTestAmount,
   onBack,
-  isConfirmed
+  isConfirmed,
 }: Props) => {
   const { toast } = useToast();
 
-  const { data: btcReserves = [], refetch: refetchReserves } = useBtcReserves();
+  const {
+    data: btcReserves = [],
+    refetch: refetchReserves,
+    isFetching: isRefetchingReserves,
+  } = useBtcReserves();
   const {
     data: btcBlockHeight,
     isLoading: blockHeightLoading,
     isError: blockHeightError,
     refetch: refetchBlockHeight,
+    isFetching: isRefetchingBlockHeight,
   } = useBtcBlockHeight();
 
-  const [selectedBtcReserve, setSelectedBtcReserve] = useState<number | undefined>();
+  const [selectedBtcReserve, setSelectedBtcReserve] = useState<
+    number | undefined
+  >();
   const [qrGenerated, setQrGenerated] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasShownExpiryToast = useRef(false);
 
-  const selectedReserve = selectedBtcReserve !== undefined
-    ? btcReserves.find(r => Number(r.ReserveId) === selectedBtcReserve)
-    : undefined;
+  const selectedReserve =
+    selectedBtcReserve !== undefined
+      ? btcReserves.find((r) => Number(r.ReserveId) === selectedBtcReserve)
+      : undefined;
 
   const selectedReserveAddress = selectedReserve?.ReserveAddress;
 
@@ -59,7 +151,8 @@ const VerificationStep = ({
   useEffect(() => {
     if (!btcBlockHeight || !selectedReserve) return;
 
-    const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+    const unlockHeight =
+      Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
     if (btcBlockHeight >= unlockHeight && !hasShownExpiryToast.current) {
       hasShownExpiryToast.current = true;
       toast({
@@ -95,9 +188,32 @@ const VerificationStep = ({
     }
   }, [selectedReserveAddress]);
 
+  async function handleRefreshReserves() {
+    setSelectedBtcReserve(undefined);
+    const [{ status }] = await Promise.all([
+      refetchReserves(),
+      new Promise((r) => setTimeout(r, 300)),
+    ]);
+    toast(
+      status === "success"
+        ? { title: "Reserves updated", description: "Latest reserve data fetched." }
+        : { title: "Refresh failed", description: "Could not fetch reserves.", variant: "error" }
+    );
+  }
+
+  async function handleRetryBlockHeight() {
+    const [{ status }] = await Promise.all([
+      refetchBlockHeight(),
+      new Promise((r) => setTimeout(r, 300)),
+    ]);
+    if (status === "success") {
+      toast({ title: "Block height updated" });
+    }
+  }
+
   const depositAmountInBTC = new BTC("sats", Big(btcSatoshiTestAmount))
     .convert("BTC")
-    .toString()
+    .toString();
 
   return (
     <div className="space-y-6">
@@ -108,10 +224,7 @@ const VerificationStep = ({
         <Text asChild>
           <label className="text-primary-accent">Sender BTC Address</label>
         </Text>
-        <Input
-          value={btcDepositAddress}
-          readOnly
-        />
+        <Input value={btcDepositAddress} readOnly />
         <div className="flex items-center gap-2 text-xs text-yellow-500">
           <Info className="h-3 w-3 shrink-0" />
           <span>Oracles will only detect deposits sent from this address</span>
@@ -130,7 +243,10 @@ const VerificationStep = ({
 
         <div className="space-y-2">
           <Text asChild>
-            <label className="text-primary-accent" htmlFor="input-deposit-amount">
+            <label
+              className="text-primary-accent"
+              htmlFor="input-deposit-amount"
+            >
               BTC Amount
             </label>
           </Text>
@@ -156,14 +272,14 @@ const VerificationStep = ({
                   ref={canvasRef}
                   width={256}
                   height={256}
-                  className="rounded-md max-w-[200px] sm:max-w-[256px]"
+                  className="max-w-[200px] rounded-md sm:max-w-[256px]"
                 />
                 {!qrGenerated && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
+                  <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}
-                <Text className="mt-2 text-xs text-center text-primary-accent">
+                <Text className="mt-2 text-center text-xs text-primary-accent">
                   Scan with wallet
                 </Text>
               </div>
@@ -171,103 +287,82 @@ const VerificationStep = ({
                 <Text asChild>
                   <label className="text-primary-accent">Reserve Address</label>
                 </Text>
-                <CopyField value={selectedReserveAddress} label="reserve address" />
-                {/* Block Height Indicator */}
+                <CopyField
+                  value={selectedReserveAddress}
+                  label="reserve address"
+                />
+                {/* Sweep Progress */}
                 {selectedReserve && (
-                  <div className="mt-3 space-y-1">
-                    {/* Critical blocks warning */}
-                    {(() => {
-                      const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
-                      const blocksRemaining = btcBlockHeight != null ? unlockHeight - btcBlockHeight : null;
-                      if (blocksRemaining !== null && blocksRemaining <= CRITICAL_BLOCKS_WARNING && blocksRemaining > 0) {
-                        return (
-                          <div className="flex items-center gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/50 text-yellow-500 text-xs">
-                            <AlertTriangle className="h-4 w-4 shrink-0" />
-                            <span>Do not send deposit when the reserve expiry is within 4 blocks, please create a new deposit when the reserve address has updated</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
+                  <div className="mt-3 space-y-2">
                     <Text asChild>
-                      <label className="text-primary-accent text-sm">
+                      <label className="text-sm text-primary-accent">
                         Reserve Expiry
                       </label>
                     </Text>
                     {blockHeightError ? (
-                      <div className="flex items-center gap-2 text-sm text-red-500">
+                      <div className="text-red-500 flex items-center gap-2 text-sm">
                         <span>Unable to fetch block height</span>
                         <button
-                          onClick={() => refetchBlockHeight()}
-                          className="p-1 rounded text-primary-accent hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          onClick={handleRetryBlockHeight}
+                          disabled={isRefetchingBlockHeight}
+                          className="rounded p-1 text-primary-accent transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50"
                           aria-label="Retry fetching block height"
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          <RefreshCw className={`h-4 w-4 ${isRefetchingBlockHeight ? "animate-spin" : ""}`} />
                         </button>
                       </div>
-                    ) : (
+                    ) : blockHeightLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-primary-accent">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Fetching block height...</span>
+                      </div>
+                    ) : btcBlockHeight != null ? (
                       (() => {
-                        const unlockHeight = Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
-                        const blocksRemaining = btcBlockHeight != null
-                          ? unlockHeight - btcBlockHeight
-                          : null;
-                        const isExpired = blocksRemaining !== null && blocksRemaining <= 0;
-                        const isWarning = blocksRemaining !== null && blocksRemaining > 0 && blocksRemaining <= LOW_BLOCKS_WARNING;
-                        const colorClass = blocksRemaining === null
-                          ? "text-primary-accent"
-                          : isExpired
-                            ? "text-red-500"
-                            : isWarning
-                              ? "text-yellow-500"
-                              : "text-green-500";
-
+                        const unlockHeight =
+                          Number(selectedReserve.UnlockHeight) +
+                          NEXT_UNLOCK_HEIGHT_MODIFIER;
+                        const blocksRemaining = unlockHeight - btcBlockHeight;
+                        const isCritical =
+                          blocksRemaining <= CRITICAL_BLOCKS_WARNING &&
+                          blocksRemaining > 0;
+                        const isExpired = blocksRemaining <= 0;
                         return (
-                          <div className="space-y-1">
-                            {blockHeightLoading ? (
-                              <div className="flex items-center gap-2 text-sm text-primary-accent">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Fetching block height...</span>
+                          <>
+                            {isCritical && (
+                              <div className="flex items-center gap-2 rounded border border-yellow-500/50 bg-yellow-500/10 p-2 text-xs text-yellow-500">
+                                <AlertTriangle className="h-4 w-4 shrink-0" />
+                                <span>
+                                  Do not send deposit when the reserve expiry is
+                                  within 4 blocks, please create a new deposit
+                                  when the reserve address has updated
+                                </span>
                               </div>
-                            ) : (
-                              <>
-                                <div className={`text-sm font-mono ${colorClass}`}>
-                                  {btcBlockHeight}/{unlockHeight}
-                                </div>
-                                <div className={`text-xs flex items-center gap-1 ${colorClass}`}>
-                                  {isWarning && <AlertTriangle className="h-3 w-3" />}
-                                  {isExpired ? (
-                                    <span className="flex items-center gap-2">
-                                      Expired — reserve sweeping in progress
-                                      <button
-                                        onClick={() => {
-                                          setSelectedBtcReserve(undefined);
-                                          refetchReserves();
-                                        }}
-                                        className="underline hover:no-underline"
-                                      >
-                                        Refresh
-                                      </button>
-                                    </span>
-                                  ) : (
-                                    <span>
-                                      {blocksRemaining} block{blocksRemaining === 1 ? "" : "s"} remaining
-                                      {isWarning && " — complete soon"}
-                                    </span>
-                                  )}
-                                </div>
-                              </>
                             )}
-                          </div>
+                            <SweepProgress
+                              currentBlock={btcBlockHeight}
+                              sweepBlock={unlockHeight}
+                              blocksRemaining={blocksRemaining}
+                            />
+                            {isExpired && (
+                              <button
+                                onClick={handleRefreshReserves}
+                                disabled={isRefetchingReserves}
+                                className="text-red-500 text-xs underline hover:no-underline inline-flex items-center gap-1 disabled:opacity-50 disabled:no-underline"
+                              >
+                                <RefreshCw className={`h-3 w-3 ${isRefetchingReserves ? "animate-spin" : ""}`} />
+                                Refresh reserves
+                              </button>
+                            )}
+                          </>
                         );
                       })()
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>
             </div>
           </div>
         )}
-
       </div>
 
       {isConfirmed && onBack && (

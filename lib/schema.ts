@@ -62,6 +62,15 @@ export const PoolInfoSchema = z.object({
   pool_share: z.number(),
 });
 
+export const WithdrawOrderSchema = z.object({
+  tx_hash: z.string(),
+  created_at: z.number(),
+  status: z.enum(["queued", "completed"]),
+  amount: z.number(),
+  withdrawAddress: z.string().optional(),
+  reserveId: z.number().optional(),
+});
+
 export const TransactionHistorySchema = z.object({
   from: z.string(),
   to: z.string(),
