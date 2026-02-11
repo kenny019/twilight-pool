@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react";
 import BtcReserveSelect from "../btc-reserve-select";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useTwilightStore } from "@/lib/providers/store";
+import FeeEstimate from "./fee-estimate";
 
 const BtcWithdrawalForm = () => {
   const { mainWallet } = useWallet();
@@ -37,7 +38,19 @@ const BtcWithdrawalForm = () => {
     number | undefined
   >();
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
+  const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+
+  let amountSats = 0;
+  try {
+    if (withdrawAmount && withdrawAmount !== "." && withdrawAmount !== "-") {
+      amountSats = new BTC(depositDenom as BTCDenoms, Big(withdrawAmount))
+        .convert("sats")
+        .toNumber();
+    }
+  } catch {
+    // invalid input — keep 0
+  }
 
   const maxValueString =
     twilightSats > 0
@@ -79,7 +92,7 @@ const BtcWithdrawalForm = () => {
 
       if (!chainWallet || !withdrawAddress || !twilightAddress) return;
 
-      const withdrawAmount = new BTC(
+      const withdrawSats = new BTC(
         depositDenom as BTCDenoms,
         Big(depositRef.current.value)
       )
@@ -97,7 +110,7 @@ const BtcWithdrawalForm = () => {
         reserveId: Long.fromNumber(selectedReserveId),
         twilightAddress,
         withdrawAddress: withdrawAddress,
-        withdrawAmount: Long.fromNumber(withdrawAmount),
+        withdrawAmount: Long.fromNumber(withdrawSats),
       });
 
       setIsSubmitLoading(false);
@@ -139,7 +152,7 @@ const BtcWithdrawalForm = () => {
         tx_hash: res.transactionHash,
         created_at: Date.now(),
         status: "queued",
-        amount: withdrawAmount,
+        amount: withdrawSats,
         withdrawAddress,
         reserveId: selectedReserveId,
       });
@@ -198,8 +211,10 @@ const BtcWithdrawalForm = () => {
             </Text>
             <label
               onClick={() => {
-                if (depositRef.current)
+                if (depositRef.current) {
                   depositRef.current.value = maxValueString;
+                  setWithdrawAmount(maxValueString);
+                }
               }}
               className="cursor-pointer select-none text-xs text-primary opacity-60 hover:opacity-100"
             >
@@ -209,6 +224,7 @@ const BtcWithdrawalForm = () => {
           <PopoverInput
             id="input-btc-amount"
             name="depositValue"
+            onChange={(e) => setWithdrawAmount(e.target.value)}
             onClickPopover={(e) => {
               e.preventDefault();
               if (!depositRef.current?.value) return;
@@ -220,9 +236,9 @@ const BtcWithdrawalForm = () => {
                 Big(depositRef.current.value)
               );
 
-              depositRef.current.value = currentValue
-                .convert(toDenom)
-                .toString();
+              const converted = currentValue.convert(toDenom).toString();
+              depositRef.current.value = converted;
+              setWithdrawAmount(converted);
             }}
             type="number"
             step="any"
@@ -246,6 +262,12 @@ const BtcWithdrawalForm = () => {
             onValueChange={setSelectedReserveId}
           />
         </div>
+        {amountSats > 0 && (
+          <FeeEstimate
+            amountSats={amountSats}
+            displayDenom={depositDenom as BTCDenoms}
+          />
+        )}
         <Button
           disabled={
             isSubmitLoading ||
