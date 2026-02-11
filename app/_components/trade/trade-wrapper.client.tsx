@@ -20,7 +20,7 @@ const layout = [
   { i: "order", x: 10, y: 0, w: 3, h: 13, minW: 2, minH: 12 },
   { i: "chart", x: 0, y: 0, w: 7, h: 13, minW: 2, minH: 8 },
   { i: "orderbook", x: 7, y: 0, w: 2, h: 13, minW: 2 },
-  { i: "details", x: 0, y: 12, w: 12, h: 5, minW: 4, minH: 4 },
+  { i: "details", x: 0, y: 12, w: 12, h: 8, minW: 4, minH: 4 },
 ];
 
 const layoutSmall = [
