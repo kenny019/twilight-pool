@@ -357,7 +357,7 @@ const Page = () => {
                     asChild
                   >
                     <Link
-                      href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${result.data.txHash}`}
+                      href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${result.data.txHash}`}
                       target={"_blank"}
                     >
                       Explorer link

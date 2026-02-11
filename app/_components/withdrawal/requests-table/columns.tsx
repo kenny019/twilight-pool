@@ -63,7 +63,7 @@ export const withdrawRequestColumns: ColumnDef<MergedWithdrawRequest, any>[] = [
       return (
         <Button className="justify-start gap-0 items-start" asChild variant="link">
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${hash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${hash}`}
             target="_blank"
           >
             {truncateHash(hash)} <ArrowUpRight className="h-3 w-3" />

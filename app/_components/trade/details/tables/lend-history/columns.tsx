@@ -135,7 +135,7 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
     cell: (row) => (
       <Button className="justify-start" asChild variant="link">
         <Link
-          href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${row.getValue()}`}
+          href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${row.getValue()}`}
           target="_blank"
         >
           {truncateHash(row.getValue() as string)}

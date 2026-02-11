@@ -218,7 +218,7 @@ const LendManagement = () => {
               .convert("BTC")
               .toString()} BTC. `}
             <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${tx_hash}`}
+              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${tx_hash}`}
               target={"_blank"}
               className="text-sm underline hover:opacity-100"
             >

@@ -429,7 +429,7 @@ const OrderMarketForm = () => {
               asChild
             >
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${orderData.tx_hash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${orderData.tx_hash}`}
                 target={"_blank"}
               >
                 Explorer link
@@ -501,7 +501,7 @@ const OrderMarketForm = () => {
           {
             orderData.tx_hash && (
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${orderData.tx_hash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${orderData.tx_hash}`}
                 target={"_blank"}
                 className="text-sm underline hover:opacity-100"
               >
@@ -773,7 +773,7 @@ const OrderMarketForm = () => {
                       asChild
                     >
                       <Link
-                        href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/BRCs50fMzA3AW7q0HuzkA`}
+                        href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/BRCs50fMzA3AW7q0HuzkA`}
                         target={"_blank"}
                       >
                         Explorer link

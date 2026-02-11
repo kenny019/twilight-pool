@@ -180,7 +180,7 @@ export const useSyncTrades = () => {
               .convert("BTC")
               .toString()} BTC to the Trading Account.`}
             <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${txId}`}
+              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${txId}`}
               target={"_blank"}
               className="text-sm underline hover:opacity-100"
             >

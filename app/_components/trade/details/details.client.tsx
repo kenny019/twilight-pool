@@ -106,7 +106,7 @@ const DetailsPanel = () => {
           {
             settledData.tx_hash && (
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${settledData.tx_hash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${settledData.tx_hash}`}
                 target={"_blank"}
                 className="text-sm underline hover:opacity-100"
               >
@@ -175,7 +175,7 @@ const DetailsPanel = () => {
         {
           cancelOrderData.tx_hash && (
             <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${cancelOrderData.tx_hash}`}
+              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
               target={"_blank"}
               className="text-sm underline hover:opacity-100"
             >

@@ -286,7 +286,7 @@ const TransferDialog = ({
                 .convert("BTC")
                 .toString()} BTC to ${renameTag(depositZkAccount.tag)}. `}
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${res.transactionHash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${res.transactionHash}`}
                 target={"_blank"}
                 className="text-sm underline hover:opacity-100"
               >
@@ -675,7 +675,7 @@ const TransferDialog = ({
                   .convert("BTC")
                   .toString()} BTC to Funding Account. `}
                 <Link
-                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${mintBurnRes.transactionHash}`}
+                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
                   target={"_blank"}
                   className="text-sm underline hover:opacity-100"
                 >

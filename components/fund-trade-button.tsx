@@ -173,7 +173,7 @@ function FundingTradeButton({
             .convert("BTC")
             .toString()} BTC to your Trading Account. `}
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${broadcastResponse.transactionHash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${broadcastResponse.transactionHash}`}
             target={"_blank"}
             className="text-sm underline hover:opacity-100"
           >
@@ -341,7 +341,7 @@ function FundingTradeButton({
             .convert("BTC")
             .toString()} BTC to the Funding Account.`}
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${mintBurnRes.transactionHash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
             target={"_blank"}
             className="text-sm underline hover:opacity-100"
           >

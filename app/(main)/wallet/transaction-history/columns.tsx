@@ -47,7 +47,7 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
     cell: (row) => (
       <Button className="justify-end gap-0 items-start" asChild variant="link">
         <Link
-          href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${row.getValue()}`}
+          href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${row.getValue()}`}
           target="_blank"
         >
           {truncateHash(row.getValue() as string)} <ArrowUpRight className="h-3 w-3" />

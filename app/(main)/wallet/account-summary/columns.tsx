@@ -49,7 +49,7 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
       return (
         <Button className="justify-start gap-0 items-start" asChild variant="link">
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${txHash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${txHash}`}
             target="_blank"
             className="relative"
           >

@@ -457,7 +457,7 @@ const OrderLimitForm = () => {
           {
             orderData.tx_hash && (
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${orderData.tx_hash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${orderData.tx_hash}`}
                 target={"_blank"}
                 className="text-sm underline hover:opacity-100"
               >

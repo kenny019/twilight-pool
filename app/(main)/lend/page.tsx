@@ -398,7 +398,7 @@ const Page = () => {
               .convert("BTC")
               .toString()} BTC to the Funding Account.`}
             <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${mintBurnRes.transactionHash}`}
+              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
               target={"_blank"}
               className="text-sm underline hover:opacity-100"
             >

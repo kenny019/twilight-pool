@@ -235,7 +235,7 @@ const OrderMyTrades = () => {
             .convert("BTC")
             .toString()} BTC to the Trading Account.`}
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${mintBurnRes.transactionHash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
             target={"_blank"}
             className="text-sm underline hover:opacity-100"
           >
@@ -494,7 +494,7 @@ const OrderMyTrades = () => {
         description: <div className="opacity-90">
           Successfully closed {tradeOrder.orderType.toLowerCase()} order.{" "}
           <Link
-            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/tx/${settledTx?.tx_hash || tradeOrder.tx_hash}`}
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${settledTx?.tx_hash || tradeOrder.tx_hash}`}
             target={"_blank"}
             className="text-sm underline hover:opacity-100"
           >
