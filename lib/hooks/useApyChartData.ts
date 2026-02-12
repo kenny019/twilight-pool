@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import wfetch from "../http";
-
-const RELAYER_URL = "https://relayer.twilight.rest/api";
+import { priceURL } from "../api/rest";
+import { TwilightApiResponse } from "../types";
 
 export type ApyChartRange = "24 hours" | "7 days" | "30 days";
 export type ApyChartStep =
@@ -26,15 +26,10 @@ export interface ApyChartDataPoint {
   value: number;
 }
 
-export interface ApyChartResponse {
-  jsonrpc: string;
-  id: number;
-  result?: ApyChartDataPoint[];
-  error?: {
-    code: number;
-    message: string;
-  };
-}
+type RawApyDataPoint = {
+  apy: string;
+  bucket_ts: string;
+};
 
 async function fetchApyChartData(
   params: ApyChartParams
@@ -50,34 +45,33 @@ async function fetchApyChartData(
     },
   });
 
-  const { success, data, error } = await wfetch(RELAYER_URL)
+  const { success, data, error } = await wfetch(priceURL)
     .post({ body })
-    .json<ApyChartResponse>();
+    .json<TwilightApiResponse<RawApyDataPoint[]>>();
 
   if (!success) {
     console.error("Failed to fetch APY chart data:", error);
     throw new Error("Failed to fetch APY chart data");
   }
 
-  if (data.error) {
-    console.error("APY chart API error:", data.error);
-    throw new Error(data.error.message || "APY chart API error");
-  }
-
-  if (!data.result) {
-    console.warn("No APY chart data received");
+  if (!data.result || data.result.length === 0) {
     return [];
   }
 
-  return data.result;
+  return data.result
+    .map((point) => ({
+      time: new Date(point.bucket_ts).getTime() / 1000,
+      value: parseFloat(point.apy),
+    }))
+    .sort((a, b) => a.time - b.time);
 }
 
 export function useApyChartData(params: ApyChartParams) {
   return useQuery({
     queryKey: ["apyChart", params.range, params.step, params.lookback],
     queryFn: () => fetchApyChartData(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });

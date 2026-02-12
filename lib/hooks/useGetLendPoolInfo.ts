@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getLendPoolInfo, getPoolShareValue } from "../api/rest";
+import { getLendPoolInfo, getLastDayApy, getPoolShareValue } from "../api/rest";
 import { LendPoolInfo } from "../types";
 import { useTwilightStore } from "../providers/store";
 import BTC from "../twilight/denoms";
@@ -11,18 +11,16 @@ export function useGetLendPoolInfo() {
   const query = useQuery({
     queryKey: ["lend-pool-info"],
     queryFn: async (): Promise<LendPoolInfo | null> => {
-      const poolInfoPromise = getLendPoolInfo();
-      const poolShareValue = getPoolShareValue();
-
-      const [result, poolShare] = await Promise.all([
-        poolInfoPromise,
-        poolShareValue,
+      const [result, poolShare, apy] = await Promise.all([
+        getLendPoolInfo(),
+        getPoolShareValue(),
+        getLastDayApy(),
       ]);
 
       if (!result) return null;
 
       setPoolInfo({
-        apy: 0,
+        apy,
         pool_share: poolShare,
         tvl_btc: new BTC("sats", Big(result.total_locked_value))
           .convert("BTC")

@@ -1,12 +1,18 @@
 "use client";
 
 import Button from "@/components/button";
-import { Text } from "@/components/typography";
 import cn from '@/lib/cn';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, LineSeries } from 'lightweight-charts';
+import { useApyChartData, ApyChartParams } from "@/lib/hooks/useApyChartData";
 
-type TimePeriod = "1D" | "1W" | "1M" | "6M" | "1Y";
+type TimePeriod = "1D" | "1W" | "1M";
+
+const PERIOD_PARAMS: Record<TimePeriod, ApyChartParams> = {
+  "1D": { range: "24 hours", step: "15 minutes", lookback: "24 hours" },
+  "1W": { range: "7 days", step: "2 hours", lookback: "7 days" },
+  "1M": { range: "30 days", step: "12 hours", lookback: "30 days" },
+};
 
 const ApyChart = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("1D");
@@ -14,61 +20,18 @@ const ApyChart = () => {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<any>(null);
 
-  const timePeriods: TimePeriod[] = ["1D", "1W", "1M", "6M", "1Y"];
+  const timePeriods: TimePeriod[] = ["1D", "1W", "1M"];
 
-  // Generate realistic APY data starting from 0% with 0.5% increments
-  const generateRealisticAPYData = (period: TimePeriod) => {
-    const now = Date.now() / 1000;
-    const data = [];
-
-    let points: number;
-    let interval: number; // in seconds
-
-    switch (period) {
-      case "1D":
-        points = 24; // hourly points
-        interval = 60 * 60; // 1 hour
-        break;
-      case "1W":
-        points = 7; // daily points
-        interval = 60 * 60 * 24; // 1 day
-        break;
-      case "1M":
-        points = 30; // daily points
-        interval = 60 * 60 * 24; // 1 day
-        break;
-      case "6M":
-        points = 26; // weekly points
-        interval = 60 * 60 * 24 * 7; // 1 week
-        break;
-      case "1Y":
-        points = 12; // monthly points
-        interval = 60 * 60 * 24 * 30; // ~1 month
-        break;
-      default:
-        points = 24;
-        interval = 60 * 60;
-    }
-
-    // Create a straight line at 0% APY
-    for (let i = 0; i < points; i++) {
-      data.push({
-        time: (now - (points - 1 - i) * interval) as any,
-        value: 0.0, // Straight line at 0%
-      });
-    }
-
-    return data;
-  };
+  const params = useMemo(() => PERIOD_PARAMS[selectedPeriod], [selectedPeriod]);
+  const { data: chartData } = useApyChartData(params);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Create chart
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'rgb(156, 163, 175)', // text-gray-400
+        textColor: 'rgb(156, 163, 175)',
         attributionLogo: false,
       },
       width: chartContainerRef.current.clientWidth,
@@ -98,23 +61,27 @@ const ApyChart = () => {
       },
     });
 
-    // Add line series
     const lineSeries = chart.addSeries(LineSeries, {
-      color: 'rgb(34, 197, 94)', // green-500
+      color: 'rgb(34, 197, 94)',
       lineWidth: 2,
       priceFormat: {
-        type: 'percent',
-        precision: 2,
+        type: 'custom',
+        formatter: (value: number) => {
+          const abs = Math.abs(value);
+          if (abs >= 1e12) return `${(value / 1e12).toFixed(1)}T%`;
+          if (abs >= 1e9) return `${(value / 1e9).toFixed(1)}B%`;
+          if (abs >= 1e6) return `${(value / 1e6).toFixed(1)}M%`;
+          if (abs >= 1e3) return `${(value / 1e3).toFixed(1)}K%`;
+          if (abs < 1) return `${value.toFixed(4)}%`;
+          return `${value.toFixed(2)}%`;
+        },
+        minMove: 0.0001,
       },
     });
-
-    // Set initial data
-    lineSeries.setData(generateRealisticAPYData(selectedPeriod));
 
     chartRef.current = chart;
     seriesRef.current = lineSeries;
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chart) {
         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
@@ -129,15 +96,14 @@ const ApyChart = () => {
         chart.remove();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update data when period changes
+  // Update data when chartData changes
   useEffect(() => {
-    if (seriesRef.current) {
-      seriesRef.current.setData(generateRealisticAPYData(selectedPeriod));
+    if (seriesRef.current && chartData) {
+      seriesRef.current.setData(chartData);
     }
-  }, [selectedPeriod]);
+  }, [chartData]);
 
   return (
     <div className="space-y-4">
@@ -164,4 +130,4 @@ const ApyChart = () => {
   );
 };
 
-export default ApyChart; 
+export default ApyChart;

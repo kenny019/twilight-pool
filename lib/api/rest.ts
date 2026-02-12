@@ -74,7 +74,7 @@ async function getReserveData() {
 }
 
 // todo: refactor into seperate files
-const priceURL = process.env.NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
+export const priceURL = process.env.NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
 
 type PriceFeedData = {
   id: string;
@@ -237,6 +237,26 @@ export type TransactionHash = {
   output: string;
   tx_hash: string;
 };
+
+async function getLastDayApy() {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "last_day_apy",
+    id: 123,
+    params: null,
+  });
+
+  const { success, data, error } = await wfetch(priceURL)
+    .post({ body })
+    .json<TwilightApiResponse<string>>();
+
+  if (!success) {
+    console.error("getLastDayApy", error);
+    return 0;
+  }
+
+  return parseFloat(data.result) || 0;
+}
 
 async function getPoolShareValue() {
   const body = JSON.stringify({
@@ -412,6 +432,7 @@ export {
   queryTransactionHashByRequestId,
   getPoolShareValue,
   getLendPoolInfo,
+  getLastDayApy,
   getMarketStats,
   getWithdrawRequests,
 };
