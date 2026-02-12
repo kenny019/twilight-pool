@@ -3,7 +3,6 @@
 import { ToastProps } from '@/components/toast';
 import cn from "@/lib/cn";
 import { useToast } from '@/lib/hooks/useToast';
-import { ZkAccount } from '@/lib/types';
 import {
   ColumnDef,
   SortingState,
@@ -12,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -21,13 +20,12 @@ interface DataTableProps<TData, TValue> {
 
 export interface AccountSummaryTableMeta {
   toast: (options: any) => void;
+  subaccountTransfer: (address: string) => Promise<void>;
+  isTransferring: (address: string) => boolean;
 }
 
 interface AccountSummaryDataTableProps<TData, TValue> extends DataTableProps<TData, TValue> {
-  subaccountTransfer: (zkAccount: ZkAccount) => Promise<{
-    success: boolean;
-    message: string;
-  } | undefined>;
+  subaccountTransfer: (address: string) => Promise<any>;
 }
 
 export function AccountSummaryDataTable<TData, TValue>({
@@ -38,11 +36,23 @@ export function AccountSummaryDataTable<TData, TValue>({
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
+  const [transferringAddress, setTransferringAddress] = useState<string | null>(null);
 
   const { toast } = useToast()
 
+  const wrappedTransfer = useCallback(async (address: string) => {
+    setTransferringAddress(address);
+    try {
+      await subaccountTransfer(address);
+    } finally {
+      setTransferringAddress(null);
+    }
+  }, [subaccountTransfer]);
+
   const tableMeta: AccountSummaryTableMeta = {
-    toast
+    toast,
+    subaccountTransfer: wrappedTransfer,
+    isTransferring: (address: string) => transferringAddress === address,
   };
 
   const table = useReactTable({

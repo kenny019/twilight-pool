@@ -7,34 +7,45 @@ import LendManagement from "@/app/_components/lend/lend-management.client";
 import LendOrdersTable from "@/app/_components/trade/details/tables/lend-orders/lend-orders-table.client";
 import LendHistoryTable from "@/app/_components/trade/details/tables/lend-history/lend-history-table.client";
 import Button from "@/components/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { Text } from "@/components/typography";
 import { Separator } from "@/components/seperator";
 import { executeLendOrder } from "@/lib/api/client";
-import { queryTransactionHashByRequestId, queryTransactionHashes } from "@/lib/api/rest";
+import {
+  queryTransactionHashByRequestId,
+  queryTransactionHashes,
+} from "@/lib/api/rest";
 import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
-import { createQueryLendOrderMsg, executeTradeLendOrderMsg } from "@/lib/twilight/zkos";
+import {
+  createQueryLendOrderMsg,
+  executeTradeLendOrderMsg,
+} from "@/lib/twilight/zkos";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { Loader2 } from "lucide-react";
 import React, { useState, useMemo, useCallback } from "react";
 import { LendOrder, ZkAccount } from "@/lib/types";
-import { useGetLendPoolInfo } from '@/lib/hooks/useGetLendPoolInfo';
-import { queryLendOrder } from '@/lib/api/relayer';
-import Big from 'big.js';
-import { usePriceFeed } from '@/lib/providers/feed';
-import { createZkAccount, createZkBurnTx } from '@/lib/twilight/zk';
-import { broadcastTradingTx } from '@/lib/api/zkos';
-import { twilightproject } from 'twilightjs';
-import Long from 'long';
-import BTC from '@/lib/twilight/denoms';
-import Link from 'next/link';
-import { ZkPrivateAccount } from '@/lib/zk/account';
+import { useGetLendPoolInfo } from "@/lib/hooks/useGetLendPoolInfo";
+import { queryLendOrder } from "@/lib/api/relayer";
+import Big from "big.js";
+import { usePriceFeed } from "@/lib/providers/feed";
+import { createZkAccount, createZkBurnTx } from "@/lib/twilight/zk";
+import { broadcastTradingTx } from "@/lib/api/zkos";
+import { twilightproject } from "twilightjs";
+import Long from "long";
+import BTC from "@/lib/twilight/denoms";
+import Link from "next/link";
+import { ZkPrivateAccount } from "@/lib/zk/account";
 
 const formatTag = (tag: string) => {
   if (tag === "main") {
@@ -42,13 +53,13 @@ const formatTag = (tag: string) => {
   }
 
   return tag;
-}
+};
 
 type TabType = "active-orders" | "lend-history";
 
 const Page = () => {
   useRedirectUnconnected();
-  useGetLendPoolInfo()
+  useGetLendPoolInfo();
 
   const { toast } = useToast();
 
@@ -76,27 +87,32 @@ const Page = () => {
     (state) => state.history.addTransaction
   );
 
-  const getAccountTag = useCallback((address: string) => {
-    const account = zKAccounts.find(account => account.address === address);
-    return formatTag(account?.tag || "");
-  }, [zKAccounts]);
+  const getAccountTag = useCallback(
+    (address: string) => {
+      const account = zKAccounts.find((account) => account.address === address);
+      return formatTag(account?.tag || "");
+    },
+    [zKAccounts]
+  );
 
   // Filter lend orders for active vs history
   const activeLendOrders = useMemo(() => {
-    return lendOrders.filter(order => order.orderStatus === "LENDED").map(order => ({
-      ...order,
-      accountTag: getAccountTag(order.accountAddress)
-    }));
+    return lendOrders
+      .filter((order) => order.orderStatus === "LENDED")
+      .map((order) => ({
+        ...order,
+        accountTag: getAccountTag(order.accountAddress),
+      }));
   }, [lendOrders, getAccountTag]);
 
   const lendHistory = useMemo(() => {
-    return lendHistoryData.map(order => ({
+    return lendHistoryData.map((order) => ({
       ...order,
-      accountTag: getAccountTag(order.accountAddress)
+      accountTag: getAccountTag(order.accountAddress),
     }));
   }, [lendHistoryData, getAccountTag]);
 
-  const getPoolSharePrice = () => poolInfo?.pool_share || 0
+  const getPoolSharePrice = () => poolInfo?.pool_share || 0;
 
   const { mainWallet } = useWallet();
   const chainWallet = mainWallet?.getChainWallet("nyks");
@@ -112,8 +128,9 @@ const Page = () => {
 
       toast({
         title: "Withdrawing lend order",
-        description: "Please do not close this page until the lend order is withdrawn...",
-      })
+        description:
+          "Please do not close this page until the lend order is withdrawn...",
+      });
 
       setIsSettleLoading(true);
       setSettlingOrderId(order.accountAddress); // Use accountAddress as unique identifier
@@ -121,19 +138,11 @@ const Page = () => {
       const lendOrderRes = await retry<
         ReturnType<typeof queryTransactionHashes>,
         string
-      >(
-        queryTransactionHashes,
-        30,
-        order.accountAddress,
-        1000,
-        (txHash) => {
-          const found = txHash.result.find(
-            (tx) => tx.order_status === "FILLED"
-          );
+      >(queryTransactionHashes, 30, order.accountAddress, 1000, (txHash) => {
+        const found = txHash.result.find((tx) => tx.order_status === "FILLED");
 
-          return found ? true : false;
-        }
-      );
+        return found ? true : false;
+      });
 
       if (!lendOrderRes.success) {
         console.error("lend order settle not successful");
@@ -173,19 +182,11 @@ const Page = () => {
       const requestIdRes = await retry<
         ReturnType<typeof queryTransactionHashes>,
         string
-      >(
-        queryTransactionHashByRequestId,
-        30,
-        requestId,
-        1000,
-        (txHash) => {
-          const found = txHash.result.find(
-            (tx) => tx.order_status === "SETTLED"
-          );
+      >(queryTransactionHashByRequestId, 30, requestId, 1000, (txHash) => {
+        const found = txHash.result.find((tx) => tx.order_status === "SETTLED");
 
-          return found ? true : false;
-        }
-      );
+        return found ? true : false;
+      });
 
       if (!requestIdRes.success) {
         console.error("lend order settle not successful");
@@ -236,7 +237,9 @@ const Page = () => {
         return;
       }
 
-      const newBalance = Math.round(Big(queryLendOrderRes.result.new_lend_state_amount).toNumber())
+      const newBalance = Math.round(
+        Big(queryLendOrderRes.result.new_lend_state_amount).toNumber()
+      );
       // const newBalance = Math.round(Big(queryLendOrderRes.result.balance).toNumber())
 
       console.log("newBalance", newBalance);
@@ -259,15 +262,10 @@ const Page = () => {
         tx_hash: tx_hash,
         value: newBalance,
         payment: Big(queryLendOrderRes.result.payment).toNumber() || 0,
-      })
+      });
 
       setIsSettleLoading(false);
       setSettlingOrderId(null);
-
-      toast({
-        title: "Success",
-        description: "Withdrew lend order successfully",
-      });
 
       const updatedSelectedZkAccount: ZkAccount = {
         ...selectedZkAccount,
@@ -294,7 +292,7 @@ const Page = () => {
       const privateTxSingleResult =
         await senderZkPrivateAccount.privateTxSingle(
           newBalance,
-          transientAccount.address,
+          transientAccount.address
         );
 
       if (!privateTxSingleResult.success) {
@@ -308,6 +306,23 @@ const Page = () => {
         txId,
         updatedAddress: updatedTransientAddress,
       } = privateTxSingleResult.data;
+
+      // update the account in case burn fails
+      updateZkAccount(updatedSelectedZkAccount.address, {
+        type: "Coin",
+        address: updatedTransientAddress,
+        scalar: updatedTransientScalar,
+        isOnChain: true,
+        value: newBalance,
+        tag: updatedSelectedZkAccount.tag,
+      });
+
+      console.log(
+        "updating account in case broadcast fails",
+        updatedSelectedZkAccount.address,
+        "updatedTransientAddress",
+        updatedTransientAddress
+      );
 
       const {
         success,
@@ -337,6 +352,17 @@ const Page = () => {
         return;
       }
 
+      // update the account in case broadcast fails
+      updateZkAccount(updatedTransientAddress, {
+        type: "Coin",
+        address: updatedTransientAddress,
+        scalar: updatedTransientScalar,
+        isOnChain: false,
+        value: newBalance,
+        tag: updatedSelectedZkAccount.tag,
+        zkAccountHex,
+      });
+
       toast({
         title: "Broadcasting transfer",
         description:
@@ -351,7 +377,6 @@ const Page = () => {
       const tradingTxRes = safeJSONParse(tradingTxResString as string);
 
       if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
-
         console.error("error broadcasting zkBurnTx msg", tradingTxRes);
         setIsWithdrawDialogOpen(false);
         return;
@@ -371,7 +396,7 @@ const Page = () => {
       toast({
         title: "Approval Pending",
         description: "Please approve the transaction in your wallet.",
-      })
+      });
 
       const mintBurnRes = await stargateClient.signAndBroadcast(
         twilightAddress,
@@ -387,7 +412,7 @@ const Page = () => {
         toTag: "Funding",
         tx_hash: mintBurnRes.transactionHash,
         type: "Burn",
-        value: newBalance
+        value: newBalance,
       });
 
       toast({
@@ -410,8 +435,7 @@ const Page = () => {
 
       setIsWithdrawDialogOpen(false);
       removeZkAccount(selectedZkAccount);
-      return
-
+      return;
     } catch (err) {
       setIsSettleLoading(false);
       setSettlingOrderId(null);
@@ -427,7 +451,8 @@ const Page = () => {
       toast({
         variant: "error",
         title: "Error",
-        description: "An error has occurred withdrawing lend order, try again later.",
+        description:
+          "An error has occurred withdrawing lend order, try again later.",
       });
     }
   }
@@ -456,19 +481,23 @@ const Page = () => {
 
   return (
     <div className="mx-8 my-8 space-y-6 md:space-y-8">
-      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+      <Dialog
+        open={isWithdrawDialogOpen}
+        onOpenChange={setIsWithdrawDialogOpen}
+      >
         <DialogContent>
           <div className="flex flex-col items-center gap-4 py-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <DialogTitle>Withdrawal In Progress</DialogTitle>
             <DialogDescription className="text-center">
-              A wallet signature is required to complete your withdrawal. Please approve the transaction when prompted.
+              A wallet signature is required to complete your withdrawal. Please
+              approve the transaction when prompted.
             </DialogDescription>
           </div>
         </DialogContent>
       </Dialog>
       {/* Pool Info */}
-      <div className="rounded-lg bg-card border border-outline p-4 md:p-6">
+      <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
         <Text heading="h2" className="mb-4 text-lg font-medium">
           Pool Info
         </Text>
@@ -476,31 +505,33 @@ const Page = () => {
       </div>
 
       {/* APY Chart and Add Liquidity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* APY Chart */}
-        <div className="rounded-lg bg-card border border-outline p-4 md:p-6">
+        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
           <Text heading="h2" className="mb-4 text-lg font-medium">
             APY History
           </Text>
           <ApyChart />
         </div>
 
-        <div className="rounded-lg bg-card border border-outline p-4 md:p-6">
+        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
           <Text heading="h2" className="mb-4 text-lg font-medium">
             Add Liquidity
           </Text>
           <div className="space-y-4">
             <LendManagement />
             <div className="text-sm text-primary-accent">
-              <p>Deposit BTC to earn yield from trading fees and lending rewards.</p>
+              <p>
+                Deposit BTC to earn yield from trading fees and lending rewards.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* My Investment */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg bg-card border border-outline p-4 md:p-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
           <MyInvestment />
         </div>
       </div>
@@ -530,9 +561,7 @@ const Page = () => {
           </Tabs>
         </div>
 
-        <div className="overflow-x-auto">
-          {renderTableContent()}
-        </div>
+        <div className="overflow-x-auto">{renderTableContent()}</div>
       </div>
     </div>
   );

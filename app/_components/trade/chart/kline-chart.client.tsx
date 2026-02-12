@@ -18,7 +18,7 @@ import cn from "@/lib/cn";
 import dayjs, { type ManipulateType } from "dayjs";
 
 // klinecharts ships ESM named exports but Next.js 13 may resolve to CJS default
-const { init, dispose } = klinecharts as any ?? klinecharts;
+const { init, dispose } = (klinecharts as any) ?? klinecharts;
 
 const TIME_INTERVALS: {
   name: string;
@@ -37,12 +37,12 @@ const INTERVAL_OFFSETS: Record<
 > = {
   [CandleInterval.ONE_MINUTE]: { unit: "minute", amount: 720 },
   [CandleInterval.FIVE_MINUTE]: { unit: "minute", amount: 720 },
-  [CandleInterval.FIFTEEN_MINUTE]: { unit: "day", amount: 7 },
-  [CandleInterval.ONE_HOUR]: { unit: "day", amount: 7 },
-  [CandleInterval.FOUR_HOUR]: { unit: "day", amount: 7 },
+  [CandleInterval.FIFTEEN_MINUTE]: { unit: "day", amount: 14 },
+  [CandleInterval.ONE_HOUR]: { unit: "day", amount: 30 },
+  [CandleInterval.FOUR_HOUR]: { unit: "day", amount: 90 },
   [CandleInterval.EIGHT_HOUR]: { unit: "day", amount: 7 },
   [CandleInterval.TWELVE_HOUR]: { unit: "day", amount: 7 },
-  [CandleInterval.ONE_DAY]: { unit: "day", amount: 14 },
+  [CandleInterval.ONE_DAY]: { unit: "day", amount: 365 },
   [CandleInterval.ONE_DAY_CHANGE]: { unit: "day", amount: 1 },
 };
 
@@ -63,7 +63,7 @@ const KLineChart = () => {
   const { addPrice } = usePriceFeed();
   const addPriceRef = useRef(addPrice);
   const [timeInterval, setTimeInterval] = useState<CandleInterval>(
-    CandleInterval.ONE_MINUTE
+    CandleInterval.FIFTEEN_MINUTE
   );
 
   // Keep addPrice ref in sync to avoid stale closure in subscribeBar
@@ -86,38 +86,69 @@ const KLineChart = () => {
 
     // Register data loader before setSymbol/setPeriod
     chart.setDataLoader({
-      getBars: async ({ type, timestamp, period, callback }: { type: string; timestamp: number | null; period: Period; callback: (data: any[], more?: any) => void }) => {
+      getBars: async ({
+        type,
+        timestamp,
+        period,
+        callback,
+      }: {
+        type: string;
+        timestamp: number | null;
+        period: Period;
+        callback: (data: any[], more?: any) => void;
+      }) => {
         const interval = periodToCandleInterval(period);
         const offset = INTERVAL_OFFSETS[interval];
-        if (!offset) { callback([], false); return; }
+        if (!offset) {
+          callback([], false);
+          return;
+        }
 
         if (type === "init" || type === "forward") {
-          const since = type === "init"
-            ? dayjs().subtract(offset.amount, offset.unit).toISOString()
-            : dayjs(timestamp!).subtract(offset.amount, offset.unit).toISOString();
+          const since =
+            type === "init"
+              ? dayjs().subtract(offset.amount, offset.unit).toISOString()
+              : dayjs(timestamp!)
+                  .subtract(offset.amount, offset.unit)
+                  .toISOString();
           try {
-            const res = await getCandleData({ since, interval, limit: 1000 });
-            if (!res.success) { callback([], false); return; }
+            const res = await getCandleData({ since, interval, limit: 10000 });
+            if (!res.success) {
+              callback([], false);
+              return;
+            }
             const bars = res.data.result.map(transformCandleData);
             bars.sort((a, b) => a.timestamp - b.timestamp);
             callback(bars, { forward: bars.length >= 1000 });
-          } catch { callback([], false); }
+          } catch {
+            callback([], false);
+          }
         } else {
           callback([], false);
         }
       },
-      subscribeBar: ({ period, callback }: { period: Period; callback: (data: any) => void }) => {
+      subscribeBar: ({
+        period,
+        callback,
+      }: {
+        period: Period;
+        callback: (data: any) => void;
+      }) => {
         const interval = periodToCandleInterval(period);
         const bi = BINANCE_INTERVAL_MAP[interval];
         if (!bi) return;
-        const ws = new WebSocket(`wss://stream.binance.com/ws/btcusdt@kline_${bi}`);
+        const ws = new WebSocket(
+          `wss://stream.binance.com/ws/btcusdt@kline_${bi}`
+        );
         ws.onmessage = (event) => {
           try {
             const parsed = JSON.parse(event.data);
             const kd = transformBinanceKline(parsed.k);
             callback(kd);
             addPriceRef.current(kd.close);
-          } catch (err) { console.error(err); }
+          } catch (err) {
+            console.error(err);
+          }
         };
         wsRef.current = ws;
       },
@@ -127,12 +158,20 @@ const KLineChart = () => {
       },
     });
 
-    chart.setSymbol({ ticker: "BTCUSD", pricePrecision: 2, volumePrecision: 4 });
+    chart.setSymbol({
+      ticker: "BTCUSD",
+      pricePrecision: 2,
+      volumePrecision: 4,
+    });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[timeInterval]);
 
     // MA overlays
     chart.createIndicator("MA", true, { id: "candle_pane" });
-    chart.overrideIndicator({ name: "MA", calcParams: [7, 25, 99], paneId: "candle_pane" });
+    chart.overrideIndicator({
+      name: "MA",
+      calcParams: [7, 25, 99],
+      paneId: "candle_pane",
+    });
 
     // Volume sub-pane
     chart.createIndicator("VOL", false, { height: 80 });

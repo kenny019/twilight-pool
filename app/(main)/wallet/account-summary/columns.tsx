@@ -5,17 +5,20 @@ import BTC from "@/lib/twilight/denoms";
 import { ColumnDef } from "@tanstack/react-table";
 import Big from "big.js";
 import dayjs from "dayjs";
-import { truncateHash } from '@/lib/helpers';
-import { AccountSummaryTableMeta } from './data-table';
-import { ActiveAccount } from '../page';
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import { truncateHash } from "@/lib/helpers";
+import { AccountSummaryTableMeta } from "./data-table";
+import { ActiveAccount } from "../page";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   {
     accessorKey: "createdAt",
     header: "Created",
-    accessorFn: (row) => row.createdAt ? dayjs.unix(row.createdAt).format("DD/MM/YYYY HH:mm:ss") : "",
+    accessorFn: (row) =>
+      row.createdAt
+        ? dayjs.unix(row.createdAt).format("DD/MM/YYYY HH:mm:ss")
+        : "",
   },
   {
     accessorKey: "tag",
@@ -25,18 +28,21 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
     accessorKey: "address",
     header: "Address",
     cell: (row) => (
-      <Button onClick={(e) => {
-        const meta = row.table.options.meta as AccountSummaryTableMeta;
-        e.preventDefault();
-        meta.toast({
-          title: "Copied to clipboard",
-          description: `${row.row.original.tag} address copied to clipboard`,
-        })
-        navigator.clipboard.writeText(row.getValue());
-      }} variant="link">
+      <Button
+        onClick={(e) => {
+          const meta = row.table.options.meta as AccountSummaryTableMeta;
+          e.preventDefault();
+          meta.toast({
+            title: "Copied to clipboard",
+            description: `${row.row.original.tag} address copied to clipboard`,
+          });
+          navigator.clipboard.writeText(row.getValue());
+        }}
+        variant="link"
+      >
         {truncateHash(row.getValue() as string)}
       </Button>
-    )
+    ),
   },
   {
     accessorKey: "txHash",
@@ -44,10 +50,15 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
     cell: (row) => {
       const utilized = row.row.original.utilized;
       const txHash = row.row.original.txHash;
-      if (!txHash || !utilized) return <span className="text-primary-accent">-</span>;
+      if (!txHash || !utilized)
+        return <span className="text-primary-accent">-</span>;
 
       return (
-        <Button className="justify-start gap-0 items-start" asChild variant="link">
+        <Button
+          className="items-start justify-start gap-0"
+          asChild
+          variant="link"
+        >
           <Link
             href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${txHash}`}
             target="_blank"
@@ -56,16 +67,15 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
             {truncateHash(txHash)} <ArrowUpRight className="h-3 w-3" />
           </Link>
         </Button>
-      )
-
-    }
+      );
+    },
   },
 
   {
     accessorKey: "value",
     header: "Balance (BTC)",
     accessorFn: (row) =>
-      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8)
+      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8),
   },
   {
     accessorKey: "type",
@@ -74,12 +84,35 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   {
     accessorKey: "utilized",
     header: "Utilized",
-    accessorFn: (row) => row.utilized ? "Yes" : "No"
-  }
-  // {
-  //   header: "Actions",
-  //   cell: (row) => {
+    accessorFn: (row) => (row.utilized ? "Yes" : "No"),
+  },
+  {
+    header: "Actions",
+    cell: (ctx) => {
+      const row = ctx.row;
+      if (
+        row.original.utilized ||
+        row.original.tag === "Trading Account" ||
+        row.original.value === 0
+      )
+        return null;
 
-  //   }
-  // }
+      const meta = ctx.table.options.meta as AccountSummaryTableMeta;
+      const isTransferring = meta.isTransferring(row.original.address);
+
+      return (
+        <div className="flex justify-end">
+          <Button
+            className="py-1"
+            variant="ui"
+            size="small"
+            disabled={isTransferring}
+            onClick={() => meta.subaccountTransfer(row.original.address)}
+          >
+            {isTransferring ? "Transferring..." : "Transfer to Funding"}
+          </Button>
+        </div>
+      );
+    },
+  },
 ];

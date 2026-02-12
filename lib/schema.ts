@@ -8,6 +8,7 @@ export const ZkAccountSchema = z.object({
   isOnChain: z.boolean().optional(),
   value: z.number().optional(), // note: sats value
   createdAt: z.number().optional(),
+  zkAccountHex: z.string().optional(), // hex of zkaccount from output string, this field is only needed if account does not exist anymore on chain
 });
 
 export const TradeOrderSchema = z.object({
