@@ -3,7 +3,7 @@ import { createCancelTraderOrderMsg } from "../twilight/zkos";
 
 const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_ENDPOINT as string;
 
-async function sendTradeOrder(tradeData: string) {
+async function sendTradeOrder(tradeData: string, twilightAddress?: string) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "CreateTraderOrder",
@@ -13,8 +13,13 @@ async function sendTradeOrder(tradeData: string) {
     id: 1,
   });
 
+  const headers: Record<string, string> = {};
+  if (twilightAddress) {
+    headers["Twilight-Address"] = twilightAddress;
+  }
+
   const { success, data, error } = await wfetch(CLIENT_URL)
-    .post({ body })
+    .post({ body, headers })
     .json<Record<string, any>>();
 
   if (!success) {
@@ -27,7 +32,7 @@ async function sendTradeOrder(tradeData: string) {
   return data;
 }
 
-async function sendLendOrder(lendData: string) {
+async function sendLendOrder(lendData: string, twilightAddress?: string) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "CreateLendOrder",
@@ -37,8 +42,13 @@ async function sendLendOrder(lendData: string) {
     id: 1,
   });
 
+  const headers: Record<string, string> = {};
+  if (twilightAddress) {
+    headers["Twilight-Address"] = twilightAddress;
+  }
+
   const { success, data, error } = await wfetch(CLIENT_URL)
-    .post({ body })
+    .post({ body, headers })
     .json<Record<string, any>>();
 
   if (!success) {

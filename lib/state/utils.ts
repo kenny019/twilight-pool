@@ -15,6 +15,10 @@ export interface AccountSlices {
   history: HistorySlice;
   trade_history: TradeHistorySlice;
   withdraw: WithdrawSlice;
+  optInLeaderboard: boolean;
+  hasShownOptInDialog: boolean;
+  setOptInLeaderboard: (val: boolean) => void;
+  setHasShownOptInDialog: (val: boolean) => void;
 }
 
 export interface SessionSlices {

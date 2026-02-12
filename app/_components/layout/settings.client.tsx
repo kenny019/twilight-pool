@@ -22,6 +22,8 @@ import { useTheme } from "next-themes";
 import Button from "@/components/button";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
+import { useTwilightStore } from "@/lib/providers/store";
+import { useWallet } from "@cosmos-kit/react-lite";
 
 // workaround for tailwind css
 enum ColorBG {
@@ -37,6 +39,10 @@ const Settings = () => {
   const { toast } = useToast();
 
   const privateKey = useSessionStore((state) => state.privateKey);
+
+  const { status } = useWallet();
+  const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
+  const setOptInLeaderboard = useTwilightStore((state) => state.setOptInLeaderboard);
 
   return (
     <Dialog>
@@ -121,6 +127,31 @@ const Settings = () => {
               Export Seed to Clipboard
             </Button> */}
           </div>
+          {status === "Connected" && (
+            <>
+              <Text className="select-none font-ui text-xs uppercase text-primary-accent">
+                Leaderboard
+              </Text>
+              <div className="space-y-1">
+                <div className="flex w-full items-center justify-between">
+                  <label
+                    className="cursor-pointer select-none"
+                    htmlFor="toggle-leaderboard"
+                  >
+                    Leaderboard participation
+                  </label>
+                  <Switch
+                    checked={optInLeaderboard}
+                    onCheckedChange={setOptInLeaderboard}
+                    id="toggle-leaderboard"
+                  />
+                </div>
+                <Text className="text-xs text-primary-accent">
+                  Track your trades on the chain for leaderboard participation.
+                </Text>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

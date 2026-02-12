@@ -172,6 +172,7 @@ const OrderLimitForm = () => {
   const tradingAccountBalanceString = new BTC("sats", Big(tradingAccountBalance)).convert("BTC").toFixed(8);
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
+  const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -346,7 +347,7 @@ const OrderLimitForm = () => {
         throw "Error with creating limit order";
       }
 
-      const data = await sendTradeOrder(msg);
+      const data = await sendTradeOrder(msg, optInLeaderboard ? twilightAddress : undefined);
 
       if (!data.result || !data.result.id_key) {
         console.error("sendTradeOrderResult", data);

@@ -73,6 +73,7 @@ const OrderMarketForm = () => {
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
+  const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [usdAmount, setUsdAmount] = useState<string>("");
@@ -349,7 +350,7 @@ const OrderMarketForm = () => {
         return;
       }
 
-      const data = await sendTradeOrder(msg);
+      const data = await sendTradeOrder(msg, optInLeaderboard ? twilightAddress : undefined);
 
       if (!data.result || !data.result.id_key) {
         toast({

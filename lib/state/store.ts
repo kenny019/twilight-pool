@@ -37,12 +37,26 @@ export const createTwilightStore = () => {
         history: createHistorySlice(...actions),
         trade_history: createTradeHistorySlice(...actions),
         withdraw: createWithdrawSlice(...actions),
+        optInLeaderboard: false,
+        hasShownOptInDialog: false,
+        setOptInLeaderboard: (val: boolean) => {
+          const [set] = actions;
+          set((state) => {
+            state.optInLeaderboard = val;
+          });
+        },
+        setHasShownOptInDialog: (val: boolean) => {
+          const [set] = actions;
+          set((state) => {
+            state.hasShownOptInDialog = val;
+          });
+        },
       })),
       {
         name: "twilight-",
         storage: createJSONStorage<AccountSlices>(() => localStorage),
         skipHydration: true,
-        version: 0.3,
+        version: 0.4,
         migrate: (persistedState, version) => {
           if (version === 0) {
             const newState = persistedState as AccountSlices;
@@ -63,6 +77,12 @@ export const createTwilightStore = () => {
               });
             }
 
+            return newState;
+          }
+          if (version === 0.3) {
+            const newState = persistedState as AccountSlices;
+            newState.optInLeaderboard = false;
+            newState.hasShownOptInDialog = false;
             return newState;
           }
           return persistedState as AccountSlices;
@@ -93,6 +113,10 @@ export const createTwilightStore = () => {
               ...currentState.withdraw,
               ...initialWithdrawSliceState,
             },
+            optInLeaderboard: currentState.optInLeaderboard,
+            hasShownOptInDialog: currentState.hasShownOptInDialog,
+            setOptInLeaderboard: currentState.setOptInLeaderboard,
+            setHasShownOptInDialog: currentState.setHasShownOptInDialog,
           };
 
           const mergedData = deepMerge(

@@ -47,6 +47,7 @@ const LendManagement = () => {
     (state) => state.history.addTransaction
   );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
@@ -164,7 +165,7 @@ const LendManagement = () => {
         return;
       }
 
-      const data = await sendLendOrder(msg);
+      const data = await sendLendOrder(msg, optInLeaderboard ? twilightAddress : undefined);
 
       if (data.result && data.result.id_key) {
         const lendOrderRes = await retry<

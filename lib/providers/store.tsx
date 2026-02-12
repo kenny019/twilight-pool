@@ -21,6 +21,8 @@ import dayjs from "dayjs";
 export const twilightStoreContext =
   createContext<StoreApi<AccountSlices> | null>(null);
 
+const isHydratedContext = createContext(false);
+
 export interface twilightStoreProviderProps {
   children: React.ReactNode;
 }
@@ -178,10 +180,14 @@ export const TwilightStoreProvider = ({
 
   return (
     <twilightStoreContext.Provider value={storeRef.current}>
-      {children}
+      <isHydratedContext.Provider value={isHydrated}>
+        {children}
+      </isHydratedContext.Provider>
     </twilightStoreContext.Provider>
   );
 };
+
+export const useIsStoreHydrated = () => useContext(isHydratedContext);
 
 export const useTwilightStore = <T,>(
   selector: (store: AccountSlices) => T
