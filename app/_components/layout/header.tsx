@@ -10,6 +10,7 @@ import Settings from "./settings.client";
 import SubaccountSelect from "./subaccount/subaccount-select.client";
 import MobileNav from "./mobile-navigation.client";
 import KycStatus from "./kyc-status";
+import RelayerStatus from "./relayer-status.client";
 import { usePathname } from 'next/navigation';
 import cn from '@/lib/cn';
 import { TWILIGHT_NETWORK_TYPE } from '@/lib/constants';
@@ -131,6 +132,7 @@ const Header = () => {
           <div className="mx-auto flex flex-row items-center space-x-2 sm:mx-0 md:space-x-4">
             {/* <KycStatus /> */}
             {/* <SubaccountSelect /> */}
+            <RelayerStatus />
             <ConnectWallet />
             <Settings />
           </div>
@@ -141,6 +143,7 @@ const Header = () => {
           </Link>
           <div className="flex items-center space-x-2">
             {/* <KycStatus /> */}
+            <RelayerStatus dotOnly />
             <ConnectWallet />
             <MobileNav />
           </div>
