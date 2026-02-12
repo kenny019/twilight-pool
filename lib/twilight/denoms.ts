@@ -55,6 +55,14 @@ export default class BTC {
     return this.value.mul(new Big(factor));
   }
 
+  static formatSatsAuto(sats: number): { value: string; denom: BTCDenoms } {
+    const btcValue = sats / 1e8;
+    if (btcValue > 0 && btcValue < 0.01) {
+      return { value: (sats / 1e5).toFixed(2), denom: "mBTC" };
+    }
+    return { value: btcValue.toFixed(2), denom: "BTC" };
+  }
+
   static format(value: Big, unit?: BTCDenoms) {
     switch (unit) {
       case "sats":

@@ -248,7 +248,7 @@ const OrderLimitForm = () => {
         toast({
           variant: "error",
           title: "Order exceeds maximum position size",
-          description: `Maximum ${positionType.toLowerCase()} position size is ${(maxPosition / 1e8).toFixed(8)} BTC.`,
+          description: `Maximum ${positionType.toLowerCase()} position size is ${BTC.formatSatsAuto(maxPosition).value} ${BTC.formatSatsAuto(maxPosition).denom}.`,
         });
         return;
       }

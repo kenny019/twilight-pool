@@ -203,16 +203,30 @@ const TickerWrapper = () => {
           isLoaded={!!marketStats.data}
           placeholder={<Skeleton className="h-6 w-[80px]" />}
         >
-          <span>
-            <span className="text-green-medium">
-              {((marketStats.data?.max_long_btc ?? 0) / 1e8).toFixed(2)}
-            </span>
-            <span className="text-xs text-gray-500">{" / "}</span>
-            <span className="text-red">
-              {((marketStats.data?.max_short_btc ?? 0) / 1e8).toFixed(2)}
-            </span>
-            <span className="text-xs text-gray-500">{" BTC"}</span>
-          </span>
+          {(() => {
+            const longSats = marketStats.data?.max_long_btc ?? 0;
+            const shortSats = marketStats.data?.max_short_btc ?? 0;
+            const longBtc = longSats / 1e8;
+            const shortBtc = shortSats / 1e8;
+            const useMBTC =
+              (longBtc > 0 && longBtc < 0.1) ||
+              (shortBtc > 0 && shortBtc < 0.1);
+            const denom = useMBTC ? "mBTC" : "BTC";
+            const divisor = useMBTC ? 1e5 : 1e8;
+
+            return (
+              <span>
+                <span className="text-green-medium">
+                  {(longSats / divisor).toFixed(2)}
+                </span>
+                <span className="text-xs text-gray-500">{" / "}</span>
+                <span className="text-red">
+                  {(shortSats / divisor).toFixed(2)}
+                </span>
+                <span className="text-xs text-gray-500">{` ${denom}`}</span>
+              </span>
+            );
+          })()}
         </Resource>
       </TickerItem>
       <TickerItem
