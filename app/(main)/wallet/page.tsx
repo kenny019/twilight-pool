@@ -628,7 +628,7 @@ const Page = () => {
                 {Intl.NumberFormat("en-US", {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 8,
-                }).format(nyksBalance / 1e8)}{" "}
+                }).format(nyksBalance)}{" "}
                 NYKS
               </Text>
             </Resource>

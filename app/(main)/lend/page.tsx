@@ -434,7 +434,16 @@ const Page = () => {
       });
 
       setIsWithdrawDialogOpen(false);
-      removeZkAccount(selectedZkAccount);
+      removeZkAccount({
+        type: "Coin",
+        address: updatedTransientAddress,
+        scalar: updatedTransientScalar,
+        isOnChain: false,
+        value: newBalance,
+        tag: updatedSelectedZkAccount.tag,
+        zkAccountHex,
+      });
+
       return;
     } catch (err) {
       setIsSettleLoading(false);
