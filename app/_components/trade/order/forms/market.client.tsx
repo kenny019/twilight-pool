@@ -9,6 +9,7 @@ import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from '@/lib/api/relayer';
 import { queryTransactionHashes } from "@/lib/api/rest";
+import { queryUtxoForAddress } from "@/lib/api/zkos";
 import cn from "@/lib/cn";
 import { retry } from '@/lib/helpers';
 import useGetMarketStats from '@/lib/hooks/useGetMarketStats';
@@ -17,7 +18,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useGrid } from "@/lib/providers/grid";
 import { useSessionStore } from "@/lib/providers/session";
-import { useTwilightStore } from "@/lib/providers/store";
+import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { createFundingToTradingTransferMsg } from '@/lib/twilight/wallet';
@@ -25,6 +26,8 @@ import { createZkAccountWithBalance, createZkOrder } from "@/lib/twilight/zk";
 import { createQueryTradeOrderMsg } from '@/lib/twilight/zkos';
 import { ZkAccount } from '@/lib/types';
 import { ZkPrivateAccount } from '@/lib/zk/account';
+import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
+import { hasUtxoData, serializeTxid, waitForUtxoUpdate } from "@/lib/utils/waitForUtxoUpdate";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
@@ -37,6 +40,10 @@ const OrderMarketForm = () => {
   const { width } = useGrid();
 
   const privateKey = useSessionStore((state) => state.privateKey);
+
+  // Raw store API — lets queue tasks read the latest state at execution time
+  // instead of relying on a potentially-stale React closure.
+  const storeApi = useTwilightStoreApi();
 
   const { isLoading: isSatsLoading } =
     useGetTwilightBTCBalance();
@@ -261,6 +268,8 @@ const OrderMarketForm = () => {
         description: "Order is being placed, please do not close this page.",
       })
 
+      // Generate the new order account before entering the queue — this is
+      // pure in-memory work and does not touch the master UTXO.
       const { account: newTradingAccount } =
         await createZkAccountWithBalance({
           tag: "market",
@@ -268,66 +277,120 @@ const OrderMarketForm = () => {
           signature: privateKey,
         });
 
-      const tag = `BTC ${type.toLowerCase()} ${newTradingAccount.address.slice(0, 6)}`
+      const tag = `BTC ${type.toLowerCase()} ${newTradingAccount.address.slice(0, 6)}`;
 
-      const senderZkPrivateAccount = await ZkPrivateAccount.create({
-        signature: privateKey,
-        existingAccount: tradingAccount,
-      });
+      // --- Master-account critical section (serialised via queue) -----------
+      // The queue guarantees only one task at a time touches the master UTXO,
+      // preventing double-spend races with useSyncTrades cleanup tasks.
+      let queueResult: { newZkAccount: ZkAccount; txId: string };
+      try {
+        queueResult = await masterAccountQueue.enqueue(async () => {
+        // Read fresh master account at execution time (not from React closure).
+        const currentTradingAccount = storeApi
+          .getState()
+          .zk.zkAccounts.find((a) => a.tag === "main");
 
-      const privateTxSingleResult = await senderZkPrivateAccount.privateTxSingle(
-        satsValue,
-        newTradingAccount.address
-      )
+        if (!currentTradingAccount) {
+          throw new Error("Master trading account not found");
+        }
 
-      if (!privateTxSingleResult.success) {
-        console.error(privateTxSingleResult.message);
+        if (!currentTradingAccount.isOnChain || !currentTradingAccount.value) {
+          throw new Error("Master trading account is not on-chain");
+        }
+
+        if ((currentTradingAccount.value ?? 0) < satsValue) {
+          throw new Error("Insufficient funds in master trading account");
+        }
+
+        // Snapshot the current UTXO txid so we can detect when the chain
+        // updates after broadcast.
+        const utxoBefore = await queryUtxoForAddress(currentTradingAccount.address);
+        const previousTxid = hasUtxoData(utxoBefore)
+          ? serializeTxid(utxoBefore.txid)
+          : "";
+
+        const senderZkPrivateAccount = await ZkPrivateAccount.create({
+          signature: privateKey,
+          existingAccount: currentTradingAccount,
+        });
+
+        const privateTxSingleResult =
+          await senderZkPrivateAccount.privateTxSingle(
+            satsValue,
+            newTradingAccount.address
+          );
+
+        if (!privateTxSingleResult.success) {
+          throw new Error(privateTxSingleResult.message);
+        }
+
+        const {
+          txId,
+          scalar: updatedTradingAccountScalar,
+          updatedAddress: updatedTradingAccountAddress,
+        } = privateTxSingleResult.data;
+
+        // Wait for the UTXO store to reflect the broadcast before releasing
+        // the lock, so the next queued task starts from consistent state.
+        const utxoWait = await waitForUtxoUpdate(
+          senderZkPrivateAccount.get().address,
+          previousTxid
+        );
+        if (!utxoWait.success) {
+          console.warn("waitForUtxoUpdate timed out:", utxoWait.message);
+        }
+
+        // Persist state updates atomically after UTXO is confirmed.
+        const newZkAccount: ZkAccount = {
+          scalar: updatedTradingAccountScalar,
+          type: "Coin",
+          address: updatedTradingAccountAddress,
+          tag,
+          isOnChain: true,
+          value: satsValue,
+          createdAt: dayjs().unix(),
+        };
+
+        // Add the new order account first so it is tracked even if a later
+        // step fails (recovery is possible via manual cleanup).
+        addZkAccount(newZkAccount);
+
+        updateZkAccount(currentTradingAccount.address, {
+          ...currentTradingAccount,
+          address: senderZkPrivateAccount.get().address,
+          scalar: senderZkPrivateAccount.get().scalar,
+          value: senderZkPrivateAccount.get().value,
+          isOnChain: senderZkPrivateAccount.get().isOnChain,
+        });
+
+        addTransactionHistory({
+          date: new Date(),
+          from: currentTradingAccount.address,
+          fromTag: "Trading Account",
+          to: updatedTradingAccountAddress,
+          toTag: tag,
+          tx_hash: txId,
+          type: "Transfer",
+          value: satsValue,
+        });
+
+          return { newZkAccount, txId };
+        });
+      } catch (err) {
+        console.error("masterAccountQueue task failed:", err);
         toast({
           title: "Error with submitting trade order",
-          description: "An error occurred when transferring funds from the trading account, please try again later.",
+          description:
+            err instanceof Error
+              ? err.message
+              : "An error occurred when transferring funds from the trading account, please try again later.",
           variant: "error",
-        })
+        });
         return;
       }
+      // --- End of critical section ------------------------------------------
 
-      // the naming is abit off, this updated trading account is the account used to place the order
-      const {
-        txId,
-        scalar: updatedTradingAccountScalar,
-        updatedAddress: updatedTradingAccountAddress,
-      } = privateTxSingleResult.data;
-
-      const newZkAccount = {
-        scalar: updatedTradingAccountScalar,
-        type: "Coin",
-        address: updatedTradingAccountAddress,
-        tag: tag,
-        isOnChain: true,
-        value: satsValue,
-        createdAt: dayjs().unix(),
-      }
-
-      // note: add zk account in case submit order fails
-      addZkAccount(newZkAccount as ZkAccount);
-
-      updateZkAccount(tradingAccount.address, {
-        ...tradingAccount,
-        address: senderZkPrivateAccount.get().address,
-        scalar: senderZkPrivateAccount.get().scalar,
-        value: senderZkPrivateAccount.get().value,
-        isOnChain: senderZkPrivateAccount.get().isOnChain,
-      })
-
-      addTransactionHistory({
-        date: new Date(),
-        from: tradingAccount.address,
-        fromTag: "Trading Account",
-        to: updatedTradingAccountAddress,
-        toTag: tag,
-        tx_hash: txId,
-        type: "Transfer",
-        value: satsValue,
-      });
+      const { newZkAccount } = queueResult;
 
       const leverage = parseInt(leverageRef.current?.value || "1");
 

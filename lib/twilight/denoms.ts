@@ -64,6 +64,7 @@ export default class BTC {
   }
 
   static format(value: Big, unit?: BTCDenoms) {
+    let result: string;
     switch (unit) {
       case "sats":
         return value.toFixed(0).replace(/\.?0+$/, "");
@@ -74,5 +75,6 @@ export default class BTC {
       default:
         return value.toString();
     }
+    return result === "-0" ? "0" : result;
   }
 }

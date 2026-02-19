@@ -248,8 +248,7 @@ const OrderMyTrades = () => {
     return {
       success: true,
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast, privateKey, removeZkAccount]);
+  }, [toast, privateKey, removeZkAccount, chainWallet]);
 
   // Memoize the callback functions to prevent unnecessary re-renders
   const handleSettleOrder = useCallback(async (tradeOrder: TradeOrder) => {
@@ -505,7 +504,12 @@ const OrderMyTrades = () => {
 
       console.log("trade order settled", settledTx?.tx_hash);
 
-      const result = await cleanupTradeOrder(privateKey, currentAccount);
+      // Pass the PnL-adjusted balance so the burn tx uses the correct on-chain
+      // value, not the original margin captured before settlement.
+      const result = await cleanupTradeOrder(privateKey, {
+        ...currentAccount,
+        value: newAccountBalance,
+      });
 
       if (!result.success) {
         toast({
@@ -616,50 +620,6 @@ const OrderMyTrades = () => {
         description: `Successfully cancelled ${tradeOrder.orderType.toLowerCase()} order`,
       });
 
-      const getZkAccountBalanceResult = await retry<
-        ReturnType<typeof getZkAccountBalance>,
-        {
-          zkAccountAddress: string;
-          signature: string;
-        }
-      >(
-        getZkAccountBalance,
-        30,
-        {
-          zkAccountAddress: tradeOrder.accountAddress,
-          signature: privateKey,
-        },
-        1000,
-        (result) => {
-          if (result.value) return true;
-
-          return false;
-        }
-      );
-
-      if (!getZkAccountBalanceResult.success) {
-        console.error("cancel order failed to get balance");
-        toast({
-          variant: "error",
-          title: "Error",
-          description: "Error with getting balance after cancelling order.",
-        });
-        return;
-      }
-
-      const { value: newAccountBalance } = getZkAccountBalanceResult.data;
-
-      if (!newAccountBalance) {
-        toast({
-          variant: "error",
-          title: "Error",
-          description: "Error with cancelling trade order",
-        });
-        return;
-      }
-
-      console.log("cancel account balance", newAccountBalance);
-
       const queryTradeOrderMsg = await createQueryTradeOrderMsg({
         address: tradeOrder.accountAddress,
         orderStatus: "CANCELLED",
@@ -680,7 +640,6 @@ const OrderMyTrades = () => {
 
       updateZkAccount(tradeOrder.accountAddress, {
         ...currentAccount,
-        value: newAccountBalance,
         type: "Coin",
       });
 
@@ -713,7 +672,7 @@ const OrderMyTrades = () => {
       if (!cleanupResult.success) {
         toast({
           title: "Error with cancelling trade order",
-          description: result.message,
+          description: cleanupResult.message,
           variant: "error",
         })
         return;

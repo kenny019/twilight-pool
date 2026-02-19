@@ -86,14 +86,24 @@ const DetailsPanel = () => {
 
       const updatedAccount = zkAccounts.find(account => account.address === trade.accountAddress);
 
-      const balance = Math.round(Big(settledData.available_margin).toNumber())
-
       if (!updatedAccount) {
+        // useSyncTrades may have already cleaned up this account before we
+        // finished.  If the trade is gone or already SETTLED, treat it as a
+        // success rather than showing a false error.
+        const currentTrade = tradeOrders.find((t) => t.uuid === trade.uuid);
+        if (!currentTrade || currentTrade.orderStatus === "SETTLED") {
+          toast({
+            title: "Position closed",
+            description: "Your position has been closed successfully.",
+          });
+          return;
+        }
+
         toast({
           title: "Failed to settle position",
           description: "Failed to find account",
           variant: "error",
-        })
+        });
         return;
       }
 
