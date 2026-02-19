@@ -202,3 +202,19 @@ export const useTwilightStore = <T,>(
 
   return useStore(twilightStoreCtx, selector);
 };
+
+/**
+ * Returns the raw Zustand StoreApi so non-React code (e.g. queue tasks) can
+ * call storeApi.getState() to read the current state without stale closures.
+ */
+export const useTwilightStoreApi = (): StoreApi<AccountSlices> => {
+  const twilightStoreCtx = useContext(twilightStoreContext);
+
+  if (!twilightStoreCtx) {
+    throw new Error(
+      `useTwilightStoreApi must be used within TwilightStoreProvider`
+    );
+  }
+
+  return twilightStoreCtx;
+};

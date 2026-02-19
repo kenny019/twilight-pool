@@ -288,12 +288,34 @@ export class ZkPrivateAccount {
       };
     }
 
-    const tradingTxRes = JSON.parse(tradingTxResString);
-
-    if (Object.hasOwn(tradingTxRes, "error")) {
+    // The ZKOS server sometimes returns a raw non-JSON error string such as
+    // "{ Error: ... }" which JSON.parse cannot handle.  Parse defensively.
+    let tradingTxRes: Record<string, unknown>;
+    try {
+      tradingTxRes = JSON.parse(tradingTxResString);
+    } catch {
       return {
         success: false,
-        message: "Error",
+        message: `txCommit error: ${tradingTxResString}`,
+      };
+    }
+
+    // The server uses both "error" and "Error" as keys depending on context.
+    if (
+      Object.hasOwn(tradingTxRes, "error") ||
+      Object.hasOwn(tradingTxRes, "Error")
+    ) {
+      const detail = tradingTxRes.error ?? tradingTxRes.Error;
+      return {
+        success: false,
+        message: `txCommit error: ${String(detail)}`,
+      };
+    }
+
+    if (typeof tradingTxRes.txHash !== "string") {
+      return {
+        success: false,
+        message: `txCommit returned unexpected format: ${tradingTxResString}`,
       };
     }
 

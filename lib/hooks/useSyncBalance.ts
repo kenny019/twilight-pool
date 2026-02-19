@@ -12,10 +12,16 @@ export const useSyncBalance = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
   const { status } = useWallet();
 
-  // Filter accounts that need syncing upfront
+  // Filter accounts that need syncing upfront.
+  // The master account (tag === "main") is excluded because its balance and
+  // UTXO are exclusively managed by serialised queue operations.  Letting the
+  // background poller overwrite it mid-flight would corrupt optimistic updates.
   const accountsToSync = useMemo(() => {
     return zkAccounts.filter(
-      (account) => account.isOnChain && account.type !== "Memo"
+      (account) =>
+        account.isOnChain &&
+        account.type !== "Memo" &&
+        account.tag !== "main"
     );
   }, [zkAccounts]);
 
