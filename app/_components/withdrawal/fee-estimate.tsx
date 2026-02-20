@@ -15,7 +15,7 @@ export default function FeeEstimate({ amountSats, displayDenom }: Props) {
 
   if (!feeRates || amountSats <= 0) return null;
 
-  const feeSats = Math.ceil(feeRates.halfHourFee * TYPICAL_TX_VBYTES);
+  const feeSats = Math.ceil(feeRates.satPerVbyte * TYPICAL_TX_VBYTES);
   const receivedSats = Math.max(amountSats - feeSats, 0);
 
   if (receivedSats === 0) return null;
@@ -39,7 +39,7 @@ export default function FeeEstimate({ amountSats, displayDenom }: Props) {
       </div>
       <div className="flex justify-between">
         <Text className="text-primary-accent">Fee rate</Text>
-        <Text>{feeRates.halfHourFee} sat/vB</Text>
+        <Text>{feeRates.satPerVbyte} sat/vB</Text>
       </div>
       <div className="flex justify-between">
         <Text className="text-primary-accent">Est. received</Text>
