@@ -20,8 +20,8 @@ import { Toaster } from "@/components/toast-provider";
 import { PriceFeedProvider } from "@/lib/providers/feed";
 import { TwilightStoreProvider } from "@/lib/providers/store";
 import { SessionStoreProvider } from "@/lib/providers/session";
-import { DialogProvider } from '@/lib/providers/limit-dialogs';
-import LeaderboardOptInDialog from '@/app/_components/layout/leaderboard-opt-in-dialog.client';
+import { DialogProvider } from "@/lib/providers/limit-dialogs";
+import LeaderboardOptInDialog from "@/app/_components/layout/leaderboard-opt-in-dialog.client";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -57,17 +57,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
           }}
           signerOptions={signerOptions}
-        // walletConnectOptions={{ // todo: implement for keplr wallet
-        //   signClient:
-        // }}
+          sessionOptions={{ duration: 86_400_000 }} // 1 day in ms
+          // walletConnectOptions={{ // todo: implement for keplr wallet
+          //   signClient:
+          // }}
         >
           <TwilightProvider>
             <SessionStoreProvider>
               <TwilightStoreProvider>
                 <PriceFeedProvider>
-                  <DialogProvider>
-                    {children}
-                  </DialogProvider>
+                  <DialogProvider>{children}</DialogProvider>
                 </PriceFeedProvider>
                 <LeaderboardOptInDialog />
               </TwilightStoreProvider>

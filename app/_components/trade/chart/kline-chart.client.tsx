@@ -119,7 +119,7 @@ const KLineChart = () => {
             }
             const bars = res.data.result.map(transformCandleData);
             bars.sort((a, b) => a.timestamp - b.timestamp);
-            callback(bars, { forward: bars.length >= 1000 });
+            callback(bars, { forward: bars.length >= 0 });
           } catch {
             callback([], false);
           }
