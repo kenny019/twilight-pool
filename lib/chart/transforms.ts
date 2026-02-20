@@ -27,7 +27,7 @@ export function transformBinanceKline(k: {
     high: parseFloat(k.h),
     low: parseFloat(k.l),
     close: parseFloat(k.c),
-    volume: parseFloat(k.v),
+    volume: 0,
   };
 }
 
