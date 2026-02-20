@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
@@ -15,9 +15,8 @@ import { useSessionStore } from "@/lib/providers/session";
 import dayjs from "dayjs";
 
 const TickerWrapper = () => {
-  const { getCurrentPrice } = usePriceFeed();
-
-  const currentPrice = getCurrentPrice();
+  const { getCurrentPrice, subscribe } = usePriceFeed();
+  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const priceDelta = 0;

@@ -73,6 +73,11 @@ export const createTradeSlice: StateImmerCreator<AccountSlices, TradeSlice> = (
         ),
       ];
 
+      // Skip update if data hasn't changed
+      if (JSON.stringify(state.trade.trades) === JSON.stringify(mergedTrades)) {
+        return;
+      }
+
       state.trade.trades = mergedTrades;
     });
   },

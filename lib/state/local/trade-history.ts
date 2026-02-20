@@ -64,7 +64,14 @@ export const createTradeHistorySlice: StateImmerCreator<
           )
       );
 
-      state.trade_history.trades = [...trades, ...newLocalTrades];
+      const mergedTrades = [...trades, ...newLocalTrades];
+
+      // Skip update if data hasn't changed
+      if (JSON.stringify(currentTrades) === JSON.stringify(mergedTrades)) {
+        return;
+      }
+
+      state.trade_history.trades = mergedTrades;
     });
   },
 });

@@ -34,7 +34,7 @@ import Big from "big.js";
 import dayjs from 'dayjs';
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 const OrderMarketForm = () => {
   const { width } = useGrid();
@@ -51,9 +51,8 @@ const OrderMarketForm = () => {
   const marketStats = useGetMarketStats();
 
   const { hasRegisteredBTC } = useTwilight();
-  const { getCurrentPrice } = usePriceFeed();
-
-  const liveBtcPrice = getCurrentPrice()
+  const { getCurrentPrice, subscribe } = usePriceFeed();
+  const liveBtcPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const currentPrice = liveBtcPrice || storedBtcPrice; // binance websocket stream does not work for USA Ip address

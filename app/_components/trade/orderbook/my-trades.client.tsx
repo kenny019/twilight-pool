@@ -11,7 +11,7 @@ import { createQueryTradeOrderMsg, executeTradeLendOrderMsg, verifyAccount, veri
 import { TradeOrder, ZkAccount } from "@/lib/types";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useSyncExternalStore } from "react";
 import { MyTradesDataTable } from "./my-trades/data-table";
 import { myTradesColumns, calculateUpnl } from "./my-trades/columns";
 import { cancelTradeOrder, queryTradeOrder } from '@/lib/api/relayer';
@@ -28,7 +28,7 @@ import Long from 'long';
 const OrderMyTrades = () => {
   const { toast } = useToast();
   const { getCurrentPrice, subscribe } = usePriceFeed();
-  const [, forceUpdate] = useState({});
+  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
 
   const privateKey = useSessionStore((state) => state.privateKey);
 
@@ -40,15 +40,6 @@ const OrderMyTrades = () => {
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
-
-  // Subscribe to price updates to refresh price-dependent columns
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      forceUpdate({});
-    });
-
-    return unsubscribe;
-  }, [subscribe]);
 
 
   const { mainWallet } = useWallet();
@@ -708,7 +699,6 @@ const OrderMyTrades = () => {
           ...column,
           cell: (row: any) => {
             const trade = row.row.original;
-            const currentPrice = getCurrentPrice();
             const markPrice = currentPrice || trade.entryPrice;
 
             return (
@@ -748,7 +738,6 @@ const OrderMyTrades = () => {
             }
 
             let upnl: number | undefined;
-            const currentPrice = getCurrentPrice();
             if (currentPrice && trade.entryPrice) {
               const positionSize = trade.positionSize;
               upnl = calculateUpnl(trade.entryPrice, currentPrice, trade.positionType, positionSize);
@@ -780,7 +769,7 @@ const OrderMyTrades = () => {
 
       return column;
     });
-  }, [getCurrentPrice]);
+  }, [currentPrice]);
 
   const tableData = useMemo(() => {
     return tradeOrders.filter((trade) => trade.isOpen).map((trade) => ({

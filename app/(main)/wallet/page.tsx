@@ -20,6 +20,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { TransactionHistoryDataTable } from "./transaction-history/data-table";
 import { transactionHistoryColumns } from "./transaction-history/columns";
@@ -109,9 +110,9 @@ const Page = () => {
     (state) => state.history.transactions
   );
 
-  const { getCurrentPrice } = usePriceFeed();
-
-  const finalPrice = getCurrentPrice() || btcPrice;
+  const { getCurrentPrice, subscribe } = usePriceFeed();
+  const liveBtcPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const finalPrice = liveBtcPrice || btcPrice;
 
   const { twilightSats, isLoading: satsLoading } = useGetTwilightBTCBalance();
 
