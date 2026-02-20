@@ -2,8 +2,8 @@
 
 import Button from "@/components/button";
 import cn from '@/lib/cn';
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createChart, ColorType, IChartApi, LineSeries } from 'lightweight-charts';
+import React, { useMemo, useState, useCallback } from "react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useApyChartData, ApyChartParams } from "@/lib/hooks/useApyChartData";
 
 type TimePeriod = "1D" | "1W" | "1M";
@@ -14,96 +14,41 @@ const PERIOD_PARAMS: Record<TimePeriod, ApyChartParams> = {
   "1M": { range: "30 days", step: "12 hours", lookback: "30 days" },
 };
 
+function formatApy(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `${(value / 1e12).toFixed(1)}T%`;
+  if (abs >= 1e9) return `${(value / 1e9).toFixed(1)}B%`;
+  if (abs >= 1e6) return `${(value / 1e6).toFixed(1)}M%`;
+  if (abs >= 1e3) return `${(value / 1e3).toFixed(1)}K%`;
+  if (abs < 1) return `${value.toFixed(4)}%`;
+  return `${value.toFixed(2)}%`;
+}
+
+const GREEN = "rgb(34, 197, 94)";
+
 const ApyChart = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("1D");
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<any>(null);
-
   const timePeriods: TimePeriod[] = ["1D", "1W", "1M"];
 
   const params = useMemo(() => PERIOD_PARAMS[selectedPeriod], [selectedPeriod]);
   const { data: chartData } = useApyChartData(params);
 
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'rgb(156, 163, 175)',
-        attributionLogo: false,
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 256,
-      grid: {
-        vertLines: {
-          color: 'rgba(156, 163, 175, 0.1)',
-        },
-        horzLines: {
-          color: 'rgba(156, 163, 175, 0.1)',
-        },
-      },
-      crosshair: {
-        mode: 1,
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(156, 163, 175, 0.2)',
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
-        },
-      },
-      timeScale: {
-        borderColor: 'rgba(156, 163, 175, 0.2)',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
-
-    const lineSeries = chart.addSeries(LineSeries, {
-      color: 'rgb(34, 197, 94)',
-      lineWidth: 2,
-      priceFormat: {
-        type: 'custom',
-        formatter: (value: number) => {
-          const abs = Math.abs(value);
-          if (abs >= 1e12) return `${(value / 1e12).toFixed(1)}T%`;
-          if (abs >= 1e9) return `${(value / 1e9).toFixed(1)}B%`;
-          if (abs >= 1e6) return `${(value / 1e6).toFixed(1)}M%`;
-          if (abs >= 1e3) return `${(value / 1e3).toFixed(1)}K%`;
-          if (abs < 1) return `${value.toFixed(4)}%`;
-          return `${value.toFixed(2)}%`;
-        },
-        minMove: 0.0001,
-      },
-    });
-
-    chartRef.current = chart;
-    seriesRef.current = lineSeries;
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chart) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (chart) {
-        chart.remove();
-      }
-    };
-  }, []);
-
-  // Update data when chartData changes
-  useEffect(() => {
-    if (seriesRef.current && chartData) {
-      seriesRef.current.setData(chartData);
+  const tickFormatter = useCallback((time: number) => {
+    const d = new Date(time * 1000);
+    if (selectedPeriod === "1D") {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-  }, [chartData]);
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }, [selectedPeriod]);
+
+  const tooltipLabelFormatter = useCallback((label: any) => {
+    const time = Number(label);
+    const d = new Date(time * 1000);
+    if (selectedPeriod === "1D") {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }, [selectedPeriod]);
 
   return (
     <div className="space-y-4">
@@ -124,7 +69,50 @@ const ApyChart = () => {
       </div>
 
       <div className="h-64 w-full rounded-lg border border-primary/20 p-4">
-        <div ref={chartContainerRef} className="w-full h-full" />
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData ?? []}>
+            <defs>
+              <linearGradient id="apyGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={GREEN} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={GREEN} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="rgba(156, 163, 175, 0.1)" />
+            <XAxis
+              dataKey="time"
+              tickFormatter={tickFormatter}
+              stroke="rgb(156, 163, 175)"
+              tick={{ fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: 'rgba(156, 163, 175, 0.2)' }}
+            />
+            <YAxis
+              tickFormatter={formatApy}
+              stroke="rgb(156, 163, 175)"
+              tick={{ fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: 'rgba(156, 163, 175, 0.2)' }}
+              width={60}
+            />
+            <Tooltip
+              labelFormatter={tooltipLabelFormatter}
+              formatter={(value: any) => [formatApy(Number(value ?? 0)), "APY"]}
+              contentStyle={{
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: '1px solid rgba(156, 163, 175, 0.2)',
+                borderRadius: '8px',
+                color: 'rgb(156, 163, 175)',
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={GREEN}
+              strokeWidth={2}
+              fill="url(#apyGradient)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
