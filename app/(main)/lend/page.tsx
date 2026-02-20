@@ -87,12 +87,16 @@ const Page = () => {
     (state) => state.history.addTransaction
   );
 
+  const zkAccountTagMap = useMemo(
+    () => new Map(zKAccounts.map((a) => [a.address, a.tag])),
+    [zKAccounts]
+  );
+
   const getAccountTag = useCallback(
     (address: string) => {
-      const account = zKAccounts.find((account) => account.address === address);
-      return formatTag(account?.tag || "");
+      return formatTag(zkAccountTagMap.get(address) || "");
     },
-    [zKAccounts]
+    [zkAccountTagMap]
   );
 
   // Filter lend orders for active vs history

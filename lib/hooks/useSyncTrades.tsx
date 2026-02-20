@@ -398,6 +398,7 @@ export const useSyncTrades = () => {
       return true;
     },
     refetchInterval: 3000,
+    staleTime: 3000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

@@ -72,13 +72,16 @@ const Page = () => {
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
 
   const activeAccounts = useMemo(() => {
+    const tradesByAddress = new Map(
+      trades.map((t) => [t.accountAddress, t])
+    );
+    const lendsByAddress = new Map(
+      lends.map((l) => [l.accountAddress, l])
+    );
+
     return zkAccounts.reduce<ActiveAccount[]>((acc, account) => {
-      const trade = trades.find(
-        (trade) => trade.accountAddress === account.address
-      );
-      const lend = lends.find(
-        (lend) => lend.accountAddress === account.address
-      );
+      const trade = tradesByAddress.get(account.address);
+      const lend = lendsByAddress.get(account.address);
 
       const type =
         account.tag === "main"
