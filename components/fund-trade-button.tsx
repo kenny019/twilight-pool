@@ -22,11 +22,18 @@ import { ZkAccount } from "@/lib/types";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import Link from "next/link";
-import { broadcastTradingTx } from "@/lib/api/zkos";
+import { broadcastTradingTx, queryUtxoForAddress } from "@/lib/api/zkos";
 import { safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { twilightproject } from "twilightjs";
 import Long from "long";
 import { send } from "process";
+import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
+import {
+  hasUtxoData,
+  serializeTxid,
+  waitForUtxoUpdate,
+} from "@/lib/utils/waitForUtxoUpdate";
+import { useTwilightStoreApi } from "@/lib/providers/store";
 
 type Props = {
   type?: "icon" | "large";
@@ -78,6 +85,7 @@ function FundingTradeButton({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const privateKey = useSessionStore((state) => state.privateKey);
+  const storeApi = useTwilightStoreApi();
 
   const handleFundingToTradeTransfer = useCallback(
     async (amount: number, chainWallet: ChainWalletBase) => {
@@ -213,246 +221,281 @@ function FundingTradeButton({
 
   const handleTradeToFundingTransfer = useCallback(
     async (amount: number, chainWallet: ChainWalletBase) => {
-      if (!tradingAccount || !twilightAddress) {
+      if (!twilightAddress) {
         return {
           success: false,
           message: "An unexpected error occurred",
         };
       }
 
-      const stargateClient = await chainWallet.getSigningStargateClient();
+      return masterAccountQueue.enqueue(async () => {
+        const state = storeApi.getState();
+        const currentTradingAccount = state.zk.zkAccounts.find(
+          (a) => a.tag === "main"
+        );
+        if (!currentTradingAccount) {
+          return {
+            success: false,
+            message: "Trading account not found",
+          };
+        }
 
-      let cosmosScalar = "";
-      let cosmosAccountHex = "";
+        const stargateClient = await chainWallet.getSigningStargateClient();
 
-      let newTradingAccount = {
-        address: "",
-        scalar: "",
-        value: 0,
-      };
+        let cosmosScalar = "";
+        let cosmosAccountHex = "";
 
-      const transientAccount = await createZkAccount({
-        tag: Math.random().toString(36).substring(2, 15),
-        signature: privateKey,
-      });
+        let newTradingAccount = {
+          address: "",
+          scalar: "",
+          value: 0,
+        };
 
-      const senderZkPrivateAccount = await ZkPrivateAccount.create({
-        signature: privateKey,
-        existingAccount: tradingAccount,
-      });
+        const transientAccount = await createZkAccount({
+          tag: Math.random().toString(36).substring(2, 15),
+          signature: privateKey,
+        });
 
-      console.log("tradingAccount.address", tradingAccount.address);
+        const utxoBefore = await queryUtxoForAddress(
+          currentTradingAccount.address
+        );
+        const previousTxid = hasUtxoData(utxoBefore)
+          ? serializeTxid(utxoBefore.txid)
+          : "";
 
-      const privateTxSingleResult =
-        await senderZkPrivateAccount.privateTxSingle(
-          amount,
-          transientAccount.address
+        const senderZkPrivateAccount = await ZkPrivateAccount.create({
+          signature: privateKey,
+          existingAccount: currentTradingAccount,
+        });
+
+        console.log(
+          "tradingAccount.address",
+          currentTradingAccount.address
         );
 
-      if (!privateTxSingleResult.success) {
-        console.error(privateTxSingleResult.message);
-        return {
-          success: false,
-          message: privateTxSingleResult.message,
+        const privateTxSingleResult =
+          await senderZkPrivateAccount.privateTxSingle(
+            amount,
+            transientAccount.address
+          );
+
+        if (!privateTxSingleResult.success) {
+          console.error(privateTxSingleResult.message);
+          return {
+            success: false,
+            message: privateTxSingleResult.message,
+          };
+        }
+
+        const utxoWait = await waitForUtxoUpdate(
+          senderZkPrivateAccount.get().address,
+          previousTxid
+        );
+        if (!utxoWait.success) {
+          console.warn(
+            "fund-trade-button waitForUtxoUpdate timed out:",
+            utxoWait.message
+          );
+        }
+
+        const {
+          scalar: updatedTransientScalar,
+          txId,
+          updatedAddress: updatedTransientAddress,
+        } = privateTxSingleResult.data;
+
+        console.log(
+          "txId",
+          txId,
+          "updatedAddess",
+          updatedTransientAddress,
+          "tradingAccount.address",
+          currentTradingAccount.address
+        );
+
+        newTradingAccount = {
+          address: senderZkPrivateAccount.get().address,
+          scalar: senderZkPrivateAccount.get().scalar,
+          value: senderZkPrivateAccount.get().value,
         };
-      }
 
-      const {
-        scalar: updatedTransientScalar,
-        txId,
-        updatedAddress: updatedTransientAddress,
-      } = privateTxSingleResult.data;
+        // update in case burn fails
+        updateZkAccount(currentTradingAccount.address, {
+          ...newTradingAccount,
+          type: "Coin",
+          isOnChain: true,
+          tag: currentTradingAccount.tag,
+        });
 
-      console.log(
-        "txId",
-        txId,
-        "updatedAddess",
-        updatedTransientAddress,
-        "tradingAccount.address",
-        tradingAccount.address
-      );
+        const {
+          success,
+          msg: zkBurnMsg,
+          zkAccountHex,
+        } = await createZkBurnTx({
+          signature: privateKey,
+          zkAccount: {
+            tag: currentTradingAccount.tag,
+            address: updatedTransientAddress,
+            scalar: updatedTransientScalar,
+            isOnChain: true,
+            value: amount,
+            type: "Coin",
+          },
+          initZkAccountAddress: transientAccount.address,
+        });
 
-      newTradingAccount = {
-        address: senderZkPrivateAccount.get().address,
-        scalar: senderZkPrivateAccount.get().scalar,
-        value: senderZkPrivateAccount.get().value,
-      };
+        if (!success || !zkBurnMsg || !zkAccountHex) {
+          console.error("error creating zkBurnTx msg");
+          console.error({
+            success,
+            zkBurnMsg,
+            zkAccountHex,
+          });
+          return {
+            success: false,
+            message: `Failed to create zkBurnTx msg`,
+          };
+        }
 
-      // update in case burn fails
-      updateZkAccount(tradingAccount.address, {
-        ...newTradingAccount,
-        type: "Coin",
-        isOnChain: true,
-        tag: tradingAccount.tag,
-      });
+        console.log(
+          "tradingAccount.address",
+          currentTradingAccount.address,
+          "2",
+          updatedTransientAddress
+        );
+        // update in case broadcast fails
+        updateZkAccount(newTradingAccount.address, {
+          ...newTradingAccount,
+          type: "Coin",
+          isOnChain: false,
+          tag: currentTradingAccount.tag,
+        });
 
-      const {
-        success,
-        msg: zkBurnMsg,
-        zkAccountHex,
-      } = await createZkBurnTx({
-        signature: privateKey,
-        zkAccount: {
-          tag: tradingAccount.tag,
+        console.log("updatedTransientAddress", updatedTransientAddress);
+
+        toast({
+          title: "Broadcasting transfer",
+          description:
+            "Please do not close this page while your transfer is being submitted...",
+        });
+
+        const tradingTxResString = await broadcastTradingTx(
+          zkBurnMsg,
+          twilightAddress
+        );
+
+        const tradingTxRes = safeJSONParse(tradingTxResString as string);
+
+        if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
+          console.error("error broadcasting zkBurnTx msg", tradingTxRes);
+          return {
+            success: false,
+            message: `Failed to broadcast zkBurnTx msg`,
+          };
+        }
+
+        cosmosScalar = updatedTransientScalar;
+        cosmosAccountHex = zkAccountHex;
+
+        addZkAccount({
           address: updatedTransientAddress,
           scalar: updatedTransientScalar,
-          isOnChain: true,
           value: amount,
           type: "Coin",
-        },
-        initZkAccountAddress: transientAccount.address,
-      });
-
-      if (!success || !zkBurnMsg || !zkAccountHex) {
-        console.error("error creating zkBurnTx msg");
-        console.error({
-          success,
-          zkBurnMsg,
+          tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+          isOnChain: false,
           zkAccountHex,
         });
+
+        const { mintBurnTradingBtc } =
+          twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
+
+        console.log({
+          btcValue: Long.fromNumber(amount),
+          encryptScalar: cosmosScalar,
+          mintOrBurn: false,
+          qqAccount: cosmosAccountHex,
+          twilightAddress,
+        });
+
+        const mintBurnMsg = mintBurnTradingBtc({
+          btcValue: Long.fromNumber(amount),
+          encryptScalar: cosmosScalar,
+          mintOrBurn: false,
+          qqAccount: cosmosAccountHex,
+          twilightAddress,
+        });
+
+        toast({
+          title: "Approval Pending",
+          description: "Please approve the transaction in your wallet.",
+        });
+
+        const mintBurnRes = await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [mintBurnMsg],
+          "auto"
+        );
+
+        removeZkAccount({
+          address: updatedTransientAddress,
+          scalar: updatedTransientScalar,
+          value: amount,
+          type: "Coin",
+          tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+          isOnChain: false,
+          zkAccountHex,
+        });
+
+        updateZkAccount(currentTradingAccount.address, {
+          ...currentTradingAccount,
+          ...newTradingAccount,
+          isOnChain: true,
+        });
+
+        addTransactionHistory({
+          date: new Date(),
+          from: newTradingAccount.address,
+          fromTag: "Trading Account",
+          to: twilightAddress,
+          toTag: "Funding",
+          tx_hash: mintBurnRes.transactionHash,
+          type: "Burn",
+          value: amount,
+        });
+
+        toast({
+          title: "Success",
+          description: (
+            <div className="opacity-90">
+              {`Successfully sent ${new BTC("sats", Big(amount))
+                .convert("BTC")
+                .toString()} BTC to the Funding Account.`}
+              <Link
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
+                target={"_blank"}
+                className="text-sm underline hover:opacity-100"
+              >
+                Explorer link
+              </Link>
+            </div>
+          ),
+        });
+
         return {
-          success: false,
-          message: `Failed to create zkBurnTx msg`,
+          success: true,
         };
-      }
-
-      console.log(
-        "tradingAccount.address",
-        tradingAccount.address,
-        "2",
-        updatedTransientAddress
-      );
-      // update in case broadcast fails
-      updateZkAccount(newTradingAccount.address, {
-        ...newTradingAccount,
-        type: "Coin",
-        isOnChain: false,
-        tag: tradingAccount.tag,
       });
-
-      console.log("updatedTransientAddress", updatedTransientAddress);
-
-      toast({
-        title: "Broadcasting transfer",
-        description:
-          "Please do not close this page while your transfer is being submitted...",
-      });
-
-      const tradingTxResString = await broadcastTradingTx(
-        zkBurnMsg,
-        twilightAddress
-      );
-
-      const tradingTxRes = safeJSONParse(tradingTxResString as string);
-
-      if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
-        console.error("error broadcasting zkBurnTx msg", tradingTxRes);
-        return {
-          success: false,
-          message: `Failed to broadcast zkBurnTx msg`,
-        };
-      }
-
-      cosmosScalar = updatedTransientScalar;
-      cosmosAccountHex = zkAccountHex;
-
-      addZkAccount({
-        address: updatedTransientAddress,
-        scalar: updatedTransientScalar,
-        value: amount,
-        type: "Coin",
-        tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
-        isOnChain: false,
-        zkAccountHex,
-      });
-
-      const { mintBurnTradingBtc } =
-        twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
-
-      console.log({
-        btcValue: Long.fromNumber(amount),
-        encryptScalar: cosmosScalar,
-        mintOrBurn: false,
-        qqAccount: cosmosAccountHex,
-        twilightAddress,
-      });
-
-      const mintBurnMsg = mintBurnTradingBtc({
-        btcValue: Long.fromNumber(amount),
-        encryptScalar: cosmosScalar,
-        mintOrBurn: false,
-        qqAccount: cosmosAccountHex,
-        twilightAddress,
-      });
-
-      toast({
-        title: "Approval Pending",
-        description: "Please approve the transaction in your wallet.",
-      });
-
-      const mintBurnRes = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [mintBurnMsg],
-        "auto"
-      );
-
-      removeZkAccount({
-        address: updatedTransientAddress,
-        scalar: updatedTransientScalar,
-        value: amount,
-        type: "Coin",
-        tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
-        isOnChain: false,
-        zkAccountHex,
-      });
-
-      updateZkAccount(tradingAccount.address, {
-        ...tradingAccount,
-        ...newTradingAccount,
-        isOnChain: true,
-      });
-
-      addTransactionHistory({
-        date: new Date(),
-        from: newTradingAccount.address,
-        fromTag: "Trading Account",
-        to: twilightAddress,
-        toTag: "Funding",
-        tx_hash: mintBurnRes.transactionHash,
-        type: "Burn",
-        value: amount,
-      });
-
-      toast({
-        title: "Success",
-        description: (
-          <div className="opacity-90">
-            {`Successfully sent ${new BTC("sats", Big(amount))
-              .convert("BTC")
-              .toString()} BTC to the Funding Account.`}
-            <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
-              target={"_blank"}
-              className="text-sm underline hover:opacity-100"
-            >
-              Explorer link
-            </Link>
-          </div>
-        ),
-      });
-
-      return {
-        success: true,
-      };
     },
     [
       privateKey,
       toast,
       addTransactionHistory,
       updateZkAccount,
-      tradingAccount,
+      addZkAccount,
+      removeZkAccount,
+      storeApi,
       twilightAddress,
-      zkAccounts,
     ]
   );
 
