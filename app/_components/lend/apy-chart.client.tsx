@@ -4,15 +4,9 @@ import Button from "@/components/button";
 import cn from '@/lib/cn';
 import React, { useMemo, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { useApyChartData, ApyChartParams } from "@/lib/hooks/useApyChartData";
+import { useApyChartData, APY_PERIOD_PARAMS } from "@/lib/hooks/useApyChartData";
 
 type TimePeriod = "1D" | "1W" | "1M";
-
-const PERIOD_PARAMS: Record<TimePeriod, ApyChartParams> = {
-  "1D": { range: "24 hours", step: "15 minutes", lookback: "24 hours" },
-  "1W": { range: "7 days", step: "2 hours", lookback: "7 days" },
-  "1M": { range: "30 days", step: "12 hours", lookback: "30 days" },
-};
 
 function formatApy(value: number): string {
   const abs = Math.abs(value);
@@ -26,11 +20,15 @@ function formatApy(value: number): string {
 
 const GREEN = "rgb(34, 197, 94)";
 
-const ApyChart = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("1D");
+type ApyChartProps = {
+  selectedPeriod: TimePeriod;
+  onPeriodChange: (period: TimePeriod) => void;
+};
+
+const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
   const timePeriods: TimePeriod[] = ["1D", "1W", "1M"];
 
-  const params = useMemo(() => PERIOD_PARAMS[selectedPeriod], [selectedPeriod]);
+  const params = useMemo(() => APY_PERIOD_PARAMS[selectedPeriod], [selectedPeriod]);
   const { data: chartData } = useApyChartData(params);
 
   const tickFormatter = useCallback((time: number) => {
@@ -59,7 +57,7 @@ const ApyChart = () => {
               key={period}
               variant={"ui"}
               size="small"
-              onClick={() => setSelectedPeriod(period)}
+              onClick={() => onPeriodChange(period)}
               className={cn("px-4 py-2 hover:border-theme transition-colors", selectedPeriod === period && "border-theme")}
             >
               {period}

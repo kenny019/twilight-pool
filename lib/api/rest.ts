@@ -255,7 +255,8 @@ async function getLastDayApy() {
     return 0;
   }
 
-  return parseFloat(data.result) || 0;
+  // API returns decimal (0.0821 = 8.21%), convert to percentage for display
+  return (parseFloat(data.result) || 0) * 100;
 }
 
 async function getPoolShareValue() {

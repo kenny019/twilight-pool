@@ -17,6 +17,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   getCurrentPrice: () => number;
+  getBtcPriceUsd: () => number;
   openLimitDialog: (account: string) => void;
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
@@ -26,6 +27,7 @@ export function PositionsDataTable<TData, TValue>({
   columns,
   data,
   getCurrentPrice,
+  getBtcPriceUsd,
   openLimitDialog,
   settleMarketOrder,
   isSettlingOrder
@@ -39,6 +41,7 @@ export function PositionsDataTable<TData, TValue>({
   // Define the table meta data
   const tableMeta: PositionsTableMeta = {
     getCurrentPrice,
+    getBtcPriceUsd,
     openLimitDialog,
     settleMarketOrder,
     isSettlingOrder

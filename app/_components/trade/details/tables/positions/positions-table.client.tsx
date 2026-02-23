@@ -6,6 +6,7 @@ import { positionsColumns } from './columns';
 import { TradeOrder } from '@/lib/types';
 import { useLimitDialog } from '@/lib/providers/limit-dialogs';
 import { usePriceFeed } from '@/lib/providers/feed';
+import { useSessionStore } from '@/lib/providers/session';
 
 interface PositionsTableProps {
   data: TradeOrder[];
@@ -15,16 +16,19 @@ interface PositionsTableProps {
 
 const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOrder, isSettlingOrder }: PositionsTableProps) {
   const { openLimitDialog } = useLimitDialog();
+  const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const { getCurrentPrice, subscribe } = usePriceFeed()
   // Subscribe to price updates so mark price / UPNL columns refresh
-  useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const getBtcPriceUsd = () => currentPrice || storedBtcPrice;
 
   return (
     <PositionsDataTable
       columns={positionsColumns}
       data={data}
       getCurrentPrice={getCurrentPrice}
+      getBtcPriceUsd={getBtcPriceUsd}
       settleMarketOrder={settleMarketOrder}
       isSettlingOrder={isSettlingOrder}
       openLimitDialog={openLimitDialog}

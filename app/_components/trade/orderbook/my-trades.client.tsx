@@ -14,9 +14,9 @@ import Big from "big.js";
 import React, { useMemo, useCallback, useSyncExternalStore } from "react";
 import { MyTradesDataTable } from "./my-trades/data-table";
 import { myTradesColumns, calculateUpnl } from "./my-trades/columns";
+import { PnlCell, PnlHeader } from "@/lib/components/pnl-display";
 import { cancelTradeOrder, queryTradeOrder } from '@/lib/api/relayer';
 import dayjs from 'dayjs';
-import cn from "@/lib/cn";
 import Link from 'next/link';
 import { ZkPrivateAccount } from '@/lib/zk/account';
 import { broadcastTradingTx } from '@/lib/api/zkos';
@@ -29,6 +29,8 @@ const OrderMyTrades = () => {
   const { toast } = useToast();
   const { getCurrentPrice, subscribe } = usePriceFeed();
   const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
+  const btcPriceUsd = currentPrice || storedBtcPrice;
 
   const privateKey = useSessionStore((state) => state.privateKey);
 
@@ -729,6 +731,7 @@ const OrderMyTrades = () => {
       if ('accessorKey' in column && column.accessorKey === 'calculatedUnrealizedPnl') {
         return {
           ...column,
+          header: () => <PnlHeader variant="uPnL" />,
           cell: (row: any) => {
             const trade = row.row.original;
             const isPendingLimit = trade.orderType === "LIMIT" && trade.orderStatus === "PENDING";
@@ -743,33 +746,14 @@ const OrderMyTrades = () => {
               upnl = calculateUpnl(trade.entryPrice, currentPrice, trade.positionType, positionSize);
             }
 
-            if (upnl === undefined || upnl === null) {
-              return <span className="text-xs text-gray-500">—</span>;
-            }
-
-            const isPositive = upnl > 0;
-            const isNegative = upnl < 0;
-            const displayupnl = BTC.format(new BTC("sats", Big(upnl)).convert("BTC"), "BTC")
-
-            return (
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  isPositive && "text-green-medium",
-                  isNegative && "text-red",
-                  !isPositive && !isNegative && "text-gray-500"
-                )}
-              >
-                {isPositive ? "+" : ""}{displayupnl} BTC
-              </span>
-            );
+            return <PnlCell pnlSats={upnl} btcPriceUsd={btcPriceUsd} />;
           },
         };
       }
 
       return column;
     });
-  }, [currentPrice]);
+  }, [currentPrice, btcPriceUsd]);
 
   const tableData = useMemo(() => {
     return tradeOrders.filter((trade) => trade.isOpen).map((trade) => ({

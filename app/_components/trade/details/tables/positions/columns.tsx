@@ -7,10 +7,12 @@ import { ColumnDef } from '@tanstack/react-table';
 import Big from 'big.js';
 import dayjs from 'dayjs';
 import { calculateUpnl } from '../../../orderbook/my-trades/columns';
+import { PnlCell, PnlHeader } from '@/lib/components/pnl-display';
 
 // Define the TableMeta interface for global table data
 interface PositionsTableMeta {
   getCurrentPrice: () => number;
+  getBtcPriceUsd: () => number;
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
   openLimitDialog: (account: string) => void;
@@ -91,37 +93,17 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "unrealizedPnl",
-    header: "PnL (BTC)",
+    header: () => <PnlHeader variant="PnL" />,
     cell: (row) => {
       const trade = row.row.original;
-
       const meta = row.table.options.meta as PositionsTableMeta;
       const currentPrice = meta.getCurrentPrice();
+      const btcPriceUsd = meta.getBtcPriceUsd();
 
       const positionSize = trade.positionSize;
       const calculatedUnrealizedPnl = calculateUpnl(trade.entryPrice, currentPrice, trade.positionType, positionSize);
 
-      if (calculatedUnrealizedPnl === undefined || calculatedUnrealizedPnl === null) {
-        return <span className="text-xs text-gray-500">—</span>;
-      }
-
-      const isPositive = calculatedUnrealizedPnl > 0;
-      const isNegative = calculatedUnrealizedPnl < 0;
-
-      const displayupnl = BTC.format(new BTC("sats", Big(calculatedUnrealizedPnl)).convert("BTC"), "BTC");
-
-      return (
-        <span
-          className={cn(
-            "text-xs font-medium",
-            isPositive && "text-green-medium",
-            isNegative && "text-red",
-            !isPositive && !isNegative && "text-gray-500"
-          )}
-        >
-          {isPositive ? "+" : ""}{displayupnl}
-        </span>
-      );
+      return <PnlCell pnlSats={calculatedUnrealizedPnl} btcPriceUsd={btcPriceUsd} />;
     },
   },
   {
