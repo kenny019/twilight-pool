@@ -14,6 +14,6 @@ export default function useGetMarketStats() {
       return response.data.result;
     },
     refetchInterval: 10000,
-    staleTime: 8000,
+    staleTime: 10000,
   });
 }

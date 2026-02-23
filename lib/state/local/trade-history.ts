@@ -5,7 +5,6 @@ export interface TradeHistorySlice {
   trades: TradeOrder[];
   addTrade: (tradeOrder: TradeOrder) => void;
   removeTrade: (tradeOrder: TradeOrder) => void;
-  updateTrade: (tradeOrder: TradeOrder) => void;
   setNewTrades: (trades: TradeOrder[]) => void;
   resetState: () => void;
 }
@@ -21,7 +20,17 @@ export const createTradeHistorySlice: StateImmerCreator<
   ...initialTradeHistorySliceState,
   addTrade: (tradeOrder) =>
     set((state) => {
-      state.trade_history.trades = [...state.trade_history.trades, tradeOrder];
+      const idx = state.trade_history.trades.findIndex(
+        (trade) => trade.uuid === tradeOrder.uuid
+      );
+      if (idx >= 0) {
+        state.trade_history.trades[idx] = {
+          ...state.trade_history.trades[idx],
+          ...tradeOrder,
+        };
+      } else {
+        state.trade_history.trades.push(tradeOrder);
+      }
     }),
   removeTrade: (tradeOrder) =>
     set((state) => {
@@ -35,24 +44,7 @@ export const createTradeHistorySlice: StateImmerCreator<
         return trade;
       });
     }),
-  updateTrade: (tradeOrder) =>
-    set((state) => {
-      const tradeExists = state.trade_history.trades.some(
-        (trade) => trade.uuid === tradeOrder.uuid
-      );
 
-      if (tradeExists) {
-        state.trade_history.trades = state.trade_history.trades.map((trade) => {
-          if (trade.uuid === tradeOrder.uuid) {
-            return {
-              ...trade,
-              ...tradeOrder,
-            };
-          }
-          return trade;
-        });
-      }
-    }),
   resetState: () => {
     set((state) => {
       state.trade_history = {
@@ -72,7 +64,14 @@ export const createTradeHistorySlice: StateImmerCreator<
           )
       );
 
-      state.trade_history.trades = [...trades, ...newLocalTrades];
+      const mergedTrades = [...trades, ...newLocalTrades];
+
+      // Skip update if data hasn't changed
+      if (JSON.stringify(currentTrades) === JSON.stringify(mergedTrades)) {
+        return;
+      }
+
+      state.trade_history.trades = mergedTrades;
     });
   },
 });

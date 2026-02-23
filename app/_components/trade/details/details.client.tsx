@@ -235,38 +235,6 @@ const DetailsPanel = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privateKey, zkAccounts])
 
-  function RenderTabs() {
-    switch (currentTab) {
-      case "positions": {
-        return <PositionsTable
-          data={positionsData}
-          settleMarketOrder={settleMarketOrder}
-          isSettlingOrder={isSettlingOrder}
-        />;
-      }
-      case "open-orders": {
-        return <OpenOrdersTable
-          data={openOrdersData}
-          cancelOrder={cancelOrder}
-        />
-      }
-      case "trader-history": {
-        return <TraderHistoryTable
-          data={traderHistoryData}
-        />;
-      }
-      case "history": {
-        return <OrderHistoryTable
-          data={orderHistoryData}
-        />;
-      }
-      case "trades": {
-        // return <OrderMyTrades />;
-        return <></>
-      }
-    }
-  }
-
   return (
     <div className="flex h-full w-full flex-col">
       <div className="sticky top-0 z-10 flex w-full items-center border-b bg-background pl-3 pt-2">
@@ -304,7 +272,29 @@ const DetailsPanel = () => {
         </Tabs>
       </div>
       <div className="">
-        <RenderTabs />
+        {currentTab === "positions" && (
+          <PositionsTable
+            data={positionsData}
+            settleMarketOrder={settleMarketOrder}
+            isSettlingOrder={isSettlingOrder}
+          />
+        )}
+        {currentTab === "open-orders" && (
+          <OpenOrdersTable
+            data={openOrdersData}
+            cancelOrder={cancelOrder}
+          />
+        )}
+        {currentTab === "trader-history" && (
+          <TraderHistoryTable
+            data={traderHistoryData}
+          />
+        )}
+        {currentTab === "history" && (
+          <OrderHistoryTable
+            data={orderHistoryData}
+          />
+        )}
       </div>
     </div>
   );

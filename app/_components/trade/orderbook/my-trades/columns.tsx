@@ -198,7 +198,7 @@ export const myTradesColumns: ColumnDef<MyTradeOrder, any>[] = [
 
       const fee = trade.feeFilled;
 
-      const funding = trade.initialMargin - trade.availableMargin - fee;
+      const funding = Math.round(trade.initialMargin - trade.availableMargin - fee);
       const fundingBTC = new BTC("sats", Big(funding))
         .convert("BTC")
 

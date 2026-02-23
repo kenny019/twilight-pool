@@ -1,13 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 
+type BitcoinInfo = {
+  blockHeight: number;
+  feeEstimate: { satPerVbyte: number; btcPerKb: number; targetBlocks: number };
+};
+
 export default function useBtcBlockHeight() {
   return useQuery({
-    queryKey: ["btc-block-height"],
-    queryFn: async (): Promise<number> => {
-      const res = await fetch("https://mempool.space/api/blocks/tip/height");
-      if (!res.ok) throw new Error("Failed to fetch block height");
+    queryKey: ["bitcoin-info"],
+    queryFn: async (): Promise<BitcoinInfo> => {
+      const res = await fetch("https://indexer.twilight.org/api/bitcoin/info");
+      if (!res.ok) throw new Error("Failed to fetch bitcoin info");
       return res.json();
     },
+    select: (data) => data.blockHeight,
     refetchInterval: 30_000,
     staleTime: 15_000,
     retry: 3,

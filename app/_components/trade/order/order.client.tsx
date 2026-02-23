@@ -10,8 +10,8 @@ import {
 } from "@/components/dropdown";
 import OrderLimitForm from "./forms/limit.client";
 import OrderMarketForm from "./forms/market.client";
-import Button from '@/components/button';
-import FundingTradeButton from '@/components/fund-trade-button';
+import Button from "@/components/button";
+import FundingTradeButton from "@/components/fund-trade-button";
 
 type OrderTabs = "limit" | "market";
 
@@ -32,7 +32,7 @@ const Order = () => {
 
   return (
     <div className="space-y-2 py-2">
-      <div className="flex relative w-full items-center border-b pl-3 justify-between">
+      <div className="relative flex w-full items-center justify-between border-b pl-3">
         <Tabs defaultValue={currentTab}>
           <TabsList variant="underline">
             <TabsTrigger
@@ -76,7 +76,7 @@ const Order = () => {
             </DropdownGroup>
           </DropdownContent>
         </DropdownMenu> */}
-        <div className="absolute right-1 bottom-1">
+        <div className="absolute bottom-1 right-1 hidden lg:block">
           <FundingTradeButton />
         </div>
       </div>

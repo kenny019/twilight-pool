@@ -64,17 +64,16 @@ export default class BTC {
   }
 
   static format(value: Big, unit?: BTCDenoms) {
-    let result: string;
+    const fix = (s: string) => (s === "-0" ? "0" : s);
     switch (unit) {
       case "sats":
-        return value.toFixed(0).replace(/\.?0+$/, "");
+        return fix(value.toFixed(0).replace(/\.?0+$/, ""));
       case "mBTC":
-        return value.toFixed(2).replace(/\.?0+$/, "");
+        return fix(value.toFixed(2).replace(/\.?0+$/, ""));
       case "BTC":
-        return value.toFixed(8).replace(/\.?0+$/, "");
+        return fix(value.toFixed(8).replace(/\.?0+$/, ""));
       default:
-        return value.toString();
+        return fix(value.toString());
     }
-    return result === "-0" ? "0" : result;
   }
 }

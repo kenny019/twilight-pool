@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { TraderHistoryDataTable } from './data-table';
 import { traderHistoryColumns } from './columns';
 import { TradeOrder } from '@/lib/types';
@@ -10,8 +10,9 @@ interface TraderHistoryTableProps {
   data: TradeOrder[];
 }
 
-const TraderHistoryTable = function TraderHistoryTable({ data }: TraderHistoryTableProps) {
-  const { getCurrentPrice } = usePriceFeed()
+const TraderHistoryTable = React.memo(function TraderHistoryTable({ data }: TraderHistoryTableProps) {
+  const { getCurrentPrice, subscribe } = usePriceFeed()
+  useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
 
   return (
     <TraderHistoryDataTable
@@ -20,6 +21,6 @@ const TraderHistoryTable = function TraderHistoryTable({ data }: TraderHistoryTa
       getCurrentPrice={getCurrentPrice}
     />
   );
-}
+});
 
 export default TraderHistoryTable;

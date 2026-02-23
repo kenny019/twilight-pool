@@ -37,7 +37,7 @@ import Big from "big.js";
 import dayjs from 'dayjs';
 import { ArrowLeftRight, ChevronDown, Loader2 } from "lucide-react";
 import Link from 'next/link';
-import React, { SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { SyntheticEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 const limitQtyOptions = [25, 50, 75, 100];
 
@@ -56,9 +56,8 @@ const OrderLimitForm = () => {
   const [leverage, setLeverage] = useState<string>("1");
   const [percent, setPercent] = useState<number>(0);
 
-  const { getCurrentPrice } = usePriceFeed();
-
-  const liveBtcPrice = getCurrentPrice()
+  const { getCurrentPrice, subscribe } = usePriceFeed();
+  const liveBtcPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const currentPrice = liveBtcPrice || storedBtcPrice; // binance websocket stream does not work for USA Ip address

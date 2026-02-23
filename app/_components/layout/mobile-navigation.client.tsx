@@ -8,6 +8,7 @@ import { Text } from "@/components/typography";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import cn from "@/lib/cn";
+import { TWILIGHT_NETWORK_TYPE } from "@/lib/constants";
 
 const MobileNav = () => {
   const path = usePathname();
@@ -49,27 +50,15 @@ const MobileNav = () => {
               <MobileLink href="/" text="Trade" />
               <MobileLink href="/lend" text="Lend" />
               <MobileLink href="/wallet" text="Wallet" />
-              <MobileLink href="/faucet" text="Faucet" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Text className="font-ui text-xs uppercase text-primary/80">
-              Docs
-            </Text>
-
-            <div className="space-y-2">
-              <MobileLink href="https://docs.twilight.rest/#introduction" text="Developer Docs" />
-              <MobileLink href="https://docs.twilight.org/" text="Specs" />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            {/* <Text className="font-ui text-xs uppercase text-primary/80">
-              User Guides
-            </Text> */}
-            <div className="space-y-2">
-              <MobileLink href="https://user-guide.docs.twilight.rest/docs" text="User Guides" />
-              {/* <MobileLink href="/lend-to-twilight-pool" text="Lend to Twilight Pool" /> */}
+              {TWILIGHT_NETWORK_TYPE === "testnet" ? (
+                <MobileLink href="/faucet" text="Faucet" />
+              ) : (
+                <>
+                  <MobileLink href="/deposit" text="Deposit" />
+                  <MobileLink href="/withdrawal" text="Withdraw" />
+                </>
+              )}
+              <MobileLink href="https://docs.twilight.org/" text="Docs" />
             </div>
           </div>
         </div>

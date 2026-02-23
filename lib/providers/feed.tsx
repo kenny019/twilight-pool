@@ -35,7 +35,7 @@ export const PriceFeedProvider: React.FC<PriceFeedProviderProps> = (props) => {
 
 const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
   const feedRef = useRef<number[]>([]);
-  const [lastPrice, setLastPrice] = useState(0);
+  const lastPriceRef = useRef(0);
   const subscribersRef = useRef<Set<PriceUpdateCallback>>(new Set());
 
   const addPrice = useCallback<(price: number) => void>(
@@ -55,7 +55,7 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
       feedRef.current = newFeed;
 
       // Update lastPrice to the previous price for delta calculation
-      setLastPrice(currentLastPrice);
+      lastPriceRef.current = currentLastPrice;
 
       // Notify all subscribers
       subscribersRef.current.forEach(callback => callback());
@@ -63,9 +63,9 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
     []
   );
 
-  const getCurrentPrice = () => {
+  const getCurrentPrice = useCallback(() => {
     return feedRef.current.length > 1 ? feedRef.current[feedRef.current.length - 1] : 0;
-  }
+  }, []);
 
   const subscribe = useCallback((callback: PriceUpdateCallback) => {
     subscribersRef.current.add(callback);
@@ -82,10 +82,10 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
       addPrice,
       getCurrentPrice,
       subscribe,
-      lastPrice,
+      get lastPrice() { return lastPriceRef.current; },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPrice, subscribe, lastPrice]);
+  }, [addPrice, getCurrentPrice, subscribe]);
 
   useReconcileOrphanedAccounts();
   useSyncTrades();

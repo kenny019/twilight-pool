@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
@@ -15,9 +15,8 @@ import { useSessionStore } from "@/lib/providers/session";
 import dayjs from "dayjs";
 
 const TickerWrapper = () => {
-  const { getCurrentPrice } = usePriceFeed();
-
-  const currentPrice = getCurrentPrice();
+  const { getCurrentPrice, subscribe } = usePriceFeed();
+  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const priceDelta = 0;
@@ -41,6 +40,7 @@ const TickerWrapper = () => {
 
   const { rate: fundingRate, timestamp: fundingTimestamp } = fundingTickerData;
 
+  const [oiShowBtc, setOiShowBtc] = useState(false);
   const [countdownString, setCountdownString] = useState("00:00:00");
 
   function useFundingCountdown() {
@@ -163,15 +163,20 @@ const TickerWrapper = () => {
           {formatCurrency(turnover)}
         </Resource>
       </TickerItem>
-      <TickerItem title="Open Interest">
+      <TickerItem title={oiShowBtc ? "Open Interest (BTC)" : "Open Interest (USD)"}>
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
-          <span>
-            {formatCurrency(openInterest, "short")}{" "}
-            <span className="text-xs text-gray-500">
-              ({openInterestBtc.toFixed(0)} BTC)
+          <span
+            className="inline-grid cursor-pointer"
+            onClick={() => setOiShowBtc((prev) => !prev)}
+          >
+            <span className={cn("col-start-1 row-start-1", oiShowBtc && "invisible")}>
+              {formatCurrency(openInterest, "short")}
+            </span>
+            <span className={cn("col-start-1 row-start-1", !oiShowBtc && "invisible")}>
+              {openInterestBtc.toFixed(4)} BTC
             </span>
           </span>
         </Resource>

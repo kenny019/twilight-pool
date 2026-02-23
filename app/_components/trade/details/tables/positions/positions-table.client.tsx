@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { PositionsDataTable } from './data-table';
 import { positionsColumns } from './columns';
 import { TradeOrder } from '@/lib/types';
@@ -13,10 +13,12 @@ interface PositionsTableProps {
   isSettlingOrder: (uuid: string) => boolean;
 }
 
-const PositionsTable = function PositionsTable({ data, settleMarketOrder, isSettlingOrder }: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOrder, isSettlingOrder }: PositionsTableProps) {
   const { openLimitDialog } = useLimitDialog();
 
-  const { getCurrentPrice } = usePriceFeed()
+  const { getCurrentPrice, subscribe } = usePriceFeed()
+  // Subscribe to price updates so mark price / UPNL columns refresh
+  useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
 
   return (
     <PositionsDataTable
@@ -29,6 +31,6 @@ const PositionsTable = function PositionsTable({ data, settleMarketOrder, isSett
     />
 
   );
-}
+});
 
 export default PositionsTable;
