@@ -35,14 +35,14 @@ const INTERVAL_OFFSETS: Record<
   string,
   { unit: ManipulateType; amount: number }
 > = {
-  [CandleInterval.ONE_MINUTE]: { unit: "minute", amount: 720 },
-  [CandleInterval.FIVE_MINUTE]: { unit: "minute", amount: 720 },
-  [CandleInterval.FIFTEEN_MINUTE]: { unit: "day", amount: 14 },
-  [CandleInterval.ONE_HOUR]: { unit: "day", amount: 30 },
-  [CandleInterval.FOUR_HOUR]: { unit: "day", amount: 90 },
-  [CandleInterval.EIGHT_HOUR]: { unit: "day", amount: 7 },
-  [CandleInterval.TWELVE_HOUR]: { unit: "day", amount: 7 },
-  [CandleInterval.ONE_DAY]: { unit: "day", amount: 365 },
+  [CandleInterval.ONE_MINUTE]: { unit: "minute", amount: 310 },
+  [CandleInterval.FIVE_MINUTE]: { unit: "hour", amount: 26 },
+  [CandleInterval.FIFTEEN_MINUTE]: { unit: "day", amount: 4 },
+  [CandleInterval.ONE_HOUR]: { unit: "day", amount: 13 },
+  [CandleInterval.FOUR_HOUR]: { unit: "day", amount: 51 },
+  [CandleInterval.EIGHT_HOUR]: { unit: "day", amount: 101 },
+  [CandleInterval.TWELVE_HOUR]: { unit: "day", amount: 151 },
+  [CandleInterval.ONE_DAY]: { unit: "day", amount: 301 },
   [CandleInterval.ONE_DAY_CHANGE]: { unit: "day", amount: 1 },
 };
 
@@ -119,6 +119,9 @@ const KLineChart = () => {
             }
             let bars = res.data.result.map(transformCandleData);
             bars.sort((a, b) => a.timestamp - b.timestamp);
+            if (type === "init") {
+              bars = bars.slice(-300);
+            }
             if (type === "forward") {
               bars = bars.filter((b) => b.timestamp < timestamp!);
             }
