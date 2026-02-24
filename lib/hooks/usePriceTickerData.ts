@@ -46,8 +46,8 @@ export default function usePriceTickerData(currentPrice: number) {
   const queryClient = useQueryClient();
   const [fundingEnabled, setFundingEnabled] = useState(true);
 
-  const yesterday = dayjs().subtract(2, "d").startOf("day").toISOString();
-  const today = dayjs().subtract(1, "d").startOf("day").toISOString();
+  const yesterday = dayjs().subtract(1, "d").startOf("day").toISOString();
+  const today = dayjs().startOf("day").toISOString();
 
   const candleQuery = useQuery({
     queryKey: ["candle-ticker"],
@@ -140,7 +140,7 @@ export default function usePriceTickerData(currentPrice: number) {
     queryClient.invalidateQueries({ queryKey: ["funding-rate"] });
   }, [queryClient]);
 
-  const hasInit = !!candleQuery.data;
+  const hasInit = candleQuery.isSuccess;
 
   return {
     priceTickerData,
