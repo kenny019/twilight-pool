@@ -9,35 +9,46 @@ import {
 } from "@/components/dropdown";
 import ExchangeResource from "@/components/exchange-resource";
 import { Input, NumberInput } from "@/components/input";
-import { Slider } from '@/components/slider';
+import { Slider } from "@/components/slider";
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
-import { queryTradeOrder } from '@/lib/api/relayer';
+import { queryTradeOrder } from "@/lib/api/relayer";
 import { queryTransactionHashes } from "@/lib/api/rest";
 import { queryUtxoForAddress } from "@/lib/api/zkos";
 import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
-import useGetMarketStats from '@/lib/hooks/useGetMarketStats';
-import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
+import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
-import { usePriceFeed } from '@/lib/providers/feed';
+import { usePriceFeed } from "@/lib/providers/feed";
 import { useGrid } from "@/lib/providers/grid";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
-import { createFundingToTradingTransferMsg } from '@/lib/twilight/wallet';
+import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { createZkAccountWithBalance, createZkOrder } from "@/lib/twilight/zk";
-import { createQueryTradeOrderMsg } from '@/lib/twilight/zkos';
-import { ZkAccount } from '@/lib/types';
-import { ZkPrivateAccount } from '@/lib/zk/account';
+import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
+import { ZkAccount } from "@/lib/types";
+import { ZkPrivateAccount } from "@/lib/zk/account";
 import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
-import { hasUtxoData, serializeTxid, waitForUtxoUpdate } from "@/lib/utils/waitForUtxoUpdate";
+import {
+  hasUtxoData,
+  serializeTxid,
+  waitForUtxoUpdate,
+} from "@/lib/utils/waitForUtxoUpdate";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
-import dayjs from 'dayjs';
+import dayjs from "dayjs";
 import { ArrowLeftRight, ChevronDown, Loader2 } from "lucide-react";
-import Link from 'next/link';
-import React, { SyntheticEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import React, {
+  SyntheticEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 const limitQtyOptions = [25, 50, 75, 100];
 
@@ -57,7 +68,11 @@ const OrderLimitForm = () => {
   const [percent, setPercent] = useState<number>(0);
 
   const { getCurrentPrice, subscribe } = usePriceFeed();
-  const liveBtcPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const liveBtcPrice = useSyncExternalStore(
+    subscribe,
+    getCurrentPrice,
+    () => 0
+  );
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const currentPrice = liveBtcPrice || storedBtcPrice; // binance websocket stream does not work for USA Ip address
@@ -75,7 +90,9 @@ const OrderLimitForm = () => {
       const usdAmountBig = Big(orderPrice || "0");
       const leverageBig = Big(leverage || "1");
 
-      const btcValue = new BTC("sats", Big(orderSats)).convert("BTC").toNumber();
+      const btcValue = new BTC("sats", Big(orderSats))
+        .convert("BTC")
+        .toNumber();
       const psize = Big(btcValue).mul(usdAmountBig);
 
       if (leverageBig.lte(0)) {
@@ -84,8 +101,10 @@ const OrderLimitForm = () => {
 
       Big.DP = 2;
 
-      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        .format(Number(psize.mul(leverageBig).toFixed(2)));
+      return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(psize.mul(leverageBig).toFixed(2)));
     } catch (error) {
       console.error("Error calculating position size:", error);
       return "0.00";
@@ -98,7 +117,9 @@ const OrderLimitForm = () => {
     }
 
     try {
-      const btcValue = new BTC("sats", Big(orderSats)).convert("BTC").toNumber();
+      const btcValue = new BTC("sats", Big(orderSats))
+        .convert("BTC")
+        .toNumber();
       // initial margin in USD = btc amount * order price
       const initialMargin = Big(btcValue).mul(orderPrice);
       const leverageBig = Big(leverage || "1");
@@ -114,7 +135,9 @@ const OrderLimitForm = () => {
       const positionSizeCalc = entryValue.mul(entryPrice);
 
       // bankruptcyprice for LONG = entryprice * leverage / (leverage + 1)
-      const bankruptcyPriceLong = entryPrice.mul(leverageBig).div(leverageBig.plus(1));
+      const bankruptcyPriceLong = entryPrice
+        .mul(leverageBig)
+        .div(leverageBig.plus(1));
       // bankruptcyprice for SHORT = entryprice * leverage / (leverage - 1) (if leverage > 1, else 0)
       const bankruptcyPriceShort = leverageBig.gt(1)
         ? entryPrice.mul(leverageBig).div(leverageBig.minus(1))
@@ -132,8 +155,16 @@ const OrderLimitForm = () => {
       // fee and funding are hardcoded to 0
       const fee = 0;
       const funding = 0;
-      const mmLong = Big(0.4).mul(entryValue).plus(Big(fee).mul(bankruptcyValueLong)).plus(Big(funding).mul(bankruptcyValueLong)).div(100);
-      const mmShort = Big(0.4).mul(entryValue).plus(Big(fee).mul(bankruptcyValueShort)).plus(Big(funding).mul(bankruptcyValueShort)).div(100);
+      const mmLong = Big(0.4)
+        .mul(entryValue)
+        .plus(Big(fee).mul(bankruptcyValueLong))
+        .plus(Big(funding).mul(bankruptcyValueLong))
+        .div(100);
+      const mmShort = Big(0.4)
+        .mul(entryValue)
+        .plus(Big(fee).mul(bankruptcyValueShort))
+        .plus(Big(funding).mul(bankruptcyValueShort))
+        .div(100);
 
       // liquidationprice = entryprice * positionsize / ((positionside * entryprice * (mm - im)) + positionsize)
       // positionside: LONG = -1, SHORT = 1
@@ -141,21 +172,37 @@ const OrderLimitForm = () => {
       const im = initialMargin;
 
       // LONG: positionside = -1
-      const longDenominator = Big(-1).mul(entryPrice).mul(mmLong.minus(im)).plus(positionSizeCalc);
+      const longDenominator = Big(-1)
+        .mul(entryPrice)
+        .mul(mmLong.minus(im))
+        .plus(positionSizeCalc);
       const liquidationPriceLong = longDenominator.eq(0)
         ? Big(0)
         : entryPrice.mul(positionSizeCalc).div(longDenominator);
 
       // SHORT: positionside = 1
-      const shortDenominator = Big(1).mul(entryPrice).mul(mmShort.minus(im)).plus(positionSizeCalc);
+      const shortDenominator = Big(1)
+        .mul(entryPrice)
+        .mul(mmShort.minus(im))
+        .plus(positionSizeCalc);
       const liquidationPriceShort = shortDenominator.eq(0)
         ? Big(0)
         : entryPrice.mul(positionSizeCalc).div(shortDenominator);
 
       Big.DP = 2;
       return {
-        long: liquidationPriceLong.lte(0) ? "0.00" : new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(liquidationPriceLong.toFixed(2))),
-        short: liquidationPriceShort.lte(0) ? "0.00" : new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(liquidationPriceShort.toFixed(2))),
+        long: liquidationPriceLong.lte(0)
+          ? "0.00"
+          : new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(Number(liquidationPriceLong.toFixed(2))),
+        short: liquidationPriceShort.lte(0)
+          ? "0.00"
+          : new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(Number(liquidationPriceShort.toFixed(2))),
       };
     } catch (error) {
       console.error("Error calculating liquidation prices:", error);
@@ -166,16 +213,23 @@ const OrderLimitForm = () => {
   const { status, mainWallet } = useWallet();
 
   const privateKey = useSessionStore((state) => state.privateKey);
-  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
-  const addTradeHistory = useTwilightStore((state) => state.trade_history.addTrade);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
-  const tradingAccount = zkAccounts.find((account) => account.tag === 'main');
+  const tradingAccount = zkAccounts.find((account) => account.tag === "main");
 
   const tradingAccountBalance = tradingAccount?.value || 0;
-  const tradingAccountBalanceString = new BTC("sats", Big(tradingAccountBalance)).convert("BTC").toFixed(8);
+  const tradingAccountBalanceString = new BTC(
+    "sats",
+    Big(tradingAccountBalance)
+  )
+    .convert("BTC")
+    .toFixed(8);
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
@@ -194,7 +248,7 @@ const OrderLimitForm = () => {
       toast({
         title: "Wallet is not connected",
         description: "Please connect your wallet to deposit.",
-      })
+      });
       return;
     }
 
@@ -202,7 +256,8 @@ const OrderLimitForm = () => {
       toast({
         variant: "error",
         title: "No funds available",
-        description: "Please transfer funds to your trading account before placing an order.",
+        description:
+          "Please transfer funds to your trading account before placing an order.",
       });
       return;
     }
@@ -230,7 +285,8 @@ const OrderLimitForm = () => {
         toast({
           variant: "error",
           title: "Insufficient funds",
-          description: "You do not have enough funds to submit this trade order",
+          description:
+            "You do not have enough funds to submit this trade order",
         });
         return;
       }
@@ -239,7 +295,7 @@ const OrderLimitForm = () => {
         toast({
           title: "Invalid amount",
           description: "Please enter an amount greater than 0.00001 BTC.",
-        })
+        });
         return;
       }
 
@@ -250,7 +306,10 @@ const OrderLimitForm = () => {
       const leverageVal = parseInt(leverageRef.current?.value || "1");
       const positionType = action === "sell" ? "SHORT" : "LONG";
       const orderValue = btcAmountInSats * leverageVal;
-      const maxPosition = positionType === "LONG" ? marketStats.data?.max_long_btc : marketStats.data?.max_short_btc;
+      const maxPosition =
+        positionType === "LONG"
+          ? marketStats.data?.max_long_btc
+          : marketStats.data?.max_short_btc;
       if (maxPosition !== undefined && orderValue > maxPosition) {
         toast({
           variant: "error",
@@ -265,16 +324,15 @@ const OrderLimitForm = () => {
       toast({
         title: "Placing order",
         description: "Order is being placed, please do not close this page.",
-      })
+      });
 
       // Generate the new order account before entering the queue — this is
       // pure in-memory work and does not touch the master UTXO.
-      const { account: newTradingAccount } =
-        await createZkAccountWithBalance({
-          tag: "limit",
-          balance: btcAmountInSats,
-          signature: privateKey,
-        });
+      const { account: newTradingAccount } = await createZkAccountWithBalance({
+        tag: "limit",
+        balance: btcAmountInSats,
+        signature: privateKey,
+      });
 
       const tag = `BTC ${action} ${newTradingAccount.address.slice(0, 6)}`;
 
@@ -290,7 +348,10 @@ const OrderLimitForm = () => {
             throw new Error("Master trading account not found");
           }
 
-          if (!currentTradingAccount.isOnChain || !currentTradingAccount.value) {
+          if (
+            !currentTradingAccount.isOnChain ||
+            !currentTradingAccount.value
+          ) {
             throw new Error("Master trading account is not on-chain");
           }
 
@@ -298,7 +359,9 @@ const OrderLimitForm = () => {
             throw new Error("Insufficient funds in master trading account");
           }
 
-          const utxoBefore = await queryUtxoForAddress(currentTradingAccount.address);
+          const utxoBefore = await queryUtxoForAddress(
+            currentTradingAccount.address
+          );
           const previousTxid = hasUtxoData(utxoBefore)
             ? serializeTxid(utxoBefore.txid)
             : "";
@@ -399,7 +462,10 @@ const OrderLimitForm = () => {
         throw "Error with creating limit order";
       }
 
-      const data = await sendTradeOrder(msg, optInLeaderboard ? twilightAddress : undefined);
+      const data = await sendTradeOrder(
+        msg,
+        optInLeaderboard ? twilightAddress : undefined
+      );
 
       if (!data.result || !data.result.id_key) {
         console.error("sendTradeOrderResult", data);
@@ -415,7 +481,7 @@ const OrderLimitForm = () => {
           let txResult = false;
 
           transactionHashes.forEach((result) => {
-            console.log(`limit order transaction hashes result`, result)
+            console.log(`limit order transaction hashes result`, result);
             if (result.tx_hash.includes("Error")) {
               return;
             }
@@ -487,16 +553,20 @@ const OrderLimitForm = () => {
         executionPrice: new Big(traderOrderInfo.execution_price).toNumber(),
         initialMargin: new Big(traderOrderInfo.initial_margin).toNumber(),
         liquidationPrice: new Big(traderOrderInfo.liquidation_price).toNumber(),
-        maintenanceMargin: new Big(traderOrderInfo.maintenance_margin).toNumber(),
+        maintenanceMargin: new Big(
+          traderOrderInfo.maintenance_margin
+        ).toNumber(),
         positionSize: new Big(traderOrderInfo.positionsize).toNumber(),
         settlementPrice: new Big(traderOrderInfo.settlement_price).toNumber(),
         unrealizedPnl: new Big(traderOrderInfo.unrealized_pnl).toNumber(),
         feeFilled: new Big(traderOrderInfo.fee_filled).toNumber(),
         feeSettled: new Big(traderOrderInfo.fee_settled).toNumber(),
-      }
+        settleLimit: traderOrderInfo.settle_limit,
+        fundingApplied: traderOrderInfo.funding_applied,
+      };
 
       addTrade(newTradeData);
-      addTradeHistory(newTradeData)
+      addTradeHistory(newTradeData);
 
       updateZkAccount(newZkAccount.address, {
         ...newZkAccount,
@@ -505,10 +575,10 @@ const OrderLimitForm = () => {
 
       toast({
         title: "Order placed successfully",
-        description: <div className="opacity-90">
-          Successfully placed limit order.{" "}
-          {
-            orderData.tx_hash && (
+        description: (
+          <div className="opacity-90">
+            Successfully placed limit order.{" "}
+            {orderData.tx_hash && (
               <Link
                 href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${orderData.tx_hash}`}
                 target={"_blank"}
@@ -516,10 +586,10 @@ const OrderLimitForm = () => {
               >
                 Explorer link
               </Link>
-            )
-          }
-        </div>
-      })
+            )}
+          </div>
+        ),
+      });
 
       // Clear form
       setLeverage("1");
@@ -528,7 +598,6 @@ const OrderLimitForm = () => {
       setOrderPrice(currentPrice);
       if (btcAmountRef.current) btcAmountRef.current.value = "";
       if (leverageRef.current) leverageRef.current.value = "";
-
     } catch (err) {
       if (typeof err === "string") {
         toast({
@@ -538,18 +607,24 @@ const OrderLimitForm = () => {
         });
         return;
       }
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
     <form onSubmit={submitLimitOrder} className="flex flex-col space-y-2 px-3">
-      <div className="flex justify-between text-xs"><span className="opacity-80">Avbl to trade</span><span>{tradingAccountBalanceString} BTC</span></div>
       <div className="flex justify-between text-xs">
-        <span className="text-green-medium">Liq. Price ≈ ${liquidationPrices.long}</span>
-        <span className="text-red">Liq. Price ≈ ${liquidationPrices.short}</span>
+        <span className="opacity-80">Avbl to trade</span>
+        <span>{tradingAccountBalanceString} BTC</span>
+      </div>
+      <div className="flex justify-between text-xs">
+        <span className="text-green-medium">
+          Liq. Price ≈ ${liquidationPrices.long}
+        </span>
+        <span className="text-red">
+          Liq. Price ≈ ${liquidationPrices.short}
+        </span>
       </div>
       {/* <Button className="flex flex-row items-center justify-center gap-4 text-xs">
         Funding<ArrowLeftRight />Trading
@@ -592,7 +667,9 @@ const OrderLimitForm = () => {
                       return;
                     }
 
-                    const newOrderSats = Big(tradingAccountBalance).mul(value).div(100)
+                    const newOrderSats = Big(tradingAccountBalance)
+                      .mul(value)
+                      .div(100);
 
                     btcAmountRef.current.value = new BTC(
                       "sats",
@@ -601,7 +678,7 @@ const OrderLimitForm = () => {
                       .convert("BTC")
                       .toString();
 
-                    setOrderSats(newOrderSats.toNumber())
+                    setOrderSats(newOrderSats.toNumber());
                   }}
                 >
                   {value}%
@@ -623,8 +700,10 @@ const OrderLimitForm = () => {
             onChange={(e) => {
               if (!e.target.value) return;
 
-              const convertedToSats = new BTC("BTC", Big(e.target.value)).convert("sats").toNumber();
-              setOrderSats(convertedToSats)
+              const convertedToSats = new BTC("BTC", Big(e.target.value))
+                .convert("sats")
+                .toNumber();
+              setOrderSats(convertedToSats);
             }}
             disabled={!tradingAccountBalance}
           />
@@ -636,18 +715,27 @@ const OrderLimitForm = () => {
           </label>
         </div>
 
-        <div className="flex items-center space-x-2 mt-1">
-          <Slider onValueChange={(value) => {
-            if (!btcAmountRef.current) return;
-            const newBtcAmount = new Big(tradingAccountBalanceString).mul(value[0] / 100).toFixed(8)
-            btcAmountRef.current.value = newBtcAmount;
+        <div className="mt-1 flex items-center space-x-2">
+          <Slider
+            onValueChange={(value) => {
+              if (!btcAmountRef.current) return;
+              const newBtcAmount = new Big(tradingAccountBalanceString)
+                .mul(value[0] / 100)
+                .toFixed(8);
+              btcAmountRef.current.value = newBtcAmount;
 
-            const convertedToSats = new BTC("BTC", Big(newBtcAmount)).convert("sats").toNumber();
-            setOrderSats(convertedToSats)
+              const convertedToSats = new BTC("BTC", Big(newBtcAmount))
+                .convert("sats")
+                .toNumber();
+              setOrderSats(convertedToSats);
 
-            setPercent(value[0])
-          }
-          } value={[percent]} defaultValue={[1]} min={1} max={100} step={1}
+              setPercent(value[0]);
+            }}
+            value={[percent]}
+            defaultValue={[1]}
+            min={1}
+            max={100}
+            step={1}
             disabled={!tradingAccountBalance}
           />
           <span className="w-10 text-right text-xs opacity-80">{percent}%</span>
@@ -687,24 +775,23 @@ const OrderLimitForm = () => {
         />
       </div>
 
-      <Slider onValueChange={(value) => {
-        if (!leverageRef.current) return;
-        leverageRef.current.value = value[0].toString();
-        setLeverage(value[0].toString());
-      }
-      } value={[parseInt(leverage)]} defaultValue={[1]} min={1} max={50} step={1} disabled={!tradingAccountBalance} />
+      <Slider
+        onValueChange={(value) => {
+          if (!leverageRef.current) return;
+          leverageRef.current.value = value[0].toString();
+          setLeverage(value[0].toString());
+        }}
+        value={[parseInt(leverage)]}
+        defaultValue={[1]}
+        min={1}
+        max={50}
+        step={1}
+        disabled={!tradingAccountBalance}
+      />
 
       <div className="flex justify-between">
-        <Text
-          className={"mb-1 opacity-80 text-xs"}
-        >
-          Position Size (USD)
-        </Text>
-        <Text
-          className={"mb-1 opacity-80 text-xs"}
-        >
-          ${positionSize}
-        </Text>
+        <Text className={"mb-1 text-xs opacity-80"}>Position Size (USD)</Text>
+        <Text className={"mb-1 text-xs opacity-80"}>${positionSize}</Text>
       </div>
 
       {status === "Connected" ? (
@@ -721,25 +808,25 @@ const OrderLimitForm = () => {
               type={"submit"}
               value={"buy"}
               disabled={isSubmitting || Big(tradingAccountBalance).lte(0)}
-            // onClick={async () => {
-            //   const { success, msg } = await createZkOrder({
-            //     zkAccount: currentZkAccount,
-            //     signature: privateKey,
-            //     value: 100,
-            //     positionType: "LONG",
-            //     leverage: 1,
-            //     orderType: "MARKET",
-            //     timebounds: 0,
-            //     entryPrice: 0,
-            //   });
+              // onClick={async () => {
+              //   const { success, msg } = await createZkOrder({
+              //     zkAccount: currentZkAccount,
+              //     signature: privateKey,
+              //     value: 100,
+              //     positionType: "LONG",
+              //     leverage: 1,
+              //     orderType: "MARKET",
+              //     timebounds: 0,
+              //     entryPrice: 0,
+              //   });
 
-            //   if (!success || !msg)
-            //     return console.error("error creating zk order");
+              //   if (!success || !msg)
+              //     return console.error("error creating zk order");
 
-            //   console.log("txString", msg);
-            //   const data = await sendTradeOrder(msg);
-            //   console.log(data);
-            // }}
+              //   console.log("txString", msg);
+              //   const data = await sendTradeOrder(msg);
+              //   console.log(data);
+              // }}
             >
               {isSubmitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

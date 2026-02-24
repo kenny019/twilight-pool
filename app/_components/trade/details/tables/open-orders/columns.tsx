@@ -1,13 +1,12 @@
-
-import Button from '@/components/button';
-import cn from '@/lib/cn';
-import { capitaliseFirstLetter, truncateHash } from '@/lib/helpers';
-import { toast } from '@/lib/hooks/useToast';
-import BTC from '@/lib/twilight/denoms';
-import { TradeOrder } from '@/lib/types';
-import { ColumnDef } from '@tanstack/react-table';
-import Big from 'big.js';
-import dayjs from 'dayjs';
+import Button from "@/components/button";
+import cn from "@/lib/cn";
+import { capitaliseFirstLetter, truncateHash } from "@/lib/helpers";
+import { toast } from "@/lib/hooks/useToast";
+import BTC from "@/lib/twilight/denoms";
+import { TradeOrder } from "@/lib/types";
+import { ColumnDef } from "@tanstack/react-table";
+import Big from "big.js";
+import dayjs from "dayjs";
 
 interface OpenOrdersTableMeta {
   cancelOrder: (order: TradeOrder) => Promise<void>;
@@ -24,29 +23,39 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     header: "Order ID",
     cell: (row) => {
       const trade = row.row.original;
-      const truncatedUuid = truncateHash(trade.uuid, 4, 4);
+
+      const uuid = trade.settleLimit ? trade.settleLimit.uuid : trade.uuid;
+      const truncatedUuid = truncateHash(uuid, 4, 4);
+
       return (
-        <span onClick={() => {
-          navigator.clipboard.writeText(trade.uuid);
-          toast({
-            title: "Copied to clipboard",
-            description: `Order ID ${truncatedUuid} copied to clipboard`,
-          })
-        }} className="font-medium cursor-pointer hover:underline">
+        <span
+          onClick={() => {
+            navigator.clipboard.writeText(uuid);
+            toast({
+              title: "Copied to clipboard",
+              description: `Order ID ${truncatedUuid} copied to clipboard`,
+            });
+          }}
+          className="cursor-pointer font-medium hover:underline"
+        >
           {truncatedUuid}
         </span>
       );
-    }
+    },
   },
   {
     accessorKey: "positionType",
     header: "Side",
     cell: (row) => {
-      const positionType = row.getValue() as string;
+      const trade = row.row.original;
+      const positionType = trade.settleLimit
+        ? trade.settleLimit.position_type
+        : trade.positionType;
+
       return (
         <span
           className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
+            "rounded px-2 py-1 text-xs font-medium",
             positionType === "LONG"
               ? "bg-green-medium/10 text-green-medium"
               : "bg-red/10 text-red"
@@ -64,13 +73,9 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       const trade = row.row.original;
       const positionSize = new BTC("sats", Big(trade.positionSize))
         .convert("BTC")
-        .toFixed(2)
+        .toFixed(2);
 
-      return (
-        <span className="font-medium">
-          ${positionSize}
-        </span>
-      );
+      return <span className="font-medium">${positionSize}</span>;
     },
   },
 
@@ -89,17 +94,22 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
   {
     accessorKey: "entryPrice",
     header: "Entry Price (USD)",
-    accessorFn: (row) => `$${row.entryPrice.toFixed(2)}`,
+    accessorFn: (row) =>
+      `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`,
   },
   {
     accessorKey: "leverage",
     header: "Leverage",
-    accessorFn: (row) => `${row.leverage.toFixed(2)}x`
+    accessorFn: (row) => `${row.leverage.toFixed(2)}x`,
   },
   {
     accessorKey: "availableMargin",
     header: "Avail. Margin (BTC)",
-    accessorFn: (row) => BTC.format(new BTC("sats", Big(row.availableMargin)).convert("BTC"), "BTC")
+    accessorFn: (row) =>
+      BTC.format(
+        new BTC("sats", Big(row.availableMargin)).convert("BTC"),
+        "BTC"
+      ),
   },
   {
     accessorKey: "actions",
@@ -109,12 +119,11 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       const meta = row.table.options.meta as OpenOrdersTableMeta;
 
       return (
-        <div className="flex flex-row gap-1 justify-start">
+        <div className="flex flex-row justify-start gap-1">
           <Button
             onClick={async (e) => {
               e.preventDefault();
-              await meta.cancelOrder(trade)
-
+              await meta.cancelOrder(trade);
             }}
             variant="ui"
             size="small"
@@ -125,7 +134,7 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       );
     },
   },
-]
+];
 
 // Export the TableMeta type for use in the data table component
 export type { OpenOrdersTableMeta };

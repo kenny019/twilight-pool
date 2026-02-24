@@ -93,12 +93,18 @@ export type QueryTradeOrderData = {
   uuid: string;
   fee_filled: string;
   fee_settled: string;
+  settle_limit: null | {
+    position_type: "LONG" | "SHORT";
+    price: string;
+    uuid: string;
+  };
+  funding_applied: string;
 };
 
 async function queryTradeOrder(msg: string) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
-    method: "trader_order_info",
+    method: "trader_order_info_v1",
     params: {
       data: msg,
     },

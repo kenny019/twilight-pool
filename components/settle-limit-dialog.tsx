@@ -1,28 +1,33 @@
-import { useTwilightStore } from '@/lib/providers/store';
-import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogTitle } from './dialog';
-import { NumberInput } from './input';
-import Button from './button';
-import { useToast } from '@/lib/hooks/useToast';
-import { settleOrder } from '@/lib/zk/trade';
-import { useSessionStore } from '@/lib/providers/session';
-import { usePriceFeed } from '@/lib/providers/feed';
-import Link from 'next/link';
-import Big from 'big.js';
-import dayjs from 'dayjs';
-import { useQueryClient } from '@tanstack/react-query';
+import { useTwilightStore } from "@/lib/providers/store";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { NumberInput } from "./input";
+import Button from "./button";
+import { useToast } from "@/lib/hooks/useToast";
+import { settleOrder } from "@/lib/zk/trade";
+import { useSessionStore } from "@/lib/providers/session";
+import { usePriceFeed } from "@/lib/providers/feed";
+import Link from "next/link";
+import Big from "big.js";
+import dayjs from "dayjs";
+import { useQueryClient } from "@tanstack/react-query";
+import cn from "@/lib/cn";
+import BTC from "@/lib/twilight/denoms";
+import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/columns";
+import { formatPnlWithUsd } from "@/lib/utils/formatPnl";
+import { formatCurrency } from "@/lib/twilight/ticker";
 
 type Props = {
   account?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
+};
 
 function SettleLimitDialog({ account, open, onOpenChange }: Props) {
   const { toast } = useToast();
 
   const trades = useTwilightStore((state) => state.trade.trades);
-  const updateTrade = useTwilightStore((state) => state.trade.updateTrade)
+  const updateTrade = useTwilightStore((state) => state.trade.updateTrade);
   const privateKey = useSessionStore((state) => state.privateKey);
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
@@ -32,9 +37,35 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
 
   const [limitPrice, setLimitPrice] = useState(currentPrice || 0);
 
-  const selectedTrade = trades.find((trade) => trade.accountAddress === account);
+  const selectedTrade = trades.find(
+    (trade) => trade.accountAddress === account
+  );
 
   const queryClient = useQueryClient();
+
+  const entryPrice = selectedTrade?.entryPrice || 0;
+  const markPrice = currentPrice || entryPrice;
+  const positionSize = selectedTrade?.positionSize || 0;
+  const positionType = selectedTrade?.positionType || "";
+
+  const positionSizeBtc = BTC.format(
+    new BTC("sats", Big(positionSize)).convert("BTC"),
+    "BTC"
+  );
+
+  const estimatedPnl = calculateUpnl(
+    entryPrice,
+    limitPrice,
+    positionType,
+    positionSize
+  );
+  const estimatedPnlBtc = BTC.format(
+    new BTC("sats", Big(estimatedPnl)).convert("BTC"),
+    "BTC"
+  );
+  const estimatedPnlUsd = formatPnlWithUsd(estimatedPnl, currentPrice);
+  const isPnlPositive = estimatedPnl > 0;
+  const isPnlNegative = estimatedPnl < 0;
 
   async function handleSettleLimit() {
     if (limitPrice < 0) {
@@ -59,23 +90,30 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
 
     toast({
       title: "Closing position",
-      description: "Please do not close this page while your position is being closed...",
-    })
+      description:
+        "Please do not close this page while your position is being closed...",
+    });
 
-    console.log("limitPrice", limitPrice)
-    const result = await settleOrder(selectedTrade, "limit", privateKey, limitPrice)
+    console.log("limitPrice", limitPrice);
+    const result = await settleOrder(
+      selectedTrade,
+      "limit",
+      privateKey,
+      limitPrice
+    );
 
     if (!result.success) {
       toast({
         title: "Error settling order",
         description: result.message,
         variant: "error",
-      })
+      });
       return;
     }
 
     const settledData = result.data;
 
+    console.log("test1", settledData);
     updateTrade({
       ...selectedTrade,
       orderStatus: settledData.order_status,
@@ -97,16 +135,18 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
       bankruptcyPrice: Big(settledData.bankruptcy_price).toNumber(),
       bankruptcyValue: Big(settledData.bankruptcy_value).toNumber(),
       initialMargin: Big(settledData.initial_margin).toNumber(),
-    })
+      settleLimit: settledData.settle_limit,
+      fundingApplied: settledData.funding_applied,
+    });
 
-    await queryClient.invalidateQueries({ queryKey: ['sync-trades'] })
+    await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
 
     toast({
       title: "Limit order sent",
-      description: <div className="opacity-90">
-        Close position limit order sent.{" "}
-        {
-          settledData.tx_hash && (
+      description: (
+        <div className="opacity-90">
+          Close position limit order sent.{" "}
+          {settledData.tx_hash && (
             <Link
               href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${settledData.tx_hash}`}
               target={"_blank"}
@@ -114,20 +154,43 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
             >
               Explorer link
             </Link>
-          )
-        }
-      </div>
-    })
-
+          )}
+        </div>
+      ),
+    });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogTitle>Settle Limit</DialogTitle>
-        <div className="flex flex-col gap-6">
+        <DialogTitle>Close Position</DialogTitle>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-primary-accent">
+              Entry Price (USD)
+            </span>
+            <span className="text-sm font-medium">
+              {formatCurrency(entryPrice)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-primary-accent">
+              Mark Price (USD)
+            </span>
+            <span className="text-sm font-medium">
+              {formatCurrency(markPrice)}
+            </span>
+          </div>
+
+          <div className="border-t" />
+
           <div className="space-y-1">
-            <label className="text-sm font-medium text-primary-accent" htmlFor="input-limit-amount-usd">Limit Price (USD)</label>
+            <label
+              className="text-xs text-primary-accent"
+              htmlFor="input-limit-amount-usd"
+            >
+              Limit Price (USD)
+            </label>
             <NumberInput
               id="input-limit-amount-usd"
               inputValue={limitPrice}
@@ -137,11 +200,34 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
             />
           </div>
 
-          <Button onClick={handleSettleLimit}>Settle Limit</Button>
+          <div className="border-t" />
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-primary-accent">Position Amount</span>
+            <span className="text-sm font-medium">{positionSizeBtc} BTC</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-primary-accent">Estimated PnL</span>
+            <span
+              className={cn(
+                "text-sm font-medium",
+                isPnlPositive && "text-green-medium",
+                isPnlNegative && "text-red",
+                !isPnlPositive && !isPnlNegative && "text-gray-500"
+              )}
+            >
+              {isPnlPositive ? "+" : ""}
+              {estimatedPnlBtc} BTC ({estimatedPnlUsd})
+            </span>
+          </div>
+
+          <div className="border-t" />
+
+          <Button onClick={handleSettleLimit}>Confirm</Button>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
-export default SettleLimitDialog
+export default SettleLimitDialog;

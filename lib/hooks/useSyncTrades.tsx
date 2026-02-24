@@ -11,11 +11,15 @@ import { WalletStatus } from "@cosmos-kit/core";
 import { ZkPrivateAccount } from "../zk/account";
 import { createZkAccount } from "../twilight/zk";
 import { useToast } from "./useToast";
-import Link from 'next/link';
-import BTC from '../twilight/denoms';
-import { queryTransactionHashes } from '../api/rest';
+import Link from "next/link";
+import BTC from "../twilight/denoms";
+import { queryTransactionHashes } from "../api/rest";
 import { masterAccountQueue } from "../utils/masterAccountQueue";
-import { hasUtxoData, serializeTxid, waitForUtxoUpdate } from "../utils/waitForUtxoUpdate";
+import {
+  hasUtxoData,
+  serializeTxid,
+  waitForUtxoUpdate,
+} from "../utils/waitForUtxoUpdate";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -63,6 +67,8 @@ const tradeInfoKeysToTradeKey = {
   fee_filled: "feeFilled",
   fee_settled: "feeSettled",
   output: "output",
+  settle_limit: "settleLimit",
+  funding_applied: "fundingApplied",
 };
 
 export const useSyncTrades = () => {
@@ -108,7 +114,9 @@ export const useSyncTrades = () => {
         });
 
         const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
-        const queryTxHashRes = await queryTransactionHashes(trade.accountAddress);
+        const queryTxHashRes = await queryTransactionHashes(
+          trade.accountAddress
+        );
 
         if (!queryTradeOrderRes || !queryTxHashRes.result) {
           continue;
@@ -168,9 +176,7 @@ export const useSyncTrades = () => {
 
       for (const trade of tradeOrders) {
         const updatedTrade = updated.get(trade.uuid);
-        const newTrade = updatedTrade
-          ? { ...trade, ...updatedTrade }
-          : trade;
+        const newTrade = updatedTrade ? { ...trade, ...updatedTrade } : trade;
 
         mergedTrades.push(newTrade);
 
@@ -248,7 +254,10 @@ export const useSyncTrades = () => {
                     ReturnType<typeof senderZkPrivateAccount.privateTxSingle>
                   >;
 
-                  if (!currentTradingAccount?.isOnChain || !currentTradingAccount.value) {
+                  if (
+                    !currentTradingAccount?.isOnChain ||
+                    !currentTradingAccount.value
+                  ) {
                     // Master account doesn't exist on-chain yet — create a
                     // fresh one as the transfer destination.
                     const freshMasterAccount = await createZkAccount({
@@ -378,7 +387,10 @@ export const useSyncTrades = () => {
                   });
                 })
                 .catch((err) => {
-                  console.error("useSyncTrades cleanup queue task failed:", err);
+                  console.error(
+                    "useSyncTrades cleanup queue task failed:",
+                    err
+                  );
                 });
 
               cleanupPromises.push(cleanupPromise.then(() => {}));
@@ -409,8 +421,8 @@ export const useSyncTrades = () => {
 
       return true;
     },
-    refetchInterval: 3000,
-    staleTime: 3000,
+    refetchInterval: 5000,
+    staleTime: 5000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

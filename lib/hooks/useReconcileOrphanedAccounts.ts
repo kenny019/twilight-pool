@@ -31,9 +31,16 @@ export const useReconcileOrphanedAccounts = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
 
   useQuery({
-    queryKey: ["reconcile-orphaned-accounts", status, privateKey, zkAccounts.length, trades.length],
+    queryKey: [
+      "reconcile-orphaned-accounts",
+      status,
+      privateKey,
+      zkAccounts.length,
+      trades.length,
+    ],
     queryFn: async () => {
-      if (status !== WalletStatus.Connected || !privateKey) return { reconciled: 0 };
+      if (status !== WalletStatus.Connected || !privateKey)
+        return { reconciled: 0 };
 
       const tradeAddresses = new Set(trades.map((t) => t.accountAddress));
 
@@ -78,10 +85,12 @@ export const useReconcileOrphanedAccounts = () => {
 
           if (!queryTradeOrderRes?.result) continue;
 
-          const traderOrderInfo = queryTradeOrderRes.result as QueryTradeOrderData;
+          const traderOrderInfo =
+            queryTradeOrderRes.result as QueryTradeOrderData;
 
           const existingByUuid = trades.some(
-            (t) => t.uuid === traderOrderInfo.uuid || t.uuid === latestEntry.order_id
+            (t) =>
+              t.uuid === traderOrderInfo.uuid || t.uuid === latestEntry.order_id
           );
           if (existingByUuid) continue;
 
@@ -90,8 +99,12 @@ export const useReconcileOrphanedAccounts = () => {
             traderOrderInfo.order_status !== "SETTLED" &&
             traderOrderInfo.order_status !== "LIQUIDATE";
 
-          const initialMargin = new Big(traderOrderInfo.initial_margin).toNumber();
-          const unrealizedPnl = new Big(traderOrderInfo.unrealized_pnl || 0).toNumber();
+          const initialMargin = new Big(
+            traderOrderInfo.initial_margin
+          ).toNumber();
+          const unrealizedPnl = new Big(
+            traderOrderInfo.unrealized_pnl || 0
+          ).toNumber();
 
           const newTrade: TradeOrder = {
             accountAddress: account.address,
@@ -106,17 +119,29 @@ export const useReconcileOrphanedAccounts = () => {
             leverage: parseInt(traderOrderInfo.leverage, 10) || 1,
             date: dayjs(traderOrderInfo.timestamp).toDate(),
             isOpen,
-            availableMargin: new Big(traderOrderInfo.available_margin).toNumber(),
-            bankruptcyPrice: new Big(traderOrderInfo.bankruptcy_price).toNumber(),
-            bankruptcyValue: new Big(traderOrderInfo.bankruptcy_value).toNumber(),
+            availableMargin: new Big(
+              traderOrderInfo.available_margin
+            ).toNumber(),
+            bankruptcyPrice: new Big(
+              traderOrderInfo.bankruptcy_price
+            ).toNumber(),
+            bankruptcyValue: new Big(
+              traderOrderInfo.bankruptcy_value
+            ).toNumber(),
             entryNonce: traderOrderInfo.entry_nonce,
             entrySequence: traderOrderInfo.entry_sequence,
             executionPrice: new Big(traderOrderInfo.execution_price).toNumber(),
             initialMargin,
-            liquidationPrice: new Big(traderOrderInfo.liquidation_price).toNumber(),
-            maintenanceMargin: new Big(traderOrderInfo.maintenance_margin).toNumber(),
+            liquidationPrice: new Big(
+              traderOrderInfo.liquidation_price
+            ).toNumber(),
+            maintenanceMargin: new Big(
+              traderOrderInfo.maintenance_margin
+            ).toNumber(),
             positionSize: new Big(traderOrderInfo.positionsize).toNumber(),
-            settlementPrice: new Big(traderOrderInfo.settlement_price).toNumber(),
+            settlementPrice: new Big(
+              traderOrderInfo.settlement_price
+            ).toNumber(),
             unrealizedPnl,
             realizedPnl: !isOpen
               ? traderOrderInfo.order_status === "LIQUIDATE"
@@ -126,6 +151,8 @@ export const useReconcileOrphanedAccounts = () => {
             feeFilled: new Big(traderOrderInfo.fee_filled || 0).toNumber(),
             feeSettled: new Big(traderOrderInfo.fee_settled || 0).toNumber(),
             exit_nonce: traderOrderInfo.exit_nonce,
+            settleLimit: traderOrderInfo.settle_limit,
+            fundingApplied: traderOrderInfo.funding_applied,
           };
 
           addTrade(newTrade);

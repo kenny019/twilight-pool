@@ -40,6 +40,14 @@ export const TradeOrderSchema = z.object({
   positionSize: z.number(),
   settlementPrice: z.number(),
   exit_nonce: z.number().optional(),
+  settleLimit: z
+    .object({
+      position_type: z.enum(["LONG", "SHORT"]),
+      price: z.string(),
+      uuid: z.string(),
+    })
+    .nullable(),
+  fundingApplied: z.string().nullable(),
 });
 
 export const LendOrderSchema = z.object({

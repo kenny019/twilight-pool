@@ -1,20 +1,25 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import React, { useState, useMemo, useCallback } from "react";
-import { useTwilightStore } from '@/lib/providers/store';
-import PositionsTable from './tables/positions/positions-table.client';
-import { useSessionStore } from '@/lib/providers/session';
-import { useToast } from '@/lib/hooks/useToast';
-import { TradeOrder } from '@/lib/types';
-import { cancelZkOrder, settleOrder } from '@/lib/zk/trade';
-import Link from 'next/link';
-import Big from 'big.js';
-import OpenOrdersTable from './tables/open-orders/open-orders-table.client';
-import TraderHistoryTable from './tables/trader-history/trader-history-table.client';
-import OrderHistoryTable from './tables/order-history/order-history-table.client';
-import { useWallet } from '@cosmos-kit/react-lite';
-import { useQueryClient } from '@tanstack/react-query';
+import { useTwilightStore } from "@/lib/providers/store";
+import PositionsTable from "./tables/positions/positions-table.client";
+import { useSessionStore } from "@/lib/providers/session";
+import { useToast } from "@/lib/hooks/useToast";
+import { TradeOrder } from "@/lib/types";
+import { cancelZkOrder, settleOrder } from "@/lib/zk/trade";
+import Link from "next/link";
+import Big from "big.js";
+import OpenOrdersTable from "./tables/open-orders/open-orders-table.client";
+import TraderHistoryTable from "./tables/trader-history/trader-history-table.client";
+import OrderHistoryTable from "./tables/order-history/order-history-table.client";
+import { useWallet } from "@cosmos-kit/react-lite";
+import { useQueryClient } from "@tanstack/react-query";
 
-type TabType = "history" | "trades" | "positions" | "open-orders" | "trader-history";
+type TabType =
+  | "history"
+  | "trades"
+  | "positions"
+  | "open-orders"
+  | "trader-history";
 
 const DetailsPanel = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
@@ -22,218 +27,248 @@ const DetailsPanel = () => {
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
-  const orderHistoryData = useTwilightStore((state) => state.trade_history.trades);
+  const orderHistoryData = useTwilightStore(
+    (state) => state.trade_history.trades
+  );
   const privateKey = useSessionStore((state) => state.privateKey);
 
-  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount)
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
 
   const positionsData = useMemo(() => {
-    return tradeOrders.filter((trade) => trade.orderStatus === "FILLED")
-  }, [tradeOrders])
+    return tradeOrders.filter((trade) => trade.orderStatus === "FILLED");
+  }, [tradeOrders]);
 
   const openOrdersData = useMemo(() => {
-    return tradeOrders.filter((trade) => trade.orderStatus === "PENDING")
-  }, [tradeOrders])
+    return tradeOrders.filter(
+      (trade) => trade.orderStatus === "PENDING" || trade.settleLimit
+    );
+  }, [tradeOrders]);
 
   const traderHistoryData = useMemo(() => {
-    return orderHistoryData.filter((trade) => trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE" || trade.orderStatus === "FILLED")
-  }, [orderHistoryData])
+    return orderHistoryData.filter(
+      (trade) =>
+        trade.orderStatus === "SETTLED" ||
+        trade.orderStatus === "LIQUIDATE" ||
+        trade.orderStatus === "FILLED"
+    );
+  }, [orderHistoryData]);
 
-  const {
-    toast,
-  } = useToast()
+  const { toast } = useToast();
 
   const queryClient = useQueryClient();
 
-  const isSettlingOrder = useCallback((uuid: string) => {
-    return settlingOrders.has(uuid);
-  }, [settlingOrders]);
+  const isSettlingOrder = useCallback(
+    (uuid: string) => {
+      return settlingOrders.has(uuid);
+    },
+    [settlingOrders]
+  );
 
-  const settleMarketOrder = useCallback(async (trade: TradeOrder, currentPrice: number) => {
-    // Idempotency check: prevent duplicate settle attempts
-    if (settlingOrders.has(trade.uuid)) {
-      return;
-    }
-
-    // Mark order as settling
-    setSettlingOrders(prev => new Set(prev).add(trade.uuid));
-
-    try {
-      toast({
-        title: "Closing position",
-        description: "Please do not close this page while your position is being closed...",
-      })
-
-      const settleOrderResult = await settleOrder(trade, "market", privateKey, currentPrice);
-
-      if (!settleOrderResult.success) {
-        toast({
-          title: "Failed to settle position",
-          description: settleOrderResult.message,
-          variant: "error",
-        })
+  const settleMarketOrder = useCallback(
+    async (trade: TradeOrder, currentPrice: number) => {
+      // Idempotency check: prevent duplicate settle attempts
+      if (settlingOrders.has(trade.uuid)) {
         return;
       }
 
-      toast({
-        title: "Order closed successfully",
-        description: "Please do not close this page while your balance is being updated...",
-      })
+      // Mark order as settling
+      setSettlingOrders((prev) => new Set(prev).add(trade.uuid));
 
-      const settledData = settleOrderResult.data;
+      try {
+        toast({
+          title: "Closing position",
+          description:
+            "Please do not close this page while your position is being closed...",
+        });
 
-      const updatedAccount = zkAccounts.find(account => account.address === trade.accountAddress);
+        const settleOrderResult = await settleOrder(
+          trade,
+          "market",
+          privateKey,
+          currentPrice
+        );
 
-      if (!updatedAccount) {
-        // useSyncTrades may have already cleaned up this account before we
-        // finished.  If the trade is gone or already SETTLED, treat it as a
-        // success rather than showing a false error.
-        const currentTrade = tradeOrders.find((t) => t.uuid === trade.uuid);
-        if (!currentTrade || currentTrade.orderStatus === "SETTLED") {
+        if (!settleOrderResult.success) {
           toast({
-            title: "Position closed",
-            description: "Your position has been closed successfully.",
+            title: "Failed to settle position",
+            description: settleOrderResult.message,
+            variant: "error",
           });
           return;
         }
 
         toast({
-          title: "Failed to settle position",
+          title: "Order closed successfully",
+          description:
+            "Please do not close this page while your balance is being updated...",
+        });
+
+        const settledData = settleOrderResult.data;
+
+        const updatedAccount = zkAccounts.find(
+          (account) => account.address === trade.accountAddress
+        );
+
+        if (!updatedAccount) {
+          // useSyncTrades may have already cleaned up this account before we
+          // finished.  If the trade is gone or already SETTLED, treat it as a
+          // success rather than showing a false error.
+          const currentTrade = tradeOrders.find((t) => t.uuid === trade.uuid);
+          if (!currentTrade || currentTrade.orderStatus === "SETTLED") {
+            toast({
+              title: "Position closed",
+              description: "Your position has been closed successfully.",
+            });
+            return;
+          }
+
+          toast({
+            title: "Failed to settle position",
+            description: "Failed to find account",
+            variant: "error",
+          });
+          return;
+        }
+
+        await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+
+        toast({
+          title: "Position closed",
+          description: (
+            <div className="opacity-90">
+              Successfully closed {trade.orderType.toLowerCase()} order.{" "}
+              {settledData.tx_hash && (
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${settledData.tx_hash}`}
+                  target={"_blank"}
+                  className="text-sm underline hover:opacity-100"
+                >
+                  Explorer link
+                </Link>
+              )}
+            </div>
+          ),
+        });
+      } finally {
+        // Remove from settling set regardless of success/failure
+        setSettlingOrders((prev) => {
+          const next = new Set(prev);
+          next.delete(trade.uuid);
+          return next;
+        });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [privateKey, zkAccounts, toast, settlingOrders]
+  );
+
+  const cancelOrder = useCallback(
+    async (order: TradeOrder) => {
+      toast({
+        title: "Cancelling order",
+        description:
+          "Please do not close this page while your order is being cancelled...",
+      });
+
+      const cancelOrderResult = await cancelZkOrder(order, privateKey);
+
+      if (!cancelOrderResult.success) {
+        toast({
+          title: "Failed to cancel order",
+          description: cancelOrderResult.message,
+          variant: "error",
+        });
+        return;
+      }
+
+      const cancelOrderData = cancelOrderResult.data;
+
+      const zkAccount = zkAccounts.find(
+        (account) => account.address === order.accountAddress
+      );
+
+      if (!zkAccount) {
+        toast({
+          title: "Failed to cancel order",
           description: "Failed to find account",
           variant: "error",
         });
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['sync-trades'] })
+      // const result = await cleanupTradeOrder(privateKey, zkAccount);
+
+      // if (!result.success) {
+      //   toast({
+      //     title: "Error with settling trade order",
+      //     description: result.message,
+      //     variant: "error",
+      //   })
+      //   return;
+      // }
 
       toast({
-        title: "Position closed",
-        description: <div className="opacity-90">
-          Successfully closed {trade.orderType.toLowerCase()} order.{" "}
-          {
-            settledData.tx_hash && (
+        title: "Order cancelled",
+        description: (
+          <div className="opacity-90">
+            Successfully cancelled {order.orderType.toLowerCase()} order.{" "}
+            {cancelOrderData.tx_hash && (
               <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${settledData.tx_hash}`}
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
                 target={"_blank"}
                 className="text-sm underline hover:opacity-100"
               >
                 Explorer link
               </Link>
-            )
-          }
-        </div>
-      })
-    } finally {
-      // Remove from settling set regardless of success/failure
-      setSettlingOrders(prev => {
-        const next = new Set(prev);
-        next.delete(trade.uuid);
-        return next;
+            )}
+          </div>
+        ),
       });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [privateKey, zkAccounts, toast, settlingOrders])
 
-  const cancelOrder = useCallback(async (order: TradeOrder) => {
-    toast({
-      title: "Cancelling order",
-      description: "Please do not close this page while your order is being cancelled...",
-    })
+      const updatedAccount = zkAccounts.find(
+        (account) => account.address === order.accountAddress
+      );
 
-    const cancelOrderResult = await cancelZkOrder(order, privateKey);
+      if (!updatedAccount) {
+        toast({
+          title: "Failed to cancel order",
+          description: "Failed to find account",
+          variant: "error",
+        });
+        return;
+      }
 
-    if (!cancelOrderResult.success) {
-      toast({
-        title: "Failed to cancel order",
-        description: cancelOrderResult.message,
-        variant: "error",
-      })
-      return;
-    }
+      // addTradeHistory({
+      //   ...order,
+      //   orderStatus: cancelOrderData.order_status,
+      //   availableMargin: Big(cancelOrderData.available_margin).toNumber(),
+      //   maintenanceMargin: Big(cancelOrderData.maintenance_margin).toNumber(),
+      //   unrealizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
+      //   settlementPrice: Big(cancelOrderData.settlement_price).toNumber(),
+      //   positionSize: Big(cancelOrderData.positionsize).toNumber(),
+      //   orderType: cancelOrderData.order_type,
+      //   date: dayjs(cancelOrderData.timestamp).toDate(),
+      //   exit_nonce: cancelOrderData.exit_nonce,
+      //   executionPrice: Big(cancelOrderData.execution_price).toNumber(),
+      //   isOpen: false,
+      //   feeSettled: Big(cancelOrderData.fee_settled).toNumber(),
+      //   feeFilled: Big(cancelOrderData.fee_filled).toNumber(),
+      //   realizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
+      //   tx_hash: cancelOrderData.tx_hash || order.tx_hash,
+      // })
 
-    const cancelOrderData = cancelOrderResult.data;
+      updateZkAccount(order.accountAddress, {
+        ...updatedAccount,
+        type: "Coin",
+      });
 
-    const zkAccount = zkAccounts.find(account => account.address === order.accountAddress);
-
-    if (!zkAccount) {
-      toast({
-        title: "Failed to cancel order",
-        description: "Failed to find account",
-        variant: "error",
-      })
-      return;
-    }
-
-    // const result = await cleanupTradeOrder(privateKey, zkAccount);
-
-    // if (!result.success) {
-    //   toast({
-    //     title: "Error with settling trade order",
-    //     description: result.message,
-    //     variant: "error",
-    //   })
-    //   return;
-    // }
-
-    toast({
-      title: "Order cancelled",
-      description: <div className="opacity-90">
-        Successfully cancelled {order.orderType.toLowerCase()} order.{" "}
-        {
-          cancelOrderData.tx_hash && (
-            <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
-              target={"_blank"}
-              className="text-sm underline hover:opacity-100"
-            >
-              Explorer link
-            </Link>
-          )
-        }
-      </div>
-    })
-
-    const updatedAccount = zkAccounts.find(account => account.address === order.accountAddress);
-
-    if (!updatedAccount) {
-      toast({
-        title: "Failed to cancel order",
-        description: "Failed to find account",
-        variant: "error",
-      })
-      return;
-    }
-
-    // addTradeHistory({
-    //   ...order,
-    //   orderStatus: cancelOrderData.order_status,
-    //   availableMargin: Big(cancelOrderData.available_margin).toNumber(),
-    //   maintenanceMargin: Big(cancelOrderData.maintenance_margin).toNumber(),
-    //   unrealizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-    //   settlementPrice: Big(cancelOrderData.settlement_price).toNumber(),
-    //   positionSize: Big(cancelOrderData.positionsize).toNumber(),
-    //   orderType: cancelOrderData.order_type,
-    //   date: dayjs(cancelOrderData.timestamp).toDate(),
-    //   exit_nonce: cancelOrderData.exit_nonce,
-    //   executionPrice: Big(cancelOrderData.execution_price).toNumber(),
-    //   isOpen: false,
-    //   feeSettled: Big(cancelOrderData.fee_settled).toNumber(),
-    //   feeFilled: Big(cancelOrderData.fee_filled).toNumber(),
-    //   realizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-    //   tx_hash: cancelOrderData.tx_hash || order.tx_hash,
-    // })
-
-    updateZkAccount(order.accountAddress, {
-      ...updatedAccount,
-      type: "Coin",
-    });
-
-    await queryClient.invalidateQueries({ queryKey: ['sync-trades'] })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [privateKey, zkAccounts])
+      await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [privateKey, zkAccounts]
+  );
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -280,20 +315,13 @@ const DetailsPanel = () => {
           />
         )}
         {currentTab === "open-orders" && (
-          <OpenOrdersTable
-            data={openOrdersData}
-            cancelOrder={cancelOrder}
-          />
+          <OpenOrdersTable data={openOrdersData} cancelOrder={cancelOrder} />
         )}
         {currentTab === "trader-history" && (
-          <TraderHistoryTable
-            data={traderHistoryData}
-          />
+          <TraderHistoryTable data={traderHistoryData} />
         )}
         {currentTab === "history" && (
-          <OrderHistoryTable
-            data={orderHistoryData}
-          />
+          <OrderHistoryTable data={orderHistoryData} />
         )}
       </div>
     </div>

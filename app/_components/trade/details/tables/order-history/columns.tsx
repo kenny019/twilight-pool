@@ -1,14 +1,14 @@
-import { Text } from '@/components/typography';
-import cn from '@/lib/cn';
-import { capitaliseFirstLetter, truncateHash } from '@/lib/helpers';
-import { toast } from '@/lib/hooks/useToast';
-import BTC from '@/lib/twilight/denoms';
-import { TradeOrder } from '@/lib/types';
-import { ColumnDef } from '@tanstack/react-table';
-import Big from 'big.js';
-import dayjs from 'dayjs';
-import Link from 'next/link';
-import { PnlCell, PnlHeader } from '@/lib/components/pnl-display';
+import { Text } from "@/components/typography";
+import cn from "@/lib/cn";
+import { capitaliseFirstLetter, truncateHash } from "@/lib/helpers";
+import { toast } from "@/lib/hooks/useToast";
+import BTC from "@/lib/twilight/denoms";
+import { TradeOrder } from "@/lib/types";
+import { ColumnDef } from "@tanstack/react-table";
+import Big from "big.js";
+import dayjs from "dayjs";
+import Link from "next/link";
+import { PnlCell, PnlHeader } from "@/lib/components/pnl-display";
 
 // Define the TableMeta interface for global table data
 interface OrderHistoryTableMeta {
@@ -34,24 +34,28 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const truncatedUuid = truncateHash(trade.uuid, 4, 4);
       return (
-        <span onClick={() => {
-          navigator.clipboard.writeText(trade.uuid);
-          toast({
-            title: "Copied to clipboard",
-            description: `Order ID ${truncatedUuid} copied to clipboard`,
-          })
-        }} className="font-medium cursor-pointer hover:underline">
+        <span
+          onClick={() => {
+            navigator.clipboard.writeText(trade.uuid);
+            toast({
+              title: "Copied to clipboard",
+              description: `Order ID ${truncatedUuid} copied to clipboard`,
+            });
+          }}
+          className="cursor-pointer font-medium hover:underline"
+        >
           {truncatedUuid}
         </span>
       );
-    }
+    },
   },
   {
     accessorKey: "tx_hash",
     header: "TxHash",
     cell: (row) => {
       const order = row.row.original;
-      if (!order.tx_hash) {
+
+      if (!order.tx_hash || order.orderStatus === "CANCELLED") {
         return <Text className="text-primary-accent">-</Text>;
       }
 
@@ -70,7 +74,7 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
   {
     accessorKey: "orderType",
     header: "Type",
-    accessorFn: (row) => capitaliseFirstLetter(row.orderType)
+    accessorFn: (row) => capitaliseFirstLetter(row.orderType),
   },
   {
     accessorKey: "orderStatus",
@@ -80,7 +84,7 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       return (
         <span
           className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
+            "rounded px-2 py-1 text-xs font-medium",
             status === "SETTLED"
               ? "bg-green-medium/10 text-green-medium"
               : status === "LIQUIDATE"
@@ -101,7 +105,7 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       return (
         <span
           className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
+            "rounded px-2 py-1 text-xs font-medium",
             positionType === "LONG"
               ? "bg-green-medium/10 text-green-medium"
               : "bg-red/10 text-red"
@@ -119,13 +123,9 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const positionSize = new BTC("sats", Big(trade.positionSize))
         .convert("BTC")
-        .toFixed(2)
+        .toFixed(2);
 
-      return (
-        <span className="font-medium">
-          ${positionSize}
-        </span>
-      );
+      return <span className="font-medium">${positionSize}</span>;
     },
   },
   {
@@ -139,20 +139,20 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
         return <span className="text-xs text-gray-500">—</span>;
       }
 
-      const positionValue = new BTC("sats", Big(Math.abs(trade.positionSize / markPrice)))
-        .convert("BTC")
+      const positionValue = new BTC(
+        "sats",
+        Big(Math.abs(trade.positionSize / markPrice))
+      ).convert("BTC");
 
       return (
-        <span className="font-medium">
-          {BTC.format(positionValue, "BTC")}
-        </span>
+        <span className="font-medium">{BTC.format(positionValue, "BTC")}</span>
       );
     },
   },
   {
     accessorKey: "entryPrice",
     header: "Entry Price (USD)",
-    accessorFn: (row) => `$${row.entryPrice.toFixed(2)}`
+    accessorFn: (row) => `$${row.entryPrice.toFixed(2)}`,
   },
   {
     accessorKey: "settlementPrice",
@@ -160,21 +160,22 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      if (trade.orderStatus !== "SETTLED" && trade.orderStatus !== "LIQUIDATE") {
+      if (
+        trade.orderStatus !== "SETTLED" &&
+        trade.orderStatus !== "LIQUIDATE"
+      ) {
         return <span className="text-xs text-gray-500">—</span>;
       }
 
       return (
-        <span className="font-medium">
-          ${trade.settlementPrice.toFixed(2)}
-        </span>
+        <span className="font-medium">${trade.settlementPrice.toFixed(2)}</span>
       );
-    }
+    },
   },
   {
     accessorKey: "leverage",
     header: "Leverage",
-    accessorFn: (row) => `${row.leverage.toFixed(2)}x`
+    accessorFn: (row) => `${row.leverage.toFixed(2)}x`,
   },
   {
     accessorKey: "realizedPnl",
@@ -183,9 +184,10 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const meta = row.table.options.meta as OrderHistoryTableMeta;
 
-      const pnl = trade.orderStatus === "LIQUIDATE"
-        ? -trade.initialMargin
-        : (trade.realizedPnl || trade.unrealizedPnl || 0);
+      const pnl =
+        trade.orderStatus === "LIQUIDATE"
+          ? -trade.initialMargin
+          : trade.realizedPnl || trade.unrealizedPnl || 0;
 
       return (
         <PnlCell
@@ -216,7 +218,11 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
   {
     accessorKey: "availableMargin",
     header: "Avail. Margin (BTC)",
-    accessorFn: (row) => BTC.format(new BTC("sats", Big(row.availableMargin)).convert("BTC"), "BTC")
+    accessorFn: (row) =>
+      BTC.format(
+        new BTC("sats", Big(row.availableMargin)).convert("BTC"),
+        "BTC"
+      ),
   },
   {
     accessorKey: "funding",
@@ -224,20 +230,27 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      const pnl = trade.orderStatus === "LIQUIDATE"
-        ? -trade.initialMargin
-        : (trade.realizedPnl || trade.unrealizedPnl || 0);
-      const funding = Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled - trade.feeSettled + pnl);
+      const pnl =
+        trade.orderStatus === "LIQUIDATE"
+          ? -trade.initialMargin
+          : trade.realizedPnl || trade.unrealizedPnl || 0;
+      const funding = Math.round(
+        trade.initialMargin -
+          trade.availableMargin -
+          trade.feeFilled -
+          trade.feeSettled +
+          pnl
+      );
 
-      const fundingBTC = new BTC("sats", Big(funding))
-        .convert("BTC")
+      const fundingBTC = new BTC("sats", Big(funding)).convert("BTC");
 
       return (
-        <span className={cn("font-medium",
-          funding > 0 ? "text-green-medium" :
-            funding < 0 ? "text-red" :
-              ""
-        )}>
+        <span
+          className={cn(
+            "font-medium",
+            funding > 0 ? "text-green-medium" : funding < 0 ? "text-red" : ""
+          )}
+        >
           {BTC.format(fundingBTC, "BTC")}
         </span>
       );
@@ -249,9 +262,14 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      const fee = trade.orderStatus === "FILLED" ? trade.feeFilled : trade.feeSettled;
+      const fee =
+        trade.orderStatus === "FILLED" ? trade.feeFilled : trade.feeSettled;
 
-      if (trade.orderStatus === "CANCELLED" || trade.orderStatus === "LIQUIDATE" || trade.orderStatus === "PENDING") {
+      if (
+        trade.orderStatus === "CANCELLED" ||
+        trade.orderStatus === "LIQUIDATE" ||
+        trade.orderStatus === "PENDING"
+      ) {
         return <span className="text-xs text-gray-500">-</span>;
       }
 
@@ -260,9 +278,9 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
           {BTC.format(new BTC("sats", Big(fee)).convert("BTC"), "BTC")}
         </span>
       );
-    }
+    },
   },
-]
+];
 
 // Export the TableMeta type for use in the data table component
 export type { OrderHistoryTableMeta };
