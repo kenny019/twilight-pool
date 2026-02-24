@@ -1,6 +1,7 @@
 "use client";
 
 import PoolInfo from "@/app/_components/lend/pool-info.client";
+import PoolHealth from "@/app/_components/lend/pool-health.client";
 import ApyChart from "@/app/_components/lend/apy-chart.client";
 import MyInvestment from "@/app/_components/lend/my-investment.client";
 import LendManagement from "@/app/_components/lend/lend-management.client";
@@ -511,10 +512,10 @@ const Page = () => {
           </div>
         </DialogContent>
       </Dialog>
-      {/* Pool Info */}
+      {/* Pool Performance */}
       <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
         <Text heading="h2" className="mb-4 text-lg font-medium">
-          Pool Info
+          Pool Performance
         </Text>
         <PoolInfo selectedApyPeriod={selectedApyPeriod} />
       </div>
@@ -524,7 +525,13 @@ const Page = () => {
         {/* APY Chart */}
         <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
           <Text heading="h2" className="mb-4 text-lg font-medium">
-            APY History
+            APY History (fallback ={" "}
+            {selectedApyPeriod === "1D"
+              ? "1 Day"
+              : selectedApyPeriod === "1W"
+                ? "7 Days"
+                : "30 Days"}
+            )
           </Text>
           <ApyChart selectedPeriod={selectedApyPeriod} onPeriodChange={setSelectedApyPeriod} />
         </div>

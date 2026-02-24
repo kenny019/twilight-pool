@@ -41,6 +41,7 @@ type QueueEntry<T> = {
 };
 
 class MasterAccountQueue {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly queue: QueueEntry<any>[] = [];
   private _busy = false;
 
