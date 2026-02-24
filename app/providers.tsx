@@ -18,6 +18,7 @@ import { MainWalletBase } from "@cosmos-kit/core";
 import { TwilightProvider } from "@/lib/providers/twilight";
 import { Toaster } from "@/components/toast-provider";
 import { PriceFeedProvider } from "@/lib/providers/feed";
+import { PnlDisplayModeProvider } from "@/lib/providers/pnl-display-mode";
 import { TwilightStoreProvider } from "@/lib/providers/store";
 import { SessionStoreProvider } from "@/lib/providers/session";
 import { DialogProvider } from "@/lib/providers/limit-dialogs";
@@ -66,7 +67,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <SessionStoreProvider>
               <TwilightStoreProvider>
                 <PriceFeedProvider>
-                  <DialogProvider>{children}</DialogProvider>
+                  <PnlDisplayModeProvider>
+                    <DialogProvider>{children}</DialogProvider>
+                  </PnlDisplayModeProvider>
                 </PriceFeedProvider>
                 <LeaderboardOptInDialog />
               </TwilightStoreProvider>

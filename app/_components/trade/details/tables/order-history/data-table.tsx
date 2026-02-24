@@ -17,12 +17,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   getCurrentPrice: () => number;
+  getBtcPriceUsd: () => number;
 }
 
 export function OrderHistoryDataTable<TData, TValue>({
   columns,
   data,
   getCurrentPrice,
+  getBtcPriceUsd,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
@@ -31,6 +33,7 @@ export function OrderHistoryDataTable<TData, TValue>({
   // Define the table meta data
   const tableMeta: OrderHistoryTableMeta = {
     getCurrentPrice,
+    getBtcPriceUsd,
   };
 
   const table = useReactTable({

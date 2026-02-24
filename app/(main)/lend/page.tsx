@@ -36,6 +36,7 @@ import { Loader2 } from "lucide-react";
 import React, { useState, useMemo, useCallback } from "react";
 import { LendOrder, ZkAccount } from "@/lib/types";
 import { useGetLendPoolInfo } from "@/lib/hooks/useGetLendPoolInfo";
+import type { ApyPeriod } from "@/lib/hooks/useApyChartData";
 import { queryLendOrder } from "@/lib/api/relayer";
 import Big from "big.js";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -64,6 +65,7 @@ const Page = () => {
   const { toast } = useToast();
 
   const [currentTab, setCurrentTab] = useState<TabType>("active-orders");
+  const [selectedApyPeriod, setSelectedApyPeriod] = useState<ApyPeriod>("1D");
   const [isSettleLoading, setIsSettleLoading] = useState(false);
   const [settlingOrderId, setSettlingOrderId] = useState<string | null>(null);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
@@ -514,7 +516,7 @@ const Page = () => {
         <Text heading="h2" className="mb-4 text-lg font-medium">
           Pool Info
         </Text>
-        <PoolInfo />
+        <PoolInfo selectedApyPeriod={selectedApyPeriod} />
       </div>
 
       {/* APY Chart and Add Liquidity */}
@@ -524,7 +526,7 @@ const Page = () => {
           <Text heading="h2" className="mb-4 text-lg font-medium">
             APY History
           </Text>
-          <ApyChart />
+          <ApyChart selectedPeriod={selectedApyPeriod} onPeriodChange={setSelectedApyPeriod} />
         </div>
 
         <div className="bg-card rounded-lg border border-outline p-4 md:p-6">

@@ -31,6 +31,8 @@
  */
 
 const TASK_TIMEOUT_MS = 60_000;
+/** Minimum delay between tasks so UTXO store can settle (~5–6s per relayer). */
+const INTER_TASK_DELAY_MS = 2_000;
 
 type QueueEntry<T> = {
   task: () => Promise<T>;
@@ -39,6 +41,7 @@ type QueueEntry<T> = {
 };
 
 class MasterAccountQueue {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly queue: QueueEntry<any>[] = [];
   private _busy = false;
 
@@ -81,7 +84,12 @@ class MasterAccountQueue {
       .catch((err) => entry.reject(err))
       .finally(() => {
         this._busy = false;
-        this.advance();
+        // Brief delay before next task so UTXO store can settle.
+        if (this.queue.length > 0) {
+          setTimeout(() => this.advance(), INTER_TASK_DELAY_MS);
+        } else {
+          this.advance();
+        }
       });
   }
 }

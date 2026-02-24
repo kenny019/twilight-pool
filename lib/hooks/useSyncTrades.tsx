@@ -164,26 +164,19 @@ export const useSyncTrades = () => {
       if (updated.size < 1) return true;
 
       const mergedTrades: TradeOrder[] = [];
-
-      // At most one master-account cleanup is scheduled per cycle.
-      // Scheduling more would risk double-spending the same UTXO before the
-      // first cleanup's UTXO update is reflected in the oracle subscriber.
-      // The next 3-second poll picks up the remaining terminal orders.
-      let cleanupScheduled = false;
+      const cleanupPromises: Promise<void>[] = [];
 
       for (const trade of tradeOrders) {
         const updatedTrade = updated.get(trade.uuid);
-
-        if (!updatedTrade) {
-          mergedTrades.push(trade);
-          continue;
-        }
-
-        const newTrade: TradeOrder = { ...trade, ...updatedTrade };
-
-        console.log("updatedTrade", updatedTrade);
+        const newTrade = updatedTrade
+          ? { ...trade, ...updatedTrade }
+          : trade;
 
         mergedTrades.push(newTrade);
+
+        if (updatedTrade) {
+          console.log("updatedTrade", updatedTrade);
+        }
 
         const isTerminal =
           newTrade.orderStatus === "SETTLED" ||
@@ -203,19 +196,17 @@ export const useSyncTrades = () => {
               // The exchange already debited the master account on-chain;
               // we only need to drop the local reference.
               removeZkAccount(existingZkAccount);
-            } else if (!cleanupScheduled) {
+            } else {
               // SETTLED or CANCELLED — merge the order-account balance back
               // into the master account via a private transfer.  Serialised
               // through the queue to prevent UTXO double-spend races.
-              cleanupScheduled = true;
-
               const newBalance = Math.round(newTrade.availableMargin);
               const accountAddress = newTrade.accountAddress;
               const accountType: ZkAccount["type"] =
                 newTrade.orderStatus === "CANCELLED" ? "Coin" : "CoinSettled";
               const tradeCopy = { ...newTrade };
 
-              masterAccountQueue
+              const cleanupPromise = masterAccountQueue
                 .enqueue(async () => {
                   // Read state at task-execution time, not closure time.
                   const state = storeApi.getState();
@@ -271,6 +262,19 @@ export const useSyncTrades = () => {
                         freshMasterAccount.address,
                         0
                       );
+
+                    if (privateTxSingleResult.success) {
+                      const utxoWait = await waitForUtxoUpdate(
+                        privateTxSingleResult.data.updatedAddress,
+                        ""
+                      );
+                      if (!utxoWait.success) {
+                        console.warn(
+                          "useSyncTrades waitForUtxoUpdate timed out (fresh master):",
+                          utxoWait.message
+                        );
+                      }
+                    }
                   } else {
                     // Snapshot current master UTXO txid before broadcast.
                     const utxoBefore = await queryUtxoForAddress(
@@ -376,12 +380,14 @@ export const useSyncTrades = () => {
                 .catch((err) => {
                   console.error("useSyncTrades cleanup queue task failed:", err);
                 });
+
+              cleanupPromises.push(cleanupPromise.then(() => {}));
             }
           }
         }
 
         // Record every status transition to trade history.
-        if (updatedTrade.orderStatus) {
+        if (updatedTrade && updatedTrade.orderStatus) {
           console.log(
             "adding to history",
             trade.orderStatus,
@@ -389,6 +395,12 @@ export const useSyncTrades = () => {
           );
           addTradeHistory(newTrade);
         }
+      }
+
+      // Wait for all cleanup tasks to complete before committing, so the
+      // next poll sees consistent state.
+      if (cleanupPromises.length > 0) {
+        await Promise.allSettled(cleanupPromises);
       }
 
       // Always commit the updated trade statuses so the next poll cycle

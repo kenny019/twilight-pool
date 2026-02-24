@@ -8,10 +8,12 @@ import { ColumnDef } from '@tanstack/react-table';
 import Big from 'big.js';
 import dayjs from 'dayjs';
 import Link from 'next/link';
+import { PnlCell, PnlHeader } from '@/lib/components/pnl-display';
 
 // Define the TableMeta interface for global table data
 interface OrderHistoryTableMeta {
   getCurrentPrice: () => number;
+  getBtcPriceUsd: () => number;
 }
 
 // Update the interface to remove currentPrice and privateKey from row data
@@ -176,34 +178,20 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "realizedPnl",
-    header: "PnL (BTC)",
+    header: () => <PnlHeader variant="PnL" />,
     cell: (row) => {
       const trade = row.row.original;
+      const meta = row.table.options.meta as OrderHistoryTableMeta;
 
       const pnl = trade.orderStatus === "LIQUIDATE"
         ? -trade.initialMargin
         : (trade.realizedPnl || trade.unrealizedPnl || 0);
 
-      if (pnl === undefined || pnl === null) {
-        return <span className="text-xs text-gray-500">0</span>;
-      }
-
-      const isPositive = pnl > 0;
-      const isNegative = pnl < 0;
-
-      const displayPnl = BTC.format(new BTC("sats", Big(pnl)).convert("BTC"), "BTC");
-
       return (
-        <span
-          className={cn(
-            "text-xs font-medium",
-            isPositive && "text-green-medium",
-            isNegative && "text-red",
-            !isPositive && !isNegative && "text-gray-500"
-          )}
-        >
-          {isPositive ? "+" : ""}{displayPnl}
-        </span>
+        <PnlCell
+          pnlSats={pnl === undefined || pnl === null ? null : pnl}
+          btcPriceUsd={meta.getBtcPriceUsd()}
+        />
       );
     },
   },

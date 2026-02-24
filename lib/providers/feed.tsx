@@ -1,5 +1,6 @@
 "use client";
-import { createContext, useCallback, useContext, useMemo, useRef } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { useReconcileOrphanedAccounts } from '../hooks/useReconcileOrphanedAccounts';
 import { useSyncTrades } from '../hooks/useSyncTrades';
 
 type PriceFeedProviderProps = {
@@ -86,7 +87,8 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addPrice, getCurrentPrice, subscribe]);
 
-  useSyncTrades()
+  useReconcileOrphanedAccounts();
+  useSyncTrades();
   // useSyncBalance()
 
   return <feedContext.Provider value={value}>{children}</feedContext.Provider>;

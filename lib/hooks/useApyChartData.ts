@@ -3,16 +3,8 @@ import wfetch from "../http";
 import { priceURL } from "../api/rest";
 import { TwilightApiResponse } from "../types";
 
-export type ApyChartRange = "24 hours" | "7 days" | "30 days";
-export type ApyChartStep =
-  | "1 minute"
-  | "5 minutes"
-  | "15 minutes"
-  | "30 minutes"
-  | "1 hour"
-  | "2 hours"
-  | "4 hours"
-  | "12 hours";
+export type ApyChartRange = "1d" | "7d" | "30d";
+export type ApyChartStep = "1m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "12h";
 export type ApyChartLookback = "24 hours" | "7 days" | "30 days";
 
 export interface ApyChartParams {
@@ -20,6 +12,14 @@ export interface ApyChartParams {
   step: ApyChartStep;
   lookback: ApyChartLookback;
 }
+
+export type ApyPeriod = "1D" | "1W" | "1M";
+
+export const APY_PERIOD_PARAMS: Record<ApyPeriod, ApyChartParams> = {
+  "1D": { range: "1d", step: "15m", lookback: "24 hours" },
+  "1W": { range: "7d", step: "2h", lookback: "7 days" },
+  "1M": { range: "30d", step: "12h", lookback: "30 days" },
+};
 
 export interface ApyChartDataPoint {
   time: number;
@@ -61,7 +61,7 @@ async function fetchApyChartData(
   return data.result
     .map((point) => ({
       time: new Date(point.bucket_ts).getTime() / 1000,
-      value: parseFloat(point.apy),
+      value: parseFloat(point.apy) * 100, // API returns decimal (0.0821 = 8.21%), convert to percentage for display
     }))
     .sort((a, b) => a.time - b.time);
 }

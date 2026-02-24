@@ -2,7 +2,9 @@ import { queryUtxoForAddress } from "@/lib/api/zkos";
 import { UtxoData } from "@/lib/types";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
-const DEFAULT_POLL_INTERVAL_MS = 2_000;
+const DEFAULT_POLL_INTERVAL_MS = 1_000;
+/** Minimum wait before returning success. Relayer/chain UTXO availability ~5–6s. */
+const DEFAULT_MIN_WAIT_MS = 5_000;
 
 type WaitResult =
   | { success: true }
@@ -13,10 +15,9 @@ type WaitResult =
  * txid than `previousTxid`, indicating that the on-chain UTXO store has
  * been updated after the most recent broadcastTradingTx call.
  *
- * We compare txids rather than output_index because output_index is just
- * the position within a transaction (almost always 0 for single-output
- * Dark transfers) and will be the same for the old and new UTXO.
- * txid is the unique transaction hash and changes with every new broadcast.
+ * Enforces a minimum wait (default 5s) so the oracle/chain has time to
+ * reflect the new state before the next task runs. This prevents UTXO
+ * double-spend races when multiple merges run in quick succession.
  *
  * Typical usage — inside a masterAccountQueue task, after broadcastTradingTx:
  *
@@ -31,18 +32,24 @@ type WaitResult =
 export async function waitForUtxoUpdate(
   address: string,
   previousTxid: string,
-  options?: { timeoutMs?: number; pollIntervalMs?: number }
+  options?: {
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+    minWaitMs?: number;
+  }
 ): Promise<WaitResult> {
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+  const minWaitMs = options?.minWaitMs ?? DEFAULT_MIN_WAIT_MS;
   const deadline = Date.now() + timeoutMs;
+  const minWaitDeadline = Date.now() + minWaitMs;
 
   while (Date.now() < deadline) {
     const result = await queryUtxoForAddress(address);
 
     if (hasUtxoData(result)) {
       const currentTxid = serializeTxid(result.txid);
-      if (currentTxid !== previousTxid) {
+      if (currentTxid !== previousTxid && Date.now() >= minWaitDeadline) {
         return { success: true };
       }
     }

@@ -30,7 +30,7 @@ import {
   createZkAccountWithBalance,
   createZkBurnTx,
 } from "@/lib/twilight/zk";
-import { broadcastTradingTx } from "@/lib/api/zkos";
+import { broadcastTradingTx, queryUtxoForAddress } from "@/lib/api/zkos";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import Link from "next/link";
@@ -39,6 +39,13 @@ import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { twilightproject } from "twilightjs";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import { safeJSONParse, isUserRejection } from "@/lib/helpers";
+import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
+import {
+  hasUtxoData,
+  serializeTxid,
+  waitForUtxoUpdate,
+} from "@/lib/utils/waitForUtxoUpdate";
+import { useTwilightStoreApi } from "@/lib/providers/store";
 import { getRegisteredBTCAddress } from '@/lib/twilight/rest';
 import { registerBTCAddress } from '@/lib/utils/btc-registration';
 import dayjs from "dayjs";
@@ -76,6 +83,7 @@ const TransferDialog = ({
   );
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const storeApi = useTwilightStoreApi();
 
   const { twilightSats } = useGetTwilightBTCBalance();
 
@@ -493,197 +501,232 @@ const TransferDialog = ({
             return;
           }
 
-          const transientZkAccount = await createZkAccount({
-            tag: "transient",
-            signature: privateKey,
-          });
+          const runBurn = async () => {
+            const currentSender = storeApi.getState().zk.zkAccounts.find(
+              (a) => a.address === senderZkAccount.address
+            );
+            if (!currentSender) return;
 
-          const senderZkPrivateAccount = await ZkPrivateAccount.create({
-            signature: privateKey,
-            existingAccount: senderZkAccount,
-          });
+            const transientZkAccount = await createZkAccount({
+              tag: "transient",
+              signature: privateKey,
+            });
 
-          const privateTxSingleResult =
-            await senderZkPrivateAccount.privateTxSingle(
+            const utxoBefore =
+              senderZkAccount.tag === "main"
+                ? await queryUtxoForAddress(currentSender.address)
+                : null;
+            const previousTxid =
+              utxoBefore && hasUtxoData(utxoBefore)
+                ? serializeTxid(utxoBefore.txid)
+                : "";
+
+            const senderZkPrivateAccount = await ZkPrivateAccount.create({
+              signature: privateKey,
+              existingAccount: currentSender,
+            });
+
+            const privateTxSingleResult =
+              await senderZkPrivateAccount.privateTxSingle(
+                transferAmount,
+                transientZkAccount.address
+              );
+
+            if (!privateTxSingleResult.success) {
+              console.error(privateTxSingleResult.message);
+              toast({
+                variant: "error",
+                title: "An error has occurred",
+                description: privateTxSingleResult.message,
+              });
+              setIsSubmitLoading(false);
+              return;
+            }
+
+            if (senderZkAccount.tag === "main") {
+              const utxoWait = await waitForUtxoUpdate(
+                senderZkPrivateAccount.get().address,
+                previousTxid
+              );
+              if (!utxoWait.success) {
+                console.warn(
+                  "transfer-dialog waitForUtxoUpdate timed out:",
+                  utxoWait.message
+                );
+              }
+            }
+
+            const {
+              scalar: updatedTransientScalar,
+              txId,
+              updatedAddress: updatedTransientAddress,
+            } = privateTxSingleResult.data;
+
+            console.log("txId", txId, "updatedAddess", updatedTransientAddress);
+
+            console.log(
+              "transient zkAccount balance =",
               transferAmount,
-              transientZkAccount.address
             );
 
-          if (!privateTxSingleResult.success) {
-            console.error(privateTxSingleResult.message);
-            toast({
-              variant: "error",
-              title: "An error has occurred",
-              description: privateTxSingleResult.message,
-            });
-            setIsSubmitLoading(false);
-            return;
-          }
-
-          const {
-            scalar: updatedTransientScalar,
-            txId,
-            updatedAddress: updatedTransientAddress,
-          } = privateTxSingleResult.data;
-
-          console.log("txId", txId, "updatedAddess", updatedTransientAddress);
-
-          console.log(
-            "transient zkAccount balance =",
-            transferAmount,
-          );
-
-          const {
-            success,
-            msg: zkBurnMsg,
-            zkAccountHex,
-          } = await createZkBurnTx({
-            signature: privateKey,
-            zkAccount: {
-              tag: senderZkAccount.tag,
-              address: updatedTransientAddress,
-              scalar: updatedTransientScalar,
-              isOnChain: true,
-              value: transferAmount,
-              type: "Coin",
-            },
-            initZkAccountAddress: transientZkAccount.address,
-          });
-
-          if (!success || !zkBurnMsg || !zkAccountHex) {
-            toast({
-              variant: "error",
-              title: "An error has occurred",
-              description: "Please try again later.",
-            });
-            console.error("error creating zkBurnTx msg");
-            console.error({
+            const {
               success,
-              zkBurnMsg,
+              msg: zkBurnMsg,
               zkAccountHex,
+            } = await createZkBurnTx({
+              signature: privateKey,
+              zkAccount: {
+                tag: senderZkAccount.tag,
+                address: updatedTransientAddress,
+                scalar: updatedTransientScalar,
+                isOnChain: true,
+                value: transferAmount,
+                type: "Coin",
+              },
+              initZkAccountAddress: transientZkAccount.address,
             });
-            setIsSubmitLoading(false);
-            return;
-          }
 
-          console.log({
-            zkAccountHex: zkAccountHex,
-            balance: transferAmount,
-            signature: privateKey,
-            initZkAccountAddress: transientZkAccount.address,
-          });
+            if (!success || !zkBurnMsg || !zkAccountHex) {
+              toast({
+                variant: "error",
+                title: "An error has occurred",
+                description: "Please try again later.",
+              });
+              console.error("error creating zkBurnTx msg");
+              console.error({
+                success,
+                zkBurnMsg,
+                zkAccountHex,
+              });
+              setIsSubmitLoading(false);
+              return;
+            }
 
-          const isAccountValid = await verifyAccount({
-            zkAccountHex: zkAccountHex,
-            balance: transferAmount,
-            signature: privateKey,
-          });
+            console.log({
+              zkAccountHex: zkAccountHex,
+              balance: transferAmount,
+              signature: privateKey,
+              initZkAccountAddress: transientZkAccount.address,
+            });
 
-          console.log("isAccountValid", isAccountValid);
+            const isAccountValid = await verifyAccount({
+              zkAccountHex: zkAccountHex,
+              balance: transferAmount,
+              signature: privateKey,
+            });
 
-          toast({
-            title: "Broadcasting transfer",
-            description:
-              "Please do not close this page while your transfer is being submitted...",
-          });
+            console.log("isAccountValid", isAccountValid);
 
-          const txValidMessage = await verifyQuisQuisTransaction({
-            tx: zkBurnMsg,
-          });
-
-          console.log("txValidMessage", txValidMessage);
-
-          const tradingTxResString = await broadcastTradingTx(
-            zkBurnMsg,
-            twilightAddress
-          );
-
-          console.log("zkBurnMsg tradingTxResString >>"), tradingTxResString;
-
-          const tradingTxRes = safeJSONParse(tradingTxResString as string);
-
-          if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
             toast({
-              variant: "error",
-              title: "An error has occurred",
-              description: "Please try again later.",
+              title: "Broadcasting transfer",
+              description:
+                "Please do not close this page while your transfer is being submitted...",
             });
-            console.error("error broadcasting zkBurnTx msg", tradingTxRes);
-            setIsSubmitLoading(false);
-            return;
+
+            const txValidMessage = await verifyQuisQuisTransaction({
+              tx: zkBurnMsg,
+            });
+
+            console.log("txValidMessage", txValidMessage);
+
+            const tradingTxResString = await broadcastTradingTx(
+              zkBurnMsg,
+              twilightAddress
+            );
+
+            console.log("zkBurnMsg tradingTxResString >>"), tradingTxResString;
+
+            const tradingTxRes = safeJSONParse(tradingTxResString as string);
+
+            if (!tradingTxRes.success || Object.hasOwn(tradingTxRes, "error")) {
+              toast({
+                variant: "error",
+                title: "An error has occurred",
+                description: "Please try again later.",
+              });
+              console.error("error broadcasting zkBurnTx msg", tradingTxRes);
+              setIsSubmitLoading(false);
+              return;
+            }
+
+            console.log("tradingTxRes", tradingTxRes);
+
+            const { mintBurnTradingBtc } =
+              twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
+
+            const stargateClient = await chainWallet.getSigningStargateClient();
+
+            console.log({
+              btcValue: Long.fromNumber(transferAmount),
+              encryptScalar: updatedTransientScalar,
+              mintOrBurn: false,
+              qqAccount: zkAccountHex,
+              twilightAddress,
+            });
+
+            const mintBurnMsg = mintBurnTradingBtc({
+              btcValue: Long.fromNumber(transferAmount),
+              encryptScalar: updatedTransientScalar,
+              mintOrBurn: false,
+              qqAccount: zkAccountHex,
+              twilightAddress,
+            });
+
+            console.log("mintBurnMsg", mintBurnMsg);
+            const mintBurnRes = await stargateClient.signAndBroadcast(
+              twilightAddress,
+              [mintBurnMsg],
+              "auto"
+            );
+
+            updateZkAccount(senderZkAccount.address, {
+              ...senderZkAccount,
+              address: senderZkPrivateAccount.get().address,
+              scalar: senderZkPrivateAccount.get().scalar,
+              value: senderZkPrivateAccount.get().value,
+            });
+
+            addTransactionHistory({
+              date: new Date(),
+              from: senderZkAccount.address,
+              fromTag: senderZkAccount.tag,
+              to: twilightAddress,
+              toTag: "Funding",
+              tx_hash: mintBurnRes.transactionHash,
+              type: "Burn",
+              value: transferAmount,
+            });
+
+            console.log(
+              "sent sats from trading to funding",
+              senderZkAccount.value
+            );
+
+            console.log("mintBurnRes", mintBurnRes);
+            toast({
+              title: "Success",
+              description: (
+                <div className="opacity-90">
+                  {`Successfully sent ${new BTC("sats", Big(transferAmount))
+                    .convert("BTC")
+                    .toString()} BTC to Funding Account. `}
+                  <Link
+                    href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
+                    target={"_blank"}
+                    className="text-sm underline hover:opacity-100"
+                  >
+                    Explorer link
+                  </Link>
+                </div>
+              ),
+            });
+          };
+
+          if (senderZkAccount.tag === "main") {
+            await masterAccountQueue.enqueue(runBurn);
+          } else {
+            await runBurn();
           }
-
-          console.log("tradingTxRes", tradingTxRes);
-
-          const { mintBurnTradingBtc } =
-            twilightproject.nyks.zkos.MessageComposer.withTypeUrl;
-
-          const stargateClient = await chainWallet.getSigningStargateClient();
-
-          console.log({
-            btcValue: Long.fromNumber(transferAmount),
-            encryptScalar: updatedTransientScalar,
-            mintOrBurn: false,
-            qqAccount: zkAccountHex,
-            twilightAddress,
-          });
-
-          const mintBurnMsg = mintBurnTradingBtc({
-            btcValue: Long.fromNumber(transferAmount),
-            encryptScalar: updatedTransientScalar,
-            mintOrBurn: false,
-            qqAccount: zkAccountHex,
-            twilightAddress,
-          });
-
-          console.log("mintBurnMsg", mintBurnMsg);
-          const mintBurnRes = await stargateClient.signAndBroadcast(
-            twilightAddress,
-            [mintBurnMsg],
-            "auto"
-          );
-
-          updateZkAccount(senderZkAccount.address, {
-            ...senderZkAccount,
-            address: senderZkPrivateAccount.get().address,
-            scalar: senderZkPrivateAccount.get().scalar,
-            value: senderZkPrivateAccount.get().value,
-          });
-
-          addTransactionHistory({
-            date: new Date(),
-            from: senderZkAccount.address,
-            fromTag: senderZkAccount.tag,
-            to: twilightAddress,
-            toTag: "Funding",
-            tx_hash: mintBurnRes.transactionHash,
-            type: "Burn",
-            value: transferAmount,
-          });
-
-          console.log(
-            "sent sats from trading to funding",
-            senderZkAccount.value
-          );
-
-          console.log("mintBurnRes", mintBurnRes);
-          toast({
-            title: "Success",
-            description: (
-              <div className="opacity-90">
-                {`Successfully sent ${new BTC("sats", Big(transferAmount))
-                  .convert("BTC")
-                  .toString()} BTC to Funding Account. `}
-                <Link
-                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
-                  target={"_blank"}
-                  className="text-sm underline hover:opacity-100"
-                >
-                  Explorer link
-                </Link>
-              </div>
-            ),
-          });
         }
 
         setIsSubmitLoading(false);
