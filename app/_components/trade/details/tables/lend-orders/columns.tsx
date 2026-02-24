@@ -10,6 +10,9 @@ import BTC from "@/lib/twilight/denoms";
 import { Loader2 } from "lucide-react";
 import cn from "@/lib/cn";
 import { calculateAPR } from "@/lib/helpers";
+import { Tooltip } from "@/components/tooltip";
+
+const MIN_HOLDING_SECONDS = 3600; // 1 hour - don't annualize before this
 
 export interface LendOrdersTableMeta {
   getCurrentPrice: () => number;
@@ -68,23 +71,36 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "pool_share_price",
-    header: "Entry Pool Share Value (BTC)",
+    header: () => (
+      <Tooltip
+        title="Entry Share NAV"
+        body="Implied Share NAV at the time you deposited, computed from your deposit amount and the pool shares you received."
+      >
+        <span>Entry Share NAV</span>
+      </Tooltip>
+    ),
     cell: (row) => {
       const deposit = row.row.original.value;
       const npoolshare = row.row.original.npoolshare;
 
       if (!deposit || !npoolshare) {
-        return <Text className="font-medium">0.00000000 BTC</Text>;
+        return <Text className="font-medium">—</Text>;
       }
 
-      const shareValue = Big(deposit).div(npoolshare).div(10_000);
+      const entryShareNavSats = Math.round(
+        Big(deposit).mul(10_000).div(npoolshare).toNumber()
+      );
 
-      return <Text className="font-medium">{shareValue.toFixed(8)}</Text>;
+      return (
+        <Text className="font-medium">
+          {entryShareNavSats.toLocaleString()} sats
+        </Text>
+      );
     },
   },
   {
     accessorKey: "apy",
-    header: "APR %",
+    header: "Ann. Returns",
     cell: (row) => {
       const order = row.row.original;
       const meta = row.table.options.meta as LendOrdersTableMeta;
@@ -100,15 +116,20 @@ export const lendOrdersColumns: ColumnDef<
         currentSharePrice * (order.npoolshare / 10000) - order.value;
       const timeElapsedSeconds = (Date.now() - orderTimestampMs) / 1000;
 
-      const apr = calculateAPR({
-        rewards,
-        principal: order.value,
-        timeElapsedSeconds,
-      });
+      const apr =
+        timeElapsedSeconds >= MIN_HOLDING_SECONDS
+          ? calculateAPR({
+              rewards,
+              principal: order.value,
+              timeElapsedSeconds,
+            })
+          : 0;
 
       return (
         <Text className={cn("font-medium", apr > 0 && "text-green-medium")}>
-          {apr.toFixed(2)}%
+          {timeElapsedSeconds >= MIN_HOLDING_SECONDS
+            ? `${apr.toFixed(2)}%`
+            : "—"}
         </Text>
       );
     },

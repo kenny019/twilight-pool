@@ -89,7 +89,7 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
   },
   {
     accessorKey: "pool_share_price",
-    header: "Entry Pool Share Value (BTC)",
+    header: "Entry Share NAV",
     cell: (row) => {
       const deposit = row.row.original.value;
       const npoolshare = row.row.original.npoolshare;
