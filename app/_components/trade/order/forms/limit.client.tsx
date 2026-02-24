@@ -43,6 +43,7 @@ import { ArrowLeftRight, ChevronDown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import React, {
   SyntheticEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -66,6 +67,11 @@ const OrderLimitForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leverage, setLeverage] = useState<string>("1");
   const [percent, setPercent] = useState<number>(0);
+
+  const updatePercent = useCallback((value: number) => {
+    const finalValue = Math.max(0, Math.min(value, 100));
+    setPercent(finalValue);
+  }, []);
 
   const { getCurrentPrice, subscribe } = usePriceFeed();
   const liveBtcPrice = useSyncExternalStore(
@@ -679,6 +685,7 @@ const OrderLimitForm = () => {
                       .toString();
 
                     setOrderSats(newOrderSats.toNumber());
+                    setPercent(value);
                   }}
                 >
                   {value}%
@@ -698,12 +705,25 @@ const OrderLimitForm = () => {
             step="any"
             name="btc"
             onChange={(e) => {
-              if (!e.target.value) return;
+              if (!e.target.value) {
+                setPercent(0);
+                return;
+              }
 
-              const convertedToSats = new BTC("BTC", Big(e.target.value))
-                .convert("sats")
-                .toNumber();
-              setOrderSats(convertedToSats);
+              try {
+                const convertedToSats = new BTC("BTC", Big(e.target.value))
+                  .convert("sats")
+                  .toNumber();
+                setOrderSats(convertedToSats);
+
+                if (!tradingAccountBalance) return;
+                updatePercent(
+                  Big(e.target.value)
+                    .div(Big(tradingAccountBalanceString))
+                    .mul(100)
+                    .toNumber()
+                );
+              } catch {}
             }}
             disabled={!tradingAccountBalance}
           />

@@ -13,6 +13,7 @@ import TraderHistoryTable from "./tables/trader-history/trader-history-table.cli
 import OrderHistoryTable from "./tables/order-history/order-history-table.client";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
+import EditOrderDialog from "@/components/edit-order-dialog";
 
 type TabType =
   | "history"
@@ -24,6 +25,11 @@ type TabType =
 const DetailsPanel = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
   const [settlingOrders, setSettlingOrders] = useState<Set<string>>(new Set());
+  const [editDialogOrder, setEditDialogOrder] = useState<TradeOrder | null>(
+    null
+  );
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingOrders, setEditingOrders] = useState<Set<string>>(new Set());
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
@@ -132,7 +138,7 @@ const DetailsPanel = () => {
           return;
         }
 
-        await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+        await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
         toast({
           title: "Position closed",
@@ -213,7 +219,7 @@ const DetailsPanel = () => {
         title: "Order cancelled",
         description: (
           <div className="opacity-90">
-            Successfully cancelled {order.orderType.toLowerCase()} order.{" "}
+            Successfully cancelled limit order.{" "}
             {cancelOrderData.tx_hash && (
               <Link
                 href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
@@ -264,10 +270,19 @@ const DetailsPanel = () => {
         type: "Coin",
       });
 
-      await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+      await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [privateKey, zkAccounts]
+  );
+
+  const openEditDialog = useCallback(
+    (order: TradeOrder) => {
+      if (editingOrders.has(order.uuid)) return;
+      setEditDialogOrder(order);
+      setIsEditDialogOpen(true);
+    },
+    [editingOrders]
   );
 
   return (
@@ -315,7 +330,11 @@ const DetailsPanel = () => {
           />
         )}
         {currentTab === "open-orders" && (
-          <OpenOrdersTable data={openOrdersData} cancelOrder={cancelOrder} />
+          <OpenOrdersTable
+            data={openOrdersData}
+            cancelOrder={cancelOrder}
+            openEditDialog={openEditDialog}
+          />
         )}
         {currentTab === "trader-history" && (
           <TraderHistoryTable data={traderHistoryData} />
@@ -324,6 +343,13 @@ const DetailsPanel = () => {
           <OrderHistoryTable data={orderHistoryData} />
         )}
       </div>
+      <EditOrderDialog
+        order={editDialogOrder}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        editingOrders={editingOrders}
+        setEditingOrders={setEditingOrders}
+      />
     </div>
   );
 };

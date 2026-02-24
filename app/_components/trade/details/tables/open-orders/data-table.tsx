@@ -17,12 +17,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   cancelOrder: (order: TradeOrder) => Promise<void>;
+  openEditDialog: (order: TradeOrder) => void;
 }
 
 export function OpenOrdersDataTable<TData, TValue>({
   columns,
   data,
   cancelOrder,
+  openEditDialog,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
@@ -31,6 +33,7 @@ export function OpenOrdersDataTable<TData, TValue>({
   // Define the table meta data
   const tableMeta: OpenOrdersTableMeta = {
     cancelOrder,
+    openEditDialog,
   };
 
   const table = useReactTable({

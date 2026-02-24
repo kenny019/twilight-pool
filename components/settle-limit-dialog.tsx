@@ -139,7 +139,7 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
       fundingApplied: settledData.funding_applied,
     });
 
-    await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+    await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
     toast({
       title: "Limit order sent",

@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 
 interface OpenOrdersTableMeta {
   cancelOrder: (order: TradeOrder) => Promise<void>;
+  openEditDialog: (order: TradeOrder) => void;
 }
 
 export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
@@ -120,6 +121,18 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
 
       return (
         <div className="flex flex-row justify-start gap-1">
+          {/*{!trade.settleLimit && (
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openEditDialog(trade);
+              }}
+              variant="ui"
+              size="small"
+            >
+              Edit
+            </Button>
+          )}*/}
           <Button
             onClick={async (e) => {
               e.preventDefault();
@@ -127,6 +140,7 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
             }}
             variant="ui"
             size="small"
+            // disabled={trade.settleLimit !== null}
           >
             Cancel
           </Button>
