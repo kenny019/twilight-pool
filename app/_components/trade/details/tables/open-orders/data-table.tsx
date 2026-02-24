@@ -18,6 +18,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   cancelOrder: (order: TradeOrder) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
 export function OpenOrdersDataTable<TData, TValue>({
@@ -25,6 +26,7 @@ export function OpenOrdersDataTable<TData, TValue>({
   data,
   cancelOrder,
   openEditDialog,
+  isCancellingOrder,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
@@ -34,6 +36,7 @@ export function OpenOrdersDataTable<TData, TValue>({
   const tableMeta: OpenOrdersTableMeta = {
     cancelOrder,
     openEditDialog,
+    isCancellingOrder,
   };
 
   const table = useReactTable({

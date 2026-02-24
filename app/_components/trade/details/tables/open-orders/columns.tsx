@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 interface OpenOrdersTableMeta {
   cancelOrder: (order: TradeOrder) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
 export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
@@ -118,6 +119,7 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
       const meta = row.table.options.meta as OpenOrdersTableMeta;
+      const isCancelling = meta.isCancellingOrder(trade.uuid);
 
       return (
         <div className="flex flex-row justify-start gap-1">
@@ -140,9 +142,9 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
             }}
             variant="ui"
             size="small"
-            // disabled={trade.settleLimit !== null}
+            disabled={isCancelling}
           >
-            Cancel
+            {isCancelling ? "Cancelling..." : "Cancel"}
           </Button>
         </div>
       );

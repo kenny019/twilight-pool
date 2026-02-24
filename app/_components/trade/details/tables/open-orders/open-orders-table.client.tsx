@@ -9,15 +9,17 @@ interface OpenOrdersTableProps {
   data: TradeOrder[];
   cancelOrder: (order: TradeOrder) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
-const OpenOrdersTable = React.memo(function OpenOrdersTable({ data, cancelOrder, openEditDialog }: OpenOrdersTableProps) {
+const OpenOrdersTable = React.memo(function OpenOrdersTable({ data, cancelOrder, openEditDialog, isCancellingOrder }: OpenOrdersTableProps) {
   return (
     <OpenOrdersDataTable
       columns={openOrdersColumns}
       data={data}
       cancelOrder={cancelOrder}
       openEditDialog={openEditDialog}
+      isCancellingOrder={isCancellingOrder}
     />
 
   );

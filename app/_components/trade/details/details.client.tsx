@@ -25,6 +25,7 @@ type TabType =
 const DetailsPanel = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
   const [settlingOrders, setSettlingOrders] = useState<Set<string>>(new Set());
+  const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(new Set());
   const [editDialogOrder, setEditDialogOrder] = useState<TradeOrder | null>(
     null
   );
@@ -70,6 +71,13 @@ const DetailsPanel = () => {
       return settlingOrders.has(uuid);
     },
     [settlingOrders]
+  );
+
+  const isCancellingOrder = useCallback(
+    (uuid: string) => {
+      return cancellingOrders.has(uuid);
+    },
+    [cancellingOrders]
   );
 
   const settleMarketOrder = useCallback(
@@ -172,6 +180,11 @@ const DetailsPanel = () => {
 
   const cancelOrder = useCallback(
     async (order: TradeOrder) => {
+      if (cancellingOrders.has(order.uuid)) return;
+
+      setCancellingOrders((prev) => new Set(prev).add(order.uuid));
+
+      try {
       toast({
         title: "Cancelling order",
         description:
@@ -271,9 +284,16 @@ const DetailsPanel = () => {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
+      } finally {
+        setCancellingOrders((prev) => {
+          const next = new Set(prev);
+          next.delete(order.uuid);
+          return next;
+        });
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [privateKey, zkAccounts]
+    [privateKey, zkAccounts, cancellingOrders]
   );
 
   const openEditDialog = useCallback(
@@ -334,6 +354,7 @@ const DetailsPanel = () => {
             data={openOrdersData}
             cancelOrder={cancelOrder}
             openEditDialog={openEditDialog}
+            isCancellingOrder={isCancellingOrder}
           />
         )}
         {currentTab === "trader-history" && (
