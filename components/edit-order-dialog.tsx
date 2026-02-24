@@ -288,7 +288,7 @@ function EditOrderDialog({
         type: "Memo",
       });
 
-      // await queryClient.refetchQueries({ queryKey: ["sync-trades"] });
+      await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
       toast({
         title: "Order edited successfully",
