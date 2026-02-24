@@ -6,89 +6,51 @@ import Skeleton from "@/components/skeleton";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useSessionStore } from "@/lib/providers/session";
 import React, { useMemo } from "react";
-import { useGetPoolShareValue } from "@/lib/hooks/useGetPoolShareValue";
-import {
-  useApyChartData,
-  APY_PERIOD_PARAMS,
-  ApyPeriod,
-} from "@/lib/hooks/useApyChartData";
-import { Tooltip } from "@/components/tooltip";
-import {
-  median,
-  periodReturnFromApy,
-  formatReturnPct,
-} from "@/lib/utils/lend-metrics";
+import { useGetPoolShareValue } from '@/lib/hooks/useGetPoolShareValue';
+import { useApyChartData, APY_PERIOD_PARAMS, ApyPeriod } from "@/lib/hooks/useApyChartData";
 
 const APY_LABELS: Record<ApyPeriod, string> = {
-  "1D": "Pool APY (1D)",
-  "1W": "Pool APY (7D)",
-  "1M": "Pool APY (30D)",
-};
-
-const RETURN_LABELS: Record<ApyPeriod, string> = {
-  "1D": "Pool Return (1D)",
-  "1W": "Pool Return (7D)",
-  "1M": "Pool Return (30D)",
-};
-
-const PERIOD_DAYS: Record<ApyPeriod, number> = {
-  "1D": 1,
-  "1W": 7,
-  "1M": 30,
-};
-
-const MEDIAN_N: Record<ApyPeriod, number | undefined> = {
-  "1D": undefined,
-  "1W": 6,
-  "1M": 4,
+  "1D": "APY (24h)",
+  "1W": "APY (7d)",
+  "1M": "APY (30d)",
 };
 
 type PoolInfoProps = {
   selectedApyPeriod: ApyPeriod;
 };
 
-const StatBlock = ({
-  label,
-  value,
-  isLoaded,
-  placeholder,
-}: {
-  label: React.ReactNode;
-  value: React.ReactNode;
-  isLoaded: boolean;
-  placeholder: React.ReactNode;
-}) => (
-  <div className="flex flex-col gap-1">
-    {label}
-    <Resource isLoaded={isLoaded} placeholder={placeholder}>
-      <Text className="text-base font-semibold">{value}</Text>
-    </Resource>
-  </div>
-);
-
 const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
   const currentPrice = useSessionStore((state) => state.price.btcPrice);
 
   const { data: poolShareValue } = useGetPoolShareValue();
-  const { data: chartData } = useApyChartData(
-    APY_PERIOD_PARAMS[selectedApyPeriod]
-  );
+  const { data: chartData } = useApyChartData(APY_PERIOD_PARAMS[selectedApyPeriod]);
 
-  const { displayApy, displayReturn } = useMemo(() => {
-    let apy: number | undefined;
+  const displayApy = useMemo(() => {
     if (selectedApyPeriod === "1D") {
-      apy = poolInfo?.apy;
-    } else if (chartData?.length) {
-      const values = chartData.map((p) => p.value);
-      apy = median(values, MEDIAN_N[selectedApyPeriod]) ?? undefined;
+      return poolInfo?.apy;
     }
-    const returnVal =
-      apy != null
-        ? periodReturnFromApy(apy, PERIOD_DAYS[selectedApyPeriod])
-        : undefined;
-    return { displayApy: apy, displayReturn: returnVal };
+    if (chartData && chartData.length > 0) {
+      return chartData[chartData.length - 1]?.value;
+    }
+    return undefined;
   }, [selectedApyPeriod, poolInfo?.apy, chartData]);
+
+  const isApyLoaded = selectedApyPeriod === "1D" ? !!poolInfo : !!chartData?.length;
+
+  return (
+    <div className="flex flex-row flex-wrap gap-6 md:gap-12">
+      <div className="flex flex-col">
+        <Text className="text-sm text-primary-accent">{APY_LABELS[selectedApyPeriod]}</Text>
+        <Resource
+          isLoaded={isApyLoaded}
+          placeholder={<Skeleton className="h-6 w-16" />}
+        >
+          <Text className="text-xl font-semibold">
+            {displayApy != null ? displayApy.toFixed(2) : "0.00"}%
+          </Text>
+        </Resource>
+      </div>
 
   const isApyLoaded =
     selectedApyPeriod === "1D" ? !!poolInfo : !!chartData?.length;
