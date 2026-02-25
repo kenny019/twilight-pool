@@ -20,15 +20,12 @@ export const createTradeHistorySlice: StateImmerCreator<
   ...initialTradeHistorySliceState,
   addTrade: (tradeOrder) =>
     set((state) => {
-      const idx = state.trade_history.trades.findIndex(
-        (trade) => trade.uuid === tradeOrder.uuid
+      const exists = state.trade_history.trades.some(
+        (t) =>
+          t.uuid === tradeOrder.uuid &&
+          t.orderStatus === tradeOrder.orderStatus
       );
-      if (idx >= 0) {
-        state.trade_history.trades[idx] = {
-          ...state.trade_history.trades[idx],
-          ...tradeOrder,
-        };
-      } else {
+      if (!exists) {
         state.trade_history.trades.push(tradeOrder);
       }
     }),
@@ -60,7 +57,9 @@ export const createTradeHistorySlice: StateImmerCreator<
       const newLocalTrades = currentTrades.filter(
         (currentTrade) =>
           !trades.some(
-            (incomingTrade) => incomingTrade.uuid === currentTrade.uuid
+            (incomingTrade) =>
+              incomingTrade.uuid === currentTrade.uuid &&
+              incomingTrade.orderStatus === currentTrade.orderStatus
           )
       );
 
