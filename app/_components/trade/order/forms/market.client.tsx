@@ -285,9 +285,9 @@ const OrderMarketForm = () => {
     }
 
     try {
-      const satsValue = new BTC("BTC", Big(btcValue))
-        .convert("sats")
-        .toNumber();
+      const satsValue = Math.floor(
+        new BTC("BTC", Big(btcValue)).convert("sats").toNumber()
+      );
 
       if (tradingAccountBalance < satsValue) {
         toast({

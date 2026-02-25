@@ -69,6 +69,25 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     },
   },
   {
+    id: "type",
+    header: "Type",
+    cell: ({ row }) => {
+      const trade = row.original;
+      if (trade.settleLimit) {
+        return (
+          <span className="rounded px-2 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-500">
+            Close
+          </span>
+        );
+      }
+      return (
+        <span className="rounded px-2 py-1 text-xs font-medium bg-primary-accent/10 text-primary-accent">
+          Open
+        </span>
+      );
+    },
+  },
+  {
     accessorKey: "positionSize",
     header: "Position Size (USD)",
     cell: (row) => {
@@ -83,7 +102,7 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
 
   {
     accessorKey: "orderType",
-    header: "Type",
+    header: "Order Type",
     cell: (row) => {
       const orderType = row.getValue() as string;
       return (

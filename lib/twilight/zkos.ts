@@ -138,7 +138,7 @@ async function createTraderOrder({
     programContract,
     signature,
     scalar,
-    value: BigInt(value),
+    value: BigInt(Math.floor(value)),
     positionType,
     orderType,
     leverage,
@@ -151,7 +151,7 @@ async function createTraderOrder({
     programContract,
     signature,
     scalar,
-    BigInt(value),
+    BigInt(Math.floor(value)),
     positionType,
     orderType,
     leverage,
@@ -179,7 +179,7 @@ async function createZkOSLendOrder({
     signature,
     scriptAddress,
     scalar,
-    BigInt(deposit)
+    BigInt(Math.floor(deposit))
   );
 }
 
@@ -203,9 +203,9 @@ async function createTradingTxSingle({
     signature,
     senderInput,
     receiverAddress,
-    BigInt(amount),
+    BigInt(Math.floor(amount)),
     isReceiverInput, // input has to be true if receiver account exists
-    BigInt(updatedSenderBalance),
+    BigInt(Math.floor(updatedSenderBalance)),
     BigInt(1)
   );
 }
@@ -284,7 +284,7 @@ async function createBurnMessageTx({
   const zkos = await initZkos();
   return zkos.createBurnMessageTransaction(
     inputString,
-    BigInt(amount),
+    BigInt(Math.floor(amount)),
     scalar,
     signature,
     address
@@ -369,9 +369,9 @@ async function createShuffleTransactionSingle({
     signature,
     senderInput,
     receiverAddress,
-    BigInt(amount),
+    BigInt(Math.floor(amount)),
     false,
-    BigInt(updatedSenderBalance),
+    BigInt(Math.floor(updatedSenderBalance)),
     anonymitySet,
     BigInt(1)
   );

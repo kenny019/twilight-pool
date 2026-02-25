@@ -280,12 +280,11 @@ const OrderLimitForm = () => {
 
       const action = submitter.value as "sell" | "buy";
 
-      const btcAmountInSats = new BTC(
-        "BTC",
-        Big(btcAmountRef.current?.value as string)
-      )
-        .convert("sats")
-        .toNumber();
+      const btcAmountInSats = Math.floor(
+        new BTC("BTC", Big(btcAmountRef.current?.value as string))
+          .convert("sats")
+          .toNumber()
+      );
 
       if (tradingAccountBalance < btcAmountInSats) {
         toast({

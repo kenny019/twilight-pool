@@ -49,7 +49,10 @@ const DetailsPanel = () => {
 
   const openOrdersData = useMemo(() => {
     return tradeOrders.filter(
-      (trade) => trade.orderStatus === "PENDING" || trade.settleLimit
+      (trade) =>
+        trade.orderStatus !== "SETTLED" &&
+        trade.orderStatus !== "CANCELLED" &&
+        (trade.orderStatus === "PENDING" || trade.settleLimit)
     );
   }, [tradeOrders]);
 
