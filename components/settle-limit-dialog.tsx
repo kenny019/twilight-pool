@@ -37,6 +37,13 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
 
   const [limitPrice, setLimitPrice] = useState(currentPrice || 0);
 
+  React.useEffect(() => {
+    if (open && currentPrice) {
+      setLimitPrice(currentPrice);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const selectedTrade = trades.find(
     (trade) => trade.accountAddress === account
   );

@@ -14,7 +14,7 @@ type RetryErrorResponse = {
 const sleep = (delay: number) => new Promise((res) => setTimeout(res, delay));
 
 export async function retry<QueryReturn, QueryArgs = void>(
-  query: (...args: QueryArgs[]) => QueryReturn,
+  query: (args: QueryArgs, ...rest: any[]) => QueryReturn,
   retries: number,
   args: QueryArgs,
   delay: number,
