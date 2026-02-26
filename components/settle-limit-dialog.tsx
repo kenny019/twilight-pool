@@ -28,6 +28,9 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
 
   const trades = useTwilightStore((state) => state.trade.trades);
   const updateTrade = useTwilightStore((state) => state.trade.updateTrade);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
   const privateKey = useSessionStore((state) => state.privateKey);
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
@@ -120,8 +123,7 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
 
     const settledData = result.data;
 
-    console.log("test1", settledData);
-    updateTrade({
+    const updatedTradeData = {
       ...selectedTrade,
       orderStatus: settledData.order_status,
       availableMargin: Big(settledData.available_margin).toNumber(),
@@ -144,6 +146,20 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
       initialMargin: Big(settledData.initial_margin).toNumber(),
       settleLimit: settledData.settle_limit,
       fundingApplied: settledData.funding_applied,
+    };
+
+    updateTrade(updatedTradeData);
+    addTradeHistory({
+      ...updatedTradeData,
+      positionType:
+        settledData.settle_limit?.position_type ||
+        updatedTradeData.positionType,
+      entryPrice: settledData.settle_limit
+        ? Number(settledData.settle_limit.price)
+        : updatedTradeData.entryPrice,
+      orderStatus: "PENDING",
+      orderType: "LIMIT",
+      date: new Date(),
     });
 
     await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
