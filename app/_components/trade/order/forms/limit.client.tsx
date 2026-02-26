@@ -117,6 +117,18 @@ const OrderLimitForm = () => {
     }
   }, [orderPrice, leverage, orderSats]);
 
+  const positionSizeBtc = useMemo(() => {
+    if (!orderSats || !leverage) return "0";
+    try {
+      const leverageBig = Big(leverage || "1");
+      if (leverageBig.lte(0)) return "0";
+      const totalSats = Big(orderSats).mul(leverageBig);
+      return BTC.format(new BTC("sats", totalSats).convert("BTC"), "BTC");
+    } catch {
+      return "0";
+    }
+  }, [orderSats, leverage]);
+
   const liquidationPrices = useMemo(() => {
     if (!orderPrice || !leverage || !orderSats || orderPrice <= 0) {
       return { long: "0.00", short: "0.00" };
@@ -839,6 +851,10 @@ const OrderLimitForm = () => {
       <div className="flex justify-between">
         <Text className={"mb-1 text-xs opacity-80"}>Position Size (USD)</Text>
         <Text className={"mb-1 text-xs opacity-80"}>${positionSize}</Text>
+      </div>
+      <div className="flex justify-between">
+        <Text className={"mb-1 text-xs opacity-80"}>Position Size (BTC)</Text>
+        <Text className={"mb-1 text-xs opacity-80"}>{positionSizeBtc} BTC</Text>
       </div>
 
       {status === "Connected" ? (

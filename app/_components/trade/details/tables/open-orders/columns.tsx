@@ -75,13 +75,13 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       const trade = row.original;
       if (trade.settleLimit) {
         return (
-          <span className="rounded px-2 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-500">
+          <span className="rounded bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-500">
             Close
           </span>
         );
       }
       return (
-        <span className="rounded px-2 py-1 text-xs font-medium bg-primary-accent/10 text-primary-accent">
+        <span className="rounded bg-primary-accent/10 px-2 py-1 text-xs font-medium text-primary-accent">
           Open
         </span>
       );
@@ -114,7 +114,7 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
   },
   {
     accessorKey: "entryPrice",
-    header: "Entry Price (USD)",
+    header: "Limit Price (USD)",
     accessorFn: (row) =>
       `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`,
   },

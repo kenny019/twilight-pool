@@ -149,7 +149,9 @@ export const traderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const pnl = trade.orderStatus === "LIQUIDATE"
         ? -trade.initialMargin
         : (trade.realizedPnl || trade.unrealizedPnl || 0);
-      const funding = Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled - trade.feeSettled + pnl);
+      const funding = trade.fundingApplied != null
+        ? Number(trade.fundingApplied)
+        : Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled - trade.feeSettled + pnl);
 
       const fundingBTC = new BTC("sats", Big(funding))
         .convert("BTC")

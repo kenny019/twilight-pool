@@ -141,6 +141,20 @@ const OrderMarketForm = () => {
     }
   }, [usdAmount, leverage]);
 
+  const positionSizeBtc = useMemo(() => {
+    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) return "0";
+    try {
+      const leverageBig = Big(leverage || "1");
+      const usdBig = Big(usdAmount);
+      if (usdBig.lte(0) || leverageBig.lte(0)) return "0";
+      Big.DP = 20;
+      const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig);
+      return BTC.format(btcValue, "BTC");
+    } catch {
+      return "0";
+    }
+  }, [usdAmount, leverage, currentPrice]);
+
   const liquidationPrices = useMemo(() => {
     if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) {
       return { long: "0.00", short: "0.00" };
@@ -745,11 +759,9 @@ const OrderMarketForm = () => {
                 return;
               }
 
-              Big.DP = 2;
-
-              const usdValue = Big(currentPrice).mul(value).toFixed(2);
-              usdRef.current.value = usdValue;
-              setUsdAmount(usdValue);
+              const usdPrecise = Big(currentPrice).mul(value);
+              usdRef.current.value = usdPrecise.toFixed(2);
+              setUsdAmount(usdPrecise.toString());
 
               if (!tradingAccountBalance) return;
               updatePercent(
@@ -808,10 +820,9 @@ const OrderMarketForm = () => {
             btcRef.current.value = newBtcAmount;
             setPercent(value[0]);
 
-            const usdValue = Big(currentPrice).mul(newBtcAmount).toFixed(2);
-
-            usdRef.current.value = usdValue;
-            setUsdAmount(usdValue);
+            const usdPrecise = Big(currentPrice).mul(newBtcAmount);
+            usdRef.current.value = usdPrecise.toFixed(2);
+            setUsdAmount(usdPrecise.toString());
           }}
           value={[percent]}
           defaultValue={[1]}
@@ -874,6 +885,10 @@ const OrderMarketForm = () => {
       <div className="flex justify-between">
         <Text className={"mb-1 text-xs opacity-80"}>Position Size (USD)</Text>
         <Text className={"mb-1 text-xs opacity-80"}>${positionSize}</Text>
+      </div>
+      <div className="flex justify-between">
+        <Text className={"mb-1 text-xs opacity-80"}>Position Size (BTC)</Text>
+        <Text className={"mb-1 text-xs opacity-80"}>{positionSizeBtc} BTC</Text>
       </div>
 
       {status === "Connected" ? (

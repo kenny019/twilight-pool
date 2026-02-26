@@ -55,7 +55,11 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const order = row.row.original;
 
-      if (!order.tx_hash || order.orderStatus === "CANCELLED") {
+      if (
+        !order.tx_hash ||
+        order.orderStatus === "CANCELLED" ||
+        order.orderStatus === "PENDING"
+      ) {
         return <Text className="text-primary-accent">-</Text>;
       }
 
@@ -234,13 +238,16 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
         trade.orderStatus === "LIQUIDATE"
           ? -trade.initialMargin
           : trade.realizedPnl || trade.unrealizedPnl || 0;
-      const funding = Math.round(
-        trade.initialMargin -
-          trade.availableMargin -
-          trade.feeFilled -
-          trade.feeSettled +
-          pnl
-      );
+      const funding =
+        trade.fundingApplied != null
+          ? Number(trade.fundingApplied)
+          : Math.round(
+              trade.initialMargin -
+                trade.availableMargin -
+                trade.feeFilled -
+                trade.feeSettled +
+                pnl
+            );
 
       const fundingBTC = new BTC("sats", Big(funding)).convert("BTC");
 

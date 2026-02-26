@@ -25,7 +25,9 @@ type TabType =
 const DetailsPanel = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
   const [settlingOrders, setSettlingOrders] = useState<Set<string>>(new Set());
-  const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(new Set());
+  const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(
+    new Set()
+  );
   const [editDialogOrder, setEditDialogOrder] = useState<TradeOrder | null>(
     null
   );
@@ -42,6 +44,9 @@ const DetailsPanel = () => {
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
 
   const positionsData = useMemo(() => {
     return tradeOrders.filter((trade) => trade.orderStatus === "FILLED");
@@ -188,105 +193,115 @@ const DetailsPanel = () => {
       setCancellingOrders((prev) => new Set(prev).add(order.uuid));
 
       try {
-      toast({
-        title: "Cancelling order",
-        description:
-          "Please do not close this page while your order is being cancelled...",
-      });
-
-      const cancelOrderResult = await cancelZkOrder(order, privateKey);
-
-      if (!cancelOrderResult.success) {
         toast({
-          title: "Failed to cancel order",
-          description: cancelOrderResult.message,
-          variant: "error",
+          title: "Cancelling order",
+          description:
+            "Please do not close this page while your order is being cancelled...",
         });
-        return;
-      }
 
-      const cancelOrderData = cancelOrderResult.data;
+        const cancelOrderResult = await cancelZkOrder(order, privateKey);
 
-      const zkAccount = zkAccounts.find(
-        (account) => account.address === order.accountAddress
-      );
+        if (!cancelOrderResult.success) {
+          toast({
+            title: "Failed to cancel order",
+            description: cancelOrderResult.message,
+            variant: "error",
+          });
+          return;
+        }
 
-      if (!zkAccount) {
+        const cancelOrderData = cancelOrderResult.data;
+
+        const zkAccount = zkAccounts.find(
+          (account) => account.address === order.accountAddress
+        );
+
+        if (!zkAccount) {
+          toast({
+            title: "Failed to cancel order",
+            description: "Failed to find account",
+            variant: "error",
+          });
+          return;
+        }
+
+        // const result = await cleanupTradeOrder(privateKey, zkAccount);
+
+        // if (!result.success) {
+        //   toast({
+        //     title: "Error with settling trade order",
+        //     description: result.message,
+        //     variant: "error",
+        //   })
+        //   return;
+        // }
+
         toast({
-          title: "Failed to cancel order",
-          description: "Failed to find account",
-          variant: "error",
+          title: "Order cancelled",
+          description: (
+            <div className="opacity-90">
+              Successfully cancelled limit order.{" "}
+              {cancelOrderData.tx_hash && (
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
+                  target={"_blank"}
+                  className="text-sm underline hover:opacity-100"
+                >
+                  Explorer link
+                </Link>
+              )}
+            </div>
+          ),
         });
-        return;
-      }
 
-      // const result = await cleanupTradeOrder(privateKey, zkAccount);
+        const updatedAccount = zkAccounts.find(
+          (account) => account.address === order.accountAddress
+        );
 
-      // if (!result.success) {
-      //   toast({
-      //     title: "Error with settling trade order",
-      //     description: result.message,
-      //     variant: "error",
-      //   })
-      //   return;
-      // }
+        if (!updatedAccount) {
+          toast({
+            title: "Failed to cancel order",
+            description: "Failed to find account",
+            variant: "error",
+          });
+          return;
+        }
 
-      toast({
-        title: "Order cancelled",
-        description: (
-          <div className="opacity-90">
-            Successfully cancelled limit order.{" "}
-            {cancelOrderData.tx_hash && (
-              <Link
-                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
-                target={"_blank"}
-                className="text-sm underline hover:opacity-100"
-              >
-                Explorer link
-              </Link>
-            )}
-          </div>
-        ),
-      });
+        // addTradeHistory({
+        //   ...order,
+        //   orderStatus: cancelOrderData.order_status,
+        //   availableMargin: Big(cancelOrderData.available_margin).toNumber(),
+        //   maintenanceMargin: Big(cancelOrderData.maintenance_margin).toNumber(),
+        //   unrealizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
+        //   settlementPrice: Big(cancelOrderData.settlement_price).toNumber(),
+        //   positionSize: Big(cancelOrderData.positionsize).toNumber(),
+        //   orderType: cancelOrderData.order_type,
+        //   date: dayjs(cancelOrderData.timestamp).toDate(),
+        //   exit_nonce: cancelOrderData.exit_nonce,
+        //   executionPrice: Big(cancelOrderData.execution_price).toNumber(),
+        //   isOpen: false,
+        //   feeSettled: Big(cancelOrderData.fee_settled).toNumber(),
+        //   feeFilled: Big(cancelOrderData.fee_filled).toNumber(),
+        //   realizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
+        //   tx_hash: cancelOrderData.tx_hash || order.tx_hash,
+        // })
 
-      const updatedAccount = zkAccounts.find(
-        (account) => account.address === order.accountAddress
-      );
-
-      if (!updatedAccount) {
-        toast({
-          title: "Failed to cancel order",
-          description: "Failed to find account",
-          variant: "error",
+        addTradeHistory({
+          ...order,
+          entryPrice: order.settleLimit
+            ? Number(order.settleLimit.price)
+            : order.entryPrice,
+          orderStatus: "CANCELLED",
+          orderType: "LIMIT",
+          date: new Date(),
         });
-        return;
-      }
 
-      // addTradeHistory({
-      //   ...order,
-      //   orderStatus: cancelOrderData.order_status,
-      //   availableMargin: Big(cancelOrderData.available_margin).toNumber(),
-      //   maintenanceMargin: Big(cancelOrderData.maintenance_margin).toNumber(),
-      //   unrealizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-      //   settlementPrice: Big(cancelOrderData.settlement_price).toNumber(),
-      //   positionSize: Big(cancelOrderData.positionsize).toNumber(),
-      //   orderType: cancelOrderData.order_type,
-      //   date: dayjs(cancelOrderData.timestamp).toDate(),
-      //   exit_nonce: cancelOrderData.exit_nonce,
-      //   executionPrice: Big(cancelOrderData.execution_price).toNumber(),
-      //   isOpen: false,
-      //   feeSettled: Big(cancelOrderData.fee_settled).toNumber(),
-      //   feeFilled: Big(cancelOrderData.fee_filled).toNumber(),
-      //   realizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-      //   tx_hash: cancelOrderData.tx_hash || order.tx_hash,
-      // })
+        updateZkAccount(order.accountAddress, {
+          ...updatedAccount,
+          type: "Coin",
+        });
 
-      updateZkAccount(order.accountAddress, {
-        ...updatedAccount,
-        type: "Coin",
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
+        await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
       } finally {
         setCancellingOrders((prev) => {
           const next = new Set(prev);

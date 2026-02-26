@@ -235,7 +235,14 @@ export type TransactionHash = {
   order_status: string;
   order_type: string;
   output: string;
+  request_id: string | null;
   tx_hash: string;
+};
+
+type TransactionHashOpts = {
+  status?: "FILLED" | "SETTLED" | "PENDING" | "CANCELLED";
+  limit?: number;
+  offset?: number;
 };
 
 async function getLastDayApy() {
@@ -345,13 +352,14 @@ async function getMarketStats() {
 }
 
 async function queryTransactionHashes(
-  address: string
+  address: string,
+  opts?: TransactionHashOpts
 ): Promise<Record<string, never> | TwilightApiResponse<TransactionHash[]>> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "transaction_hashes",
     params: {
-      AccountId: { id: address },
+      AccountId: { id: address, ...opts },
     },
     id: 1,
   });
@@ -370,12 +378,15 @@ async function queryTransactionHashes(
   return data;
 }
 
-async function queryTransactionHashByRequestId(requestId: string) {
+async function queryTransactionHashByRequestId(
+  requestId: string,
+  opts?: TransactionHashOpts
+) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     method: "transaction_hashes",
     params: {
-      RequestId: { id: requestId },
+      RequestId: { id: requestId, ...opts },
     },
     id: 1,
   });

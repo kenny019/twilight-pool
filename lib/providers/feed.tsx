@@ -87,9 +87,15 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addPrice, getCurrentPrice, subscribe]);
 
+  return (
+    <feedContext.Provider value={value}>
+      <PriceFeedConsumers>{children}</PriceFeedConsumers>
+    </feedContext.Provider>
+  );
+};
+
+const PriceFeedConsumers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useReconcileOrphanedAccounts();
   useSyncTrades();
-  // useSyncBalance()
-
-  return <feedContext.Provider value={value}>{children}</feedContext.Provider>;
+  return <>{children}</>;
 };
