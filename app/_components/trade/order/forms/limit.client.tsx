@@ -481,22 +481,23 @@ const OrderLimitForm = () => {
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
         if (txHashResult.result) {
-          const transactionHashes = txHashResult.result;
-
-          let txResult = false;
-
-          transactionHashes.forEach((result) => {
-            console.log(`limit order transaction hashes result`, result);
-            if (result.tx_hash.includes("Error")) {
-              return;
-            }
-
-            txResult = !!result.tx_hash;
-          });
-
-          return txResult;
+          const found = txHashResult.result.find(
+            (r) =>
+              r.tx_hash &&
+              !r.tx_hash.includes("Error") &&
+              r.order_status !== "CANCELLED"
+          );
+          return !!found;
         }
         return false;
+      };
+
+      const transactionHashFailCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
+        return txHashResult.result?.some(
+          (r) => r.order_status === "CANCELLED"
+        ) ?? false;
       };
 
       const transactionHashRes = await retry<
@@ -507,16 +508,43 @@ const OrderLimitForm = () => {
         30,
         newZkAccount.address,
         1000,
-        transactionHashCondition
+        transactionHashCondition,
+        transactionHashFailCondition
       );
 
       if (!transactionHashRes.success) {
-        throw "Unable to get tx hash of order";
+        if (transactionHashRes.cancelled) {
+          toast({
+            variant: "error",
+            title: "Order request denied",
+            description:
+              "Your order request was denied by the relayer. Your funds remain in your account. Please try again.",
+          });
+        } else {
+          toast({
+            variant: "error",
+            title: "Error",
+            description: "Unable to get tx hash of order",
+          });
+        }
+        return;
       }
 
-      const orderData = transactionHashRes.data.result[0];
+      const orderData = transactionHashRes.data.result.find(
+        (r) =>
+          r.tx_hash &&
+          !r.tx_hash.includes("Error") &&
+          r.order_status !== "CANCELLED"
+      );
 
-      if (!orderData) throw "Unable to get tx hash of order";
+      if (!orderData) {
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Unable to get tx hash of order",
+        });
+        return;
+      }
 
       console.log("orderData", orderData);
 

@@ -68,7 +68,7 @@ const MyInvestment = () => {
                 timeElapsedSeconds: timeElapsed,
               })
             : 0;
-        if (timeElapsed >= MIN_HOLDING_SECONDS) {
+        if (timeElapsed >= MIN_HOLDING_SECONDS && Number.isFinite(apr)) {
           weightedAPRSum += apr * order.value;
           totalWeight += order.value;
           showAnnualizedReturn = true;
@@ -167,7 +167,7 @@ const MyInvestment = () => {
         <div className="col-span-2 flex flex-col gap-1">
           <Tooltip
             title="Annualized Return (est.)"
-            body="An annualized estimate based on your current unrealized rewards and time since deposit. This can change as Share NAV changes."
+            body="An annualized estimate based on your current unrealized rewards and time since deposit. This can change as Share NAV changes. For stability, annualization assumes a minimum 7-day holding period."
           >
             <Text className="text-primary-accent">
               Annualized Return (est.)
@@ -177,10 +177,13 @@ const MyInvestment = () => {
             <Text
               className={cn(
                 "font-medium",
-                data.annualizedReturn > 0 && "text-green-medium"
+                data.annualizedReturn > 0 && "text-green-medium",
+                data.annualizedReturn < 0 && "text-red"
               )}
             >
-              {data.hasActiveDeposits && data.showAnnualizedReturn
+              {data.hasActiveDeposits &&
+              data.showAnnualizedReturn &&
+              Number.isFinite(data.annualizedReturn)
                 ? `${data.annualizedReturn.toFixed(2)}%`
                 : "—"}
             </Text>

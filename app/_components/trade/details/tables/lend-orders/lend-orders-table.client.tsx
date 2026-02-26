@@ -13,6 +13,7 @@ interface Props {
   getPoolSharePrice: () => number;
   settleLendOrder: (order: LendOrder) => Promise<void>;
   settlingOrderId: string | null;
+  isRelayerHalted?: boolean;
 }
 
 const LendOrdersTable = ({
@@ -20,7 +21,8 @@ const LendOrdersTable = ({
   getCurrentPrice,
   getPoolSharePrice,
   settleLendOrder,
-  settlingOrderId
+  settlingOrderId,
+  isRelayerHalted,
 }: Props) => {
   return (
     <LendOrdersDataTable
@@ -30,6 +32,7 @@ const LendOrdersTable = ({
       getPoolSharePrice={getPoolSharePrice}
       settleLendOrder={settleLendOrder}
       settlingOrderId={settlingOrderId}
+      isRelayerHalted={isRelayerHalted}
     />
   );
 };
