@@ -759,11 +759,9 @@ const OrderMarketForm = () => {
                 return;
               }
 
-              Big.DP = 2;
-
-              const usdValue = Big(currentPrice).mul(value).toFixed(2);
-              usdRef.current.value = usdValue;
-              setUsdAmount(usdValue);
+              const usdPrecise = Big(currentPrice).mul(value);
+              usdRef.current.value = usdPrecise.toFixed(2);
+              setUsdAmount(usdPrecise.toString());
 
               if (!tradingAccountBalance) return;
               updatePercent(
@@ -822,10 +820,9 @@ const OrderMarketForm = () => {
             btcRef.current.value = newBtcAmount;
             setPercent(value[0]);
 
-            const usdValue = Big(currentPrice).mul(newBtcAmount).toFixed(2);
-
-            usdRef.current.value = usdValue;
-            setUsdAmount(usdValue);
+            const usdPrecise = Big(currentPrice).mul(newBtcAmount);
+            usdRef.current.value = usdPrecise.toFixed(2);
+            setUsdAmount(usdPrecise.toString());
           }}
           value={[percent]}
           defaultValue={[1]}

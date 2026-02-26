@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
 import { Zap } from "lucide-react";
@@ -42,38 +42,42 @@ const TickerWrapper = () => {
 
   const [oiShowBtc, setOiShowBtc] = useState(false);
   const [countdownString, setCountdownString] = useState("00:00:00");
+  const hasResetRef = useRef(false);
 
   function useFundingCountdown() {
     useEffect(() => {
       if (!fundingTimestamp) return;
+      hasResetRef.current = false;
 
       const timer = setInterval(() => {
         const now = dayjs();
         const fundingTime = dayjs(fundingTimestamp);
 
-        const nextFunding = fundingTime.add(1, "hour");
+        let nextFunding = fundingTime.add(1, "hour");
+        const expired = nextFunding.diff(now, "ms") <= 0;
+
+        if (expired && !hasResetRef.current) {
+          hasResetRef.current = true;
+          resetFunding();
+        }
+
+        while (nextFunding.diff(now, "ms") <= 0) {
+          nextFunding = nextFunding.add(1, "hour");
+        }
 
         const fundingTimeDelta = nextFunding.diff(now, "ms");
+        const hours = Math.floor((fundingTimeDelta / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((fundingTimeDelta / 1000 / 60) % 60);
+        const seconds = Math.floor((fundingTimeDelta / 1000) % 60);
 
-        if (fundingTimeDelta > 0) {
-          const hours = Math.floor((fundingTimeDelta / (1000 * 60 * 60)) % 24);
-          const minutes = Math.floor((fundingTimeDelta / 1000 / 60) % 60);
-          const seconds = Math.floor((fundingTimeDelta / 1000) % 60);
-
-          setCountdownString(
-            `${hours.toString().padStart(2, "0")}:${minutes
-              .toString()
-              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-          );
-        } else {
-          resetFunding();
-          clearInterval(timer);
-          setCountdownString("00:00:00");
-        }
+        setCountdownString(
+          `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+        );
       }, 1000);
 
       return () => clearInterval(timer);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fundingTimestamp, resetFunding]);
   }
 
