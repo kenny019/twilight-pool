@@ -125,11 +125,18 @@ export const lendOrdersColumns: ColumnDef<
             })
           : 0;
 
+      const showApr =
+        timeElapsedSeconds >= MIN_HOLDING_SECONDS && Number.isFinite(apr);
+
       return (
-        <Text className={cn("font-medium", apr > 0 && "text-green-medium")}>
-          {timeElapsedSeconds >= MIN_HOLDING_SECONDS
-            ? `${apr.toFixed(2)}%`
-            : "—"}
+        <Text
+          className={cn(
+            "font-medium",
+            apr > 0 && "text-green-medium",
+            apr < 0 && "text-red"
+          )}
+        >
+          {showApr ? `${apr.toFixed(2)}%` : "—"}
         </Text>
       );
     },

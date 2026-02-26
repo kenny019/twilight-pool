@@ -97,15 +97,35 @@ export function safeJSONParse<T>(
 }
 
 const SECONDS_IN_YEAR = 31_536_000;
+/** Minimum effective holding time for annualization. Prevents extreme ARR spikes for very recent deposits. */
+const MIN_ANNUALIZATION_SECONDS = 7 * 24 * 60 * 60;
 
+/**
+ * Calculates annualized return (ARR) from rewards, principal, and time elapsed.
+ * ARR is symmetric: positive or negative, reflecting actual performance.
+ * Uses a 7-day minimum annualization window to avoid extreme spikes for new deposits.
+ */
 export function calculateAPR(params: {
   rewards: number;
   principal: number;
   timeElapsedSeconds: number;
 }): number {
   const { rewards, principal, timeElapsedSeconds } = params;
-  if (principal <= 0 || timeElapsedSeconds <= 0 || rewards <= 0) return 0;
-  return (rewards / principal) * (SECONDS_IN_YEAR / timeElapsedSeconds) * 100;
+
+  // Division-by-zero guards: return NaN so callers display "—"
+  if (principal <= 0 || timeElapsedSeconds <= 0) return NaN;
+
+  // Noise guard: negligible return (< 0.0001%) treated as 0 to reduce micro-noise
+  const returnRatio = rewards / principal;
+  if (Math.abs(returnRatio) < 1e-6) return 0;
+
+  // Use minimum 7-day window for annualization to prevent extreme ARR for very recent deposits
+  const effectiveSeconds = Math.max(
+    timeElapsedSeconds,
+    MIN_ANNUALIZATION_SECONDS
+  );
+
+  return (rewards / principal) * (SECONDS_IN_YEAR / effectiveSeconds) * 100;
 }
 
 export function isUserRejection(err: unknown): boolean {

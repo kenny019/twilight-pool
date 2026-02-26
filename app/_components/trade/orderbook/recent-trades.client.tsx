@@ -26,7 +26,8 @@ export const orderbookColumns: ColumnDef<RecentTrade>[] = [
     accessorKey: "positionsize",
     header: "Size (USD)",
     accessorFn: (row) => {
-      return new BTC("sats", Big(row.positionsize)).convert("BTC").toFixed(4);
+      const btc = new BTC("sats", Big(row.positionsize)).convert("BTC");
+      return Number(btc).toFixed(2);
     },
   },
   {

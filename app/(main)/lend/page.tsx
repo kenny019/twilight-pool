@@ -66,7 +66,7 @@ const Page = () => {
   const { toast } = useToast();
 
   const [currentTab, setCurrentTab] = useState<TabType>("active-orders");
-  const [selectedApyPeriod, setSelectedApyPeriod] = useState<ApyPeriod>("1D");
+  const [selectedApyPeriod, setSelectedApyPeriod] = useState<ApyPeriod>("1W");
   const [isSettleLoading, setIsSettleLoading] = useState(false);
   const [settlingOrderId, setSettlingOrderId] = useState<string | null>(null);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
@@ -519,6 +519,13 @@ const Page = () => {
         </Text>
         <PoolInfo selectedApyPeriod={selectedApyPeriod} />
       </div>
+      {/* Pool Health */}
+      <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
+        <Text heading="h2" className="mb-4 text-lg font-medium">
+          Pool Health
+        </Text>
+        <PoolHealth />
+      </div>
 
       {/* APY Chart and Add Liquidity */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -533,7 +540,10 @@ const Page = () => {
                 : "30 Days"}
             )
           </Text>
-          <ApyChart selectedPeriod={selectedApyPeriod} onPeriodChange={setSelectedApyPeriod} />
+          <ApyChart
+            selectedPeriod={selectedApyPeriod}
+            onPeriodChange={setSelectedApyPeriod}
+          />
         </div>
 
         <div className="bg-card rounded-lg border border-outline p-4 md:p-6">

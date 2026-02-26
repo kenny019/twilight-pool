@@ -319,7 +319,7 @@ const LendManagement = () => {
 
     const poolShare = (sats / (poolInfo?.pool_share || 0));
 
-    setApproxPoolShare(poolShare.toFixed(8))
+    setApproxPoolShare(poolShare.toFixed(2))
   }, [depositDenom, poolInfo?.pool_share])
 
   function renderDepositForm() {
