@@ -19,6 +19,7 @@ export interface LendOrdersTableMeta {
   getPoolSharePrice: () => number;
   settleLendOrder: (order: LendOrder) => Promise<void>;
   settlingOrderId: string | null;
+  isRelayerHalted?: boolean;
 }
 
 export const lendOrdersColumns: ColumnDef<
@@ -210,23 +211,36 @@ export const lendOrdersColumns: ColumnDef<
         return null;
       }
 
+      const withdrawDisabled =
+        isSettling ||
+        meta.settlingOrderId !== null ||
+        meta.isRelayerHalted;
+
       return (
         <div className="flex justify-start space-x-2">
-          <Button
-            size="small"
-            onClick={() => meta.settleLendOrder(order)}
-            disabled={isSettling || meta.settlingOrderId !== null}
-            className="px-3 py-1"
+          <span
+            title={
+              meta.isRelayerHalted
+                ? "The relayer is halted. Withdrawals will be available when it resumes."
+                : undefined
+            }
           >
-            {isSettling ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                Withdrawing...
-              </>
-            ) : (
-              "Withdraw"
-            )}
-          </Button>
+            <Button
+              size="small"
+              onClick={() => meta.settleLendOrder(order)}
+              disabled={withdrawDisabled}
+              className="px-3 py-1"
+            >
+              {isSettling ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Withdrawing...
+                </>
+              ) : (
+                "Withdraw"
+              )}
+            </Button>
+          </span>
         </div>
       );
     },

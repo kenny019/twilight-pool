@@ -21,8 +21,10 @@ import { executeLendOrder } from "@/lib/api/client";
 import {
   queryTransactionHashByRequestId,
   queryTransactionHashes,
+  type TransactionHash,
 } from "@/lib/api/rest";
 import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
+import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
@@ -64,6 +66,8 @@ const Page = () => {
   useGetLendPoolInfo();
 
   const { toast } = useToast();
+  const marketStats = useGetMarketStats();
+  const isRelayerHalted = marketStats.data?.status === "HALT";
 
   const [currentTab, setCurrentTab] = useState<TabType>("active-orders");
   const [selectedApyPeriod, setSelectedApyPeriod] = useState<ApyPeriod>("1W");
@@ -133,6 +137,16 @@ const Page = () => {
         return;
       }
 
+      if (isRelayerHalted) {
+        toast({
+          variant: "error",
+          title: "Withdrawals paused",
+          description:
+            "The relayer is currently halted. Withdrawals will be available when the relayer resumes.",
+        });
+        return;
+      }
+
       toast({
         title: "Withdrawing lend order",
         description:
@@ -146,9 +160,8 @@ const Page = () => {
         ReturnType<typeof queryTransactionHashes>,
         string
       >(queryTransactionHashes, 30, order.accountAddress, 1000, (txHash) => {
-        const found = txHash.result.find((tx) => tx.order_status === "FILLED");
-
-        return found ? true : false;
+        const found = txHash.result?.find((tx) => tx.order_status === "FILLED");
+        return !!found;
       });
 
       if (!lendOrderRes.success) {
@@ -187,24 +200,58 @@ const Page = () => {
       const requestId = executeLendRes.result.id_key;
 
       const requestIdRes = await retry<
-        ReturnType<typeof queryTransactionHashes>,
+        ReturnType<typeof queryTransactionHashByRequestId>,
         string
-      >(queryTransactionHashByRequestId, 30, requestId, 1000, (txHash) => {
-        const found = txHash.result.find((tx) => tx.order_status === "SETTLED");
-
-        return found ? true : false;
-      });
+      >(
+        queryTransactionHashByRequestId,
+        30,
+        requestId,
+        1000,
+        (txHash) => {
+          const result = "result" in txHash ? txHash.result : undefined;
+          const found = Array.isArray(result)
+            ? result.find(
+                (tx: TransactionHash) => tx.order_status === "SETTLED"
+              )
+            : undefined;
+          return !!found;
+        },
+        (txHash) => {
+          const result = "result" in txHash ? txHash.result : undefined;
+          const cancelled = Array.isArray(result)
+            ? result.find(
+                (tx: TransactionHash) => tx.order_status === "CANCELLED"
+              )
+            : undefined;
+          return !!cancelled;
+        }
+      );
 
       if (!requestIdRes.success) {
-        console.error("lend order settle not successful");
+        if (requestIdRes.cancelled) {
+          toast({
+            variant: "error",
+            title: "Withdraw request denied",
+            description: "The withdraw request was denied. Please try again later.",
+          });
+        } else {
+          console.error("lend order settle not successful");
+          toast({
+            variant: "error",
+            title: "Unable to withdraw lend order",
+            description: "An error has occurred, try again later.",
+          });
+        }
         setIsSettleLoading(false);
         setSettlingOrderId(null);
         return;
       }
 
-      const requestIdData = requestIdRes.data.result.find(
-        (tx) => tx.order_status === "SETTLED"
-      );
+      const txResult =
+        "result" in requestIdRes.data ? requestIdRes.data.result : [];
+      const requestIdData = Array.isArray(txResult)
+        ? txResult.find((tx: TransactionHash) => tx.order_status === "SETTLED")
+        : undefined;
 
       const tx_hash = requestIdData?.tx_hash;
 
@@ -229,25 +276,31 @@ const Page = () => {
         orderStatus: "SETTLED",
       });
 
-      const queryLendOrderRes = await queryLendOrder(queryLendOrderMsg);
-      console.log(queryLendOrderRes);
+      const queryLendOrderRes = await retry(
+        queryLendOrder,
+        5,
+        queryLendOrderMsg,
+        1000,
+        (res) => !!res?.result
+      );
 
-      if (!queryLendOrderRes) {
-        console.error(queryLendOrderRes);
+      if (!queryLendOrderRes.success || !queryLendOrderRes.data?.result) {
+        console.error("queryLendOrder", queryLendOrderRes);
         toast({
           variant: "error",
           title: "Unable to query lend order",
-          description: "An error has occurred, try again later.",
+          description:
+            "Your withdraw may have succeeded. Check your transaction history.",
         });
         setIsSettleLoading(false);
         setSettlingOrderId(null);
         return;
       }
 
+      const lendResult = queryLendOrderRes.data.result;
       const newBalance = Math.round(
-        Big(queryLendOrderRes.result.new_lend_state_amount).toNumber()
+        Big(lendResult.new_lend_state_amount ?? 0).toNumber()
       );
-      // const newBalance = Math.round(Big(queryLendOrderRes.result.balance).toNumber())
 
       console.log("newBalance", newBalance);
 
@@ -268,7 +321,7 @@ const Page = () => {
         timestamp: new Date(),
         tx_hash: tx_hash,
         value: newBalance,
-        payment: Big(queryLendOrderRes.result.payment).toNumber() || 0,
+        payment: Big(lendResult.payment ?? 0).toNumber() || 0,
       });
 
       setIsSettleLoading(false);
@@ -483,6 +536,7 @@ const Page = () => {
             getPoolSharePrice={getPoolSharePrice}
             settleLendOrder={settleLendOrder}
             settlingOrderId={settlingOrderId}
+            isRelayerHalted={isRelayerHalted}
           />
         );
       case "lend-history":

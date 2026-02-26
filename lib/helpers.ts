@@ -7,6 +7,8 @@ type RetrySuccessResponse<T> = {
 
 type RetryErrorResponse = {
   success: false;
+  /** True when failCondition matched (e.g. order CANCELLED by relayer) */
+  cancelled?: boolean;
 };
 
 const sleep = (delay: number) => new Promise((res) => setTimeout(res, delay));
@@ -16,7 +18,9 @@ export async function retry<QueryReturn, QueryArgs = void>(
   retries: number,
   args: QueryArgs,
   delay: number,
-  condition?: (data: Awaited<QueryReturn>) => boolean
+  condition?: (data: Awaited<QueryReturn>) => boolean,
+  /** When true, fail immediately without retrying (e.g. CANCELLED status) */
+  failCondition?: (data: Awaited<QueryReturn>) => boolean
 ): Promise<RetrySuccessResponse<Awaited<QueryReturn>> | RetryErrorResponse> {
   let outputData: NonNullable<Awaited<QueryReturn>> | undefined = undefined;
   let tryCount = 0;
@@ -35,6 +39,10 @@ export async function retry<QueryReturn, QueryArgs = void>(
       }
 
       outputData = response;
+
+      if (failCondition?.(outputData)) {
+        return { success: false, cancelled: true };
+      }
 
       if (outputData && !condition) {
         break;

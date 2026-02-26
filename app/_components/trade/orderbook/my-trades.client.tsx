@@ -356,23 +356,28 @@ const OrderMyTrades = () => {
           txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
         ) => {
           if (txHashResult.result) {
-            const transactionHashes = txHashResult.result;
-
-            let hasSettled = false;
-            transactionHashes.forEach((result) => {
-              if (result.order_status !== "PENDING") {
-                return;
-              }
-
-              console.log(result.order_id, tradeOrder.uuid);
-              hasSettled =
-                result.order_id === tradeOrder.uuid &&
-                !result.tx_hash.includes("Error");
-            });
-
-            return hasSettled;
+            const found = txHashResult.result.find(
+              (r) =>
+                (r.order_status === "PENDING" || r.order_status === "SETTLED") &&
+                r.order_id === tradeOrder.uuid &&
+                r.tx_hash &&
+                !r.tx_hash.includes("Error")
+            );
+            return !!found;
           }
           return false;
+        };
+
+        const transactionHashFailCondition = (
+          txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+        ) => {
+          return (
+            txHashResult.result?.some(
+              (r) =>
+                r.order_id === tradeOrder.uuid &&
+                r.order_status === "CANCELLED"
+            ) ?? false
+          );
         };
 
         const transactionHashRes = await retry<
@@ -383,16 +388,26 @@ const OrderMyTrades = () => {
           30,
           tradeOrder.accountAddress,
           1000,
-          transactionHashCondition
+          transactionHashCondition,
+          transactionHashFailCondition
         );
 
         if (!transactionHashRes.success) {
-          console.error("settling order failed to get transaction_hashes");
-          toast({
-            variant: "error",
-            title: "Error",
-            description: "Error with settling trade order",
-          });
+          if (transactionHashRes.cancelled) {
+            toast({
+              variant: "error",
+              title: "Settle request not honored",
+              description:
+                "The settle request was not honored. Please resend the request.",
+            });
+          } else {
+            console.error("settling order failed to get transaction_hashes");
+            toast({
+              variant: "error",
+              title: "Error",
+              description: "Error with settling trade order",
+            });
+          }
           return;
         }
 
@@ -401,7 +416,8 @@ const OrderMyTrades = () => {
         // as input is memo and not yet coin
 
         const settledTx = transactionHashRes.data.result.find(
-          (tx) => tx.order_status === "SETTLED"
+          (tx) =>
+            tx.order_status === "SETTLED" && tx.order_id === tradeOrder.uuid
         );
 
         const getZkAccountBalanceResult = await retry<

@@ -132,23 +132,26 @@ export async function settleOrder(
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
         if (txHashResult.result) {
-          const transactionHashes = txHashResult.result;
-
-          let hasSettled = false;
-          transactionHashes.forEach((result) => {
-            if (result.order_status !== "SETTLED") {
-              return;
-            }
-
-            console.log(`txHash result`, result);
-            hasSettled =
-              result.order_id === trade.uuid &&
-              !result.tx_hash.includes("Error");
-          });
-
-          return hasSettled;
+          const found = txHashResult.result.find(
+            (r) =>
+              r.order_status === "SETTLED" &&
+              r.order_id === trade.uuid &&
+              r.tx_hash &&
+              !r.tx_hash.includes("Error")
+          );
+          return !!found;
         }
         return false;
+      };
+
+      const transactionHashFailCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
+        return (
+          txHashResult.result?.some(
+            (r) => r.order_id === trade.uuid && r.order_status === "CANCELLED"
+          ) ?? false
+        );
       };
 
       const transactionHashRes = await retry<
@@ -159,15 +162,22 @@ export async function settleOrder(
         30,
         trade.accountAddress,
         1000,
-        transactionHashCondition
+        transactionHashCondition,
+        transactionHashFailCondition
       );
 
       if (!transactionHashRes.success) {
+        if (transactionHashRes.cancelled) {
+          return {
+            success: false,
+            message:
+              "Settle request was not honored. Please resend the request.",
+          };
+        }
         console.error(
           "settling MARKET order failed to get transaction_hashes",
           transactionHashRes
         );
-
         return {
           success: false,
           message:
@@ -176,7 +186,7 @@ export async function settleOrder(
       }
 
       const settledTx = transactionHashRes.data.result.find(
-        (tx) => tx.order_status === "SETTLED"
+        (tx) => tx.order_status === "SETTLED" && tx.order_id === trade.uuid
       );
 
       if (!settledTx) {

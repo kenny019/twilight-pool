@@ -5,9 +5,13 @@ import Resource from "@/components/resource";
 import { Text } from "@/components/typography";
 import { sendLendOrder } from "@/lib/api/client";
 import { queryLendOrder } from '@/lib/api/relayer';
-import { queryTransactionHashByRequestId, queryTransactionHashes } from '@/lib/api/rest';
+import {
+  queryTransactionHashByRequestId,
+  type TransactionHash,
+} from "@/lib/api/rest";
 import { retry, isUserRejection } from '@/lib/helpers';
-import useGetTwilightBTCBalance from '@/lib/hooks/useGetTwilightBtcBalance';
+import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
@@ -30,8 +34,9 @@ const LendManagement = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
   const { status } = useWallet();
 
-  const { twilightSats } =
-    useGetTwilightBTCBalance();
+  const { twilightSats } = useGetTwilightBTCBalance();
+  const marketStats = useGetMarketStats();
+  const isRelayerHalted = marketStats.data?.status === "HALT";
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
@@ -60,7 +65,17 @@ const LendManagement = () => {
   async function submitDepositForm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const tag = `BTC lend ${zkAccounts.length}`
+    if (isRelayerHalted) {
+      toast({
+        variant: "error",
+        title: "Deposits paused",
+        description:
+          "The relayer is currently halted. Deposits will be available when the relayer resumes.",
+      });
+      return;
+    }
+
+    const tag = `BTC lend ${zkAccounts.length}`;
 
     const chainWallet = mainWallet?.getChainWallet("nyks");
 
@@ -169,7 +184,7 @@ const LendManagement = () => {
 
       if (data.result && data.result.id_key) {
         const lendOrderRes = await retry<
-          ReturnType<typeof queryTransactionHashes>,
+          ReturnType<typeof queryTransactionHashByRequestId>,
           string
         >(
           queryTransactionHashByRequestId,
@@ -177,28 +192,48 @@ const LendManagement = () => {
           data.result.id_key,
           1000,
           (txHash) => {
-            const found = txHash.result.find(
-              (tx) => tx.order_status === "FILLED"
-            );
-
-            return found ? true : false;
+            const result = "result" in txHash ? txHash.result : undefined;
+            const found = Array.isArray(result)
+              ? result.find((tx: TransactionHash) => tx.order_status === "FILLED")
+              : undefined;
+            return !!found;
+          },
+          (txHash) => {
+            const result = "result" in txHash ? txHash.result : undefined;
+            const cancelled = Array.isArray(result)
+              ? result.find(
+                  (tx: TransactionHash) => tx.order_status === "CANCELLED"
+                )
+              : undefined;
+            return !!cancelled;
           }
         );
 
         if (!lendOrderRes.success) {
-          console.error("lend order deposit not successful");
-          toast({
-            variant: "error",
-            title: "Unable to submit lend order",
-            description: "An error has occurred, try again later.",
-          });
+          if (lendOrderRes.cancelled) {
+            toast({
+              variant: "error",
+              title: "Lend order not accepted",
+              description:
+                "Your funds remain in your ZK account. Use the recovery option in the wallet to move them back to funding.",
+            });
+          } else {
+            console.error("lend order deposit not successful");
+            toast({
+              variant: "error",
+              title: "Unable to submit lend order",
+              description: "An error has occurred, try again later.",
+            });
+          }
           setIsSubmitLoading(false);
           return;
         }
 
-        const lendOrderData = lendOrderRes.data.result.find(
-          (tx) => tx.order_status === "FILLED"
-        );
+        const txResult =
+          "result" in lendOrderRes.data ? lendOrderRes.data.result : [];
+        const lendOrderData = Array.isArray(txResult)
+          ? txResult.find((tx: TransactionHash) => tx.order_status === "FILLED")
+          : undefined;
 
         const tx_hash = lendOrderData?.tx_hash;
 
@@ -234,19 +269,33 @@ const LendManagement = () => {
           orderStatus: "FILLED",
         });
 
-        const queryLendOrderRes = await queryLendOrder(queryLendOrderMsg);
-        console.log(queryLendOrderRes);
+        const queryLendOrderRes = await retry(
+          queryLendOrder,
+          5,
+          queryLendOrderMsg,
+          1000,
+          (res) => !!res?.result
+        );
 
-        if (!queryLendOrderRes) {
-          console.error(queryLendOrderRes);
+        if (!queryLendOrderRes.success || !queryLendOrderRes.data?.result) {
+          console.error("queryLendOrder", queryLendOrderRes);
           toast({
             variant: "error",
             title: "Unable to query lend order",
-            description: "An error has occurred, try again later.",
+            description:
+              "Your deposit may have succeeded. Check your lend history or try refreshing.",
           });
           setIsSubmitLoading(false);
           return;
         }
+
+        const npoolshare = Number(
+          queryLendOrderRes.data.result.npoolshare ?? 0
+        );
+        const fallbackNpoolshare =
+          poolInfo?.pool_share && npoolshare === 0
+            ? Math.round((transferAmount / poolInfo.pool_share) * 10_000)
+            : npoolshare;
 
         const newLendOrder = {
           accountAddress: zkAccountToUse.address,
@@ -256,7 +305,7 @@ const LendManagement = () => {
           timestamp: new Date(),
           apy: poolInfo?.apy,
           tx_hash: tx_hash,
-          npoolshare: Number(queryLendOrderRes.result.npoolshare),
+          npoolshare: fallbackNpoolshare,
           pool_share_price_entry: btcPrice,
         }
 
@@ -372,7 +421,20 @@ const LendManagement = () => {
           <Text>≈ {approxPoolShare}</Text>
         </div>
 
-        <Button disabled={isSubmitLoading || status !== WalletStatus.Connected} type="submit" className="w-full">
+        <Button
+          disabled={
+            isSubmitLoading ||
+            status !== WalletStatus.Connected ||
+            isRelayerHalted
+          }
+          type="submit"
+          className="w-full"
+          title={
+            isRelayerHalted
+              ? "The relayer is halted. Deposits will be available when it resumes."
+              : undefined
+          }
+        >
           <Resource
             isLoaded={!isSubmitLoading}
             placeholder={<Loader2 className="animate-spin" />}
@@ -380,6 +442,11 @@ const LendManagement = () => {
             Deposit
           </Resource>
         </Button>
+        {isRelayerHalted && (
+          <Text className="text-xs text-primary-accent">
+            Deposits paused — relayer is halted
+          </Text>
+        )}
       </form>
     );
   }
