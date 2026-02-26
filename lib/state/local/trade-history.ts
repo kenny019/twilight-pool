@@ -1,10 +1,11 @@
-import { TradeOrder } from "@/lib/types";
+import { FundingHistoryEntry, TradeOrder } from "@/lib/types";
 import { AccountSlices, StateImmerCreator } from "../utils";
 
 export interface TradeHistorySlice {
   trades: TradeOrder[];
   addTrade: (tradeOrder: TradeOrder) => void;
   removeTrade: (tradeOrder: TradeOrder) => void;
+  updateTradeFundingHistory: (uuid: string, fundingHistory: FundingHistoryEntry[]) => void;
   setNewTrades: (trades: TradeOrder[]) => void;
   resetState: () => void;
 }
@@ -40,6 +41,13 @@ export const createTradeHistorySlice: StateImmerCreator<
         }
         return trade;
       });
+    }),
+  updateTradeFundingHistory: (uuid, fundingHistory) =>
+    set((state) => {
+      const trade = state.trade_history.trades.find((t) => t.uuid === uuid);
+      if (trade) {
+        trade.fundingHistory = fundingHistory;
+      }
     }),
 
   resetState: () => {

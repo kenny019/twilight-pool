@@ -2,6 +2,8 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { useReconcileOrphanedAccounts } from '../hooks/useReconcileOrphanedAccounts';
 import { useSyncTrades } from '../hooks/useSyncTrades';
+import { useFundingCycleTrigger } from '../hooks/useFundingCycleTrigger';
+import { useFundingHistoryRefresh } from '../hooks/useFundingHistoryRefresh';
 
 type PriceFeedProviderProps = {
   children: React.ReactNode;
@@ -97,5 +99,9 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
 const PriceFeedConsumers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useReconcileOrphanedAccounts();
   useSyncTrades();
+  useFundingCycleTrigger();
+  useFundingHistoryRefresh();
+  // useSyncBalance()
+
   return <>{children}</>;
 };

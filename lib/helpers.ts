@@ -154,6 +154,17 @@ export function capitaliseFirstLetter(str: string) {
  * @param minLength - Minimum length before truncating (default: 16)
  * @returns The truncated hash or original if shorter than minLength
  */
+/**
+ * Formats sats as mBTC with up to 5 decimal places.
+ * Use for small amounts (funding, fees) where BTC.format's 2-decimal mBTC loses precision.
+ */
+export function formatSatsMBtc(sats: number): string {
+  if (!Number.isFinite(sats)) return "0";
+  const mBtc = sats / 100_000; // 1 mBTC = 100,000 sats
+  const s = mBtc.toFixed(5).replace(/\.?0+$/, "");
+  return s === "-0" ? "0" : s;
+}
+
 export function truncateHash(
   hash: string | null | undefined,
   startLength: number = 8,

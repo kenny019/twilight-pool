@@ -1,6 +1,7 @@
+import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import cn from "@/lib/cn";
-import { capitaliseFirstLetter, truncateHash } from "@/lib/helpers";
+import { capitaliseFirstLetter, formatSatsMBtc, truncateHash } from "@/lib/helpers";
 import { toast } from "@/lib/hooks/useToast";
 import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
@@ -14,6 +15,7 @@ import { PnlCell, PnlHeader } from "@/lib/components/pnl-display";
 interface OrderHistoryTableMeta {
   getCurrentPrice: () => number;
   getBtcPriceUsd: () => number;
+  openFundingDialog: (trade: TradeOrder) => void;
 }
 
 // Update the interface to remove currentPrice and privateKey from row data
@@ -230,9 +232,10 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "funding",
-    header: "Funding (BTC)",
+    header: "Funding (mBTC)",
     cell: (row) => {
       const trade = row.row.original;
+      const meta = row.table.options.meta as OrderHistoryTableMeta;
 
       const pnl =
         trade.orderStatus === "LIQUIDATE"
@@ -249,23 +252,36 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
                 pnl
             );
 
-      const fundingBTC = new BTC("sats", Big(funding)).convert("BTC");
-
       return (
-        <span
-          className={cn(
-            "font-medium",
-            funding > 0 ? "text-green-medium" : funding < 0 ? "text-red" : ""
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "font-medium",
+              funding > 0 ? "text-green-medium" : funding < 0 ? "text-red" : ""
+            )}
+          >
+            {formatSatsMBtc(funding)}
+          </span>
+          {(trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE") && (
+            <Button
+              variant="ui"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openFundingDialog(trade);
+              }}
+              className="px-2 py-0.5 text-xs"
+            >
+              Details
+            </Button>
           )}
-        >
-          {BTC.format(fundingBTC, "BTC")}
-        </span>
+        </div>
       );
     },
   },
   {
     accessorKey: "feeFilled",
-    header: "Fee (BTC)",
+    header: "Fee (mBTC)",
     cell: (row) => {
       const trade = row.row.original;
 
@@ -282,7 +298,7 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
 
       return (
         <span className="font-medium">
-          {BTC.format(new BTC("sats", Big(fee)).convert("BTC"), "BTC")}
+          {formatSatsMBtc(fee)}
         </span>
       );
     },

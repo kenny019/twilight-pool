@@ -66,6 +66,14 @@ export type UtxoData = {
 
 export type ZkAccount = z.infer<typeof ZkAccountSchema>;
 export type TradeOrder = z.infer<typeof TradeOrderSchema>;
+export type FundingHistoryEntry = {
+  time: string;
+  position_side: string;
+  payment: string;
+  funding_rate: string;
+  order_id: string;
+};
+
 export type LendOrder = z.infer<typeof LendOrderSchema>;
 export type PoolInfo = z.infer<typeof PoolInfoSchema>;
 export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;

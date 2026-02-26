@@ -1,6 +1,6 @@
 import Button from '@/components/button';
 import cn from '@/lib/cn';
-import { capitaliseFirstLetter } from '@/lib/helpers';
+import { capitaliseFirstLetter, formatSatsMBtc } from '@/lib/helpers';
 import BTC from '@/lib/twilight/denoms';
 import { TradeOrder } from '@/lib/types';
 import { ColumnDef } from '@tanstack/react-table';
@@ -16,6 +16,7 @@ interface PositionsTableMeta {
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
   openLimitDialog: (account: string) => void;
+  openFundingDialog: (trade: TradeOrder) => void;
 }
 
 // Update the interface to remove currentPrice and privateKey from row data
@@ -123,33 +124,44 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "funding",
-    header: "Funding (BTC)",
+    header: "Funding (mBTC)",
     cell: (row) => {
       const trade = row.row.original;
+      const meta = row.table.options.meta as PositionsTableMeta;
 
       const pnl = trade.unrealizedPnl || 0;
       const funding = trade.fundingApplied != null
         ? Number(trade.fundingApplied)
         : Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled + pnl);
 
-      const fundingBTC = new BTC("sats", Big(funding))
-        .convert("BTC")
-
       return (
-        <span className={cn("font-medium",
-          funding > 0 ? "text-green-medium" :
-            funding < 0 ? "text-red" :
-              ""
-        )}>
-          {BTC.format(fundingBTC, "BTC")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={cn("font-medium",
+            funding > 0 ? "text-green-medium" :
+              funding < 0 ? "text-red" :
+                ""
+          )}>
+            {formatSatsMBtc(funding)}
+          </span>
+          <Button
+            variant="ui"
+            size="small"
+            onClick={(e) => {
+              e.preventDefault();
+              meta.openFundingDialog(trade);
+            }}
+            className="px-2 py-0.5 text-xs"
+          >
+            Details
+          </Button>
+        </div>
       );
     },
   },
   {
     accessorKey: "feeFilled",
-    header: "Fee (BTC)",
-    accessorFn: (row) => BTC.format(new BTC("sats", Big(row.feeFilled)).convert("BTC"), "BTC")
+    header: "Fee (mBTC)",
+    accessorFn: (row) => formatSatsMBtc(row.feeFilled)
   },
   {
     accessorKey: "positionType",

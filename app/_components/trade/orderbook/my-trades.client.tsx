@@ -35,6 +35,7 @@ import { broadcastTradingTx } from "@/lib/api/zkos";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { twilightproject } from "twilightjs";
 import Long from "long";
+import FundingHistoryDialog from "@/components/funding-history-dialog";
 
 const OrderMyTrades = () => {
   const { toast } = useToast();
@@ -57,6 +58,15 @@ const OrderMyTrades = () => {
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
   const removeTrade = useTwilightStore((state) => state.trade.removeTrade);
+
+  const [fundingDialogTrade, setFundingDialogTrade] =
+    React.useState<TradeOrder | null>(null);
+  const [isFundingDialogOpen, setIsFundingDialogOpen] = React.useState(false);
+
+  const openFundingDialog = useCallback((trade: TradeOrder) => {
+    setFundingDialogTrade(trade);
+    setIsFundingDialogOpen(true);
+  }, []);
 
   const { mainWallet } = useWallet();
 
@@ -838,12 +848,21 @@ const OrderMyTrades = () => {
         ...trade,
         onSettle: () => handleSettleOrder(trade),
         onCancel: () => handleCancelOrder(trade),
+        openFundingDialog,
       }));
-  }, [tradeOrders, handleSettleOrder, handleCancelOrder]);
+  }, [tradeOrders, handleSettleOrder, handleCancelOrder, openFundingDialog]);
 
   return (
     <div className="w-full px-3">
       <MyTradesDataTable columns={enhancedColumns} data={tableData} />
+      <FundingHistoryDialog
+        trade={fundingDialogTrade}
+        open={isFundingDialogOpen}
+        onOpenChange={(open) => {
+          setIsFundingDialogOpen(open);
+          if (!open) setFundingDialogTrade(null);
+        }}
+      />
     </div>
   );
 };
