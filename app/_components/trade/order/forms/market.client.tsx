@@ -141,6 +141,20 @@ const OrderMarketForm = () => {
     }
   }, [usdAmount, leverage]);
 
+  const positionSizeBtc = useMemo(() => {
+    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) return "0";
+    try {
+      const leverageBig = Big(leverage || "1");
+      const usdBig = Big(usdAmount);
+      if (usdBig.lte(0) || leverageBig.lte(0)) return "0";
+      Big.DP = 20;
+      const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig);
+      return BTC.format(btcValue, "BTC");
+    } catch {
+      return "0";
+    }
+  }, [usdAmount, leverage, currentPrice]);
+
   const liquidationPrices = useMemo(() => {
     if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) {
       return { long: "0.00", short: "0.00" };
@@ -874,6 +888,10 @@ const OrderMarketForm = () => {
       <div className="flex justify-between">
         <Text className={"mb-1 text-xs opacity-80"}>Position Size (USD)</Text>
         <Text className={"mb-1 text-xs opacity-80"}>${positionSize}</Text>
+      </div>
+      <div className="flex justify-between">
+        <Text className={"mb-1 text-xs opacity-80"}>Position Size (BTC)</Text>
+        <Text className={"mb-1 text-xs opacity-80"}>{positionSizeBtc} BTC</Text>
       </div>
 
       {status === "Connected" ? (
