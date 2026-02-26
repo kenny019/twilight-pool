@@ -56,7 +56,7 @@ export const createTwilightStore = () => {
         name: "twilight-",
         storage: createJSONStorage<AccountSlices>(() => localStorage),
         skipHydration: true,
-        version: 0.4,
+        version: 0.5,
         migrate: (persistedState, version) => {
           if (version === 0) {
             const newState = persistedState as AccountSlices;
@@ -83,6 +83,22 @@ export const createTwilightStore = () => {
             const newState = persistedState as AccountSlices;
             newState.optInLeaderboard = false;
             newState.hasShownOptInDialog = false;
+            return newState;
+          }
+          if (version === 0.4) {
+            const newState = persistedState as AccountSlices;
+            if (newState.trade?.trades) {
+              newState.trade.trades = newState.trade.trades.map((t) => ({
+                ...t,
+                fundingHistory: t.fundingHistory ?? undefined,
+              }));
+            }
+            if (newState.trade_history?.trades) {
+              newState.trade_history.trades = newState.trade_history.trades.map((t) => ({
+                ...t,
+                fundingHistory: t.fundingHistory ?? undefined,
+              }));
+            }
             return newState;
           }
           return persistedState as AccountSlices;

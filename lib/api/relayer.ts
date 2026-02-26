@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import wfetch from "../http";
 import { createCancelTraderOrderMsg } from "../twilight/zkos";
-import { QueryLendOrderData } from "../types";
+import { FundingHistoryEntry, QueryLendOrderData } from "../types";
 
 const RELAYER_PUBLIC_URL = process.env
   .NEXT_PUBLIC_TWILIGHT_PRICE_REST as string;
@@ -132,4 +132,36 @@ async function queryTradeOrder(msg: string) {
   };
 }
 
-export { queryLendOrder, queryTradeOrder, cancelTradeOrder };
+async function queryOrderFundingHistory(msg: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "order_funding_history",
+    params: {
+      data: msg,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(RELAYER_PUBLIC_URL, {
+    headers: {
+      "date-time": dayjs().unix().toString(),
+      "Content-Type": "application/json",
+    },
+  })
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error("queryOrderFundingHistory error", error);
+    return null;
+  }
+
+  const result = data?.result;
+  if (!Array.isArray(result)) {
+    return [];
+  }
+
+  return result as FundingHistoryEntry[];
+}
+
+export { queryLendOrder, queryTradeOrder, cancelTradeOrder, queryOrderFundingHistory };

@@ -2,6 +2,7 @@
 
 import Button from "@/components/button";
 import cn from "@/lib/cn";
+import { formatSatsMBtc } from "@/lib/helpers";
 import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
 import { ColumnDef } from "@tanstack/react-table";
@@ -11,6 +12,7 @@ import dayjs from 'dayjs';
 interface MyTradeOrder extends TradeOrder {
   onSettle: (trade: TradeOrder) => void;
   onCancel: (trade: TradeOrder) => void;
+  openFundingDialog?: (trade: TradeOrder) => void;
   currentPrice?: number;
   calculatedUnrealizedPnl?: number;
 }
@@ -188,7 +190,7 @@ export const myTradesColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "funding",
-    header: "Funding (BTC)",
+    header: "Funding (mBTC)",
     cell: (row) => {
       const trade = row.row.original;
 
@@ -199,24 +201,36 @@ export const myTradesColumns: ColumnDef<MyTradeOrder, any>[] = [
       const fee = trade.feeFilled;
 
       const funding = Math.round(trade.initialMargin - trade.availableMargin - fee);
-      const fundingBTC = new BTC("sats", Big(funding))
-        .convert("BTC")
 
       return (
-        <span className={cn("font-medium",
-          funding > 0 ? "text-green-medium" :
-            funding < 0 ? "text-red" :
-              ""
-        )}>
-          {BTC.format(fundingBTC, "BTC")} BTC
-        </span>
-
+        <div className="flex items-center gap-2">
+          <span className={cn("font-medium",
+            funding > 0 ? "text-green-medium" :
+              funding < 0 ? "text-red" :
+                ""
+          )}>
+            {formatSatsMBtc(funding)}
+          </span>
+          {trade.openFundingDialog && (
+            <Button
+              variant="ui"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+                trade.openFundingDialog?.(trade);
+              }}
+              className="px-2 py-0.5 text-xs"
+            >
+              Details
+            </Button>
+          )}
+        </div>
       );
     },
   },
   {
     accessorKey: "fee",
-    header: "Fee (BTC)",
+    header: "Fee (mBTC)",
     cell: (row) => {
       const fee = row.getValue() as number;
       const trade = row.row.original;
@@ -227,7 +241,7 @@ export const myTradesColumns: ColumnDef<MyTradeOrder, any>[] = [
 
       return (
         <span className="font-medium">
-          {BTC.format(new BTC("sats", Big(fee)).convert("BTC"), "BTC")}
+          {formatSatsMBtc(fee)}
         </span>
       );
     },

@@ -18,6 +18,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   getCurrentPrice: () => number;
   getBtcPriceUsd: () => number;
+  openFundingDialog: (trade: import("@/lib/types").TradeOrder) => void;
 }
 
 export function OrderHistoryDataTable<TData, TValue>({
@@ -25,6 +26,7 @@ export function OrderHistoryDataTable<TData, TValue>({
   data,
   getCurrentPrice,
   getBtcPriceUsd,
+  openFundingDialog,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
@@ -34,6 +36,7 @@ export function OrderHistoryDataTable<TData, TValue>({
   const tableMeta: OrderHistoryTableMeta = {
     getCurrentPrice,
     getBtcPriceUsd,
+    openFundingDialog,
   };
 
   const table = useReactTable({

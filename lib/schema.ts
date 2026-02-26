@@ -48,6 +48,17 @@ export const TradeOrderSchema = z.object({
     })
     .nullable(),
   fundingApplied: z.string().nullable(),
+  fundingHistory: z
+    .array(
+      z.object({
+        time: z.string(),
+        position_side: z.string(),
+        payment: z.string(),
+        funding_rate: z.string(),
+        order_id: z.string(),
+      })
+    )
+    .optional(),
 });
 
 export const LendOrderSchema = z.object({
