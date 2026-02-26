@@ -149,7 +149,7 @@ export async function settleOrder(
       ) => {
         return (
           txHashResult.result?.some(
-            (r) => r.order_id === trade.uuid && r.order_status === "CANCELLED"
+            (r) => r.order_id === trade.uuid && r.order_status === "CANCELLED" && r.order_type === "MARKET"
           ) ?? false
         );
       };

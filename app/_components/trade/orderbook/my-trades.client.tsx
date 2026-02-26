@@ -375,7 +375,8 @@ const OrderMyTrades = () => {
             txHashResult.result?.some(
               (r) =>
                 r.order_id === tradeOrder.uuid &&
-                r.order_status === "CANCELLED"
+                r.order_status === "CANCELLED" &&
+                r.order_type === tradeOrder.orderType
             ) ?? false
           );
         };
