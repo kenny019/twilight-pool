@@ -260,7 +260,7 @@ async function createZkOrder({
   signature: string;
   value: number;
   positionType: PositionTypes;
-  orderType: OrderTypes;
+  orderType: Exclude<OrderTypes, "SLTP">;
   leverage: number;
   entryPrice?: number;
   timebounds: number;

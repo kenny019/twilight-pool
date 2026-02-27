@@ -7,7 +7,10 @@ import { OpenOrdersDataTable } from './data-table';
 
 interface OpenOrdersTableProps {
   data: TradeOrder[];
-  cancelOrder: (order: TradeOrder) => Promise<void>;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
   isCancellingOrder: (uuid: string) => boolean;
 }

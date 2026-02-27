@@ -16,7 +16,7 @@ interface PositionsTableProps {
 }
 
 const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOrder, isSettlingOrder }: PositionsTableProps) {
-  const { openLimitDialog } = useLimitDialog();
+  const { openLimitDialog, openConditionalDialog } = useLimitDialog();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
@@ -42,6 +42,7 @@ const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOr
         settleMarketOrder={settleMarketOrder}
         isSettlingOrder={isSettlingOrder}
         openLimitDialog={openLimitDialog}
+        openConditionalDialog={openConditionalDialog}
         openFundingDialog={openFundingDialog}
       />
       <FundingHistoryDialog

@@ -4,10 +4,12 @@ import { retry } from "../helpers";
 import {
   createQueryTradeOrderMsg,
   executeTradeLendOrderMsg,
+  executeTradeLendOrderSltpMsg,
 } from "../twilight/zkos";
-import { executeTradeOrder } from "@/lib/api/client";
+import { executeTradeOrder, executeTradeOrderSltp } from "@/lib/api/client";
 import {
   cancelTradeOrder,
+  cancelTradeOrderSlTp,
   queryTradeOrder,
   QueryTradeOrderData,
 } from "../api/relayer";
@@ -240,18 +242,159 @@ export async function settleOrder(
   }
 }
 
+export async function settleOrderSltp(
+  trade: TradeOrder,
+  privateKey: string,
+  executionPrice: number,
+  sl?: number | null,
+  tp?: number | null
+): Promise<
+  SuccessResult<QueryTradeOrderData & { tx_hash?: string }> | FailureResult
+> {
+  try {
+    if (trade.orderStatus !== "FILLED") {
+      return {
+        success: false,
+        message: "Only filled orders can be settled",
+      };
+    }
+
+    if ((sl == null || sl === 0) && (tp == null || tp === 0)) {
+      return {
+        success: false,
+        message: "At least one of Stop Loss or Take Profit is required",
+      };
+    }
+
+    let output = trade.output;
+
+    if (!output) {
+      const transactionHashCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
+        if (txHashResult.result) {
+          let hasSettled = false;
+          txHashResult.result.forEach((result) => {
+            if (result.output && result.order_id === trade.uuid) {
+              hasSettled = true;
+            }
+          });
+          return hasSettled;
+        }
+        return false;
+      };
+
+      const transactionHashRes = await retry<
+        ReturnType<typeof queryTransactionHashes>,
+        string
+      >(
+        queryTransactionHashes,
+        30,
+        trade.accountAddress,
+        1000,
+        transactionHashCondition
+      );
+
+      if (!transactionHashRes.success) {
+        return {
+          success: false,
+          message:
+            "Failed to get output for the trade, please check the console for more details",
+        };
+      }
+
+      output = transactionHashRes.data.result.find(
+        (result) => result.order_id === trade.uuid && result.output
+      )?.output;
+
+      if (typeof output !== "string") {
+        return {
+          success: false,
+          message:
+            "Failed to get output for the trade, please check the console for more details",
+        };
+      }
+    }
+
+    const msg = await executeTradeLendOrderSltpMsg({
+      address: trade.accountAddress,
+      orderStatus: "FILLED",
+      orderType: "SLTP",
+      outputMemo: output,
+      transactionType: "ORDERTX",
+      uuid: trade.uuid,
+      signature: privateKey,
+      executionPricePoolshare: executionPrice,
+      sl: sl ?? null,
+      tp: tp ?? null,
+    });
+
+    await executeTradeOrderSltp(msg);
+
+    const queryTradeOrderMsg = await createQueryTradeOrderMsg({
+      address: trade.accountAddress,
+      orderStatus: "FILLED",
+      signature: privateKey,
+    });
+
+    const queryTradeOrderResponse = await queryTradeOrder(queryTradeOrderMsg);
+
+    if (!queryTradeOrderResponse || !queryTradeOrderResponse.result) {
+      return {
+        success: false,
+        message:
+          "Failed to query trade order details, please check the console for more details",
+      };
+    }
+
+    return {
+      success: true,
+      data: queryTradeOrderResponse.result,
+    };
+  } catch (err) {
+    console.error(`settleOrderSltp error:`, err);
+    return {
+      success: false,
+      message:
+        "Failed to place SLTP order, please check the console for more details.",
+    };
+  }
+}
+
+export type CancelZkOrderOptions = {
+  sl_bool?: boolean;
+  tp_bool?: boolean;
+};
+
 export async function cancelZkOrder(
   trade: TradeOrder,
-  privateKey: string
+  privateKey: string,
+  options?: CancelZkOrderOptions
 ): Promise<
   SuccessResult<QueryTradeOrderData & { tx_hash: string }> | FailureResult
 > {
   try {
-    const cancelResult = await cancelTradeOrder({
-      address: trade.accountAddress,
-      uuid: trade.uuid,
-      signature: privateKey,
-    });
+    const isSltp = !!(trade.takeProfit || trade.stopLoss);
+
+    let cancelResult: Record<string, unknown>;
+
+    if (isSltp) {
+      const sl_bool = options?.sl_bool ?? !!trade.stopLoss;
+      const tp_bool = options?.tp_bool ?? !!trade.takeProfit;
+      cancelResult = await cancelTradeOrderSlTp({
+        address: trade.accountAddress,
+        uuid: trade.uuid,
+        signature: privateKey,
+        sl_bool,
+        tp_bool,
+      });
+    } else {
+      cancelResult = await cancelTradeOrder({
+        address: trade.accountAddress,
+        uuid: trade.uuid,
+        signature: privateKey,
+      });
+    }
 
     console.log("cancelResult", cancelResult);
 

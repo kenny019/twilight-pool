@@ -57,7 +57,10 @@ const DetailsPanel = () => {
       (trade) =>
         trade.orderStatus !== "SETTLED" &&
         trade.orderStatus !== "CANCELLED" &&
-        (trade.orderStatus === "PENDING" || trade.settleLimit)
+        (trade.orderStatus === "PENDING" ||
+          trade.settleLimit ||
+          trade.takeProfit ||
+          trade.stopLoss)
     );
   }, [tradeOrders]);
 
@@ -187,7 +190,10 @@ const DetailsPanel = () => {
   );
 
   const cancelOrder = useCallback(
-    async (order: TradeOrder) => {
+    async (
+      order: TradeOrder,
+      options?: { sl_bool?: boolean; tp_bool?: boolean }
+    ) => {
       if (cancellingOrders.has(order.uuid)) return;
 
       setCancellingOrders((prev) => new Set(prev).add(order.uuid));
@@ -199,7 +205,7 @@ const DetailsPanel = () => {
             "Please do not close this page while your order is being cancelled...",
         });
 
-        const cancelOrderResult = await cancelZkOrder(order, privateKey);
+        const cancelOrderResult = await cancelZkOrder(order, privateKey, options);
 
         if (!cancelOrderResult.success) {
           toast({

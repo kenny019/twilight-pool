@@ -195,6 +195,8 @@ export const useReconcileOrphanedAccounts = () => {
             feeSettled: new Big(traderOrderInfo.fee_settled || 0).toNumber(),
             exit_nonce: traderOrderInfo.exit_nonce,
             settleLimit: traderOrderInfo.settle_limit,
+            takeProfit: traderOrderInfo.take_profit ?? undefined,
+            stopLoss: traderOrderInfo.stop_loss ?? undefined,
             fundingApplied: traderOrderInfo.funding_applied,
           };
 
