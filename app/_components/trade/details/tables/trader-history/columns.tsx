@@ -1,4 +1,5 @@
 import Button from '@/components/button';
+import { Info } from 'lucide-react';
 import cn from '@/lib/cn';
 import { capitaliseFirstLetter, formatSatsMBtc, truncateHash } from '@/lib/helpers';
 import { toast } from '@/lib/hooks/useToast';
@@ -157,7 +158,7 @@ export const traderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
         : Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled - trade.feeSettled + pnl);
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className={cn("font-medium",
             funding > 0 ? "text-green-medium" :
               funding < 0 ? "text-red" :
@@ -166,17 +167,17 @@ export const traderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
             {formatSatsMBtc(funding)}
           </span>
           {(trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE") && (
-            <Button
-              variant="ui"
-              size="small"
+            <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 meta.openFundingDialog(trade);
               }}
-              className="px-2 py-0.5 text-xs"
+              className="text-primary-accent/40 hover:text-primary-accent p-0.5 rounded hover:bg-theme/20 transition-colors"
+              aria-label="View funding history"
             >
-              Details
-            </Button>
+              <Info className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
       );

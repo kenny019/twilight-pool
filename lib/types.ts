@@ -80,7 +80,7 @@ export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;
 export type WithdrawOrder = z.infer<typeof WithdrawOrderSchema>;
 
 export type PositionTypes = "LONG" | "SHORT";
-export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND";
+export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND" | "SLTP";
 
 export enum CandleInterval {
   ONE_MINUTE = "ONE_MINUTE",

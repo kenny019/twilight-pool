@@ -68,6 +68,8 @@ const tradeInfoKeysToTradeKey = {
   fee_settled: "feeSettled",
   output: "output",
   settle_limit: "settleLimit",
+  take_profit: "takeProfit",
+  stop_loss: "stopLoss",
   funding_applied: "fundingApplied",
 };
 

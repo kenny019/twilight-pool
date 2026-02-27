@@ -109,4 +109,34 @@ async function executeTradeOrder(msg: string) {
   return data;
 }
 
-export { sendTradeOrder, sendLendOrder, executeTradeOrder, executeLendOrder };
+async function executeTradeOrderSltp(msg: string) {
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "ExecuteTraderOrderSlTp",
+    params: {
+      data: msg,
+    },
+    id: 1,
+  });
+
+  const { success, data, error } = await wfetch(CLIENT_URL)
+    .post({ body })
+    .json<Record<string, any>>();
+
+  if (!success) {
+    console.error(error);
+
+    return {};
+  }
+
+  console.log("success sent execute trade order SLTP", data);
+  return data;
+}
+
+export {
+  sendTradeOrder,
+  sendLendOrder,
+  executeTradeOrder,
+  executeTradeOrderSltp,
+  executeLendOrder,
+};

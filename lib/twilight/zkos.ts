@@ -323,6 +323,67 @@ async function executeTradeLendOrderMsg({
   );
 }
 
+async function executeTradeLendOrderSltpMsg({
+  outputMemo,
+  signature,
+  address,
+  uuid,
+  orderType,
+  orderStatus,
+  executionPricePoolshare,
+  transactionType,
+  sl,
+  tp,
+}: {
+  outputMemo: string;
+  signature: string;
+  address: string;
+  uuid: string;
+  orderType: string;
+  orderStatus: string;
+  executionPricePoolshare: number;
+  transactionType: "ORDERTX" | "LENDTX";
+  sl?: number | null;
+  tp?: number | null;
+}) {
+  const zkos = await initZkos();
+  return zkos.executeTradeLendOrderZkOSSlTp(
+    outputMemo,
+    signature,
+    address,
+    uuid,
+    orderType,
+    orderStatus,
+    executionPricePoolshare,
+    transactionType,
+    sl ?? null,
+    tp ?? null
+  );
+}
+
+async function createCancelTraderOrderSltpMsg({
+  address,
+  signature,
+  uuid,
+  sl_bool,
+  tp_bool,
+}: {
+  address: string;
+  signature: string;
+  uuid: string;
+  sl_bool: boolean;
+  tp_bool: boolean;
+}) {
+  const zkos = await initZkos();
+  return zkos.cancelTraderOrderZkOSSlTp(
+    address,
+    signature,
+    JSON.stringify(uuid),
+    sl_bool,
+    tp_bool
+  );
+}
+
 async function coinAddressMonitoring({
   utxoOutputString,
   signature,
@@ -395,6 +456,7 @@ export {
   createQueryLendOrderMsg,
   createZkOSLendOrder,
   executeTradeLendOrderMsg,
+  executeTradeLendOrderSltpMsg,
   coinAddressMonitoring,
   createBurnMessageTx,
   getUpdatedAddressFromTransaction,
@@ -402,4 +464,5 @@ export {
   verifyQuisQuisTransaction,
   verifyAccount,
   createCancelTraderOrderMsg,
+  createCancelTraderOrderSltpMsg,
 };

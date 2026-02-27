@@ -45,8 +45,23 @@ export const TradeOrderSchema = z.object({
       position_type: z.enum(["LONG", "SHORT"]),
       price: z.string(),
       uuid: z.string(),
+      timestamp: z.string().optional(),
     })
     .nullable(),
+  takeProfit: z
+    .object({
+      tp_price: z.string(),
+      timestamp: z.string(),
+    })
+    .nullable()
+    .optional(),
+  stopLoss: z
+    .object({
+      sl_price: z.string(),
+      timestamp: z.string(),
+    })
+    .nullable()
+    .optional(),
   fundingApplied: z.string().nullable(),
   fundingHistory: z
     .array(
