@@ -29,8 +29,8 @@ export const createHistorySlice: StateImmerCreator<
     }),
   resetState: () => {
     set((state) => {
-      state.trade = {
-        ...state.trade,
+      state.history = {
+        ...state.history,
         ...initialHistorySliceState,
       };
     });

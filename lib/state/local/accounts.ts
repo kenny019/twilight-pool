@@ -1,6 +1,5 @@
 import { ZkAccount } from "@/lib/types";
 import { AccountSlices, StateImmerCreator } from "../utils";
-import { immer } from "zustand/middleware/immer";
 
 export interface ZkAccountSlice {
   blockHeight: number;
@@ -42,6 +41,18 @@ export const createZkAccountSlice: StateImmerCreator<
     }),
   addZkAccount: (zkAccount) =>
     set((state) => {
+      const accountIndex = state.zk.zkAccounts.findIndex(
+        (account) => account.address === zkAccount.address
+      );
+
+      if (accountIndex > -1) {
+        state.zk.zkAccounts[accountIndex] = {
+          ...state.zk.zkAccounts[accountIndex],
+          ...zkAccount,
+        };
+        return;
+      }
+
       state.zk.zkAccounts = [...state.zk.zkAccounts, zkAccount];
     }),
   removeZkAccount: (zkAccount) =>

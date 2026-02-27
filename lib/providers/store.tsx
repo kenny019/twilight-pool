@@ -30,18 +30,23 @@ export interface twilightStoreProviderProps {
 export const TwilightStoreProvider = ({
   children,
 }: twilightStoreProviderProps) => {
+  type TwilightStoreApi = Mutate<
+    StoreApi<AccountSlices>,
+    [["zustand/persist", AccountSlices], ["zustand/immer", never]]
+  >;
+
   const storeRef =
-    useRef<
-      Mutate<
-        StoreApi<AccountSlices>,
-        [["zustand/persist", AccountSlices], ["zustand/immer", never]]
-      >
-    >();
+    useRef<TwilightStoreApi>();
+  const rehydrateRunRef = useRef(0);
+  const rehydrateQueueRef = useRef(Promise.resolve());
+  const [store, setStore] = useState<TwilightStoreApi>(() =>
+    createTwilightStore("twilight-")
+  );
 
   const [isHydrated, setIsHydrated] = useState(false);
 
   if (!storeRef.current) {
-    storeRef.current = createTwilightStore();
+    storeRef.current = store;
   }
 
   const { status, mainWallet } = useWallet();
@@ -49,36 +54,46 @@ export const TwilightStoreProvider = ({
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
+  useEffect(() => {
+    storeRef.current = store;
+  }, [store]);
+
   function useRehydrateLocalStore() {
     useEffect(() => {
-      async function rehydrateLocalStore() {
-        setIsHydrated(false);
+      const currentRun = ++rehydrateRunRef.current;
+      const chainAddress = chainWallet?.address;
 
-        if (!storeRef.current) {
-          return;
-        }
+      setIsHydrated(false);
 
-        if (!chainWallet?.address) {
-          storeRef.current.persist.setOptions({
-            name: `twilight-`,
-          });
+      rehydrateQueueRef.current = rehydrateQueueRef.current
+        .then(async () => {
+          if (currentRun !== rehydrateRunRef.current) {
+            return;
+          }
 
-          storeRef.current.setState(storeRef.current.getInitialState());
-          return;
-        }
+          const storageKey = chainAddress
+            ? `twilight-${chainAddress}`
+            : "twilight-";
+          const nextStore = createTwilightStore(storageKey);
 
-        const chainAddress = chainWallet.address;
+          if (chainAddress) {
+            console.log("rehydrating local data", chainAddress);
+            await nextStore.persist.rehydrate();
+          }
 
-        console.log("rehydrating local data", chainAddress);
-        storeRef.current.persist.setOptions({
-          name: `twilight-${chainAddress}`,
+          if (currentRun !== rehydrateRunRef.current) {
+            return;
+          }
+
+          storeRef.current = nextStore;
+          setStore(nextStore);
+          setIsHydrated(!!chainAddress);
+        })
+        .catch((error) => {
+          if (currentRun === rehydrateRunRef.current) {
+            console.error("Failed to rehydrate local Twilight store", error);
+          }
         });
-
-        await storeRef.current.persist.rehydrate();
-
-        setIsHydrated(true);
-      }
-      rehydrateLocalStore();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chainWallet?.address]);
   }
@@ -179,7 +194,7 @@ export const TwilightStoreProvider = ({
   useResetSelectedZkAccount();
 
   return (
-    <twilightStoreContext.Provider value={storeRef.current}>
+    <twilightStoreContext.Provider value={store}>
       <isHydratedContext.Provider value={isHydrated}>
         {children}
       </isHydratedContext.Provider>

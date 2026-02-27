@@ -21,6 +21,18 @@ export const createTradeSlice: StateImmerCreator<AccountSlices, TradeSlice> = (
   ...initialTradeSliceState,
   addTrade: (tradeOrder) =>
     set((state) => {
+      const tradeIndex = state.trade.trades.findIndex(
+        (trade) => trade.uuid === tradeOrder.uuid
+      );
+
+      if (tradeIndex > -1) {
+        state.trade.trades[tradeIndex] = {
+          ...state.trade.trades[tradeIndex],
+          ...tradeOrder,
+        };
+        return;
+      }
+
       state.trade.trades = [...state.trade.trades, tradeOrder];
     }),
   removeTrade: (tradeOrder) =>
@@ -70,19 +82,23 @@ export const createTradeSlice: StateImmerCreator<AccountSlices, TradeSlice> = (
   },
   setNewTrades: (trades) => {
     set((state) => {
-      const incomingTradesMap = new Map(
-        trades.map((trade) => [trade.uuid, trade])
+      const dedupedTrades = new Map(
+        state.trade.trades.reduce((tradeMap, trade) => {
+          tradeMap.set(trade.uuid, trade);
+          return tradeMap;
+        }, new Map<string, TradeOrder>())
       );
 
-      const mergedTrades = [
-        ...trades,
-        ...state.trade.trades.filter(
-          (currentTrade) => !incomingTradesMap.has(currentTrade.uuid)
-        ),
-      ];
+      for (const trade of trades) {
+        dedupedTrades.set(trade.uuid, trade);
+      }
+
+      const mergedTrades = Array.from(dedupedTrades.values());
 
       // Skip update if data hasn't changed
-      if (JSON.stringify(state.trade.trades) === JSON.stringify(mergedTrades)) {
+      if (
+        JSON.stringify(state.trade.trades) === JSON.stringify(mergedTrades)
+      ) {
         return;
       }
 

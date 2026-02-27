@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useTwilightStore } from "../providers/store";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsStoreHydrated, useTwilightStore } from "../providers/store";
 import { createQueryTradeOrderMsg } from "../twilight/zkos";
 import { useSessionStore } from "../providers/session";
 import { queryTradeOrder } from "../api/relayer";
@@ -11,6 +11,7 @@ import { TradeOrder, ZkAccount } from "../types";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { WalletStatus } from "@cosmos-kit/core";
 import dayjs from "dayjs";
+import { useEffect, useRef } from "react";
 
 /**
  * Reconciles orphaned ZK accounts (accounts in zkAccounts with no matching trade
@@ -27,19 +28,58 @@ export const useReconcileOrphanedAccounts = () => {
   );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
 
-  const { status } = useWallet();
+  const { status, mainWallet } = useWallet();
   const privateKey = useSessionStore((state) => state.privateKey);
+  const isHydrated = useIsStoreHydrated();
+  const queryClient = useQueryClient();
+  const chainWallet = mainWallet?.getChainWallet("nyks");
+  const twilightAddress = chainWallet?.address;
+  const runContextRef = useRef({
+    twilightAddress,
+    privateKey,
+    isHydrated,
+  });
+
+  runContextRef.current = {
+    twilightAddress,
+    privateKey,
+    isHydrated,
+  };
+
+  useEffect(() => {
+    void queryClient.cancelQueries({ queryKey: ["reconcile-orphaned-accounts"] });
+  }, [queryClient, twilightAddress, privateKey, isHydrated]);
+
+  const isRunActive = (runAddress: string, runPrivateKey: string) => {
+    const activeContext = runContextRef.current;
+
+    return (
+      activeContext.isHydrated &&
+      activeContext.twilightAddress === runAddress &&
+      activeContext.privateKey === runPrivateKey
+    );
+  };
 
   useQuery({
     queryKey: [
       "reconcile-orphaned-accounts",
       status,
+      twilightAddress,
       privateKey,
+      isHydrated,
       zkAccounts.length,
       trades.length,
     ],
     queryFn: async () => {
-      if (status !== WalletStatus.Connected || !privateKey)
+      const runAddress = twilightAddress;
+      const runPrivateKey = privateKey;
+
+      if (
+        status !== WalletStatus.Connected ||
+        !runAddress ||
+        !runPrivateKey ||
+        !isHydrated
+      )
         return { reconciled: 0 };
 
       const tradeAddresses = new Set(trades.map((t) => t.accountAddress));
@@ -56,6 +96,9 @@ export const useReconcileOrphanedAccounts = () => {
       let reconciled = 0;
 
       for (const account of orphanedAccounts) {
+        if (!isRunActive(runAddress, runPrivateKey))
+          return { reconciled };
+
         try {
           const txHashesRes = await queryTransactionHashes(account.address);
 
@@ -78,7 +121,7 @@ export const useReconcileOrphanedAccounts = () => {
           const queryTradeOrderMsg = await createQueryTradeOrderMsg({
             address: account.address,
             orderStatus: latestEntry.order_status,
-            signature: privateKey,
+            signature: runPrivateKey,
           });
 
           const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
@@ -155,10 +198,14 @@ export const useReconcileOrphanedAccounts = () => {
             fundingApplied: traderOrderInfo.funding_applied,
           };
 
+          if (!isRunActive(runAddress, runPrivateKey))
+            return { reconciled };
           addTrade(newTrade);
           addTradeHistory(newTrade);
 
           if (isOpen && traderOrderInfo.order_status === "FILLED") {
+            if (!isRunActive(runAddress, runPrivateKey))
+              return { reconciled };
             updateZkAccount(account.address, {
               ...account,
               type: "Memo",
@@ -178,7 +225,9 @@ export const useReconcileOrphanedAccounts = () => {
     },
     enabled:
       status === WalletStatus.Connected &&
+      !!twilightAddress &&
       !!privateKey &&
+      isHydrated &&
       zkAccounts.length > 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,

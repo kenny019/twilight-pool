@@ -106,11 +106,9 @@ const Twilight: React.FC<TwilightProviderProps> = ({ children }) => {
 
         if (!twilightAddress) return;
 
-        const twilightStore = createTwilightStore();
-
-        twilightStore.persist.setOptions({
-          name: `twilight-${twilightAddress}`,
-        });
+        const twilightStore = createTwilightStore(
+          `twilight-${twilightAddress}`
+        );
 
         await twilightStore.persist.rehydrate();
         console.log(`rehydrated twilight-${twilightAddress}`);

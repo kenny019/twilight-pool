@@ -1,5 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { useTwilightStore, useTwilightStoreApi } from "../providers/store";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsStoreHydrated,
+  useTwilightStore,
+  useTwilightStoreApi,
+} from "../providers/store";
 import { createQueryTradeOrderMsg } from "../twilight/zkos";
 import { useSessionStore } from "../providers/session";
 import { queryTradeOrder } from "../api/relayer";
@@ -20,6 +24,7 @@ import {
   serializeTxid,
   waitForUtxoUpdate,
 } from "../utils/waitForUtxoUpdate";
+import { useEffect, useRef } from "react";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -95,22 +100,59 @@ export const useSyncTrades = () => {
   const twilightAddress = chainWallet?.address;
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const isHydrated = useIsStoreHydrated();
+  const queryClient = useQueryClient();
+  const runContextRef = useRef({
+    twilightAddress,
+    privateKey,
+    isHydrated,
+  });
+
+  runContextRef.current = {
+    twilightAddress,
+    privateKey,
+    isHydrated,
+  };
+
+  useEffect(() => {
+    void queryClient.cancelQueries({ queryKey: ["sync-trades"] });
+  }, [queryClient, twilightAddress, privateKey, isHydrated]);
+
+  const isRunActive = (runAddress: string, runPrivateKey: string) => {
+    const activeContext = runContextRef.current;
+
+    return (
+      activeContext.isHydrated &&
+      activeContext.twilightAddress === runAddress &&
+      activeContext.privateKey === runPrivateKey
+    );
+  };
 
   useQuery({
-    queryKey: ["sync-trades", twilightAddress],
+    queryKey: ["sync-trades", twilightAddress, privateKey, isHydrated],
     queryFn: async () => {
-      if (status !== WalletStatus.Connected) return true;
+      const runAddress = twilightAddress;
+      const runPrivateKey = privateKey;
+
+      if (
+        status !== WalletStatus.Connected ||
+        !runAddress ||
+        !runPrivateKey ||
+        !isHydrated
+      )
+        return true;
       if (tradeOrders.length === 0) return true;
 
       const updated = new Map<string, Partial<TradeOrder>>();
 
       for (const trade of tradeOrders) {
+        if (!isRunActive(runAddress, runPrivateKey)) return true;
         if (statusToSkip.includes(trade.orderStatus)) continue;
 
         const queryTradeOrderMsg = await createQueryTradeOrderMsg({
           address: trade.accountAddress,
           orderStatus: trade.orderStatus,
-          signature: privateKey,
+          signature: runPrivateKey,
         });
 
         const queryTradeOrderRes = await queryTradeOrder(queryTradeOrderMsg);
@@ -190,6 +232,7 @@ export const useSyncTrades = () => {
           newTrade.orderStatus === "CANCELLED";
 
         if (isTerminal) {
+          if (!isRunActive(runAddress, runPrivateKey)) return true;
           // Re-read zkAccounts from the store at this moment (not from a
           // render-time closure) to avoid acting on a removed account.
           const freshZkAccounts = storeApi.getState().zk.zkAccounts;
@@ -199,6 +242,7 @@ export const useSyncTrades = () => {
 
           if (existingZkAccount) {
             if (newTrade.orderStatus === "LIQUIDATE") {
+              if (!isRunActive(runAddress, runPrivateKey)) return true;
               // The exchange already debited the master account on-chain;
               // we only need to drop the local reference.
               removeZkAccount(existingZkAccount);
@@ -214,6 +258,8 @@ export const useSyncTrades = () => {
 
               const cleanupPromise = masterAccountQueue
                 .enqueue(async () => {
+                  if (!isRunActive(runAddress, runPrivateKey)) return;
+
                   // Read state at task-execution time, not closure time.
                   const state = storeApi.getState();
                   const currentZkAccount = state.zk.zkAccounts.find(
@@ -241,7 +287,7 @@ export const useSyncTrades = () => {
                   }
 
                   const senderZkPrivateAccount = await ZkPrivateAccount.create({
-                    signature: privateKey,
+                    signature: runPrivateKey,
                     existingAccount: zkAccountToSettle,
                   });
 
@@ -262,7 +308,7 @@ export const useSyncTrades = () => {
                     // fresh one as the transfer destination.
                     const freshMasterAccount = await createZkAccount({
                       tag: "main",
-                      signature: privateKey,
+                      signature: runPrivateKey,
                     });
 
                     privateTxSingleResult =
@@ -336,6 +382,7 @@ export const useSyncTrades = () => {
                     .zk.zkAccounts.find((a) => a.tag === "main");
 
                   if (latestTradingAccount) {
+                    if (!isRunActive(runAddress, runPrivateKey)) return;
                     updateZkAccount(latestTradingAccount.address, {
                       ...latestTradingAccount,
                       address: updatedTradingAccountAddress,
@@ -347,6 +394,7 @@ export const useSyncTrades = () => {
                     });
                   }
 
+                  if (!isRunActive(runAddress, runPrivateKey)) return;
                   addTransactionHistory({
                     date: new Date(),
                     from: zkAccountToSettle.address,
@@ -360,9 +408,11 @@ export const useSyncTrades = () => {
 
                   // Only remove the order account and trade record after the
                   // transfer is confirmed, preserving recovery options on failure.
+                  if (!isRunActive(runAddress, runPrivateKey)) return;
                   removeZkAccount(zkAccountToSettle);
                   removeTrade(tradeCopy);
 
+                  if (!isRunActive(runAddress, runPrivateKey)) return;
                   toast({
                     title: "Success",
                     description: (
@@ -400,6 +450,7 @@ export const useSyncTrades = () => {
 
         // Record every status transition to trade history.
         if (updatedTrade && updatedTrade.orderStatus) {
+          if (!isRunActive(runAddress, runPrivateKey)) return true;
           console.log(
             "adding to history",
             trade.orderStatus,
@@ -417,6 +468,7 @@ export const useSyncTrades = () => {
 
       // Always commit the updated trade statuses so the next poll cycle
       // skips already-terminal orders (statusToSkip check at top of loop).
+      if (!isRunActive(runAddress, runPrivateKey)) return true;
       setNewTrades(mergedTrades);
 
       return true;
@@ -427,5 +479,11 @@ export const useSyncTrades = () => {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchIntervalInBackground: true,
+    enabled:
+      status === WalletStatus.Connected &&
+      !!twilightAddress &&
+      !!privateKey &&
+      isHydrated &&
+      tradeOrders.length > 0,
   });
 };
