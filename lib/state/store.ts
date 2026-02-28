@@ -24,7 +24,7 @@ import {
   initialWithdrawSliceState,
 } from "./local/withdraw";
 
-export const createTwilightStore = () => {
+export const createTwilightStore = (storageKey = "twilight-") => {
   return createStore<
     AccountSlices,
     [["zustand/persist", AccountSlices], ["zustand/immer", never]]
@@ -53,7 +53,7 @@ export const createTwilightStore = () => {
         },
       })),
       {
-        name: "twilight-",
+        name: storageKey,
         storage: createJSONStorage<AccountSlices>(() => localStorage),
         skipHydration: true,
         version: 0.5,

@@ -183,7 +183,7 @@ const DetailsPanel = () => {
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [privateKey, zkAccounts, toast, settlingOrders]
+    [privateKey, queryClient, settlingOrders, toast, tradeOrders, zkAccounts]
   );
 
   const cancelOrder = useCallback(
@@ -311,7 +311,15 @@ const DetailsPanel = () => {
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [privateKey, zkAccounts, cancellingOrders]
+    [
+      addTradeHistory,
+      cancellingOrders,
+      privateKey,
+      queryClient,
+      toast,
+      updateZkAccount,
+      zkAccounts,
+    ]
   );
 
   const openEditDialog = useCallback(

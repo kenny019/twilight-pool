@@ -264,7 +264,7 @@ const OrderMyTrades = () => {
         success: true,
       };
     },
-    [toast, privateKey, removeZkAccount, chainWallet]
+    [addTransactionHistory, chainWallet, removeZkAccount, toast, twilightAddress]
   );
 
   // Memoize the callback functions to prevent unnecessary re-renders
