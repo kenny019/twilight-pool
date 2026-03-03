@@ -1,5 +1,12 @@
-import Button from '@/components/button';
-import cn from '@/lib/cn';
+import Button from "@/components/button";
+import {
+  DropdownMenu,
+  DropdownTrigger,
+  DropdownContent,
+  DropdownItem,
+} from "@/components/dropdown";
+import { ChevronDown, Info } from "lucide-react";
+import cn from "@/lib/cn";
 import { capitaliseFirstLetter, formatSatsMBtc } from '@/lib/helpers';
 import BTC from '@/lib/twilight/denoms';
 import { TradeOrder } from '@/lib/types';
@@ -16,6 +23,7 @@ interface PositionsTableMeta {
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
   openLimitDialog: (account: string) => void;
+  openConditionalDialog: (account: string, mode: "limit" | "sltp") => void;
   openFundingDialog: (trade: TradeOrder) => void;
 }
 
@@ -135,7 +143,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
         : Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled + pnl);
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className={cn("font-medium",
             funding > 0 ? "text-green-medium" :
               funding < 0 ? "text-red" :
@@ -143,17 +151,17 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
           )}>
             {formatSatsMBtc(funding)}
           </span>
-          <Button
-            variant="ui"
-            size="small"
+          <button
+            type="button"
             onClick={(e) => {
               e.preventDefault();
               meta.openFundingDialog(trade);
             }}
-            className="px-2 py-0.5 text-xs"
+            className="text-primary-accent/40 hover:text-primary-accent p-0.5 rounded hover:bg-theme/20 transition-colors"
+            aria-label="View funding history"
           >
-            Details
-          </Button>
+            <Info className="h-3.5 w-3.5" />
+          </button>
         </div>
       );
     },
@@ -205,16 +213,34 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
           >
             {isSettling ? "Closing..." : "Close Market"}
           </Button>
-          <Button
-            onClick={() => {
-              meta.openLimitDialog(trade.accountAddress)
-            }}
-            variant="ui"
-            size="small"
-            disabled={isSettling}
-          >
-            Close Limit
-          </Button>
+          <DropdownMenu>
+            <DropdownTrigger asChild>
+              <Button
+                variant="ui"
+                size="small"
+                disabled={isSettling}
+                className="gap-1"
+              >
+                Close <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent align="start">
+              <DropdownItem
+                onSelect={() =>
+                  meta.openConditionalDialog(trade.accountAddress, "limit")
+                }
+              >
+                Limit
+              </DropdownItem>
+              <DropdownItem
+                onSelect={() =>
+                  meta.openConditionalDialog(trade.accountAddress, "sltp")
+                }
+              >
+                SL/TP
+              </DropdownItem>
+            </DropdownContent>
+          </DropdownMenu>
         </div>
       );
     },

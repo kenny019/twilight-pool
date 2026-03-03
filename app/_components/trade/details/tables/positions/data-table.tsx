@@ -19,6 +19,7 @@ interface DataTableProps<TData, TValue> {
   getCurrentPrice: () => number;
   getBtcPriceUsd: () => number;
   openLimitDialog: (account: string) => void;
+  openConditionalDialog: (account: string, mode: "limit" | "sltp") => void;
   openFundingDialog: (trade: TradeOrder) => void;
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
@@ -30,6 +31,7 @@ export function PositionsDataTable<TData, TValue>({
   getCurrentPrice,
   getBtcPriceUsd,
   openLimitDialog,
+  openConditionalDialog,
   openFundingDialog,
   settleMarketOrder,
   isSettlingOrder
@@ -45,6 +47,7 @@ export function PositionsDataTable<TData, TValue>({
     getCurrentPrice,
     getBtcPriceUsd,
     openLimitDialog,
+    openConditionalDialog,
     openFundingDialog,
     settleMarketOrder,
     isSettlingOrder

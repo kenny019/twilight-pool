@@ -9,7 +9,10 @@ import Big from "big.js";
 import dayjs from "dayjs";
 
 interface OpenOrdersTableMeta {
-  cancelOrder: (order: TradeOrder) => Promise<void>;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
   isCancellingOrder: (uuid: string) => boolean;
 }
@@ -18,7 +21,15 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
   {
     accessorKey: "date",
     header: "Time",
-    accessorFn: (row) => dayjs(row.date).format("DD/MM/YYYY HH:mm:ss"),
+    accessorFn: (row) => {
+      const ts =
+        row.settleLimit?.timestamp ??
+        row.takeProfit?.timestamp ??
+        row.stopLoss?.timestamp;
+      return ts
+        ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
+        : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
+    },
   },
   {
     accessorKey: "uuid",
@@ -73,6 +84,13 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     header: "Type",
     cell: ({ row }) => {
       const trade = row.original;
+      if (trade.takeProfit || trade.stopLoss) {
+        return (
+          <span className="rounded bg-purple-500/10 px-2 py-1 text-xs font-medium text-purple-500">
+            SLTP
+          </span>
+        );
+      }
       if (trade.settleLimit) {
         return (
           <span className="rounded bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-500">
@@ -104,6 +122,14 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     accessorKey: "orderType",
     header: "Order Type",
     cell: (row) => {
+      const trade = row.row.original;
+      if (trade.takeProfit || trade.stopLoss) {
+        return (
+          <span className="text-xs font-medium">
+            {capitaliseFirstLetter(trade.orderType)}
+          </span>
+        );
+      }
       const orderType = row.getValue() as string;
       return (
         <span className="text-xs font-medium">
@@ -114,9 +140,18 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
   },
   {
     accessorKey: "entryPrice",
-    header: "Limit Price (USD)",
-    accessorFn: (row) =>
-      `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`,
+    header: "Price (USD)",
+    accessorFn: (row) => {
+      if (row.takeProfit || row.stopLoss) {
+        const parts: string[] = [];
+        if (row.stopLoss)
+          parts.push(`SL: $${Number(row.stopLoss.sl_price).toFixed(2)}`);
+        if (row.takeProfit)
+          parts.push(`TP: $${Number(row.takeProfit.tp_price).toFixed(2)}`);
+        return parts.join(" / ");
+      }
+      return `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`;
+    },
   },
   {
     accessorKey: "leverage",
@@ -139,21 +174,61 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       const trade = row.row.original;
       const meta = row.table.options.meta as OpenOrdersTableMeta;
       const isCancelling = meta.isCancellingOrder(trade.uuid);
+      const isSltp = !!(trade.takeProfit || trade.stopLoss);
+
+      if (isSltp) {
+        const hasSl = !!trade.stopLoss;
+        const hasTp = !!trade.takeProfit;
+        return (
+          <div className="flex flex-row flex-wrap justify-start gap-1">
+            {hasSl && (
+              <Button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await meta.cancelOrder(trade, { sl_bool: true });
+                }}
+                variant="ui"
+                size="small"
+                disabled={isCancelling}
+              >
+                {isCancelling ? "Cancelling..." : "Cancel SL"}
+              </Button>
+            )}
+            {hasTp && (
+              <Button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await meta.cancelOrder(trade, { tp_bool: true });
+                }}
+                variant="ui"
+                size="small"
+                disabled={isCancelling}
+              >
+                {isCancelling ? "Cancelling..." : "Cancel TP"}
+              </Button>
+            )}
+            {(hasSl || hasTp) && (
+              <Button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await meta.cancelOrder(trade, {
+                    sl_bool: hasSl,
+                    tp_bool: hasTp,
+                  });
+                }}
+                variant="ui"
+                size="small"
+                disabled={isCancelling}
+              >
+                {isCancelling ? "Cancelling..." : "Cancel Both"}
+              </Button>
+            )}
+          </div>
+        );
+      }
 
       return (
         <div className="flex flex-row justify-start gap-1">
-          {/*{!trade.settleLimit && (
-            <Button
-              onClick={(e) => {
-                e.preventDefault();
-                meta.openEditDialog(trade);
-              }}
-              variant="ui"
-              size="small"
-            >
-              Edit
-            </Button>
-          )}*/}
           <Button
             onClick={async (e) => {
               e.preventDefault();
