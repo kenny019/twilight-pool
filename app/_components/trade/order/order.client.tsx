@@ -31,8 +31,9 @@ const Order = () => {
   }
 
   return (
-    <div className="space-y-2 py-2">
-      <div className="relative flex w-full items-center justify-between border-b pl-3">
+    <div className="flex h-full w-full flex-col">
+      <div className="sticky top-0 z-10 bg-background pt-2">
+        <div className="relative flex w-full items-center justify-between border-b pl-3">
         <Tabs defaultValue={currentTab}>
           <TabsList variant="underline">
             <TabsTrigger
@@ -78,6 +79,7 @@ const Order = () => {
         </DropdownMenu> */}
         <div className="absolute bottom-1 right-1 hidden lg:block">
           <FundingTradeButton />
+        </div>
         </div>
       </div>
 

@@ -16,6 +16,17 @@ const DragWrapper = forwardRef<
 >(({ title, name, dimension, children, className, ...props }, ref) => {
   const { width: windowWidth } = useWindow();
 
+  // react-resizable injects a DraggableCore component as a child for resize handles;
+  // separate it so it renders outside the scroll wrapper (needed for positioning)
+  const childArray = React.Children.toArray(children);
+  const resizeHandles = childArray.filter(
+    (child) =>
+      React.isValidElement(child) &&
+      "onDrag" in child.props &&
+      "onStop" in child.props
+  );
+  const content = childArray.filter((child) => !resizeHandles.includes(child));
+
   return (
     <div
       className={cn(
@@ -33,12 +44,18 @@ const DragWrapper = forwardRef<
       >
         {title}
       </div>
-      <GridProvider
-        callbackDimensions={dimension.filter((dim) => dim.name === name)[0]}
-        gridRef={ref as React.MutableRefObject<HTMLDivElement>}
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
       >
-        {children}
-      </GridProvider>
+        <GridProvider
+          callbackDimensions={dimension.filter((dim) => dim.name === name)[0]}
+          gridRef={ref as React.MutableRefObject<HTMLDivElement>}
+        >
+          {content}
+        </GridProvider>
+      </div>
+      {resizeHandles}
     </div>
   );
 });

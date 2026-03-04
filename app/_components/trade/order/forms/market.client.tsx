@@ -275,6 +275,7 @@ const OrderMarketForm = () => {
 
     if (!btcRef.current?.value) {
       toast({
+        variant: "error",
         title: "Invalid amount",
         description: "Please enter an amount to trade.",
       });
@@ -285,6 +286,7 @@ const OrderMarketForm = () => {
 
     if (btcValue && Big(btcValue).lte(0.00001)) {
       toast({
+        variant: "error",
         title: "Invalid amount",
         description: "Please enter an amount greater than 0.00001 BTC.",
       });
@@ -687,7 +689,7 @@ const OrderMarketForm = () => {
   return (
     <form
       onSubmit={(e) => e.preventDefault()}
-      className="flex flex-col space-y-2 px-3"
+      className="flex flex-col space-y-2 px-3 pb-2"
     >
       <div className="flex justify-between text-xs">
         <span className="opacity-80">Avbl to trade</span>
