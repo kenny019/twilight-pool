@@ -1,11 +1,5 @@
 import Button from "@/components/button";
-import {
-  DropdownMenu,
-  DropdownTrigger,
-  DropdownContent,
-  DropdownItem,
-} from "@/components/dropdown";
-import { ChevronDown, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import cn from "@/lib/cn";
 import { capitaliseFirstLetter, formatSatsMBtc } from '@/lib/helpers';
 import BTC from '@/lib/twilight/denoms';
@@ -193,7 +187,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
   },
   {
     accessorKey: "actions",
-    header: "Action",
+    header: "Close",
     cell: (row) => {
       const trade = row.row.original;
       const meta = row.table.options.meta as PositionsTableMeta;
@@ -210,37 +204,34 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
+            title="Close at market price"
           >
-            {isSettling ? "Closing..." : "Close Market"}
+            {isSettling ? "..." : "MKT"}
           </Button>
-          <DropdownMenu>
-            <DropdownTrigger asChild>
-              <Button
-                variant="ui"
-                size="small"
-                disabled={isSettling}
-                className="gap-1"
-              >
-                Close <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownTrigger>
-            <DropdownContent align="start">
-              <DropdownItem
-                onSelect={() =>
-                  meta.openConditionalDialog(trade.accountAddress, "limit")
-                }
-              >
-                Limit
-              </DropdownItem>
-              <DropdownItem
-                onSelect={() =>
-                  meta.openConditionalDialog(trade.accountAddress, "sltp")
-                }
-              >
-                SL/TP
-              </DropdownItem>
-            </DropdownContent>
-          </DropdownMenu>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              meta.openConditionalDialog(trade.accountAddress, "limit");
+            }}
+            variant="ui"
+            size="small"
+            disabled={isSettling}
+            title="Close with limit order"
+          >
+            LMT
+          </Button>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              meta.openConditionalDialog(trade.accountAddress, "sltp");
+            }}
+            variant="ui"
+            size="small"
+            disabled={isSettling}
+            title="Set Stop Loss / Take Profit"
+          >
+            SLTP
+          </Button>
         </div>
       );
     },

@@ -347,9 +347,16 @@ export async function settleOrderSltp(
       };
     }
 
+    // Gracefully handle environments where take_profit / stop_loss are not yet
+    // returned by trader_order_info_v1.
+    const result = queryTradeOrderResponse.result;
     return {
       success: true,
-      data: queryTradeOrderResponse.result,
+      data: {
+        ...result,
+        take_profit: result.take_profit ?? null,
+        stop_loss: result.stop_loss ?? null,
+      },
     };
   } catch (err) {
     console.error(`settleOrderSltp error:`, err);
@@ -408,24 +415,19 @@ export async function cancelZkOrder(
       };
     }
 
+    // Poll for a CANCELLED tx record. The backend records every cancel —
+    // including partial SLTP cancels — as a CANCELLED tx entry, so this
+    // condition works for both full and partial cancellations.
     const transactionHashCondition = (
       txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
     ) => {
       if (txHashResult.result) {
-        const transactionHashes = txHashResult.result;
-
-        let hasSettled = false;
-        transactionHashes.forEach((result) => {
-          if (result.order_status !== "CANCELLED") {
-            console.log(result.order_status);
-            return;
-          }
-
-          hasSettled =
-            result.order_id === trade.uuid && !result.tx_hash.includes("Error");
-        });
-
-        return hasSettled;
+        return txHashResult.result.some(
+          (result) =>
+            result.order_status === "CANCELLED" &&
+            result.order_id === trade.uuid &&
+            !result.tx_hash.includes("Error")
+        );
       }
       return false;
     };
@@ -449,9 +451,23 @@ export async function cancelZkOrder(
       };
     }
 
+    const cancelTx = transactionHashRes.data.result.find(
+      (r) =>
+        r.order_status === "CANCELLED" &&
+        r.order_id === trade.uuid &&
+        !r.tx_hash.includes("Error")
+    );
+
+    const txHash = cancelTx?.tx_hash ?? "";
+
+    // For SLTP cancels the position stays FILLED — re-query with FILLED so we
+    // get the updated state (SL/TP fields will be null once the cancel lands).
+    // For regular entry/limit cancels query with CANCELLED.
+    const queryStatus = isSltp ? "FILLED" : "CANCELLED";
+
     const queryTradeOrderMsg = await createQueryTradeOrderMsg({
       address: trade.accountAddress,
-      orderStatus: "CANCELLED",
+      orderStatus: queryStatus,
       signature: privateKey,
     });
 
@@ -468,13 +484,21 @@ export async function cancelZkOrder(
 
     const queryTradeOrderData = queryTradeOrderResponse.result;
 
+    // Gracefully handle environments where take_profit / stop_loss are not yet
+    // returned by trader_order_info_v1 — fall back to null rather than crashing.
+    const safeData: QueryTradeOrderData = {
+      ...queryTradeOrderData,
+      take_profit: queryTradeOrderData.take_profit ?? null,
+      stop_loss: queryTradeOrderData.stop_loss ?? null,
+    };
+
     console.log(transactionHashRes.data.result);
 
     return {
       success: true,
       data: {
-        ...queryTradeOrderData,
-        tx_hash: transactionHashRes.data.result[0].tx_hash,
+        ...safeData,
+        tx_hash: txHash,
       },
     };
   } catch (err) {

@@ -28,6 +28,69 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Compute PnL in USD from a close price.
+ * Returns null when inputs are invalid or computation overflows.
+ */
+function pnlUsdFromPrice(
+  closePrice: number,
+  entryPrice: number,
+  positionSize: number,
+  positionType: string,
+  btcPriceUsd: number
+): number | null {
+  if (closePrice <= 0 || entryPrice <= 0 || positionSize === 0 || btcPriceUsd <= 0) return null;
+  try {
+    const pnlSats = calculateUpnl(entryPrice, closePrice, positionType, positionSize);
+    if (!isFinite(pnlSats)) return null;
+    // pnlSats → BTC → USD
+    const result = new Big(pnlSats).div(100_000_000).mul(btcPriceUsd).toNumber();
+    return isFinite(result) ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compute a close price that achieves the requested PnL (USD).
+ * Returns null when the PnL is unreachable (e.g. exceeds max possible gain).
+ *
+ * Derived from calculateUpnl:
+ *   LONG:  pnlSats = positionSize * (close - entry) / (entry * close)
+ *   SHORT: pnlSats = positionSize * (entry - close) / (entry * close)
+ *
+ * Inverse:
+ *   LONG:  close = positionSize * entry / (positionSize - pnlSats * entry)
+ *   SHORT: close = positionSize * entry / (positionSize + pnlSats * entry)
+ */
+function priceFromPnlUsd(
+  pnlUsd: number,
+  entryPrice: number,
+  positionSize: number,
+  positionType: string,
+  btcPriceUsd: number
+): number | null {
+  if (!isFinite(pnlUsd) || entryPrice <= 0 || positionSize === 0 || btcPriceUsd <= 0) return null;
+  try {
+    const pnlSats = new Big(pnlUsd).div(btcPriceUsd).mul(100_000_000).toNumber();
+    if (!isFinite(pnlSats)) return null;
+    const isLong = positionType.toUpperCase() === "LONG";
+    const denom = isLong
+      ? positionSize - pnlSats * entryPrice
+      : positionSize + pnlSats * entryPrice;
+    if (Math.abs(denom) < 1e-9) return null; // avoid division by zero
+    const close = (positionSize * entryPrice) / denom;
+    if (!isFinite(close) || close <= 0) return null;
+    return close;
+  } catch {
+    return null;
+  }
+}
+
+// ─── component ──────────────────────────────────────────────────────────────
+
 function ConditionalCloseDialog({
   account,
   initialTab = "limit",
@@ -49,9 +112,20 @@ function ConditionalCloseDialog({
   const liveBtcPrice = getCurrentPrice();
   const currentPrice = liveBtcPrice || storedBtcPrice;
 
+  // ── limit tab state ──────────────────────────────────────────────────────
   const [limitPrice, setLimitPrice] = useState(currentPrice || 0);
-  const [slPrice, setSlPrice] = useState<number>(0);
-  const [tpPrice, setTpPrice] = useState<number>(0);
+
+  // ── sltp tab state ───────────────────────────────────────────────────────
+  // Prices (set by price field OR derived from PnL field)
+  const [slPrice, setSlPrice] = useState(0);
+  const [tpPrice, setTpPrice] = useState(0);
+  // PnL fields — when null the value is derived from the price; when non-null
+  // the user has typed a PnL value and we derive the price from it.
+  const [slPnlInput, setSlPnlInput] = useState<number>(0);
+  const [tpPnlInput, setTpPnlInput] = useState<number>(0);
+  // Which field did the user edit last per leg? "price" | "pnl"
+  const [slLastEdited, setSlLastEdited] = useState<"price" | "pnl">("price");
+  const [tpLastEdited, setTpLastEdited] = useState<"price" | "pnl">("price");
 
   const selectedTrade = trades.find((trade) => trade.accountAddress === account);
   const queryClient = useQueryClient();
@@ -61,28 +135,49 @@ function ConditionalCloseDialog({
   const positionSize = selectedTrade?.positionSize || 0;
   const positionType = selectedTrade?.positionType || "";
 
-  const positionSizeBtc = BTC.format(
-    new BTC("sats", Big(positionSize)).convert("BTC"),
-    "BTC"
-  );
+  // Position amount in USD (2 dp) — matches columns rendering convention where
+  // positionSize treated as sats-equivalent gives the USD display value.
+  const positionSizeUsd = new BTC("sats", Big(positionSize)).convert("BTC").toFixed(2);
 
-  const hasSettleLimit = !!selectedTrade?.settleLimit;
-  const hasSltp = !!(
-    selectedTrade?.takeProfit ||
-    selectedTrade?.stopLoss
-  );
+  const hasSltp = !!(selectedTrade?.takeProfit || selectedTrade?.stopLoss);
 
+  // ── initialise state when dialog opens ──────────────────────────────────
+  // Pre-populate SL/TP from existing values if they are set; otherwise start
+  // at 0 so the user can freely enter their desired price.
   useEffect(() => {
-    if (open) {
-      setActiveTab(initialTab);
-      if (currentPrice) {
-        setLimitPrice(currentPrice);
-        setSlPrice(currentPrice);
-        setTpPrice(currentPrice);
-      }
-    }
-  }, [open, initialTab, currentPrice]);
+    if (!open) return;
 
+    setActiveTab(initialTab);
+    setLimitPrice(currentPrice || 0);
+
+    const existingSl = selectedTrade?.stopLoss
+      ? Number(selectedTrade.stopLoss.sl_price)
+      : 0;
+    const existingTp = selectedTrade?.takeProfit
+      ? Number(selectedTrade.takeProfit.tp_price)
+      : 0;
+
+    setSlPrice(existingSl);
+    setTpPrice(existingTp);
+
+    // Derive initial PnL display values from the existing prices
+    const btcPrice = currentPrice || storedBtcPrice;
+    setSlPnlInput(
+      existingSl > 0
+        ? (pnlUsdFromPrice(existingSl, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+        : 0
+    );
+    setTpPnlInput(
+      existingTp > 0
+        ? (pnlUsdFromPrice(existingTp, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+        : 0
+    );
+    setSlLastEdited("price");
+    setTpLastEdited("price");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialTab]);
+
+  // ── limit tab estimated PnL ──────────────────────────────────────────────
   const estimatedPnlLimit = calculateUpnl(
     entryPrice,
     limitPrice,
@@ -97,19 +192,77 @@ function ConditionalCloseDialog({
   const isPnlLimitPositive = estimatedPnlLimit > 0;
   const isPnlLimitNegative = estimatedPnlLimit < 0;
 
-  const estimatedPnlSl = calculateUpnl(
-    entryPrice,
-    slPrice,
-    positionType,
-    positionSize
-  );
-  const estimatedPnlTp = calculateUpnl(
-    entryPrice,
-    tpPrice,
-    positionType,
-    positionSize
-  );
+  // ── sltp derived values ──────────────────────────────────────────────────
+  const btcPrice = currentPrice || storedBtcPrice;
 
+  // Derived PnL (USD) from each price — used when user edited the price field
+  const derivedSlPnlUsd = slPrice > 0
+    ? (pnlUsdFromPrice(slPrice, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+    : 0;
+  const derivedTpPnlUsd = tpPrice > 0
+    ? (pnlUsdFromPrice(tpPrice, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+    : 0;
+
+  // What the PnL fields actually display
+  const displaySlPnl = slLastEdited === "price" ? derivedSlPnlUsd : slPnlInput;
+  const displayTpPnl = tpLastEdited === "price" ? derivedTpPnlUsd : tpPnlInput;
+
+  // Risk/Reward: only shown when both are set
+  const slPnlSats = calculateUpnl(entryPrice, slPrice, positionType, positionSize);
+  const tpPnlSats = calculateUpnl(entryPrice, tpPrice, positionType, positionSize);
+
+  // ── handlers for bidirectional price ↔ PnL ──────────────────────────────
+  function handleSlPriceChange(val: number) {
+    setSlPrice(val);
+    setSlLastEdited("price");
+    // Keep PnL input in sync so it doesn't look stale when user switches back
+    const pnl = val > 0
+      ? (pnlUsdFromPrice(val, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+      : 0;
+    setSlPnlInput(pnl);
+  }
+
+  function handleSlPnlChange(val: number) {
+    if (!isFinite(val)) return;
+    setSlPnlInput(val);
+    setSlLastEdited("pnl");
+    const derived = val !== 0
+      ? (priceFromPnlUsd(val, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+      : 0;
+    setSlPrice(derived);
+  }
+
+  function handleTpPriceChange(val: number) {
+    setTpPrice(val);
+    setTpLastEdited("price");
+    const pnl = val > 0
+      ? (pnlUsdFromPrice(val, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+      : 0;
+    setTpPnlInput(pnl);
+  }
+
+  function handleTpPnlChange(val: number) {
+    if (!isFinite(val)) return;
+    setTpPnlInput(val);
+    setTpLastEdited("pnl");
+    const derived = val !== 0
+      ? (priceFromPnlUsd(val, entryPrice, positionSize, positionType, btcPrice) ?? 0)
+      : 0;
+    setTpPrice(derived);
+  }
+
+  // ── quick presets ────────────────────────────────────────────────────────
+  function applyPreset(preset: "sl-2" | "tp-5" | "sl-2-tp-5") {
+    const isLong = positionType.toUpperCase() === "LONG";
+    if (preset === "sl-2" || preset === "sl-2-tp-5") {
+      handleSlPriceChange(isLong ? entryPrice * 0.98 : entryPrice * 1.02);
+    }
+    if (preset === "tp-5" || preset === "sl-2-tp-5") {
+      handleTpPriceChange(isLong ? entryPrice * 1.05 : entryPrice * 0.95);
+    }
+  }
+
+  // ── validation ───────────────────────────────────────────────────────────
   function validateSltp(): string | null {
     if (!selectedTrade) return "Please select a valid trade";
     const hasSl = slPrice > 0;
@@ -118,7 +271,7 @@ function ConditionalCloseDialog({
       return "At least one of Stop Loss or Take Profit is required";
     }
     if (hasSl && hasTp && Math.abs(slPrice - tpPrice) < 0.01) {
-      return "Stop Loss and Take Profit cannot be the same";
+      return "Stop Loss and Take Profit cannot be the same price";
     }
     const isLong = positionType.toUpperCase() === "LONG";
     if (hasSl) {
@@ -140,8 +293,9 @@ function ConditionalCloseDialog({
     return null;
   }
 
+  // ── submit handlers ──────────────────────────────────────────────────────
   async function handleSettleLimit() {
-    if (limitPrice < 0) {
+    if (limitPrice <= 0) {
       toast({
         title: "Invalid limit price",
         description: "Please enter a valid limit price",
@@ -157,14 +311,7 @@ function ConditionalCloseDialog({
       });
       return;
     }
-    if (hasSltp) {
-      toast({
-        title: "Cancel SLTP first",
-        description: "You have SL/TP orders. Cancel them first to place a limit close.",
-        variant: "error",
-      });
-      return;
-    }
+    // Limit and SLTP are allowed to coexist — no mutual exclusion check.
 
     onOpenChange(false);
     toast({
@@ -203,7 +350,7 @@ function ConditionalCloseDialog({
       date: dayjs(settledData.timestamp).toDate(),
       exit_nonce: settledData.exit_nonce,
       executionPrice: Big(settledData.execution_price).toNumber(),
-      isOpen: false,
+      isOpen: true,
       feeSettled: Big(settledData.fee_settled).toNumber(),
       feeFilled: Big(settledData.fee_filled).toNumber(),
       realizedPnl: Big(settledData.unrealized_pnl).toNumber(),
@@ -267,19 +414,13 @@ function ConditionalCloseDialog({
       return;
     }
     if (!selectedTrade) return;
-    if (hasSettleLimit) {
-      toast({
-        title: "Cancel limit first",
-        description:
-          "You have a limit close order. Cancel it first to place SLTP.",
-        variant: "error",
-      });
-      return;
-    }
+    // Limit and SLTP are allowed to coexist — no mutual exclusion check.
+
+    const isUpdate = hasSltp;
 
     onOpenChange(false);
     toast({
-      title: "Placing SLTP order",
+      title: isUpdate ? "Updating SLTP order" : "Placing SLTP order",
       description:
         "Please do not close this page while your order is being processed...",
     });
@@ -306,6 +447,9 @@ function ConditionalCloseDialog({
 
     const settledData = result.data;
 
+    // The position stays FILLED and open — isOpen must remain true.
+    // take_profit / stop_loss may not yet be in the API response; fall back to
+    // the values we just submitted so the UI reflects them immediately.
     const updatedTradeData = {
       ...selectedTrade,
       orderStatus: settledData.order_status,
@@ -318,7 +462,7 @@ function ConditionalCloseDialog({
       date: dayjs(settledData.timestamp).toDate(),
       exit_nonce: settledData.exit_nonce,
       executionPrice: Big(settledData.execution_price).toNumber(),
-      isOpen: false,
+      isOpen: true, // position remains open — SLTP only sets trigger conditions
       feeSettled: Big(settledData.fee_settled).toNumber(),
       feeFilled: Big(settledData.fee_filled).toNumber(),
       realizedPnl: Big(settledData.unrealized_pnl).toNumber(),
@@ -327,8 +471,20 @@ function ConditionalCloseDialog({
       bankruptcyPrice: Big(settledData.bankruptcy_price).toNumber(),
       bankruptcyValue: Big(settledData.bankruptcy_value).toNumber(),
       initialMargin: Big(settledData.initial_margin).toNumber(),
-      takeProfit: settledData.take_profit ?? undefined,
-      stopLoss: settledData.stop_loss ?? undefined,
+      // Prefer the API response values; fall back to submitted values when the
+      // API does not yet return take_profit / stop_loss fields.
+      takeProfit:
+        settledData.take_profit !== undefined
+          ? (settledData.take_profit ?? undefined)
+          : tp
+            ? { tp_price: String(tp), timestamp: new Date().toISOString() }
+            : selectedTrade.takeProfit ?? undefined,
+      stopLoss:
+        settledData.stop_loss !== undefined
+          ? (settledData.stop_loss ?? undefined)
+          : sl
+            ? { sl_price: String(sl), timestamp: new Date().toISOString() }
+            : selectedTrade.stopLoss ?? undefined,
       fundingApplied: settledData.funding_applied,
     };
 
@@ -337,31 +493,20 @@ function ConditionalCloseDialog({
       ...updatedTradeData,
       orderStatus: "PENDING",
       orderType: "SLTP",
-      takeProfit: settledData.take_profit ?? undefined,
-      stopLoss: settledData.stop_loss ?? undefined,
+      takeProfit: updatedTradeData.takeProfit,
+      stopLoss: updatedTradeData.stopLoss,
       date: new Date(),
     });
 
     await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
     toast({
-      title: "SLTP order sent",
-      description: "Stop Loss / Take Profit order has been placed.",
+      title: isUpdate ? "SLTP order updated" : "SLTP order placed",
+      description: "Stop Loss / Take Profit order has been set.",
     });
   }
 
-  function applyPreset(preset: "sl-2" | "tp-5" | "sl-2-tp-5") {
-    const isLong = positionType.toUpperCase() === "LONG";
-    if (preset === "sl-2") {
-      setSlPrice(isLong ? entryPrice * 0.98 : entryPrice * 1.02);
-    } else if (preset === "tp-5") {
-      setTpPrice(isLong ? entryPrice * 1.05 : entryPrice * 0.95);
-    } else {
-      setSlPrice(isLong ? entryPrice * 0.98 : entryPrice * 1.02);
-      setTpPrice(isLong ? entryPrice * 1.05 : entryPrice * 0.95);
-    }
-  }
-
+  // ── render ───────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -379,6 +524,7 @@ function ConditionalCloseDialog({
             </TabsTrigger>
           </TabsList>
 
+          {/* ── Limit tab ─────────────────────────────────────────────── */}
           <TabsPrimitive.Content value="limit" className="mt-4">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -418,7 +564,7 @@ function ConditionalCloseDialog({
                 <span className="text-xs text-primary-accent">
                   Position Amount
                 </span>
-                <span className="text-sm font-medium">{positionSizeBtc} BTC</span>
+                <span className="text-sm font-medium">${positionSizeUsd}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-primary-accent">
@@ -441,6 +587,7 @@ function ConditionalCloseDialog({
             </div>
           </TabsPrimitive.Content>
 
+          {/* ── SL/TP tab ──────────────────────────────────────────────── */}
           <TabsPrimitive.Content value="sltp" className="mt-4">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -461,6 +608,7 @@ function ConditionalCloseDialog({
               </div>
               <div className="border-t" />
 
+              {/* Quick presets */}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-primary-accent shrink-0">
                   Quick presets
@@ -493,68 +641,125 @@ function ConditionalCloseDialog({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label
-                  className="text-xs text-primary-accent"
-                  htmlFor="input-sl-usd"
-                >
-                  Stop Loss (USD) — optional
-                </label>
-                <NumberInput
-                  id="input-sl-usd"
-                  inputValue={slPrice}
-                  setInputValue={setSlPrice}
-                  currentPrice={currentPrice}
-                  placeholder="0.00"
-                />
-                {slPrice > 0 && (
-                  <span
+              {/* ── Stop Loss ─────────────────────────────────────── */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-red">
+                  Stop Loss — optional
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label
+                      className="text-xs text-primary-accent"
+                      htmlFor="input-sl-price"
+                    >
+                      Price (USD)
+                    </label>
+                    <NumberInput
+                      id="input-sl-price"
+                      inputValue={slPrice}
+                      setInputValue={handleSlPriceChange}
+                      currentPrice={currentPrice}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      className="text-xs text-primary-accent"
+                      htmlFor="input-sl-pnl"
+                    >
+                      PnL (USD)
+                    </label>
+                    <NumberInput
+                      id="input-sl-pnl"
+                      inputValue={isFinite(displaySlPnl) ? Number(displaySlPnl.toFixed(2)) : 0}
+                      setInputValue={handleSlPnlChange}
+                      currentPrice={0}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                {slPrice > 0 && isFinite(displaySlPnl) && (
+                  <p
                     className={cn(
                       "text-xs",
-                      estimatedPnlSl < 0 ? "text-red" : "text-green-medium"
+                      displaySlPnl < 0 ? "text-red" : "text-green-medium"
                     )}
                   >
-                    PnL at SL: {formatPnlWithUsd(estimatedPnlSl, currentPrice)}
-                  </span>
+                    Est. PnL at SL:{" "}
+                    {displaySlPnl >= 0 ? "+" : ""}
+                    {displaySlPnl.toFixed(2)} USD
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-1">
-                <label
-                  className="text-xs text-primary-accent"
-                  htmlFor="input-tp-usd"
-                >
-                  Take Profit (USD) — optional
-                </label>
-                <NumberInput
-                  id="input-tp-usd"
-                  inputValue={tpPrice}
-                  setInputValue={setTpPrice}
-                  currentPrice={currentPrice}
-                  placeholder="0.00"
-                />
-                {tpPrice > 0 && (
-                  <span
+              {/* ── Take Profit ───────────────────────────────────── */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-green-medium">
+                  Take Profit — optional
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label
+                      className="text-xs text-primary-accent"
+                      htmlFor="input-tp-price"
+                    >
+                      Price (USD)
+                    </label>
+                    <NumberInput
+                      id="input-tp-price"
+                      inputValue={tpPrice}
+                      setInputValue={handleTpPriceChange}
+                      currentPrice={currentPrice}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      className="text-xs text-primary-accent"
+                      htmlFor="input-tp-pnl"
+                    >
+                      PnL (USD)
+                    </label>
+                    <NumberInput
+                      id="input-tp-pnl"
+                      inputValue={isFinite(displayTpPnl) ? Number(displayTpPnl.toFixed(2)) : 0}
+                      setInputValue={handleTpPnlChange}
+                      currentPrice={0}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                {tpPrice > 0 && isFinite(displayTpPnl) && (
+                  <p
                     className={cn(
                       "text-xs",
-                      estimatedPnlTp >= 0 ? "text-green-medium" : "text-red"
+                      displayTpPnl >= 0 ? "text-green-medium" : "text-red"
                     )}
                   >
-                    PnL at TP: {formatPnlWithUsd(estimatedPnlTp, currentPrice)}
-                  </span>
+                    Est. PnL at TP:{" "}
+                    {displayTpPnl >= 0 ? "+" : ""}
+                    {displayTpPnl.toFixed(2)} USD
+                  </p>
                 )}
               </div>
 
+              {/* Risk/Reward ratio */}
               {slPrice > 0 && tpPrice > 0 && (
                 <div className="flex items-center justify-between text-xs text-primary-accent">
                   <span>Risk/Reward</span>
                   <span>
                     {(
-                      Math.abs(estimatedPnlTp) / Math.abs(estimatedPnlSl || 1)
+                      Math.abs(tpPnlSats) / Math.abs(slPnlSats || 1)
                     ).toFixed(2)}
                     :1
                   </span>
                 </div>
+              )}
+
+              {hasSltp && (
+                <p className="text-xs text-primary-accent">
+                  You already have an active SL/TP — confirming will update it.
+                </p>
               )}
 
               <div className="border-t" />
@@ -562,10 +767,12 @@ function ConditionalCloseDialog({
                 <span className="text-xs text-primary-accent">
                   Position Amount
                 </span>
-                <span className="text-sm font-medium">{positionSizeBtc} BTC</span>
+                <span className="text-sm font-medium">${positionSizeUsd}</span>
               </div>
               <div className="border-t" />
-              <Button onClick={handleSettleSltp}>Confirm</Button>
+              <Button onClick={handleSettleSltp}>
+                {hasSltp ? "Update SL/TP" : "Confirm"}
+              </Button>
             </div>
           </TabsPrimitive.Content>
         </Tabs>
