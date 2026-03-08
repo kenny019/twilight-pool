@@ -401,8 +401,8 @@ const DetailsPanel = () => {
   // Confirmation dialog: the "other leg" label and price for the prompt.
   const sltpConfirmOtherLabel = sltpCancelPending
     ? sltpCancelPending.cancelLeg === "sl"
-      ? `Take Profit at ${formatCurrency(Number(sltpCancelPending.trade.takeProfit?.tp_price ?? 0))}`
-      : `Stop Loss at ${formatCurrency(Number(sltpCancelPending.trade.stopLoss?.sl_price ?? 0))}`
+      ? `Take Profit at ${formatCurrency(Number(sltpCancelPending.trade.takeProfit?.price ?? 0))}`
+      : `Stop Loss at ${formatCurrency(Number(sltpCancelPending.trade.stopLoss?.price ?? 0))}`
     : "";
 
   return (

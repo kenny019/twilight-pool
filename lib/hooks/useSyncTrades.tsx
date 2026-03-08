@@ -183,7 +183,11 @@ export const useSyncTrades = () => {
               key as keyof typeof tradeInfoKeysToTradeKey
             ];
 
-          if (!(tradeKey in trade)) continue;
+          // Skip keys not in our mapping (tradeKey would be undefined).
+          // Do NOT additionally check `tradeKey in trade` — that would drop
+          // updates for fields (like takeProfit / stopLoss) that are absent
+          // from trades persisted before those fields were added.
+          if (!tradeKey) continue;
 
           let updatedValue: unknown = value;
 
@@ -191,16 +195,17 @@ export const useSyncTrades = () => {
             updatedValue = new Big(value as string | number).toNumber();
           }
 
-          // take_profit / stop_loss are being added to trader_order_info_v1
-          // incrementally. While the relayer does not yet return them, or
-          // returns null for orders that have SLTP set locally, skip the
-          // update so locally-optimistic SLTP values are preserved.
-          // Once the API is live and returns a real object the update will
-          // pass through correctly; once cancelled the local optimistic clear
-          // already set null so the equality check below will skip anyway.
+          // For take_profit / stop_loss: only skip a null update when the
+          // local value is already non-null (protects an optimistic SLTP value
+          // that was set locally but the API hasn't confirmed yet). Once the
+          // API returns the real object the guard won't fire and the update
+          // will land. If the local value is already null/undefined, allow the
+          // update through so the equality check below handles it normally.
+          const currentValueForGuard = trade[tradeKey as keyof TradeOrder];
           if (
             (key === "take_profit" || key === "stop_loss") &&
-            updatedValue === null
+            updatedValue === null &&
+            currentValueForGuard != null
           ) {
             continue;
           }

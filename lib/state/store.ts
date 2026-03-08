@@ -56,7 +56,7 @@ export const createTwilightStore = (storageKey = "twilight-") => {
         name: storageKey,
         storage: createJSONStorage<AccountSlices>(() => localStorage),
         skipHydration: true,
-        version: 0.6,
+        version: 0.7,
         migrate: (persistedState, version) => {
           if (version === 0) {
             const newState = persistedState as AccountSlices;
@@ -118,6 +118,35 @@ export const createTwilightStore = (storageKey = "twilight-") => {
                 ...t,
                 takeProfit: t.takeProfit ?? undefined,
                 stopLoss: t.stopLoss ?? undefined,
+              }));
+            }
+            return newState;
+          }
+          if (version === 0.6) {
+            // Migrate takeProfit/stopLoss from old {sl_price, tp_price, timestamp}
+            // format to the actual backend format {price, position_type, uuid, created_time}.
+            const migrateSltpField = (field: any) => {
+              if (!field) return field;
+              return {
+                price: field.price ?? field.sl_price ?? field.tp_price ?? "0",
+                position_type: field.position_type,
+                uuid: field.uuid,
+                created_time: field.created_time ?? field.timestamp,
+              };
+            };
+            const newState = persistedState as AccountSlices;
+            if (newState.trade?.trades) {
+              newState.trade.trades = newState.trade.trades.map((t) => ({
+                ...t,
+                takeProfit: migrateSltpField(t.takeProfit),
+                stopLoss: migrateSltpField(t.stopLoss),
+              }));
+            }
+            if (newState.trade_history?.trades) {
+              newState.trade_history.trades = newState.trade_history.trades.map((t) => ({
+                ...t,
+                takeProfit: migrateSltpField(t.takeProfit),
+                stopLoss: migrateSltpField(t.stopLoss),
               }));
             }
             return newState;

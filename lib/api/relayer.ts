@@ -142,15 +142,20 @@ export type QueryTradeOrderData = {
     position_type: "LONG" | "SHORT";
     price: string;
     uuid: string;
+    created_time?: string;
     timestamp?: string;
   };
   take_profit: null | {
-    tp_price: string;
-    timestamp: string;
+    price: string;
+    position_type: string;
+    uuid: string;
+    created_time: string;
   };
   stop_loss: null | {
-    sl_price: string;
-    timestamp: string;
+    price: string;
+    position_type: string;
+    uuid: string;
+    created_time: string;
   };
   funding_applied: string;
 };

@@ -24,19 +24,21 @@ export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
     header: "Time",
     accessorFn: (row) => {
       if (row._sltpLeg === "sl") {
-        return row.stopLoss?.timestamp
-          ? dayjs(row.stopLoss.timestamp).format("DD/MM/YYYY HH:mm:ss")
+        const ts = row.stopLoss?.created_time;
+        return ts
+          ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
           : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
       }
       if (row._sltpLeg === "tp") {
-        return row.takeProfit?.timestamp
-          ? dayjs(row.takeProfit.timestamp).format("DD/MM/YYYY HH:mm:ss")
+        const ts = row.takeProfit?.created_time;
+        return ts
+          ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
           : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
       }
       const ts =
-        row.settleLimit?.timestamp ??
-        row.takeProfit?.timestamp ??
-        row.stopLoss?.timestamp;
+        row.settleLimit?.created_time ??
+        row.takeProfit?.created_time ??
+        row.stopLoss?.created_time;
       return ts
         ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
         : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
@@ -167,12 +169,15 @@ export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
     header: "Price (USD)",
     accessorFn: (row) => {
       if (row._sltpLeg === "sl" && row.stopLoss) {
-        return `SL: $${Number(row.stopLoss.sl_price).toFixed(2)}`;
+        const price = parseFloat(row.stopLoss.price);
+        return isFinite(price) ? `SL: $${price.toFixed(2)}` : "SL: —";
       }
       if (row._sltpLeg === "tp" && row.takeProfit) {
-        return `TP: $${Number(row.takeProfit.tp_price).toFixed(2)}`;
+        const price = parseFloat(row.takeProfit.price);
+        return isFinite(price) ? `TP: $${price.toFixed(2)}` : "TP: —";
       }
-      return `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`;
+      const limitPrice = row.settleLimit ? Number(row.settleLimit.price) : row.entryPrice;
+      return `$${isFinite(limitPrice) ? limitPrice.toFixed(2) : "—"}`;
     },
   },
   {
