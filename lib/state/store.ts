@@ -58,35 +58,26 @@ export const createTwilightStore = (storageKey = "twilight-") => {
         skipHydration: true,
         version: 0.6,
         migrate: (persistedState, version) => {
-          if (version === 0) {
-            const newState = persistedState as AccountSlices;
+          const newState = persistedState as AccountSlices;
+
+          if (version <= 0) {
             if (newState.zk) {
               newState.zk.blockHeight = 0;
             }
-
-            return newState;
           }
-          if (version === 0.2) {
-            const newState = persistedState as AccountSlices;
+          if (version <= 0.2) {
             if (newState.trade && Array.isArray(newState.trade.trades)) {
-              newState.trade.trades = newState.trade.trades.map((trade) => {
-                return {
-                  ...trade,
-                  entryPrice: 0,
-                };
-              });
+              newState.trade.trades = newState.trade.trades.map((trade) => ({
+                ...trade,
+                entryPrice: 0,
+              }));
             }
-
-            return newState;
           }
-          if (version === 0.3) {
-            const newState = persistedState as AccountSlices;
+          if (version <= 0.3) {
             newState.optInLeaderboard = false;
             newState.hasShownOptInDialog = false;
-            return newState;
           }
-          if (version === 0.4) {
-            const newState = persistedState as AccountSlices;
+          if (version <= 0.4) {
             if (newState.trade?.trades) {
               newState.trade.trades = newState.trade.trades.map((t) => ({
                 ...t,
@@ -99,10 +90,8 @@ export const createTwilightStore = (storageKey = "twilight-") => {
                 fundingHistory: t.fundingHistory ?? undefined,
               }));
             }
-            return newState;
           }
-          if (version === 0.5) {
-            const newState = persistedState as AccountSlices;
+          if (version <= 0.5) {
             if (newState.trade?.trades) {
               newState.trade.trades = newState.trade.trades.map((t) => ({
                 ...t,
@@ -120,9 +109,9 @@ export const createTwilightStore = (storageKey = "twilight-") => {
                 stopLoss: t.stopLoss ?? undefined,
               }));
             }
-            return newState;
           }
-          return persistedState as AccountSlices;
+
+          return newState;
         },
         merge: (persistedState, currentState) => {
           const cleanCurrentState = {

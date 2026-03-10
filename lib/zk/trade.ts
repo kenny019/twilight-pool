@@ -374,13 +374,13 @@ export async function cancelZkOrder(
   SuccessResult<QueryTradeOrderData & { tx_hash: string }> | FailureResult
 > {
   try {
-    const isSltp = !!(trade.takeProfit || trade.stopLoss);
+    const isSltp = !!(options?.sl_bool || options?.tp_bool);
 
     let cancelResult: Record<string, unknown>;
 
     if (isSltp) {
-      const sl_bool = options?.sl_bool ?? !!trade.stopLoss;
-      const tp_bool = options?.tp_bool ?? !!trade.takeProfit;
+      const sl_bool = options?.sl_bool ?? false;
+      const tp_bool = options?.tp_bool ?? false;
       cancelResult = await cancelTradeOrderSlTp({
         address: trade.accountAddress,
         uuid: trade.uuid,

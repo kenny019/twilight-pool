@@ -81,7 +81,8 @@ function ConditionalCloseDialog({
         setTpPrice(currentPrice);
       }
     }
-  }, [open, initialTab, currentPrice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialTab, selectedTrade?.uuid]);
 
   const estimatedPnlLimit = calculateUpnl(
     entryPrice,
@@ -327,8 +328,18 @@ function ConditionalCloseDialog({
       bankruptcyPrice: Big(settledData.bankruptcy_price).toNumber(),
       bankruptcyValue: Big(settledData.bankruptcy_value).toNumber(),
       initialMargin: Big(settledData.initial_margin).toNumber(),
-      takeProfit: settledData.take_profit ?? undefined,
-      stopLoss: settledData.stop_loss ?? undefined,
+      takeProfit:
+        settledData.take_profit != null
+          ? settledData.take_profit
+          : tp != null
+            ? { price: String(tp), created_time: new Date().toISOString() }
+            : (selectedTrade.takeProfit ?? undefined),
+      stopLoss:
+        settledData.stop_loss != null
+          ? settledData.stop_loss
+          : sl != null
+            ? { price: String(sl), created_time: new Date().toISOString() }
+            : (selectedTrade.stopLoss ?? undefined),
       fundingApplied: settledData.funding_applied,
     };
 
@@ -337,8 +348,6 @@ function ConditionalCloseDialog({
       ...updatedTradeData,
       orderStatus: "PENDING",
       orderType: "SLTP",
-      takeProfit: settledData.take_profit ?? undefined,
-      stopLoss: settledData.stop_loss ?? undefined,
       date: new Date(),
     });
 

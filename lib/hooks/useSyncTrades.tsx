@@ -208,6 +208,23 @@ export const useSyncTrades = () => {
           updatedTradeData[tradeKey] = updatedValue;
         }
 
+        // Reconcile SL/TP: if backend omits the key (null/undefined),
+        // ensure local optimistic values are cleared.
+        if (
+          traderOrderInfo.take_profit == null &&
+          trade.takeProfit != null &&
+          !("takeProfit" in updatedTradeData)
+        ) {
+          updatedTradeData["takeProfit"] = undefined;
+        }
+        if (
+          traderOrderInfo.stop_loss == null &&
+          trade.stopLoss != null &&
+          !("stopLoss" in updatedTradeData)
+        ) {
+          updatedTradeData["stopLoss"] = undefined;
+        }
+
         if (Object.keys(updatedTradeData).length > 0) {
           updated.set(trade.uuid, updatedTradeData);
         }
