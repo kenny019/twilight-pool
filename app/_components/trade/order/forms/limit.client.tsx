@@ -290,6 +290,24 @@ const OrderLimitForm = () => {
     }
 
     try {
+      if (!btcAmountRef.current?.value || Big(btcAmountRef.current.value).lte(0)) {
+        toast({
+          variant: "error",
+          title: "Invalid amount",
+          description: "Please enter an amount to trade.",
+        });
+        return;
+      }
+    } catch {
+      toast({
+        variant: "error",
+        title: "Invalid amount",
+        description: "Please enter an amount to trade.",
+      });
+      return;
+    }
+
+    try {
       const submitter = e.nativeEvent.submitter as HTMLButtonElement;
 
       const action = submitter.value as "sell" | "buy";
@@ -312,6 +330,7 @@ const OrderLimitForm = () => {
 
       if (btcAmountInSats < 1000) {
         toast({
+          variant: "error",
           title: "Invalid amount",
           description: "Please enter an amount greater than 0.00001 BTC.",
         });
@@ -693,7 +712,7 @@ const OrderLimitForm = () => {
       : false;
 
   return (
-    <form onSubmit={submitLimitOrder} className="flex flex-col space-y-2 px-3">
+    <form onSubmit={submitLimitOrder} className="flex flex-col space-y-2 px-3 pb-2">
       <div className="flex justify-between text-xs">
         <span className="opacity-80">Avbl to trade</span>
         <span>{tradingAccountBalanceString} BTC</span>

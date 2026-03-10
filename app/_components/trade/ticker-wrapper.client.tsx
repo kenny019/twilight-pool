@@ -243,7 +243,7 @@ const TickerWrapper = () => {
           isLoaded={hasInit && fundingRate !== "00:00:00"}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
-          <div className="mr-2 inline-flex items-center space-x-2 text-theme">
+          <div className="mr-2 inline-flex items-center space-x-2 whitespace-nowrap text-theme">
             <Zap className="w-4" />
 
             {fundingRate ? (

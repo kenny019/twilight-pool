@@ -78,7 +78,7 @@ function EditOrderDialog({
     if (newPrice <= 0) {
       toast({
         title: "Invalid price",
-        description: "Please enter a valid entry price",
+        description: "Please enter a valid limit price",
         variant: "error",
       });
       return;
@@ -292,7 +292,7 @@ function EditOrderDialog({
 
       toast({
         title: "Order edited successfully",
-        description: `Entry price updated to ${formatCurrency(newPrice)}`,
+        description: `Limit price updated to ${formatCurrency(newPrice)}`,
       });
     } catch (err) {
       console.error("editOrder error:", err);
@@ -319,7 +319,7 @@ function EditOrderDialog({
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-primary-accent">
-              Current Entry Price (USD)
+              Current Limit Price (USD)
             </span>
             <span className="text-sm font-medium">
               {formatCurrency(entryPrice)}
@@ -341,7 +341,7 @@ function EditOrderDialog({
               className="text-xs text-primary-accent"
               htmlFor="input-edit-entry-price"
             >
-              New Entry Price (USD)
+              New Limit Price (USD)
             </label>
             <NumberInput
               id="input-edit-entry-price"

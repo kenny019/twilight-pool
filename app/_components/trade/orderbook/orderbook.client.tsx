@@ -86,8 +86,9 @@ const Orderbook = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col space-y-2 overflow-auto py-2">
-      <div className="flex w-full items-center border-b pl-3">
+    <div className="flex h-full w-full flex-col">
+      <div className="sticky top-0 z-10 bg-background pt-2">
+        <div className="flex w-full items-center border-b pl-3">
         <Tabs defaultValue={currentTab}>
           <TabsList className="flex w-full border-b-0" variant="underline">
             <TabsTrigger
@@ -106,6 +107,7 @@ const Orderbook = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        </div>
       </div>
       <OrderbookViews />
     </div>
