@@ -133,13 +133,22 @@ function ConditionalCloseDialog({
   // Which field did the user edit last per leg? "price" | "pnl"
   const [slLastEdited, setSlLastEdited] = useState<"price" | "pnl">("price");
   const [tpLastEdited, setTpLastEdited] = useState<"price" | "pnl">("price");
+  // PnL unit switcher
+  const [pnlUnit, setPnlUnit] = useState<"BTC" | "mBTC">("BTC");
+  const pnlScale = pnlUnit === "mBTC" ? 1000 : 1;
+  const pnlDecimals = pnlUnit === "mBTC" ? 5 : 8;
 
   const selectedTrade = trades.find((trade) => trade.accountAddress === account);
   const queryClient = useQueryClient();
 
   const entryPrice = selectedTrade?.entryPrice || 0;
   const markPrice = currentPrice || entryPrice;
-  const positionSize = selectedTrade?.positionSize || 0;
+  const rawPositionSize = selectedTrade?.positionSize || 0;
+  const initialMargin = selectedTrade?.initialMargin || 0;
+  const leverage = selectedTrade?.leverage || 1;
+  // Fallback when API omits positionSize (e.g. after SLTP response) — use margin * leverage
+  const positionSize =
+    rawPositionSize > 0 ? rawPositionSize : Math.round(initialMargin * leverage);
   const positionType = selectedTrade?.positionType || "";
   const btcPrice = currentPrice || storedBtcPrice;
   const isLong = positionType.toUpperCase() === "LONG";
@@ -196,11 +205,10 @@ function ConditionalCloseDialog({
     positionType,
     positionSize
   );
-  const estimatedPnlLimitBtc = BTC.format(
-    new BTC("sats", Big(estimatedPnlLimit)).convert("BTC"),
-    "BTC"
-  );
-  const estimatedPnlLimitUsd = formatPnlWithUsd(estimatedPnlLimit, currentPrice);
+  const estimatedPnlLimitBtcBig = new BTC("sats", Big(estimatedPnlLimit)).convert("BTC");
+  const estimatedPnlLimitBtcStr = BTC.format(estimatedPnlLimitBtcBig, "BTC");
+  // Use btcPrice (has storedBtcPrice fallback) to avoid $0.00 when live price snapshot is 0
+  const estimatedPnlLimitUsdNum = btcPrice > 0 ? estimatedPnlLimitBtcBig.toNumber() * btcPrice : 0;
   const isPnlLimitPositive = estimatedPnlLimit > 0;
   const isPnlLimitNegative = estimatedPnlLimit < 0;
 
@@ -216,20 +224,28 @@ function ConditionalCloseDialog({
     entryPrice > 0 && limitPrice > 0
       ? ((limitPrice - entryPrice) / entryPrice) * 100
       : null;
-  const limitLossMaxAbs = liqDistancePct != null ? Math.min(20, liqDistancePct * 0.98) : 20;
+  // Extend loss side to 99% of the way to liquidation; profit side capped at 50%
+  const limitLossMaxAbs = liqDistancePct != null ? liqDistancePct * 0.99 : 30;
   const limitSliderRange = isLong
-    ? { min: -limitLossMaxAbs, max: 30 }
-    : { min: -30, max: limitLossMaxAbs };
+    ? { min: -limitLossMaxAbs, max: 50 }
+    : { min: -50, max: limitLossMaxAbs };
   const limitSliderPct =
     limitDistanceFromEntryPct != null
       ? Math.min(Math.max(limitDistanceFromEntryPct, limitSliderRange.min), limitSliderRange.max)
       : 0;
+  // Thumb position as % of slider track width (clamped to avoid edge clip)
+  const thumbTrackPct =
+    limitSliderRange.max !== limitSliderRange.min
+      ? ((limitSliderPct - limitSliderRange.min) / (limitSliderRange.max - limitSliderRange.min)) * 100
+      : 50;
+  const thumbDisplayPct = Math.min(Math.max(thumbTrackPct, 5), 95);
+
   const limitProfitPresets = isLong ? [2, 5, 10, 20] : [-2, -5, -10, -20];
   const limitLossPresets = isLong ? [-2, -5, -10] : [2, 5, 10];
-  const limitNearMark =
-    limitPrice > 0 && markPrice > 0
-      ? Math.abs((limitPrice - markPrice) / markPrice) < 0.002
-      : false;
+  // Unified warning: limit is on wrong side of mark (covers both "near mark" and "wrong side")
+  const limitMayExecuteImmediately =
+    limitPrice > 0 && markPrice > 0 &&
+    ((isLong && limitPrice <= markPrice) || (!isLong && limitPrice >= markPrice));
   const limitBeyondLiq =
     liquidationPrice > 0 && limitPrice > 0
       ? (isLong && limitPrice <= liquidationPrice) ||
@@ -253,10 +269,10 @@ function ConditionalCloseDialog({
   // ── sltp derived values ──────────────────────────────────────────────────
 
   // BTC PnL derived from each price — used when user edited the price field
-  const derivedSlPnlBtc = slPrice > 0
+  const derivedSlPnlBtc = slPrice > 0 && entryPrice > 0
     ? (pnlBtcFromPrice(slPrice, entryPrice, positionSize, positionType) ?? 0)
     : 0;
-  const derivedTpPnlBtc = tpPrice > 0
+  const derivedTpPnlBtc = tpPrice > 0 && entryPrice > 0
     ? (pnlBtcFromPrice(tpPrice, entryPrice, positionSize, positionType) ?? 0)
     : 0;
 
@@ -304,7 +320,7 @@ function ConditionalCloseDialog({
   const tpPresets = isLong ? [5, 10, 25] : [-5, -10, -25];
 
   // Visualization bar
-  const barPrices = [liquidationPrice, slPrice, entryPrice, tpPrice].filter((p) => p > 0);
+  const barPrices = [liquidationPrice, slPrice, entryPrice, tpPrice, markPrice].filter((p) => p > 0);
   const barMin = barPrices.length > 0 ? Math.min(...barPrices) * 0.99 : 0;
   const barMax = barPrices.length > 0 ? Math.max(...barPrices) * 1.01 : 1;
   const barRange = barMax - barMin;
@@ -315,6 +331,7 @@ function ConditionalCloseDialog({
   const slBarPct = slPrice > 0 ? toBarPct(slPrice) : null;
   const entryBarPct = entryPrice > 0 ? toBarPct(entryPrice) : null;
   const tpBarPct = tpPrice > 0 ? toBarPct(tpPrice) : null;
+  const markBarPct = markPrice > 0 ? toBarPct(markPrice) : null;
 
   // R:R
   const hasRR = slPrice > 0 && tpPrice > 0;
@@ -626,7 +643,7 @@ function ConditionalCloseDialog({
   // ── render ───────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-h-[540px] overflow-y-auto">
         <DialogTitle>Close Position</DialogTitle>
         <Tabs
           value={activeTab}
@@ -684,15 +701,18 @@ function ConditionalCloseDialog({
                   setInputValue={setLimitPrice}
                   currentPrice={currentPrice}
                   placeholder="0.00"
+                  formatDecimals={2}
                 />
-                {limitPrice > 0 && isFinite(estimatedPnlLimit) && estimatedPnlLimit !== 0 && (
-                  <p className="text-xs text-primary-accent mt-0.5">
+                {limitPrice > 0 && isFinite(estimatedPnlLimit) && (
+                  <p className="text-xs text-primary-accent mt-0.5 min-h-[1rem]">
                     Est. PnL:{" "}
-                    <span className={isPnlLimitPositive ? "text-green-medium" : "text-red"}>
-                      {isPnlLimitPositive ? "+" : ""}{estimatedPnlLimitBtc} BTC
+                    <span className={isPnlLimitPositive ? "text-green-medium" : isPnlLimitNegative ? "text-red" : ""}>
+                      {isPnlLimitPositive ? "+" : ""}{estimatedPnlLimitBtcStr} BTC
                     </span>
                     {btcPrice > 0 && (
-                      <span className="ml-1">≈ {estimatedPnlLimitUsd}</span>
+                      <span className="ml-1">
+                        ≈ {isPnlLimitPositive ? "+" : isPnlLimitNegative ? "-" : ""}{formatCurrency(Math.abs(estimatedPnlLimitUsdNum))}
+                      </span>
                     )}
                   </p>
                 )}
@@ -708,13 +728,26 @@ function ConditionalCloseDialog({
                       : "—"}
                   </span>
                 </div>
-                <Slider
-                  min={limitSliderRange.min}
-                  max={limitSliderRange.max}
-                  step={0.1}
-                  value={[limitSliderPct]}
-                  onValueChange={([pct]) => setLimitPrice(entryPrice * (1 + pct / 100))}
-                />
+                <div className="relative pt-5">
+                  {/* Floating price chip above the slider thumb */}
+                  {limitPrice > 0 && (
+                    <div
+                      className="absolute top-0 -translate-x-1/2 whitespace-nowrap rounded bg-outline px-1.5 py-0.5 text-[10px] font-medium"
+                      style={{ left: `${thumbDisplayPct}%` }}
+                    >
+                      {formatCurrency(limitPrice)}
+                    </div>
+                  )}
+                  <Slider
+                    min={limitSliderRange.min}
+                    max={limitSliderRange.max}
+                    step={0.1}
+                    value={[limitSliderPct]}
+                    onValueChange={([pct]) =>
+                      setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
+                    }
+                  />
+                </div>
               </div>
 
               {/* 4. Preset chips */}
@@ -726,7 +759,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => setLimitPrice(entryPrice * (1 + pct / 100))}
+                      onClick={() => setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
                       className="rounded border border-green-medium/40 bg-green-medium/10 px-2.5 py-1 text-xs font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -739,7 +772,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => setLimitPrice(entryPrice * (1 + pct / 100))}
+                      onClick={() => setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
                       className="rounded border border-red/40 bg-red/10 px-2.5 py-1 text-xs font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -751,11 +784,10 @@ function ConditionalCloseDialog({
               {/* 5. Distance indicator */}
               {limitDistanceFromEntryPct != null && (
                 <p className="text-xs text-primary-accent">
-                  {formatCurrency(limitPrice)}{" "}
-                  <span className={isPnlLimitPositive ? "text-green-medium" : "text-red"}>
-                    ({limitDistanceFromEntryPct >= 0 ? "+" : ""}{limitDistanceFromEntryPct.toFixed(2)}% from entry)
+                  <span className={isPnlLimitPositive ? "text-green-medium" : isPnlLimitNegative ? "text-red" : ""}>
+                    {limitDistanceFromEntryPct >= 0 ? "+" : ""}{limitDistanceFromEntryPct.toFixed(2)}% from entry
                   </span>
-                  {markPrice > 0 && (
+                  {markPrice > 0 && limitPrice > 0 && (
                     <span className="ml-1 opacity-60">
                       / {(((limitPrice - markPrice) / markPrice) * 100).toFixed(2)}% from mark
                     </span>
@@ -788,51 +820,50 @@ function ConditionalCloseDialog({
                         }}
                       />
                     )}
-                    {/* Entry marker */}
+                    {/* Entry marker — slightly thicker for emphasis */}
                     <div
                       className="absolute top-0 h-full w-0.5 bg-primary"
                       style={{ left: `${limitEntryBarPct}%` }}
                     />
-                  </div>
-
-                  {/* Markers */}
-                  <div className="relative h-8">
+                    {/* Liq tick */}
                     {limitLiqBarPct != null && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{ left: `${limitLiqBarPct}%`, transform: "translateX(-50%)" }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-red" />
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-red">Liq</span>
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-red">{formatCurrency(liquidationPrice)}</span>
-                      </div>
+                      <div className="absolute top-0 h-full w-px bg-red/70" style={{ left: `${limitLiqBarPct}%` }} />
                     )}
-                    <div
-                      className="absolute flex flex-col items-center"
-                      style={{ left: `${limitEntryBarPct}%`, transform: "translateX(-50%)" }}
-                    >
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      <span className="whitespace-nowrap text-[9px] leading-tight text-primary-accent">Entry</span>
-                      <span className="whitespace-nowrap text-[9px] leading-tight text-primary-accent">{formatCurrency(entryPrice)}</span>
-                    </div>
+                    {/* Mark tick */}
                     {limitMarkBarPct != null && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{ left: `${limitMarkBarPct}%`, transform: "translateX(-50%)" }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-blue-400">Mark</span>
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-blue-400">{formatCurrency(markPrice)}</span>
-                      </div>
+                      <div className="absolute top-0 h-full w-0.5" style={{ left: `${limitMarkBarPct}%`, backgroundColor: '#60a5fa' }} />
                     )}
+                    {/* Limit tick */}
                     {limitPriceBarPct != null && (
                       <div
-                        className="absolute flex flex-col items-center"
-                        style={{ left: `${limitPriceBarPct}%`, transform: "translateX(-50%)" }}
-                      >
-                        <div className={cn("h-1.5 w-1.5 rounded-full", isPnlLimitPositive ? "bg-green-medium" : "bg-orange-500")} />
-                        <span className={cn("whitespace-nowrap text-[9px] leading-tight", isPnlLimitPositive ? "text-green-medium" : "text-orange-500")}>Limit</span>
-                        <span className={cn("whitespace-nowrap text-[9px] leading-tight", isPnlLimitPositive ? "text-green-medium" : "text-orange-500")}>{formatCurrency(limitPrice)}</span>
+                        className={cn("absolute top-0 h-full w-px", isPnlLimitPositive ? "bg-green-medium/80" : isPnlLimitNegative ? "bg-red/80" : "bg-primary-accent/80")}
+                        style={{ left: `${limitPriceBarPct}%` }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Legend — flex-wrap, never overlaps */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {limitPrice > 0 && (
+                      <div className={cn("flex items-center gap-1 text-[10px]", isPnlLimitPositive ? "text-green-medium" : isPnlLimitNegative ? "text-red" : "text-primary-accent")}>
+                        <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isPnlLimitPositive ? "bg-green-medium" : isPnlLimitNegative ? "bg-red" : "bg-primary-accent")} />
+                        Limit {formatCurrency(limitPrice)}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-[10px] text-primary-accent">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      Entry {formatCurrency(entryPrice)}
+                    </div>
+                    {markPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-blue-400">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
+                        Mark {formatCurrency(markPrice)}
+                      </div>
+                    )}
+                    {liquidationPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-red">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-red" />
+                        Liq {formatCurrency(liquidationPrice)}
                       </div>
                     )}
                   </div>
@@ -840,9 +871,11 @@ function ConditionalCloseDialog({
               )}
 
               {/* 7. Inline warnings */}
-              {limitNearMark && (
+              {limitMayExecuteImmediately && !limitBeyondLiq && (
                 <p className="text-xs text-yellow-500">
-                  Limit price is very close to mark — this may execute as a market order.
+                  {isLong
+                    ? "This price is at or below the current market price. The order may execute immediately."
+                    : "This price is at or above the current market price. The order may execute immediately."}
                 </p>
               )}
               {limitBeyondLiq && (
@@ -917,12 +950,13 @@ function ConditionalCloseDialog({
                       setInputValue={handleSlPriceChange}
                       currentPrice={currentPrice}
                       placeholder="0.00"
+                      formatDecimals={2}
                     />
                     {slPrice > 0 && isFinite(displaySlPnlBtc) && displaySlPnlBtc !== 0 && (
                       <p className="text-xs text-primary-accent mt-0.5">
                         Est. PnL:{" "}
                         <span className="text-red">
-                          -{Math.abs(displaySlPnlBtc).toFixed(8)} BTC
+                          {(displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                         </span>
                         {btcPrice > 0 && (
                           <span className="ml-1">≈ -{formatCurrency(Math.abs(displaySlPnlUsd))}</span>
@@ -931,13 +965,30 @@ function ConditionalCloseDialog({
                     )}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
-                      Max Loss (BTC)
-                    </label>
+                    <div className="flex items-center gap-1">
+                      <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
+                        Max Loss
+                      </label>
+                      <div className="ml-auto flex rounded border border-outline overflow-hidden">
+                        {(["BTC", "mBTC"] as const).map((u) => (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() => setPnlUnit(u)}
+                            className={cn(
+                              "px-1.5 py-0.5 text-[10px] transition-colors",
+                              pnlUnit === u ? "bg-outline text-primary" : "text-primary-accent hover:bg-outline/50"
+                            )}
+                          >{u}</button>
+                        ))}
+                      </div>
+                    </div>
                     <NumberInput
                       id="input-sl-pnl"
-                      inputValue={isFinite(displaySlPnlBtc) ? Number(Math.abs(displaySlPnlBtc).toFixed(8)) : 0}
-                      setInputValue={(val) => handleSlPnlChange(-Math.abs(val))}
+                      allowNegative
+                      formatDecimals={pnlDecimals}
+                      inputValue={isFinite(displaySlPnlBtc) ? parseFloat((displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                      setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
                       currentPrice={0}
                       placeholder="0.00000000"
                     />
@@ -965,7 +1016,7 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[slSliderPct]}
                     onValueChange={([pct]) =>
-                      handleSlPriceChange(entryPrice * (1 + pct / 100))
+                      handleSlPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
                     }
                   />
                 </div>
@@ -977,7 +1028,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => handleSlPriceChange(entryPrice * (1 + pct / 100))}
+                      onClick={() => handleSlPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
                       className="rounded border border-red/40 bg-red/10 px-2.5 py-1 text-xs font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -996,14 +1047,18 @@ function ConditionalCloseDialog({
                   </p>
                 )}
 
-                {validationErrors.sl && (
-                  <p className="text-xs text-red">{validationErrors.sl}</p>
-                )}
-                {slNearLiquidation && (
-                  <p className="text-xs text-yellow-500">
-                    Warning: Stop loss is near your liquidation price.
-                  </p>
-                )}
+                <div className="min-h-[1.25rem]">
+                  {validationErrors.sl && (
+                    <p className="text-xs text-red">{validationErrors.sl}</p>
+                  )}
+                </div>
+                <div className="min-h-[1.25rem]">
+                  {slNearLiquidation && (
+                    <p className="text-xs text-yellow-500">
+                      Warning: Stop loss is near your liquidation price.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* 3. Take Profit */}
@@ -1028,12 +1083,13 @@ function ConditionalCloseDialog({
                       setInputValue={handleTpPriceChange}
                       currentPrice={currentPrice}
                       placeholder="0.00"
+                      formatDecimals={2}
                     />
                     {tpPrice > 0 && isFinite(displayTpPnlBtc) && displayTpPnlBtc !== 0 && (
                       <p className="text-xs text-primary-accent mt-0.5">
                         Est. PnL:{" "}
                         <span className="text-green-medium">
-                          +{Math.abs(displayTpPnlBtc).toFixed(8)} BTC
+                          +{(displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                         </span>
                         {btcPrice > 0 && (
                           <span className="ml-1">≈ +{formatCurrency(Math.abs(displayTpPnlUsd))}</span>
@@ -1043,12 +1099,14 @@ function ConditionalCloseDialog({
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-primary-accent" htmlFor="input-tp-pnl">
-                      Est. Profit (BTC)
+                      Est. Profit
                     </label>
                     <NumberInput
                       id="input-tp-pnl"
-                      inputValue={isFinite(displayTpPnlBtc) ? Number(Math.abs(displayTpPnlBtc).toFixed(8)) : 0}
-                      setInputValue={(val) => handleTpPnlChange(Math.abs(val))}
+                      allowNegative
+                      formatDecimals={pnlDecimals}
+                      inputValue={isFinite(displayTpPnlBtc) ? parseFloat((displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                      setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
                       currentPrice={0}
                       placeholder="0.00000000"
                     />
@@ -1076,7 +1134,7 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[tpSliderPct]}
                     onValueChange={([pct]) =>
-                      handleTpPriceChange(entryPrice * (1 + pct / 100))
+                      handleTpPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
                     }
                   />
                 </div>
@@ -1088,7 +1146,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => handleTpPriceChange(entryPrice * (1 + pct / 100))}
+                      onClick={() => handleTpPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
                       className="rounded border border-green-medium/40 bg-green-medium/10 px-2.5 py-1 text-xs font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -1107,14 +1165,18 @@ function ConditionalCloseDialog({
                   </p>
                 )}
 
-                {validationErrors.tp && (
-                  <p className="text-xs text-red">{validationErrors.tp}</p>
-                )}
-                {showTpPoolWarning && (
-                  <p className="text-xs text-yellow-500">
-                    Take profit exceeds 2% of pool equity — payout may be limited.
-                  </p>
-                )}
+                <div className="min-h-[1.25rem]">
+                  {validationErrors.tp && (
+                    <p className="text-xs text-red">{validationErrors.tp}</p>
+                  )}
+                </div>
+                <div className="min-h-[1.25rem]">
+                  {showTpPoolWarning && (
+                    <p className="text-xs text-yellow-500">
+                      Take profit exceeds 2% of pool equity — payout may be limited.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* 4. Outcome Visualization Bar */}
@@ -1152,79 +1214,50 @@ function ConditionalCloseDialog({
                         }}
                       />
                     )}
-                    {/* Entry marker line */}
-                    <div
-                      className="absolute top-0 h-full w-0.5 bg-primary"
-                      style={{ left: `${entryBarPct}%` }}
-                    />
+                    {/* Tick lines */}
+                    <div className="absolute top-0 h-full w-0.5 bg-primary" style={{ left: `${entryBarPct}%` }} />
+                    {slBarPct != null && (
+                      <div className="absolute top-0 h-full w-px bg-orange-500/80" style={{ left: `${slBarPct}%` }} />
+                    )}
+                    {tpBarPct != null && (
+                      <div className="absolute top-0 h-full w-px bg-green-medium/80" style={{ left: `${tpBarPct}%` }} />
+                    )}
+                    {liqBarPct != null && (
+                      <div className="absolute top-0 h-full w-px bg-red/70" style={{ left: `${liqBarPct}%` }} />
+                    )}
+                    {markBarPct != null && (
+                      <div className="absolute top-0 h-full w-0.5" style={{ left: `${markBarPct}%`, backgroundColor: '#60a5fa' }} />
+                    )}
                   </div>
 
-                  {/* Marker dots and price labels */}
-                  <div className="relative h-8">
-                    {liqBarPct != null && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{
-                          left: `${liqBarPct}%`,
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-red" />
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-red">
-                          Liq
-                        </span>
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-red">
-                          {formatCurrency(liquidationPrice)}
-                        </span>
+                  {/* Legend — flex-wrap, never overlaps */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {slPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-orange-500">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                        SL {formatCurrency(slPrice)}
                       </div>
                     )}
-                    {slBarPct != null && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{
-                          left: `${slBarPct}%`,
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-orange-500">
-                          SL
-                        </span>
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-orange-500">
-                          {formatCurrency(slPrice)}
-                        </span>
-                      </div>
-                    )}
-                    <div
-                      className="absolute flex flex-col items-center"
-                      style={{
-                        left: `${entryBarPct}%`,
-                        transform: "translateX(-50%)",
-                      }}
-                    >
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      <span className="whitespace-nowrap text-[9px] leading-tight text-primary-accent">
-                        Entry
-                      </span>
-                      <span className="whitespace-nowrap text-[9px] leading-tight text-primary-accent">
-                        {formatCurrency(entryPrice)}
-                      </span>
+                    <div className="flex items-center gap-1 text-[10px] text-primary-accent">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      Entry {formatCurrency(entryPrice)}
                     </div>
-                    {tpBarPct != null && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{
-                          left: `${tpBarPct}%`,
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-medium" />
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-green-medium">
-                          TP
-                        </span>
-                        <span className="whitespace-nowrap text-[9px] leading-tight text-green-medium">
-                          {formatCurrency(tpPrice)}
-                        </span>
+                    {markPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-blue-400">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
+                        Mark {formatCurrency(markPrice)}
+                      </div>
+                    )}
+                    {tpPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-green-medium">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
+                        TP {formatCurrency(tpPrice)}
+                      </div>
+                    )}
+                    {liquidationPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-red">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-red" />
+                        Liq {formatCurrency(liquidationPrice)}
                       </div>
                     )}
                   </div>
@@ -1239,13 +1272,13 @@ function ConditionalCloseDialog({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-primary-accent">Potential Loss</span>
                     <span className="text-xs font-medium text-red">
-                      -{Math.abs(displaySlPnlBtc).toFixed(8)} BTC
+                      -{Math.abs(displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-primary-accent">Potential Profit</span>
                     <span className="text-xs font-medium text-green-medium">
-                      +{displayTpPnlBtc.toFixed(8)} BTC
+                      +{(displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                     </span>
                   </div>
                   {rrRatio != null && (
@@ -1259,9 +1292,11 @@ function ConditionalCloseDialog({
               )}
 
               {/* Global error — only shown once the user has entered something */}
-              {validationErrors.global && hasUserInput && (
-                <p className="text-xs text-red">{validationErrors.global}</p>
-              )}
+              <div className="min-h-[1.25rem]">
+                {validationErrors.global && hasUserInput && (
+                  <p className="text-xs text-red">{validationErrors.global}</p>
+                )}
+              </div>
 
               {hasSltp && (
                 <p className="text-xs text-primary-accent">

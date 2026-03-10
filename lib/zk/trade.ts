@@ -6,10 +6,13 @@ import {
   executeTradeLendOrderMsg,
   executeTradeLendOrderSltpMsg,
 } from "../twilight/zkos";
-import { executeTradeOrder, executeTradeOrderSltp } from "@/lib/api/client";
+import {
+  executeTradeOrder,
+  executeTradeOrderSltp,
+  cancelTradeOrderSlTp,
+} from "@/lib/api/client";
 import {
   cancelTradeOrder,
-  cancelTradeOrderSlTp,
   queryTradeOrder,
   QueryTradeOrderData,
 } from "../api/relayer";
