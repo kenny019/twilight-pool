@@ -607,18 +607,20 @@ function ConditionalCloseDialog({
       // Prefer the API response when it has already reflected the new SLTP.
       // If it returned null (order not yet processed), fall back to the
       // values we just submitted so the UI reflects them immediately.
+      // When tp/sl is undefined the user explicitly cleared that leg — use
+      // undefined (not the old value) so the removal persists locally.
       takeProfit:
         settledData.take_profit != null
           ? settledData.take_profit
           : tp != null
             ? { price: String(tp), created_time: new Date().toISOString() }
-            : selectedTrade.takeProfit ?? undefined,
+            : undefined,
       stopLoss:
         settledData.stop_loss != null
           ? settledData.stop_loss
           : sl != null
             ? { price: String(sl), created_time: new Date().toISOString() }
-            : selectedTrade.stopLoss ?? undefined,
+            : undefined,
       fundingApplied: settledData.funding_applied,
     };
 
