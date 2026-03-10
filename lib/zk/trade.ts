@@ -381,13 +381,16 @@ export async function cancelZkOrder(
   SuccessResult<QueryTradeOrderData & { tx_hash: string }> | FailureResult
 > {
   try {
-    const isSltp = !!(trade.takeProfit || trade.stopLoss);
+    // Use the SLTP cancel path only when explicitly requested via options.
+    // A position can have both a close-limit and SL/TP — clicking Cancel on
+    // the limit row must use the regular cancel path even if SL/TP exist.
+    const isSltp = options?.sl_bool !== undefined || options?.tp_bool !== undefined;
 
     let cancelResult: Record<string, unknown>;
 
     if (isSltp) {
-      const sl_bool = options?.sl_bool ?? !!trade.stopLoss;
-      const tp_bool = options?.tp_bool ?? !!trade.takeProfit;
+      const sl_bool = options?.sl_bool ?? false;
+      const tp_bool = options?.tp_bool ?? false;
       cancelResult = await cancelTradeOrderSlTp({
         address: trade.accountAddress,
         uuid: trade.uuid,
