@@ -53,6 +53,7 @@ import React, {
 } from "react";
 
 const limitQtyOptions = [25, 50, 75, 100];
+const LIMIT_BUFFER = 0.001;
 
 const OrderLimitForm = () => {
   const { width } = useGrid();
@@ -325,7 +326,6 @@ const OrderLimitForm = () => {
       const positionType = action === "sell" ? "SHORT" : "LONG";
 
       // Validate limit price vs mark price (0.1% buffer)
-      const LIMIT_BUFFER = 0.001;
       if (currentPrice > 0) {
         if (positionType === "LONG" && orderPrice >= currentPrice * (1 - LIMIT_BUFFER)) {
           toast({
@@ -681,8 +681,6 @@ const OrderLimitForm = () => {
       setIsSubmitting(false);
     }
   }
-
-  const LIMIT_BUFFER = 0.001;
   // Buy (Long): price must be below mark. Disable Buy when price >= mark - buffer.
   const buyDisabled =
     currentPrice > 0 && orderPrice > 0

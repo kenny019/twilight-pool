@@ -1,6 +1,6 @@
 "use client";
 import cn from "@/lib/cn";
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import Big from "big.js";

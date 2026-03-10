@@ -16,7 +16,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
 import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/columns";
-import { formatPnlWithUsd } from "@/lib/utils/formatPnl";
 import { formatCurrency } from "@/lib/twilight/ticker";
 import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import * as TabsPrimitive from "@radix-ui/react-tabs";

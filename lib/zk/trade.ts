@@ -332,7 +332,13 @@ export async function settleOrderSltp(
       tp: tp ?? null,
     });
 
-    await executeTradeOrderSltp(msg);
+    const sltpResult = await executeTradeOrderSltp(msg);
+    if (!sltpResult || Object.keys(sltpResult).length === 0) {
+      return {
+        success: false,
+        message: "Failed to submit SLTP order to relayer.",
+      };
+    }
 
     const queryTradeOrderMsg = await createQueryTradeOrderMsg({
       address: trade.accountAddress,
