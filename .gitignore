@@ -40,3 +40,4 @@ next-env.d.ts
 CLAUDE.md
 /docs
 AGENTS.md
+/memory

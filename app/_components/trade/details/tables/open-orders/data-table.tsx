@@ -16,7 +16,7 @@ import { OpenOrdersTableMeta } from './columns';
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  cancelOrder: (order: TradeOrder) => Promise<void>;
+  cancelOrder: (order: TradeOrder, options?: { sl_bool?: boolean; tp_bool?: boolean }) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
   isCancellingOrder: (uuid: string) => boolean;
 }
@@ -42,6 +42,10 @@ export function OpenOrdersDataTable<TData, TValue>({
   const table = useReactTable({
     data: data,
     columns,
+    // Synthetic SL/TP rows share the same `uuid` as the parent trade, so we
+    // append the leg suffix to produce a stable unique row key.
+    getRowId: (row: any) =>
+      row._sltpLeg ? `${row.uuid}_${row._sltpLeg}` : (row.uuid as string),
     getCoreRowModel: getCoreRowModel(),
     initialState: {
       sorting: sorting,

@@ -1,9 +1,6 @@
 import dayjs from "dayjs";
 import wfetch from "../http";
-import {
-  createCancelTraderOrderMsg,
-  createCancelTraderOrderSltpMsg,
-} from "../twilight/zkos";
+import { createCancelTraderOrderMsg } from "../twilight/zkos";
 import { FundingHistoryEntry, QueryLendOrderData } from "../types";
 
 const RELAYER_PUBLIC_URL = process.env
@@ -71,47 +68,6 @@ async function cancelTradeOrder({
   return data;
 }
 
-async function cancelTradeOrderSlTp({
-  address,
-  uuid,
-  signature,
-  sl_bool,
-  tp_bool,
-}: {
-  address: string;
-  uuid: string;
-  signature: string;
-  sl_bool: boolean;
-  tp_bool: boolean;
-}) {
-  const msg = await createCancelTraderOrderSltpMsg({
-    address,
-    signature,
-    uuid,
-    sl_bool,
-    tp_bool,
-  });
-
-  const body = JSON.stringify({
-    jsonrpc: "2.0",
-    method: "CancelTraderOrderSlTp",
-    params: {
-      data: msg,
-    },
-    id: 1,
-  });
-
-  const { success, data, error } = await wfetch(RELAYER_PUBLIC_URL)
-    .post({ body })
-    .json<Record<string, any>>();
-
-  if (!success) {
-    console.error("cancel trade order SLTP error", error);
-    return {};
-  }
-
-  return data;
-}
 
 export type QueryTradeOrderData = {
   account_id: string;
@@ -142,15 +98,20 @@ export type QueryTradeOrderData = {
     position_type: "LONG" | "SHORT";
     price: string;
     uuid: string;
+    created_time?: string;
     timestamp?: string;
   };
   take_profit: null | {
-    tp_price: string;
-    timestamp: string;
+    price: string;
+    position_type: string;
+    uuid: string;
+    created_time: string;
   };
   stop_loss: null | {
-    sl_price: string;
-    timestamp: string;
+    price: string;
+    position_type: string;
+    uuid: string;
+    created_time: string;
   };
   funding_applied: string;
 };
@@ -222,6 +183,5 @@ export {
   queryLendOrder,
   queryTradeOrder,
   cancelTradeOrder,
-  cancelTradeOrderSlTp,
   queryOrderFundingHistory,
 };

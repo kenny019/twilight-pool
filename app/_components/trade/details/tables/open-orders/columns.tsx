@@ -4,6 +4,7 @@ import { capitaliseFirstLetter, truncateHash } from "@/lib/helpers";
 import { toast } from "@/lib/hooks/useToast";
 import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
+import { OpenOrderRow } from "../../details.client";
 import { ColumnDef } from "@tanstack/react-table";
 import Big from "big.js";
 import dayjs from "dayjs";
@@ -17,15 +18,27 @@ interface OpenOrdersTableMeta {
   isCancellingOrder: (uuid: string) => boolean;
 }
 
-export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
+export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
   {
     accessorKey: "date",
     header: "Time",
     accessorFn: (row) => {
+      if (row._sltpLeg === "sl") {
+        const ts = row.stopLoss?.created_time;
+        return ts
+          ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
+          : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
+      }
+      if (row._sltpLeg === "tp") {
+        const ts = row.takeProfit?.created_time;
+        return ts
+          ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
+          : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
+      }
       const ts =
-        row.settleLimit?.timestamp ??
-        row.takeProfit?.timestamp ??
-        row.stopLoss?.timestamp;
+        row.settleLimit?.created_time ??
+        row.takeProfit?.created_time ??
+        row.stopLoss?.created_time;
       return ts
         ? dayjs(ts).format("DD/MM/YYYY HH:mm:ss")
         : dayjs(row.date).format("DD/MM/YYYY HH:mm:ss");
@@ -37,7 +50,12 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
 
-      const uuid = trade.settleLimit ? trade.settleLimit.uuid : trade.uuid;
+      const uuid =
+        trade._sltpLeg
+          ? trade.uuid
+          : trade.settleLimit
+            ? trade.settleLimit.uuid
+            : trade.uuid;
       const truncatedUuid = truncateHash(uuid, 4, 4);
 
       return (
@@ -61,9 +79,10 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     header: "Side",
     cell: (row) => {
       const trade = row.row.original;
-      const positionType = trade.settleLimit
-        ? trade.settleLimit.position_type
-        : trade.positionType;
+      const positionType =
+        !trade._sltpLeg && trade.settleLimit
+          ? trade.settleLimit.position_type
+          : trade.positionType;
 
       return (
         <span
@@ -84,10 +103,18 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     header: "Type",
     cell: ({ row }) => {
       const trade = row.original;
-      if (trade.takeProfit || trade.stopLoss) {
+
+      if (trade._sltpLeg === "sl") {
         return (
-          <span className="rounded bg-purple-500/10 px-2 py-1 text-xs font-medium text-purple-500">
-            SLTP
+          <span className="rounded bg-red/10 px-2 py-1 text-xs font-medium text-red">
+            SL
+          </span>
+        );
+      }
+      if (trade._sltpLeg === "tp") {
+        return (
+          <span className="rounded bg-green-medium/10 px-2 py-1 text-xs font-medium text-green-medium">
+            TP
           </span>
         );
       }
@@ -117,13 +144,12 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
       return <span className="font-medium">${positionSize}</span>;
     },
   },
-
   {
     accessorKey: "orderType",
     header: "Order Type",
     cell: (row) => {
       const trade = row.row.original;
-      if (trade.takeProfit || trade.stopLoss) {
+      if (trade._sltpLeg) {
         return (
           <span className="text-xs font-medium">
             {capitaliseFirstLetter(trade.orderType)}
@@ -142,15 +168,16 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     accessorKey: "entryPrice",
     header: "Price (USD)",
     accessorFn: (row) => {
-      if (row.takeProfit || row.stopLoss) {
-        const parts: string[] = [];
-        if (row.stopLoss)
-          parts.push(`SL: $${Number(row.stopLoss.sl_price).toFixed(2)}`);
-        if (row.takeProfit)
-          parts.push(`TP: $${Number(row.takeProfit.tp_price).toFixed(2)}`);
-        return parts.join(" / ");
+      if (row._sltpLeg === "sl" && row.stopLoss) {
+        const price = parseFloat(row.stopLoss.price);
+        return isFinite(price) ? `SL: $${price.toFixed(2)}` : "SL: —";
       }
-      return `$${row.settleLimit ? Number(row.settleLimit.price).toFixed(2) : row.entryPrice.toFixed(2)}`;
+      if (row._sltpLeg === "tp" && row.takeProfit) {
+        const price = parseFloat(row.takeProfit.price);
+        return isFinite(price) ? `TP: $${price.toFixed(2)}` : "TP: —";
+      }
+      const limitPrice = row.settleLimit ? Number(row.settleLimit.price) : row.entryPrice;
+      return `$${isFinite(limitPrice) ? limitPrice.toFixed(2) : "—"}`;
     },
   },
   {
@@ -173,60 +200,43 @@ export const openOrdersColumns: ColumnDef<TradeOrder, any>[] = [
     cell: (row) => {
       const trade = row.row.original;
       const meta = row.table.options.meta as OpenOrdersTableMeta;
+      // Use the base trade UUID for the in-progress check so both SL and TP
+      // rows show "Cancelling..." while a cancel is underway for that position.
       const isCancelling = meta.isCancellingOrder(trade.uuid);
-      const isSltp = !!(trade.takeProfit || trade.stopLoss);
 
-      if (isSltp) {
-        const hasSl = !!trade.stopLoss;
-        const hasTp = !!trade.takeProfit;
+      if (trade._sltpLeg === "sl") {
         return (
-          <div className="flex flex-row flex-wrap justify-start gap-1">
-            {hasSl && (
-              <Button
-                onClick={async (e) => {
-                  e.preventDefault();
-                  await meta.cancelOrder(trade, { sl_bool: true });
-                }}
-                variant="ui"
-                size="small"
-                disabled={isCancelling}
-              >
-                {isCancelling ? "Cancelling..." : "Cancel SL"}
-              </Button>
-            )}
-            {hasTp && (
-              <Button
-                onClick={async (e) => {
-                  e.preventDefault();
-                  await meta.cancelOrder(trade, { tp_bool: true });
-                }}
-                variant="ui"
-                size="small"
-                disabled={isCancelling}
-              >
-                {isCancelling ? "Cancelling..." : "Cancel TP"}
-              </Button>
-            )}
-            {(hasSl || hasTp) && (
-              <Button
-                onClick={async (e) => {
-                  e.preventDefault();
-                  await meta.cancelOrder(trade, {
-                    sl_bool: hasSl,
-                    tp_bool: hasTp,
-                  });
-                }}
-                variant="ui"
-                size="small"
-                disabled={isCancelling}
-              >
-                {isCancelling ? "Cancelling..." : "Cancel Both"}
-              </Button>
-            )}
-          </div>
+          <Button
+            onClick={async (e) => {
+              e.preventDefault();
+              await meta.cancelOrder(trade, { sl_bool: true, tp_bool: false });
+            }}
+            variant="ui"
+            size="small"
+            disabled={isCancelling}
+          >
+            {isCancelling ? "Cancelling..." : "Cancel"}
+          </Button>
         );
       }
 
+      if (trade._sltpLeg === "tp") {
+        return (
+          <Button
+            onClick={async (e) => {
+              e.preventDefault();
+              await meta.cancelOrder(trade, { sl_bool: false, tp_bool: true });
+            }}
+            variant="ui"
+            size="small"
+            disabled={isCancelling}
+          >
+            {isCancelling ? "Cancelling..." : "Cancel"}
+          </Button>
+        );
+      }
+
+      // Regular limit/entry row
       return (
         <div className="flex flex-row justify-start gap-1">
           <Button

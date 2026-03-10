@@ -1,3 +1,5 @@
+"use client";
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import React, { useState, useMemo, useCallback } from "react";
 import { useTwilightStore } from "@/lib/providers/store";
@@ -14,6 +16,14 @@ import OrderHistoryTable from "./tables/order-history/order-history-table.client
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
 import EditOrderDialog from "@/components/edit-order-dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
+import Button from "@/components/button";
+import { formatCurrency } from "@/lib/twilight/ticker";
+
+// A row in the Open Orders table. Regular rows = plain TradeOrder.
+// Rows synthesised from SLTP legs carry `_sltpLeg` to identify which leg they
+// represent so the columns can render the right badge / price / cancel action.
+export type OpenOrderRow = TradeOrder & { _sltpLeg?: "sl" | "tp" };
 
 type TabType =
   | "history"
@@ -21,6 +31,12 @@ type TabType =
   | "positions"
   | "open-orders"
   | "trader-history";
+
+// State for the "cancel one SLTP leg — ask about the other?" confirmation.
+type SltpCancelPending = {
+  trade: TradeOrder;
+  cancelLeg: "sl" | "tp";
+};
 
 const DetailsPanel = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
@@ -33,6 +49,8 @@ const DetailsPanel = () => {
   );
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrders, setEditingOrders] = useState<Set<string>>(new Set());
+  const [sltpCancelPending, setSltpCancelPending] =
+    useState<SltpCancelPending | null>(null);
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
@@ -47,22 +65,47 @@ const DetailsPanel = () => {
   const addTradeHistory = useTwilightStore(
     (state) => state.trade_history.addTrade
   );
+  const updateTrade = useTwilightStore((state) => state.trade.updateTrade);
 
   const positionsData = useMemo(() => {
     return tradeOrders.filter((trade) => trade.orderStatus === "FILLED");
   }, [tradeOrders]);
 
-  const openOrdersData = useMemo(() => {
+  // Base filter: trades that have pending close conditions.
+  const openOrdersBase = useMemo(() => {
     return tradeOrders.filter(
       (trade) =>
-        trade.orderStatus !== "SETTLED" &&
-        trade.orderStatus !== "CANCELLED" &&
-        (trade.orderStatus === "PENDING" ||
-          trade.settleLimit ||
-          trade.takeProfit ||
-          trade.stopLoss)
+        trade.orderStatus === "PENDING" ||
+        (trade.orderStatus !== "SETTLED" &&
+          trade.orderStatus !== "CANCELLED" &&
+          (trade.settleLimit || trade.takeProfit || trade.stopLoss))
     );
   }, [tradeOrders]);
+
+  // Explode each SLTP trade into separate SL and TP rows so the user sees
+  // them as independent orders, matching the Binance-style UX.
+  const openOrdersRows = useMemo((): OpenOrderRow[] => {
+    const rows: OpenOrderRow[] = [];
+    for (const trade of openOrdersBase) {
+      if (trade.orderStatus === "PENDING") {
+        rows.push(trade);
+        continue;
+      }
+      // Limit close order row
+      if (trade.settleLimit) {
+        rows.push(trade);
+      }
+      // Stop Loss row
+      if (trade.stopLoss) {
+        rows.push({ ...trade, _sltpLeg: "sl" });
+      }
+      // Take Profit row
+      if (trade.takeProfit) {
+        rows.push({ ...trade, _sltpLeg: "tp" });
+      }
+    }
+    return rows;
+  }, [openOrdersBase]);
 
   const traderHistoryData = useMemo(() => {
     return orderHistoryData.filter(
@@ -138,7 +181,7 @@ const DetailsPanel = () => {
 
         if (!updatedAccount) {
           // useSyncTrades may have already cleaned up this account before we
-          // finished.  If the trade is gone or already SETTLED, treat it as a
+          // finished. If the trade is gone or already SETTLED, treat it as a
           // success rather than showing a false error.
           const currentTrade = tradeOrders.find((t) => t.uuid === trade.uuid);
           if (!currentTrade || currentTrade.orderStatus === "SETTLED") {
@@ -189,7 +232,8 @@ const DetailsPanel = () => {
     [privateKey, queryClient, settlingOrders, toast, tradeOrders, zkAccounts]
   );
 
-  const cancelOrder = useCallback(
+  // Core cancel implementation — called directly or after confirmation.
+  const executeCancelOrder = useCallback(
     async (
       order: TradeOrder,
       options?: { sl_bool?: boolean; tp_bool?: boolean }
@@ -197,6 +241,10 @@ const DetailsPanel = () => {
       if (cancellingOrders.has(order.uuid)) return;
 
       setCancellingOrders((prev) => new Set(prev).add(order.uuid));
+
+      const isSltp = !!(order.takeProfit || order.stopLoss);
+      const cancelledSl = isSltp && (options?.sl_bool ?? !!order.stopLoss);
+      const cancelledTp = isSltp && (options?.tp_bool ?? !!order.takeProfit);
 
       try {
         toast({
@@ -218,35 +266,67 @@ const DetailsPanel = () => {
 
         const cancelOrderData = cancelOrderResult.data;
 
-        const zkAccount = zkAccounts.find(
-          (account) => account.address === order.accountAddress
-        );
-
-        if (!zkAccount) {
-          toast({
-            title: "Failed to cancel order",
-            description: "Failed to find account",
-            variant: "error",
+        if (isSltp) {
+          // SLTP cancel: position stays FILLED. Optimistically clear the
+          // cancelled leg(s) in local state so the UI updates immediately.
+          // useSyncTrades will reconcile on the next poll using the actual
+          // API response (which may not yet include take_profit / stop_loss
+          // fields — handled gracefully in cancelZkOrder).
+          updateTrade({
+            ...order,
+            stopLoss: cancelledSl ? null : order.stopLoss,
+            takeProfit: cancelledTp ? null : order.takeProfit,
           });
-          return;
+
+          // Record cancellation in order history
+          addTradeHistory({
+            ...order,
+            orderStatus: "CANCELLED",
+            orderType: "SLTP",
+            stopLoss: cancelledSl ? order.stopLoss : null,
+            takeProfit: cancelledTp ? order.takeProfit : null,
+            date: new Date(),
+          });
+        } else {
+          // Regular limit/entry cancel
+          const zkAccount = zkAccounts.find(
+            (account) => account.address === order.accountAddress
+          );
+
+          if (!zkAccount) {
+            toast({
+              title: "Failed to cancel order",
+              description: "Failed to find account",
+              variant: "error",
+            });
+            return;
+          }
+
+          addTradeHistory({
+            ...order,
+            entryPrice: order.settleLimit
+              ? Number(order.settleLimit.price)
+              : order.entryPrice,
+            orderStatus: "CANCELLED",
+            orderType: "LIMIT",
+            date: new Date(),
+          });
+
+          updateZkAccount(order.accountAddress, {
+            ...zkAccount,
+            type: "Coin",
+          });
         }
 
-        // const result = await cleanupTradeOrder(privateKey, zkAccount);
-
-        // if (!result.success) {
-        //   toast({
-        //     title: "Error with settling trade order",
-        //     description: result.message,
-        //     variant: "error",
-        //   })
-        //   return;
-        // }
+        await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
         toast({
-          title: "Order cancelled",
+          title: isSltp ? "SLTP order cancelled" : "Order cancelled",
           description: (
             <div className="opacity-90">
-              Successfully cancelled limit order.{" "}
+              {isSltp
+                ? `Successfully cancelled ${cancelledSl && cancelledTp ? "Stop Loss and Take Profit" : cancelledSl ? "Stop Loss" : "Take Profit"}.`
+                : "Successfully cancelled order."}{" "}
               {cancelOrderData.tx_hash && (
                 <Link
                   href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${cancelOrderData.tx_hash}`}
@@ -259,55 +339,6 @@ const DetailsPanel = () => {
             </div>
           ),
         });
-
-        const updatedAccount = zkAccounts.find(
-          (account) => account.address === order.accountAddress
-        );
-
-        if (!updatedAccount) {
-          toast({
-            title: "Failed to cancel order",
-            description: "Failed to find account",
-            variant: "error",
-          });
-          return;
-        }
-
-        // addTradeHistory({
-        //   ...order,
-        //   orderStatus: cancelOrderData.order_status,
-        //   availableMargin: Big(cancelOrderData.available_margin).toNumber(),
-        //   maintenanceMargin: Big(cancelOrderData.maintenance_margin).toNumber(),
-        //   unrealizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-        //   settlementPrice: Big(cancelOrderData.settlement_price).toNumber(),
-        //   positionSize: Big(cancelOrderData.positionsize).toNumber(),
-        //   orderType: cancelOrderData.order_type,
-        //   date: dayjs(cancelOrderData.timestamp).toDate(),
-        //   exit_nonce: cancelOrderData.exit_nonce,
-        //   executionPrice: Big(cancelOrderData.execution_price).toNumber(),
-        //   isOpen: false,
-        //   feeSettled: Big(cancelOrderData.fee_settled).toNumber(),
-        //   feeFilled: Big(cancelOrderData.fee_filled).toNumber(),
-        //   realizedPnl: Big(cancelOrderData.unrealized_pnl).toNumber(),
-        //   tx_hash: cancelOrderData.tx_hash || order.tx_hash,
-        // })
-
-        addTradeHistory({
-          ...order,
-          entryPrice: order.settleLimit
-            ? Number(order.settleLimit.price)
-            : order.entryPrice,
-          orderStatus: "CANCELLED",
-          orderType: "LIMIT",
-          date: new Date(),
-        });
-
-        updateZkAccount(order.accountAddress, {
-          ...updatedAccount,
-          type: "Coin",
-        });
-
-        await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
       } finally {
         setCancellingOrders((prev) => {
           const next = new Set(prev);
@@ -315,17 +346,47 @@ const DetailsPanel = () => {
           return next;
         });
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       addTradeHistory,
       cancellingOrders,
       privateKey,
       queryClient,
       toast,
+      updateTrade,
       updateZkAccount,
       zkAccounts,
     ]
+  );
+
+  // Public cancel handler: when cancelling one SLTP leg and the other leg
+  // still exists, show a confirmation dialog instead of cancelling directly.
+  const cancelOrder = useCallback(
+    async (
+      order: TradeOrder,
+      options?: { sl_bool?: boolean; tp_bool?: boolean }
+    ) => {
+      const cancellingOnlySl =
+        options?.sl_bool === true && options?.tp_bool !== true;
+      const cancellingOnlyTp =
+        options?.tp_bool === true && options?.sl_bool !== true;
+
+      if (cancellingOnlySl && order.takeProfit) {
+        // Cancelling SL but TP still exists — ask the user
+        setSltpCancelPending({ trade: order, cancelLeg: "sl" });
+        return;
+      }
+
+      if (cancellingOnlyTp && order.stopLoss) {
+        // Cancelling TP but SL still exists — ask the user
+        setSltpCancelPending({ trade: order, cancelLeg: "tp" });
+        return;
+      }
+
+      await executeCancelOrder(order, options);
+    },
+    [executeCancelOrder]
   );
 
   const openEditDialog = useCallback(
@@ -336,6 +397,13 @@ const DetailsPanel = () => {
     },
     [editingOrders]
   );
+
+  // Confirmation dialog: the "other leg" label and price for the prompt.
+  const sltpConfirmOtherLabel = sltpCancelPending
+    ? sltpCancelPending.cancelLeg === "sl"
+      ? `Take Profit at ${formatCurrency(Number(sltpCancelPending.trade.takeProfit?.price ?? 0))}`
+      : `Stop Loss at ${formatCurrency(Number(sltpCancelPending.trade.stopLoss?.price ?? 0))}`
+    : "";
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -383,7 +451,7 @@ const DetailsPanel = () => {
         )}
         {currentTab === "open-orders" && (
           <OpenOrdersTable
-            data={openOrdersData}
+            data={openOrdersRows}
             cancelOrder={cancelOrder}
             openEditDialog={openEditDialog}
             isCancellingOrder={isCancellingOrder}
@@ -396,6 +464,7 @@ const DetailsPanel = () => {
           <OrderHistoryTable data={orderHistoryData} />
         )}
       </div>
+
       <EditOrderDialog
         order={editDialogOrder}
         open={isEditDialogOpen}
@@ -403,6 +472,61 @@ const DetailsPanel = () => {
         editingOrders={editingOrders}
         setEditingOrders={setEditingOrders}
       />
+
+      {/* Partial SLTP cancel confirmation dialog */}
+      <Dialog
+        open={!!sltpCancelPending}
+        onOpenChange={(open) => {
+          if (!open) setSltpCancelPending(null);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>
+            Cancel{" "}
+            {sltpCancelPending?.cancelLeg === "sl" ? "Stop Loss" : "Take Profit"}
+          </DialogTitle>
+          <p className="text-sm text-primary-accent">
+            You also have a{" "}
+            <span className="font-medium text-primary">
+              {sltpConfirmOtherLabel}
+            </span>{" "}
+            active. Do you want to cancel it as well?
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="ui"
+              onClick={async () => {
+                if (!sltpCancelPending) return;
+                const { trade, cancelLeg } = sltpCancelPending;
+                setSltpCancelPending(null);
+                // Cancel both legs
+                await executeCancelOrder(trade, {
+                  sl_bool: true,
+                  tp_bool: true,
+                });
+              }}
+            >
+              Yes, cancel both
+            </Button>
+            <Button
+              variant="ui"
+              onClick={async () => {
+                if (!sltpCancelPending) return;
+                const { trade, cancelLeg } = sltpCancelPending;
+                setSltpCancelPending(null);
+                // Cancel only the requested leg
+                await executeCancelOrder(trade, {
+                  sl_bool: cancelLeg === "sl",
+                  tp_bool: cancelLeg === "tp",
+                });
+              }}
+            >
+              No, only cancel{" "}
+              {sltpCancelPending?.cancelLeg === "sl" ? "SL" : "TP"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

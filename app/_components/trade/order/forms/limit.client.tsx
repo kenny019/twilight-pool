@@ -25,6 +25,7 @@ import { useGrid } from "@/lib/providers/grid";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
+import { formatCurrency } from "@/lib/twilight/ticker";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { createZkAccountWithBalance, createZkOrder } from "@/lib/twilight/zk";
 import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
@@ -52,6 +53,7 @@ import React, {
 } from "react";
 
 const limitQtyOptions = [25, 50, 75, 100];
+const LIMIT_BUFFER = 0.001;
 
 const OrderLimitForm = () => {
   const { width } = useGrid();
@@ -341,6 +343,29 @@ const OrderLimitForm = () => {
 
       const leverageVal = parseInt(leverageRef.current?.value || "1");
       const positionType = action === "sell" ? "SHORT" : "LONG";
+
+      // Validate limit price vs mark price (0.1% buffer)
+      if (currentPrice > 0) {
+        if (positionType === "LONG" && orderPrice >= currentPrice * (1 - LIMIT_BUFFER)) {
+          toast({
+            variant: "error",
+            title: "Invalid limit price",
+            description: `For a Buy (Long) order, the limit price must be below the mark price (${formatCurrency(currentPrice)}). Lower the price so your order fills when the market dips to it.`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        if (positionType === "SHORT" && orderPrice <= currentPrice * (1 + LIMIT_BUFFER)) {
+          toast({
+            variant: "error",
+            title: "Invalid limit price",
+            description: `For a Sell (Short) order, the limit price must be above the mark price (${formatCurrency(currentPrice)}). Raise the price so your order fills when the market rises to it.`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const orderValue = btcAmountInSats * leverageVal;
       const maxPosition =
         positionType === "LONG"
@@ -675,6 +700,16 @@ const OrderLimitForm = () => {
       setIsSubmitting(false);
     }
   }
+  // Buy (Long): price must be below mark. Disable Buy when price >= mark - buffer.
+  const buyDisabled =
+    currentPrice > 0 && orderPrice > 0
+      ? orderPrice >= currentPrice * (1 - LIMIT_BUFFER)
+      : false;
+  // Sell (Short): price must be above mark. Disable Sell when price <= mark + buffer.
+  const sellDisabled =
+    currentPrice > 0 && orderPrice > 0
+      ? orderPrice <= currentPrice * (1 + LIMIT_BUFFER)
+      : false;
 
   return (
     <form onSubmit={submitLimitOrder} className="flex flex-col space-y-2 px-3 pb-2">
@@ -683,12 +718,16 @@ const OrderLimitForm = () => {
         <span>{tradingAccountBalanceString} BTC</span>
       </div>
       <div className="flex justify-between text-xs">
-        <span className="text-green-medium">
-          Liq. Price ≈ ${liquidationPrices.long}
-        </span>
-        <span className="text-red">
-          Liq. Price ≈ ${liquidationPrices.short}
-        </span>
+        {!buyDisabled && (
+          <span className="text-green-medium">
+            Liq. Price (Long) ≈ ${liquidationPrices.long}
+          </span>
+        )}
+        {!sellDisabled && (
+          <span className="text-red">
+            Liq. Price (Short) ≈ ${liquidationPrices.short}
+          </span>
+        )}
       </div>
       {/* <Button className="flex flex-row items-center justify-center gap-4 text-xs">
         Funding<ArrowLeftRight />Trading
@@ -708,6 +747,12 @@ const OrderLimitForm = () => {
             disabled={!tradingAccountBalance}
           />
         </div>
+        {currentPrice > 0 && (
+          <div className="mt-0.5 flex flex-col gap-0.5 text-xs text-primary-accent/70">
+            <span><span className="text-green-medium">Buy (Long):</span> limit price must be below {formatCurrency(currentPrice)}</span>
+            <span><span className="text-red">Sell (Short):</span> limit price must be above {formatCurrency(currentPrice)}</span>
+          </div>
+        )}
       </div>
       <div>
         <DropdownMenu>
@@ -877,38 +922,14 @@ const OrderLimitForm = () => {
       </div>
 
       {status === "Connected" ? (
-        <div
-          className={cn(
-            "flex justify-between",
-            width < 350 ? "flex-col space-y-2" : "flex-row space-x-4"
-          )}
-        >
-          <ExchangeResource>
+        <ExchangeResource>
+          <div className="flex flex-row gap-2">
             <Button
-              className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium disabled:hover:opacity-40"
+              className="flex-1 border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium disabled:hover:opacity-40"
               variant="ui"
               type={"submit"}
               value={"buy"}
-              disabled={isSubmitting || Big(tradingAccountBalance).lte(0)}
-              // onClick={async () => {
-              //   const { success, msg } = await createZkOrder({
-              //     zkAccount: currentZkAccount,
-              //     signature: privateKey,
-              //     value: 100,
-              //     positionType: "LONG",
-              //     leverage: 1,
-              //     orderType: "MARKET",
-              //     timebounds: 0,
-              //     entryPrice: 0,
-              //   });
-
-              //   if (!success || !msg)
-              //     return console.error("error creating zk order");
-
-              //   console.log("txString", msg);
-              //   const data = await sendTradeOrder(msg);
-              //   console.log(data);
-              // }}
+              disabled={isSubmitting || Big(tradingAccountBalance).lte(0) || buyDisabled}
             >
               {isSubmitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -916,12 +937,10 @@ const OrderLimitForm = () => {
                 <>Buy</>
               )}
             </Button>
-          </ExchangeResource>
-          <ExchangeResource>
             <Button
               variant="ui"
-              className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red disabled:hover:opacity-40"
-              disabled={isSubmitting || Big(tradingAccountBalance).lte(0)}
+              className="flex-1 border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red disabled:hover:opacity-40"
+              disabled={isSubmitting || Big(tradingAccountBalance).lte(0) || sellDisabled}
               type={"submit"}
               value={"sell"}
             >
@@ -931,8 +950,8 @@ const OrderLimitForm = () => {
                 <>Sell</>
               )}
             </Button>
-          </ExchangeResource>
-        </div>
+          </div>
+        </ExchangeResource>
       ) : (
         <div className="flex w-full justify-center">
           <ConnectWallet />

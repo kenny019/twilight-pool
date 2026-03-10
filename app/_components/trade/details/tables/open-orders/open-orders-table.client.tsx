@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { TradeOrder } from '@/lib/types';
+import { OpenOrderRow } from '../../details.client';
 import { openOrdersColumns } from './columns';
 import { OpenOrdersDataTable } from './data-table';
 
 interface OpenOrdersTableProps {
-  data: TradeOrder[];
+  data: OpenOrderRow[];
   cancelOrder: (
     order: TradeOrder,
     options?: { sl_bool?: boolean; tp_bool?: boolean }
@@ -15,7 +16,12 @@ interface OpenOrdersTableProps {
   isCancellingOrder: (uuid: string) => boolean;
 }
 
-const OpenOrdersTable = React.memo(function OpenOrdersTable({ data, cancelOrder, openEditDialog, isCancellingOrder }: OpenOrdersTableProps) {
+const OpenOrdersTable = React.memo(function OpenOrdersTable({
+  data,
+  cancelOrder,
+  openEditDialog,
+  isCancellingOrder,
+}: OpenOrdersTableProps) {
   return (
     <OpenOrdersDataTable
       columns={openOrdersColumns}
@@ -24,7 +30,6 @@ const OpenOrdersTable = React.memo(function OpenOrdersTable({ data, cancelOrder,
       openEditDialog={openEditDialog}
       isCancellingOrder={isCancellingOrder}
     />
-
   );
 });
 

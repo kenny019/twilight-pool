@@ -33,6 +33,8 @@ interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   step?: number;
   minValue?: number;
   maxValue?: number;
+  allowNegative?: boolean;
+  formatDecimals?: number;
 }
 
 const NumberInput = ({
@@ -44,28 +46,44 @@ const NumberInput = ({
   inputValue,
   setInputValue,
   currentPrice,
+  allowNegative = false,
+  formatDecimals,
   ...props
 }: NumberInputProps) => {
   const id = useId();
 
-  const inputRef = useCallback(
-    (node: HTMLInputElement) => {
-      if (node === null) return null;
+  const inputRef = useRef<HTMLInputElement>(null);
 
-      node.value = inputValue.toString();
-      return node;
-    },
-    [inputValue]
-  );
+  // Sync external value changes to the DOM input — but only when the input
+  // is not focused, so we don't clobber the user's in-progress keystrokes.
+  useEffect(() => {
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      inputRef.current.value = formatDecimals != null
+        ? inputValue.toFixed(formatDecimals)
+        : inputValue.toString();
+    }
+  }, [inputValue, formatDecimals]);
 
   return (
     <div className="relative flex w-full">
       <Input
         id={id}
-        defaultValue={defaultValue || 0}
+        defaultValue={
+          formatDecimals != null
+            ? (inputValue || 0).toFixed(formatDecimals)
+            : (inputValue || defaultValue || 0)
+        }
         type="text"
         className={className}
         ref={inputRef}
+        onBlur={() => {
+          // On blur, if the parsed value differs from what we'd display, normalise it
+          if (inputRef.current) {
+            inputRef.current.value = formatDecimals != null
+              ? inputValue.toFixed(formatDecimals)
+              : inputValue.toString();
+          }
+        }}
         onKeyDown={(e) => {
           // Allow: backspace, delete, tab, escape, enter, arrow keys
           const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
@@ -80,14 +98,20 @@ const NumberInput = ({
           if (e.key === '.' && !e.currentTarget.value.includes('.')) {
             return;
           }
+          // Allow leading minus sign if allowNegative and none already present
+          if (allowNegative && e.key === '-' && !e.currentTarget.value.includes('-')) {
+            return;
+          }
           // Block anything that isn't a digit
           if (!/^\d$/.test(e.key)) {
             e.preventDefault();
           }
         }}
         onChange={(e) => {
-          // Remove any negative signs and ensure only one dot
-          let value = e.target.value.replace(/-/g, '');
+          // Strip minus signs unless allowNegative (only a leading minus is kept)
+          let value = allowNegative
+            ? e.target.value.replace(/(?!^)-/g, '')  // keep only leading minus
+            : e.target.value.replace(/-/g, '');
           const dotCount = (value.match(/\./g) || []).length;
           if (dotCount > 1) {
             // Keep only the first dot
@@ -97,7 +121,11 @@ const NumberInput = ({
           e.target.value = value;
 
           props.onChange?.(e);
-          setInputValue(Big(value || 0).toNumber())
+          // Don't parse a bare "-" — wait for the user to type digits
+          if (value === '-' || value === '') {
+            return;
+          }
+          setInputValue(Big(value).toNumber());
         }}
         {...props}
       />

@@ -26,7 +26,8 @@ export const traderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
   {
     accessorKey: "date",
     header: "Time",
-    accessorFn: (row) => dayjs(row.date).format("DD/MM/YYYY HH:mm:ss"),
+    sortingFn: "datetime",
+    cell: (row) => dayjs(row.row.original.date).format("DD/MM/YYYY HH:mm:ss"),
   },
   {
     accessorKey: "uuid",
