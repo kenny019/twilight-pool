@@ -394,6 +394,37 @@ export async function cancelZkOrder(
     // the limit row must use the regular cancel path even if SL/TP exist.
     const isSltp = options?.sl_bool !== undefined || options?.tp_bool !== undefined;
 
+    const makeCancelEventKey = (event: {
+      id: number;
+      order_id: string;
+      order_status: string;
+      request_id: string | null;
+      tx_hash: string;
+    }) =>
+      [
+        event.id,
+        event.order_id,
+        event.order_status,
+        event.request_id ?? "",
+        event.tx_hash ?? "",
+      ].join("|");
+
+    // Snapshot existing cancel events so polling waits for a fresh one created
+    // by this cancel request (avoids matching stale historical cancels).
+    const preCancelSnapshot = await queryTransactionHashes(trade.accountAddress);
+    const preExistingCancelKeys = new Set<string>();
+    if (preCancelSnapshot.result) {
+      preCancelSnapshot.result.forEach((event) => {
+        if (
+          isCancelStatus(event.order_status) &&
+          event.order_id === trade.uuid &&
+          !isErrorStatus(event.order_status)
+        ) {
+          preExistingCancelKeys.add(makeCancelEventKey(event));
+        }
+      });
+    }
+
     let cancelResult: Record<string, unknown>;
 
     if (isSltp) {
@@ -416,9 +447,36 @@ export async function cancelZkOrder(
 
     console.log("cancelResult", cancelResult);
 
+    if (!cancelResult || Object.keys(cancelResult).length === 0) {
+      return {
+        success: false,
+        message: "Cancel request was not accepted by relayer.",
+      };
+    }
+
+    const cancelError =
+      typeof cancelResult.error === "string"
+        ? cancelResult.error
+        : cancelResult.error &&
+            typeof cancelResult.error === "object" &&
+            "message" in cancelResult.error &&
+            typeof (cancelResult.error as { message?: unknown }).message ===
+              "string"
+          ? ((cancelResult.error as { message: string }).message as string)
+          : "";
+    if (cancelError) {
+      return {
+        success: false,
+        message: cancelError,
+      };
+    }
+
     if (
       typeof cancelResult.result === "string" &&
-      cancelResult.result.includes("not cancelable")
+      (cancelResult.result.toLowerCase().includes("not cancelable") ||
+        cancelResult.result.toLowerCase().includes("rejected") ||
+        cancelResult.result.toLowerCase().includes("failed") ||
+        cancelResult.result.toLowerCase().includes("error"))
     ) {
       return {
         success: false,
@@ -436,7 +494,8 @@ export async function cancelZkOrder(
           (result) =>
             isCancelStatus(result.order_status) &&
             result.order_id === trade.uuid &&
-            !isErrorStatus(result.order_status)
+            !isErrorStatus(result.order_status) &&
+            !preExistingCancelKeys.has(makeCancelEventKey(result))
         );
       }
       return false;
@@ -465,7 +524,8 @@ export async function cancelZkOrder(
       (r) =>
         isCancelStatus(r.order_status) &&
         r.order_id === trade.uuid &&
-        !isErrorStatus(r.order_status)
+        !isErrorStatus(r.order_status) &&
+        !preExistingCancelKeys.has(makeCancelEventKey(r))
     );
 
     const txHash = cancelTx?.tx_hash ?? "";

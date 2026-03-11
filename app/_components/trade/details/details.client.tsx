@@ -242,9 +242,12 @@ const DetailsPanel = () => {
 
       setCancellingOrders((prev) => new Set(prev).add(order.uuid));
 
-      const isSltp = !!(order.takeProfit || order.stopLoss);
-      const cancelledSl = isSltp && (options?.sl_bool ?? !!order.stopLoss);
-      const cancelledTp = isSltp && (options?.tp_bool ?? !!order.takeProfit);
+      // Derive SLTP mode from explicit cancel intent, not order contents.
+      // A trade can contain both limit-close and SL/TP legs.
+      const isSltpRequest =
+        options?.sl_bool !== undefined || options?.tp_bool !== undefined;
+      const cancelledSl = isSltpRequest ? (options?.sl_bool ?? false) : false;
+      const cancelledTp = isSltpRequest ? (options?.tp_bool ?? false) : false;
 
       try {
         toast({
@@ -266,7 +269,7 @@ const DetailsPanel = () => {
 
         const cancelOrderData = cancelOrderResult.data;
 
-        if (isSltp) {
+        if (isSltpRequest) {
           // SLTP cancel: position stays FILLED. Optimistically clear the
           // cancelled leg(s) in local state so the UI updates immediately.
           // useSyncTrades will reconcile on the next poll using the actual
@@ -321,10 +324,10 @@ const DetailsPanel = () => {
         await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
         toast({
-          title: isSltp ? "SLTP order cancelled" : "Order cancelled",
+          title: isSltpRequest ? "SLTP order cancelled" : "Order cancelled",
           description: (
             <div className="opacity-90">
-              {isSltp
+              {isSltpRequest
                 ? `Successfully cancelled ${cancelledSl && cancelledTp ? "Stop Loss and Take Profit" : cancelledSl ? "Stop Loss" : "Take Profit"}.`
                 : "Successfully cancelled order."}{" "}
               {cancelOrderData.tx_hash && (
