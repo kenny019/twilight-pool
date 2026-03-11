@@ -283,7 +283,7 @@ function ConditionalCloseDialog({
   const displaySlPnlUsd = isFinite(displaySlPnlBtc) ? displaySlPnlBtc * btcPrice : 0;
   const displayTpPnlUsd = isFinite(displayTpPnlBtc) ? displayTpPnlBtc * btcPrice : 0;
 
-  // Distance from entry (%)
+  // Distance from entry (%) — kept for context display in position box
   const slDistancePct = entryPrice > 0 && slPrice > 0
     ? ((slPrice - entryPrice) / entryPrice) * 100
     : null;
@@ -291,18 +291,29 @@ function ConditionalCloseDialog({
     ? ((tpPrice - entryPrice) / entryPrice) * 100
     : null;
 
-  // Slider ranges capped at liquidation for SL
-  const slSliderMaxAbs = liqDistancePct != null ? Math.min(20, liqDistancePct * 0.98) : 20;
+  // Distance from mark (%) — used by sliders; more intuitive for active traders
+  const slDistanceFromMarkPct = markPrice > 0 && slPrice > 0
+    ? ((slPrice - markPrice) / markPrice) * 100
+    : null;
+  const tpDistanceFromMarkPct = markPrice > 0 && tpPrice > 0
+    ? ((tpPrice - markPrice) / markPrice) * 100
+    : null;
+  const liqDistanceFromMarkPct = markPrice > 0 && liquidationPrice > 0
+    ? Math.abs((liquidationPrice - markPrice) / markPrice) * 100
+    : null;
+
+  // Slider ranges relative to mark price, capped near liquidation for SL
+  const slSliderMaxAbs = liqDistanceFromMarkPct != null ? Math.min(30, liqDistanceFromMarkPct * 0.98) : 30;
   const slSliderRange = isLong
-    ? { min: -slSliderMaxAbs, max: -0.5 }
-    : { min: 0.5, max: slSliderMaxAbs };
-  const tpSliderRange = isLong ? { min: 0.5, max: 50 } : { min: -50, max: -0.5 };
-  const slSliderPct = slDistancePct != null
-    ? Math.min(Math.max(slDistancePct, slSliderRange.min), slSliderRange.max)
+    ? { min: -slSliderMaxAbs, max: -0.1 }
+    : { min: 0.1, max: slSliderMaxAbs };
+  const tpSliderRange = isLong ? { min: 0.1, max: 50 } : { min: -50, max: -0.1 };
+  const slSliderPct = slDistanceFromMarkPct != null
+    ? Math.min(Math.max(slDistanceFromMarkPct, slSliderRange.min), slSliderRange.max)
     : (isLong ? -2 : 2);
-  const tpSliderPct = tpDistancePct != null
-    ? Math.min(Math.max(tpDistancePct, tpSliderRange.min), tpSliderRange.max)
-    : (isLong ? 10 : -10);
+  const tpSliderPct = tpDistanceFromMarkPct != null
+    ? Math.min(Math.max(tpDistanceFromMarkPct, tpSliderRange.min), tpSliderRange.max)
+    : (isLong ? 5 : -5);
 
   // Pool equity warning (non-blocking)
   const showTpPoolWarning = poolEquityBtc != null && tpPrice > 0
@@ -332,11 +343,14 @@ function ConditionalCloseDialog({
   const tpBarPct = tpPrice > 0 ? toBarPct(tpPrice) : null;
   const markBarPct = markPrice > 0 ? toBarPct(markPrice) : null;
 
-  // R:R
+  // R:R — only meaningful when SL is a loss (negative PnL) and TP is a gain (positive PnL)
   const hasRR = slPrice > 0 && tpPrice > 0;
   const rrRatio =
-    hasRR && Math.abs(displaySlPnlBtc) > 0
-      ? Math.abs(displayTpPnlBtc) / Math.abs(displaySlPnlBtc)
+    hasRR &&
+    displaySlPnlBtc < 0 &&
+    displayTpPnlBtc > 0 &&
+    Math.abs(displaySlPnlBtc) > 0
+      ? displayTpPnlBtc / Math.abs(displaySlPnlBtc)
       : null;
 
   // ── handlers for bidirectional price ↔ BTC PnL ──────────────────────────
@@ -918,10 +932,6 @@ function ConditionalCloseDialog({
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">Position Size (BTC)</span>
-                  <span className="text-xs font-medium">{positionSizeDisplayBtc.toFixed(6)} BTC</span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-xs text-primary-accent">Side</span>
                   <span className={cn("text-xs font-medium", isLong ? "text-green-medium" : "text-red")}>
                     {isLong ? "Long" : "Short"}
@@ -929,85 +939,120 @@ function ConditionalCloseDialog({
                 </div>
               </div>
 
-              {/* 2. Stop Loss */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              {/* Position Amount + explainer */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-primary-accent/70 max-w-[60%]">
+                  SL/TP trigger a market close when the mark price reaches the set level.
+                </p>
+                <div className="text-right">
+                  <span className="text-[10px] text-primary-accent block">Position Amount</span>
+                  <span className="text-sm font-medium">${positionSizeUsd}</span>
+                </div>
+              </div>
+
+              {/* 2 + 3. Stop Loss | Take Profit — responsive side-by-side grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+
+                {/* ── Row 1: headers + unit toggle ── */}
+                <div>
                   <span className="text-xs font-medium text-red">Stop Loss</span>
-                  {slPrice > 0 && (
-                    <span className="rounded bg-red/10 px-1.5 py-0.5 text-[10px] text-red">
-                      {formatCurrency(slPrice)}
-                    </span>
+                </div>
+                <div className="flex items-center justify-between sm:border-l sm:border-outline sm:pl-3">
+                  <span className="text-xs font-medium text-green-medium">Take Profit</span>
+                  <div className="flex rounded border border-outline overflow-hidden">
+                    {(["BTC", "mBTC"] as const).map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setPnlUnit(u)}
+                        className={cn(
+                          "px-2 py-0.5 text-[10px] transition-colors",
+                          pnlUnit === u ? "bg-outline text-primary" : "text-primary-accent hover:bg-outline/50"
+                        )}
+                      >{u}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Row 2: price inputs ── */}
+                <div className="space-y-1">
+                  <label className="text-xs text-primary-accent" htmlFor="input-sl-price">
+                    Price (USD)
+                  </label>
+                  <NumberInput
+                    id="input-sl-price"
+                    inputValue={slPrice}
+                    setInputValue={handleSlPriceChange}
+                    currentPrice={currentPrice}
+                    placeholder="0.00"
+                    formatDecimals={2}
+                    hideBid
+                  />
+                  {slPrice > 0 && isFinite(displaySlPnlBtc) && displaySlPnlBtc !== 0 && btcPrice > 0 && (
+                    <p className="text-xs text-primary-accent mt-0.5">
+                      PnL ≈ <span className={displaySlPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displaySlPnlUsd)}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
+                  <label className="text-xs text-primary-accent" htmlFor="input-tp-price">
+                    Price (USD)
+                  </label>
+                  <NumberInput
+                    id="input-tp-price"
+                    inputValue={tpPrice}
+                    setInputValue={handleTpPriceChange}
+                    currentPrice={currentPrice}
+                    placeholder="0.00"
+                    formatDecimals={2}
+                    hideBid
+                  />
+                  {tpPrice > 0 && isFinite(displayTpPnlBtc) && displayTpPnlBtc !== 0 && btcPrice > 0 && (
+                    <p className="text-xs text-primary-accent mt-0.5">
+                      PnL ≈ <span className={displayTpPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displayTpPnlUsd)}</span>
+                    </p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-primary-accent" htmlFor="input-sl-price">
-                      Price (USD)
-                    </label>
-                    <NumberInput
-                      id="input-sl-price"
-                      inputValue={slPrice}
-                      setInputValue={handleSlPriceChange}
-                      currentPrice={currentPrice}
-                      placeholder="0.00"
-                      formatDecimals={2}
-                    />
-                    {slPrice > 0 && isFinite(displaySlPnlBtc) && displaySlPnlBtc !== 0 && (
-                      <p className="text-xs text-primary-accent mt-0.5">
-                        Est. PnL:{" "}
-                        <span className="text-red">
-                          {(displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
-                        </span>
-                        {btcPrice > 0 && (
-                          <span className="ml-1">≈ -{formatCurrency(Math.abs(displaySlPnlUsd))}</span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1">
-                      <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
-                        Max Loss
-                      </label>
-                      <div className="ml-auto flex rounded border border-outline overflow-hidden">
-                        {(["BTC", "mBTC"] as const).map((u) => (
-                          <button
-                            key={u}
-                            type="button"
-                            onClick={() => setPnlUnit(u)}
-                            className={cn(
-                              "px-1.5 py-0.5 text-[10px] transition-colors",
-                              pnlUnit === u ? "bg-outline text-primary" : "text-primary-accent hover:bg-outline/50"
-                            )}
-                          >{u}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <NumberInput
-                      id="input-sl-pnl"
-                      allowNegative
-                      formatDecimals={pnlDecimals}
-                      inputValue={isFinite(displaySlPnlBtc) ? parseFloat((displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
-                      setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
-                      currentPrice={0}
-                      placeholder="0.00000000"
-                    />
-                    {slPnlInput !== 0 && slPrice > 0 && (
-                      <p className="text-xs text-primary-accent mt-0.5">
-                        Trigger: ~{formatCurrency(slPrice)}
-                      </p>
-                    )}
-                  </div>
+                {/* ── Row 3: target PnL inputs ── */}
+                <div className="space-y-1">
+                  <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
+                    Target PnL
+                  </label>
+                  <NumberInput
+                    id="input-sl-pnl"
+                    allowNegative
+                    hideBid
+                    formatDecimals={pnlDecimals}
+                    inputValue={isFinite(displaySlPnlBtc) ? parseFloat((displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                    setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
+                    currentPrice={0}
+                    placeholder="0.00000000"
+                  />
+                </div>
+                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
+                  <label className="text-xs text-primary-accent" htmlFor="input-tp-pnl">
+                    Target PnL
+                  </label>
+                  <NumberInput
+                    id="input-tp-pnl"
+                    allowNegative
+                    hideBid
+                    formatDecimals={pnlDecimals}
+                    inputValue={isFinite(displayTpPnlBtc) ? parseFloat((displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                    setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
+                    currentPrice={0}
+                    placeholder="0.00000000"
+                  />
                 </div>
 
-                {/* SL slider */}
+                {/* ── Row 4: sliders (% from mark) ── */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">Move from entry</span>
+                    <span className="text-xs text-primary-accent">From mark</span>
                     <span className="text-xs font-medium">
-                      {slDistancePct != null
-                        ? `${slDistancePct >= 0 ? "+" : ""}${slDistancePct.toFixed(1)}%`
+                      {slDistanceFromMarkPct != null
+                        ? `${slDistanceFromMarkPct >= 0 ? "+" : ""}${slDistanceFromMarkPct.toFixed(1)}%`
                         : "—"}
                     </span>
                   </div>
@@ -1017,115 +1062,16 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[slSliderPct]}
                     onValueChange={([pct]) =>
-                      handleSlPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
+                      handleSlPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))
                     }
                   />
                 </div>
-
-                {/* SL preset chips */}
-                <div className="flex gap-1.5">
-                  <span className="text-xs text-primary-accent/60 self-center">Presets:</span>
-                  {slPresets.map((pct) => (
-                    <button
-                      key={pct}
-                      type="button"
-                      onClick={() => handleSlPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
-                      className="rounded border border-red/40 bg-red/10 px-2.5 py-1 text-xs font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
-                    >
-                      {pct > 0 ? "+" : ""}{pct}%
-                    </button>
-                  ))}
-                </div>
-
-                {/* SL distance info */}
-                {slDistancePct != null && (
-                  <p className="text-xs text-primary-accent">
-                    {formatCurrency(slPrice)}{" "}
-                    <span className="text-red">
-                      ({slDistancePct >= 0 ? "+" : ""}
-                      {slDistancePct.toFixed(2)}% from entry)
-                    </span>
-                  </p>
-                )}
-
-                <div className="min-h-[1.25rem]">
-                  {validationErrors.sl && (
-                    <p className="text-xs text-red">{validationErrors.sl}</p>
-                  )}
-                </div>
-                <div className="min-h-[1.25rem]">
-                  {slNearLiquidation && (
-                    <p className="text-xs text-yellow-500">
-                      Warning: Stop loss is near your liquidation price.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. Take Profit */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-green-medium">Take Profit</span>
-                  {tpPrice > 0 && (
-                    <span className="rounded bg-green-medium/10 px-1.5 py-0.5 text-[10px] text-green-medium">
-                      {formatCurrency(tpPrice)}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-primary-accent" htmlFor="input-tp-price">
-                      Price (USD)
-                    </label>
-                    <NumberInput
-                      id="input-tp-price"
-                      inputValue={tpPrice}
-                      setInputValue={handleTpPriceChange}
-                      currentPrice={currentPrice}
-                      placeholder="0.00"
-                      formatDecimals={2}
-                    />
-                    {tpPrice > 0 && isFinite(displayTpPnlBtc) && displayTpPnlBtc !== 0 && (
-                      <p className="text-xs text-primary-accent mt-0.5">
-                        Est. PnL:{" "}
-                        <span className="text-green-medium">
-                          +{(displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
-                        </span>
-                        {btcPrice > 0 && (
-                          <span className="ml-1">≈ +{formatCurrency(Math.abs(displayTpPnlUsd))}</span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-primary-accent" htmlFor="input-tp-pnl">
-                      Est. Profit
-                    </label>
-                    <NumberInput
-                      id="input-tp-pnl"
-                      allowNegative
-                      formatDecimals={pnlDecimals}
-                      inputValue={isFinite(displayTpPnlBtc) ? parseFloat((displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
-                      setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
-                      currentPrice={0}
-                      placeholder="0.00000000"
-                    />
-                    {tpPnlInput !== 0 && tpPrice > 0 && (
-                      <p className="text-xs text-primary-accent mt-0.5">
-                        Trigger: ~{formatCurrency(tpPrice)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* TP slider */}
-                <div className="space-y-1">
+                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">Move from entry</span>
+                    <span className="text-xs text-primary-accent">From mark</span>
                     <span className="text-xs font-medium">
-                      {tpDistancePct != null
-                        ? `${tpDistancePct >= 0 ? "+" : ""}${tpDistancePct.toFixed(1)}%`
+                      {tpDistanceFromMarkPct != null
+                        ? `${tpDistanceFromMarkPct >= 0 ? "+" : ""}${tpDistanceFromMarkPct.toFixed(1)}%`
                         : "—"}
                     </span>
                   </div>
@@ -1135,49 +1081,53 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[tpSliderPct]}
                     onValueChange={([pct]) =>
-                      handleTpPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
+                      handleTpPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))
                     }
                   />
                 </div>
 
-                {/* TP preset chips */}
-                <div className="flex gap-1.5">
-                  <span className="text-xs text-primary-accent/60 self-center">Presets:</span>
+                {/* ── Row 5: preset chips ── */}
+                <div className="flex flex-wrap gap-1">
+                  {slPresets.map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => handleSlPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))}
+                      className="rounded border border-red/40 bg-red/10 px-1.5 py-0.5 text-[10px] font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
+                    >
+                      {pct > 0 ? "+" : ""}{pct}%
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1 sm:border-l sm:border-outline sm:pl-3">
                   {tpPresets.map((pct) => (
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => handleTpPriceChange(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
-                      className="rounded border border-green-medium/40 bg-green-medium/10 px-2.5 py-1 text-xs font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
+                      onClick={() => handleTpPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))}
+                      className="rounded border border-green-medium/40 bg-green-medium/10 px-1.5 py-0.5 text-[10px] font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
                     </button>
                   ))}
                 </div>
 
-                {/* TP distance info */}
-                {tpDistancePct != null && (
-                  <p className="text-xs text-primary-accent">
-                    {formatCurrency(tpPrice)}{" "}
-                    <span className="text-green-medium">
-                      ({tpDistancePct >= 0 ? "+" : ""}
-                      {tpDistancePct.toFixed(2)}% from entry)
-                    </span>
-                  </p>
-                )}
-
+                {/* ── Row 6: warnings ── */}
                 <div className="min-h-[1.25rem]">
-                  {validationErrors.tp && (
+                  {validationErrors.sl ? (
+                    <p className="text-xs text-red">{validationErrors.sl}</p>
+                  ) : slNearLiquidation ? (
+                    <p className="text-xs text-yellow-500">SL is near liquidation price.</p>
+                  ) : null}
+                </div>
+                <div className="min-h-[1.25rem] sm:border-l sm:border-outline sm:pl-3">
+                  {validationErrors.tp ? (
                     <p className="text-xs text-red">{validationErrors.tp}</p>
-                  )}
+                  ) : showTpPoolWarning ? (
+                    <p className="text-xs text-yellow-500">TP exceeds 2% of pool equity.</p>
+                  ) : null}
                 </div>
-                <div className="min-h-[1.25rem]">
-                  {showTpPoolWarning && (
-                    <p className="text-xs text-yellow-500">
-                      Take profit exceeds 2% of pool equity — payout may be limited.
-                    </p>
-                  )}
-                </div>
+
               </div>
 
               {/* 4. Outcome Visualization Bar */}
@@ -1271,15 +1221,15 @@ function ConditionalCloseDialog({
                 <span className="text-xs text-primary-accent/60">Risk / Reward</span>
                 <div className="rounded border border-outline p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">Potential Loss</span>
-                    <span className="text-xs font-medium text-red">
-                      -{Math.abs(displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
+                    <span className="text-xs text-primary-accent">SL PnL</span>
+                    <span className={cn("text-xs font-medium", displaySlPnlBtc >= 0 ? "text-green-medium" : "text-red")}>
+                      {(displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">Potential Profit</span>
-                    <span className="text-xs font-medium text-green-medium">
-                      +{(displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
+                    <span className="text-xs text-primary-accent">TP PnL</span>
+                    <span className={cn("text-xs font-medium", displayTpPnlBtc >= 0 ? "text-green-medium" : "text-red")}>
+                      {(displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)} {pnlUnit}
                     </span>
                   </div>
                   {rrRatio != null && (
@@ -1304,20 +1254,6 @@ function ConditionalCloseDialog({
                   You already have an active SL/TP — confirming will update it.
                 </p>
               )}
-
-              <div className="border-t" />
-
-              {/* 6. Position Amount */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-primary-accent">Position Amount</span>
-                <span className="text-sm font-medium">${positionSizeUsd}</span>
-              </div>
-
-              {/* 7. Explainer footer */}
-              <p className="text-xs text-primary-accent/70">
-                SL/TP trigger a market close when the mark price reaches the set
-                level. Estimates are based on entry price and position size.
-              </p>
 
               <div className="border-t" />
 

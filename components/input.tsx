@@ -35,6 +35,7 @@ interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   maxValue?: number;
   allowNegative?: boolean;
   formatDecimals?: number;
+  hideBid?: boolean;
 }
 
 const NumberInput = ({
@@ -48,6 +49,7 @@ const NumberInput = ({
   currentPrice,
   allowNegative = false,
   formatDecimals,
+  hideBid = false,
   ...props
 }: NumberInputProps) => {
   const id = useId();
@@ -129,14 +131,16 @@ const NumberInput = ({
         }}
         {...props}
       />
-      <div className="">
-        <button className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-primary" onClick={(e) => {
-          e.preventDefault();
-          setInputValue(currentPrice);
-        }}
-          disabled={props.disabled}
-        >Bid</button>
-      </div>
+      {!hideBid && (
+        <div className="">
+          <button className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-primary" onClick={(e) => {
+            e.preventDefault();
+            setInputValue(currentPrice);
+          }}
+            disabled={props.disabled}
+          >Bid</button>
+        </div>
+      )}
     </div>
   );
 };

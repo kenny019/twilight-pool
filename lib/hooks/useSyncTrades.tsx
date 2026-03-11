@@ -209,6 +209,16 @@ export const useSyncTrades = () => {
           ) {
             continue;
           }
+          // Don't overwrite a valid positionSize with 0 — some API endpoints
+          // (e.g. SLTP placement response) omit positionsize, causing the field
+          // to come back as 0 and breaking all PnL calculations in the dialog.
+          if (
+            key === "positionsize" &&
+            updatedValue === 0 &&
+            (currentValueForGuard as number) > 0
+          ) {
+            continue;
+          }
 
           const currentValue = trade[tradeKey as keyof TradeOrder];
           if (currentValue === updatedValue) continue;
