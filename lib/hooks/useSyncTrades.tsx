@@ -195,20 +195,7 @@ export const useSyncTrades = () => {
             updatedValue = new Big(value as string | number).toNumber();
           }
 
-          // For take_profit / stop_loss: only skip a null update when the
-          // local value is already non-null (protects an optimistic SLTP value
-          // that was set locally but the API hasn't confirmed yet). Once the
-          // API returns the real object the guard won't fire and the update
-          // will land. If the local value is already null/undefined, allow the
-          // update through so the equality check below handles it normally.
           const currentValueForGuard = trade[tradeKey as keyof TradeOrder];
-          if (
-            (key === "take_profit" || key === "stop_loss") &&
-            updatedValue === null &&
-            currentValueForGuard != null
-          ) {
-            continue;
-          }
           // Don't overwrite a valid positionSize with 0 — some API endpoints
           // (e.g. SLTP placement response) omit positionsize, causing the field
           // to come back as 0 and breaking all PnL calculations in the dialog.

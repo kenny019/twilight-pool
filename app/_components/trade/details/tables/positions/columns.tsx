@@ -195,6 +195,34 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
 
       const isSettling = meta.isSettlingOrder(trade.uuid);
 
+      const limitPrice = trade.settleLimit?.price
+        ? `$${Number(trade.settleLimit.price).toFixed(2)}`
+        : null;
+
+      const slPrice = trade.stopLoss?.price
+        ? `$${Number(trade.stopLoss.price).toFixed(2)}`
+        : null;
+
+      const tpPrice = trade.takeProfit?.price
+        ? `$${Number(trade.takeProfit.price).toFixed(2)}`
+        : null;
+
+      const sltpLabel = slPrice && tpPrice
+        ? (
+          <span className="flex flex-col items-start leading-tight">
+            <span className="text-red">SL {slPrice}</span>
+            <span className="text-green-medium">TP {tpPrice}</span>
+          </span>
+        )
+        : slPrice
+          ? `SL ${slPrice}`
+          : tpPrice
+            ? `TP ${tpPrice}`
+            : "SLTP";
+
+      const sltpActive = !!(slPrice || tpPrice);
+      const limitActive = !!limitPrice;
+
       return (
         <div className="flex flex-row gap-1">
           <Button
@@ -217,9 +245,10 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
-            title="Close with limit order"
+            title={limitActive ? `Limit close at ${limitPrice}` : "Close with limit order"}
+            className={limitActive ? "text-yellow-400 border-yellow-400/40" : undefined}
           >
-            LMT
+            {limitActive ? limitPrice! : "LMT"}
           </Button>
           <Button
             onClick={(e) => {
@@ -229,9 +258,10 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
-            title="Set Stop Loss / Take Profit"
+            title={sltpActive ? `Edit SL/TP` : "Set Stop Loss / Take Profit"}
+            className={sltpActive ? "text-theme border-theme/40" : undefined}
           >
-            SLTP
+            {sltpLabel}
           </Button>
         </div>
       );
