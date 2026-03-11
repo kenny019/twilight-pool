@@ -234,16 +234,48 @@ export type TransactionHash = {
   order_id: string;
   order_status: string;
   order_type: string;
-  output: string;
+  output: string | null;
+  reason: string | null;
+  old_price: number | null;
+  new_price: number | null;
   request_id: string | null;
   tx_hash: string;
 };
 
 type TransactionHashOpts = {
-  status?: "FILLED" | "SETTLED" | "PENDING" | "CANCELLED";
+  status?: string;
   limit?: number;
   offset?: number;
 };
+
+export const TX_HASH_ERROR_STATUSES = new Set([
+  "RejectedByRiskEngine",
+  "RejectedByExchange",
+  "RejectedByRelayer",
+  "Error",
+]);
+
+export function isErrorStatus(status: string): boolean {
+  return TX_HASH_ERROR_STATUSES.has(status);
+}
+
+export function isCancelStatus(status: string): boolean {
+  return (
+    status === "CANCELLED" ||
+    status === "CancelledStopLoss" ||
+    status === "CancelledTakeProfit" ||
+    status === "CancelledLimitClose"
+  );
+}
+
+export const LIFECYCLE_STATUSES = new Set([
+  "PENDING",
+  "FILLED",
+  "SETTLED",
+  "CANCELLED",
+  "LIQUIDATE",
+  "LENDED",
+]);
 
 async function getLastDayApy() {
   const body = JSON.stringify({

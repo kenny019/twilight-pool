@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkOrder } from "@/lib/twilight/zk";
 import { sendTradeOrder } from "@/lib/api/client";
-import { queryTransactionHashes } from "@/lib/api/rest";
+import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
 import { queryTradeOrder } from "@/lib/api/relayer";
 import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
 import { retry } from "@/lib/helpers";
@@ -170,21 +170,17 @@ function EditOrderDialog({
         return;
       }
 
-      // Step 5: Poll for tx hash — filter out the stale cancel tx
+      // Step 5: Poll for tx hash — filter out the stale cancel tx and SLTP events
       const transactionHashCondition = (
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
         if (txHashResult.result) {
-          let found = false;
-          txHashResult.result.forEach((result) => {
-            if (
-              result.order_status !== "CANCELLED" &&
-              !result.tx_hash.includes("Error")
-            ) {
-              found = true;
-            }
-          });
-          return found;
+          return txHashResult.result.some(
+            (r) =>
+              !isCancelStatus(r.order_status) &&
+              !isErrorStatus(r.order_status) &&
+              r.order_type !== "SLTP"
+          );
         }
         return false;
       };
@@ -211,7 +207,10 @@ function EditOrderDialog({
       }
 
       const orderData = transactionHashRes.data.result.find(
-        (r) => r.order_status !== "CANCELLED" && !r.tx_hash.includes("Error")
+        (r) =>
+          !isCancelStatus(r.order_status) &&
+          !isErrorStatus(r.order_status) &&
+          r.order_type !== "SLTP"
       );
 
       if (!orderData) {
@@ -255,7 +254,7 @@ function EditOrderDialog({
         tx_hash: orderData.order_status === "PENDING" ? "" : orderData.tx_hash,
         uuid: orderData.order_id,
         value: order.value,
-        output: orderData.output,
+        output: orderData.output ?? undefined,
         entryPrice: new Big(traderOrderInfo.entryprice).toNumber(),
         leverage: order.leverage,
         date: dayjs(traderOrderInfo.timestamp).toDate(),
