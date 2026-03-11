@@ -13,6 +13,10 @@ import Big from "big.js";
 import OpenOrdersTable from "./tables/open-orders/open-orders-table.client";
 import TraderHistoryTable from "./tables/trader-history/trader-history-table.client";
 import OrderHistoryTable from "./tables/order-history/order-history-table.client";
+import OpenOrdersCards from "./tables/open-orders/open-orders-cards.client";
+import PositionsCards from "./tables/positions/positions-cards.client";
+import TraderHistoryCards from "./tables/trader-history/trader-history-cards.client";
+import OrderHistoryCards from "./tables/order-history/order-history-cards.client";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
 import EditOrderDialog from "@/components/edit-order-dialog";
@@ -31,6 +35,8 @@ type TabType =
   | "positions"
   | "open-orders"
   | "trader-history";
+
+type ViewMode = "table" | "cards";
 
 // State for the "cancel one SLTP leg — ask about the other?" confirmation.
 type SltpCancelPending = {
@@ -51,6 +57,14 @@ const DetailsPanel = () => {
   const [editingOrders, setEditingOrders] = useState<Set<string>>(new Set());
   const [sltpCancelPending, setSltpCancelPending] =
     useState<SltpCancelPending | null>(null);
+  const [viewByTab, setViewByTab] = useState<
+    Record<"positions" | "open-orders" | "trader-history" | "history", ViewMode>
+  >({
+    positions: "table",
+    "open-orders": "table",
+    "trader-history": "table",
+    history: "table",
+  });
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
@@ -408,9 +422,17 @@ const DetailsPanel = () => {
       : `Stop Loss at ${formatCurrency(Number(sltpCancelPending.trade.stopLoss?.price ?? 0))}`
     : "";
 
+  const currentView =
+    currentTab === "positions" ||
+    currentTab === "open-orders" ||
+    currentTab === "trader-history" ||
+    currentTab === "history"
+      ? viewByTab[currentTab]
+      : "table";
+
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="sticky top-0 z-10 flex w-full items-center border-b bg-background pl-3 pt-2">
+      <div className="sticky top-0 z-10 flex w-full flex-col gap-2 border-b bg-background px-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <Tabs defaultValue={currentTab}>
           <TabsList className="flex w-full border-b-0" variant="underline">
             <TabsTrigger
@@ -443,28 +465,96 @@ const DetailsPanel = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        {(currentTab === "positions" ||
+          currentTab === "open-orders" ||
+          currentTab === "trader-history" ||
+          currentTab === "history") && (
+          <div className="mb-2 flex items-center gap-1 self-end rounded-lg border border-border/60 bg-gradient-to-b from-background to-background/80 p-1 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
+            <Button
+              variant="ui"
+              size="small"
+              aria-pressed={currentView === "table"}
+              className={
+                currentView === "table"
+                  ? "border-theme/40 bg-theme/10 text-theme transition-all duration-150"
+                  : "transition-all duration-150 hover:brightness-110"
+              }
+              onClick={() =>
+                setViewByTab((prev) => ({
+                  ...prev,
+                  [currentTab]: "table",
+                }))
+              }
+            >
+              Table
+            </Button>
+            <Button
+              variant="ui"
+              size="small"
+              aria-pressed={currentView === "cards"}
+              className={
+                currentView === "cards"
+                  ? "border-theme/40 bg-theme/10 text-theme transition-all duration-150"
+                  : "transition-all duration-150 hover:brightness-110"
+              }
+              onClick={() =>
+                setViewByTab((prev) => ({
+                  ...prev,
+                  [currentTab]: "cards",
+                }))
+              }
+            >
+              Cards
+            </Button>
+          </div>
+        )}
       </div>
       <div className="">
         {currentTab === "positions" && (
-          <PositionsTable
-            data={positionsData}
-            settleMarketOrder={settleMarketOrder}
-            isSettlingOrder={isSettlingOrder}
-          />
+          currentView === "table" ? (
+            <PositionsTable
+              data={positionsData}
+              settleMarketOrder={settleMarketOrder}
+              isSettlingOrder={isSettlingOrder}
+            />
+          ) : (
+            <PositionsCards
+              data={positionsData}
+              settleMarketOrder={settleMarketOrder}
+              isSettlingOrder={isSettlingOrder}
+            />
+          )
         )}
         {currentTab === "open-orders" && (
-          <OpenOrdersTable
-            data={openOrdersRows}
-            cancelOrder={cancelOrder}
-            openEditDialog={openEditDialog}
-            isCancellingOrder={isCancellingOrder}
-          />
+          currentView === "table" ? (
+            <OpenOrdersTable
+              data={openOrdersRows}
+              cancelOrder={cancelOrder}
+              openEditDialog={openEditDialog}
+              isCancellingOrder={isCancellingOrder}
+            />
+          ) : (
+            <OpenOrdersCards
+              data={openOrdersRows}
+              cancelOrder={cancelOrder}
+              openEditDialog={openEditDialog}
+              isCancellingOrder={isCancellingOrder}
+            />
+          )
         )}
         {currentTab === "trader-history" && (
-          <TraderHistoryTable data={traderHistoryData} />
+          currentView === "table" ? (
+            <TraderHistoryTable data={traderHistoryData} />
+          ) : (
+            <TraderHistoryCards data={traderHistoryData} />
+          )
         )}
         {currentTab === "history" && (
-          <OrderHistoryTable data={orderHistoryData} />
+          currentView === "table" ? (
+            <OrderHistoryTable data={orderHistoryData} />
+          ) : (
+            <OrderHistoryCards data={orderHistoryData} />
+          )
         )}
       </div>
 
