@@ -36,6 +36,7 @@ interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   allowNegative?: boolean;
   formatDecimals?: number;
   hideBid?: boolean;
+  syncWhileFocused?: boolean;
 }
 
 const NumberInput = ({
@@ -50,6 +51,7 @@ const NumberInput = ({
   allowNegative = false,
   formatDecimals,
   hideBid = false,
+  syncWhileFocused = false,
   ...props
 }: NumberInputProps) => {
   const id = useId();
@@ -59,12 +61,15 @@ const NumberInput = ({
   // Sync external value changes to the DOM input — but only when the input
   // is not focused, so we don't clobber the user's in-progress keystrokes.
   useEffect(() => {
-    if (inputRef.current && document.activeElement !== inputRef.current) {
+    if (
+      inputRef.current &&
+      (syncWhileFocused || document.activeElement !== inputRef.current)
+    ) {
       inputRef.current.value = formatDecimals != null
         ? inputValue.toFixed(formatDecimals)
         : inputValue.toString();
     }
-  }, [inputValue, formatDecimals]);
+  }, [inputValue, formatDecimals, syncWhileFocused]);
 
   return (
     <div className="relative flex w-full">

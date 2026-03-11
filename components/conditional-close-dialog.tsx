@@ -47,7 +47,25 @@ function pnlBtcFromPrice(
 ): number | null {
   if (closePrice <= 0 || entryPrice <= 0 || positionSize === 0) return null;
   try {
-    const pnlSats = calculateUpnl(entryPrice, closePrice, positionType, positionSize);
+    const normalizedPositionType = positionType.trim().toUpperCase();
+    const canonicalPositionType =
+      normalizedPositionType === "BUY"
+        ? "LONG"
+        : normalizedPositionType === "SELL"
+          ? "SHORT"
+          : normalizedPositionType;
+    // Avoid silent 0 from calculateUpnl when side comes back in a non-canonical
+    // variant (e.g. BUY/SELL). Fallback to LONG semantics if unknown.
+    const safePositionType =
+      canonicalPositionType === "LONG" || canonicalPositionType === "SHORT"
+        ? canonicalPositionType
+        : "LONG";
+    const pnlSats = calculateUpnl(
+      entryPrice,
+      closePrice,
+      safePositionType,
+      positionSize
+    );
     if (!isFinite(pnlSats)) return null;
     const result = new Big(pnlSats).div(100_000_000).toNumber();
     return isFinite(result) ? result : null;
@@ -78,7 +96,14 @@ function priceFromPnlBtc(
   try {
     const pnlSats = new Big(pnlBtc).mul(100_000_000).toNumber();
     if (!isFinite(pnlSats)) return null;
-    const isLong = positionType.toUpperCase() === "LONG";
+    const normalizedPositionType = positionType.trim().toUpperCase();
+    const canonicalPositionType =
+      normalizedPositionType === "BUY"
+        ? "LONG"
+        : normalizedPositionType === "SELL"
+          ? "SHORT"
+          : normalizedPositionType;
+    const isLong = canonicalPositionType !== "SHORT";
     const denom = isLong
       ? positionSize - pnlSats * entryPrice
       : positionSize + pnlSats * entryPrice;
@@ -144,13 +169,23 @@ function ConditionalCloseDialog({
   const markPrice = currentPrice || entryPrice;
   const rawPositionSize = selectedTrade?.positionSize || 0;
   const initialMargin = selectedTrade?.initialMargin || 0;
+  const availableMargin = selectedTrade?.availableMargin || 0;
+  const marginFallback = Math.max(initialMargin, availableMargin);
   const leverage = selectedTrade?.leverage || 1;
+  const fallbackFromMargin =
+    marginFallback > 0 && markPrice > 0
+      ? Math.round(marginFallback * markPrice * Math.max(leverage, 1))
+      : 0;
   // Fallback when API omits positionSize (e.g. after SLTP response) — use margin * leverage
   const positionSize =
-    rawPositionSize > 0 ? rawPositionSize : Math.round(initialMargin * leverage);
-  const positionType = selectedTrade?.positionType || "";
+    rawPositionSize > 0
+      ? rawPositionSize
+      : fallbackFromMargin > 0
+        ? fallbackFromMargin
+        : Math.round((selectedTrade?.value || 0) * Math.max(leverage, 1));
+  const positionType = (selectedTrade?.positionType || "").trim();
   const btcPrice = currentPrice || storedBtcPrice;
-  const isLong = positionType.toUpperCase() === "LONG";
+  const isLong = positionType.toUpperCase() !== "SHORT";
   const liquidationPrice = selectedTrade?.liquidationPrice ?? 0;
   // positionSize/1e8 is the USD value (internal convention); divide by btcPrice for actual BTC
   const positionSizeDisplayBtc = btcPrice > 0 ? (positionSize / 1e8) / btcPrice : 0;
@@ -266,7 +301,6 @@ function ConditionalCloseDialog({
   const limitPriceBarPct = limitPrice > 0 ? toLimitBarPct(limitPrice) : null;
 
   // ── sltp derived values ──────────────────────────────────────────────────
-
   // BTC PnL derived from each price — used when user edited the price field
   const derivedSlPnlBtc = slPrice > 0 && entryPrice > 0
     ? (pnlBtcFromPrice(slPrice, entryPrice, positionSize, positionType) ?? 0)
@@ -282,6 +316,12 @@ function ConditionalCloseDialog({
   // USD equivalents for helper text only
   const displaySlPnlUsd = isFinite(displaySlPnlBtc) ? displaySlPnlBtc * btcPrice : 0;
   const displayTpPnlUsd = isFinite(displayTpPnlBtc) ? displayTpPnlBtc * btcPrice : 0;
+  const slPnlDisplay = isFinite(displaySlPnlBtc)
+    ? parseFloat((displaySlPnlBtc * pnlScale).toFixed(pnlDecimals))
+    : 0;
+  const tpPnlDisplay = isFinite(displayTpPnlBtc)
+    ? parseFloat((displayTpPnlBtc * pnlScale).toFixed(pnlDecimals))
+    : 0;
 
   // Distance from entry (%) — kept for context display in position box
   const slDistancePct = entryPrice > 0 && slPrice > 0
@@ -482,6 +522,13 @@ function ConditionalCloseDialog({
     }
 
     const settledData = result.data;
+    const parsedPositionSize = Number(settledData.positionsize);
+    const parsedInitialMargin = Number(settledData.initial_margin);
+    const parsedLeverage = Number(settledData.leverage);
+    const normalizedPositionType =
+      typeof settledData.position_type === "string"
+        ? settledData.position_type.toUpperCase()
+        : "";
 
     const updatedTradeData = {
       ...selectedTrade,
@@ -490,7 +537,14 @@ function ConditionalCloseDialog({
       maintenanceMargin: Big(settledData.maintenance_margin).toNumber(),
       unrealizedPnl: Big(settledData.unrealized_pnl).toNumber(),
       settlementPrice: Big(settledData.settlement_price).toNumber(),
-      positionSize: Big(settledData.positionsize).toNumber(),
+      positionSize:
+        Number.isFinite(parsedPositionSize) && parsedPositionSize > 0
+          ? parsedPositionSize
+          : selectedTrade.positionSize,
+      positionType:
+        normalizedPositionType === "LONG" || normalizedPositionType === "SHORT"
+          ? normalizedPositionType
+          : selectedTrade.positionType,
       orderType: settledData.order_type,
       date: dayjs(settledData.timestamp).toDate(),
       exit_nonce: settledData.exit_nonce,
@@ -503,7 +557,14 @@ function ConditionalCloseDialog({
       liquidationPrice: Big(settledData.liquidation_price).toNumber(),
       bankruptcyPrice: Big(settledData.bankruptcy_price).toNumber(),
       bankruptcyValue: Big(settledData.bankruptcy_value).toNumber(),
-      initialMargin: Big(settledData.initial_margin).toNumber(),
+      initialMargin:
+        Number.isFinite(parsedInitialMargin) && parsedInitialMargin > 0
+          ? parsedInitialMargin
+          : selectedTrade.initialMargin,
+      leverage:
+        Number.isFinite(parsedLeverage) && parsedLeverage > 0
+          ? parsedLeverage
+          : selectedTrade.leverage,
       settleLimit: settledData.settle_limit
         ? {
             ...settledData.settle_limit,
@@ -592,6 +653,13 @@ function ConditionalCloseDialog({
     }
 
     const settledData = result.data;
+    const parsedPositionSize = Number(settledData.positionsize);
+    const parsedInitialMargin = Number(settledData.initial_margin);
+    const parsedLeverage = Number(settledData.leverage);
+    const normalizedPositionType =
+      typeof settledData.position_type === "string"
+        ? settledData.position_type.toUpperCase()
+        : "";
 
     // The position stays FILLED and open — isOpen must remain true.
     // take_profit / stop_loss may not yet be in the API response; fall back to
@@ -603,7 +671,14 @@ function ConditionalCloseDialog({
       maintenanceMargin: Big(settledData.maintenance_margin).toNumber(),
       unrealizedPnl: Big(settledData.unrealized_pnl).toNumber(),
       settlementPrice: Big(settledData.settlement_price).toNumber(),
-      positionSize: Big(settledData.positionsize).toNumber(),
+      positionSize:
+        Number.isFinite(parsedPositionSize) && parsedPositionSize > 0
+          ? parsedPositionSize
+          : selectedTrade.positionSize,
+      positionType:
+        normalizedPositionType === "LONG" || normalizedPositionType === "SHORT"
+          ? normalizedPositionType
+          : selectedTrade.positionType,
       orderType: settledData.order_type,
       date: dayjs(settledData.timestamp).toDate(),
       exit_nonce: settledData.exit_nonce,
@@ -616,7 +691,14 @@ function ConditionalCloseDialog({
       liquidationPrice: Big(settledData.liquidation_price).toNumber(),
       bankruptcyPrice: Big(settledData.bankruptcy_price).toNumber(),
       bankruptcyValue: Big(settledData.bankruptcy_value).toNumber(),
-      initialMargin: Big(settledData.initial_margin).toNumber(),
+      initialMargin:
+        Number.isFinite(parsedInitialMargin) && parsedInitialMargin > 0
+          ? parsedInitialMargin
+          : selectedTrade.initialMargin,
+      leverage:
+        Number.isFinite(parsedLeverage) && parsedLeverage > 0
+          ? parsedLeverage
+          : selectedTrade.leverage,
       // Prefer the API response when it has already reflected the new SLTP.
       // If it returned null (order not yet processed), fall back to the
       // values we just submitted so the UI reflects them immediately.
@@ -1024,7 +1106,8 @@ function ConditionalCloseDialog({
                     allowNegative
                     hideBid
                     formatDecimals={pnlDecimals}
-                    inputValue={isFinite(displaySlPnlBtc) ? parseFloat((displaySlPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                    inputValue={slPnlDisplay}
+                    syncWhileFocused={slLastEdited === "price"}
                     setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
                     currentPrice={0}
                     placeholder="0.00000000"
@@ -1039,7 +1122,8 @@ function ConditionalCloseDialog({
                     allowNegative
                     hideBid
                     formatDecimals={pnlDecimals}
-                    inputValue={isFinite(displayTpPnlBtc) ? parseFloat((displayTpPnlBtc * pnlScale).toFixed(pnlDecimals)) : 0}
+                    inputValue={tpPnlDisplay}
+                    syncWhileFocused={tpLastEdited === "price"}
                     setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
                     currentPrice={0}
                     placeholder="0.00000000"

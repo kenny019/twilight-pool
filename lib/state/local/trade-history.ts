@@ -27,7 +27,7 @@ export const createTradeHistorySlice: StateImmerCreator<
           t.orderStatus === tradeOrder.orderStatus
       );
       if (!exists) {
-        state.trade_history.trades.push(tradeOrder);
+        state.trade_history.trades.unshift(tradeOrder);
       }
     }),
   removeTrade: (tradeOrder) =>
@@ -71,7 +71,9 @@ export const createTradeHistorySlice: StateImmerCreator<
           )
       );
 
-      const mergedTrades = [...trades, ...newLocalTrades];
+      const mergedTrades = [...trades, ...newLocalTrades].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
 
       // Skip update if data hasn't changed
       if (JSON.stringify(currentTrades) === JSON.stringify(mergedTrades)) {

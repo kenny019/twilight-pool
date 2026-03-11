@@ -206,6 +206,30 @@ export const useSyncTrades = () => {
           ) {
             continue;
           }
+          // Some relayer responses can transiently return an empty/invalid
+          // position_type. Keep a valid local value in that case so downstream
+          // PnL calculations don't collapse to 0.
+          if (key === "position_type") {
+            const normalized =
+              typeof updatedValue === "string"
+                ? updatedValue.toUpperCase()
+                : "";
+            const isValidIncoming =
+              normalized === "LONG" || normalized === "SHORT";
+            const currentNormalized =
+              typeof currentValueForGuard === "string"
+                ? currentValueForGuard.toUpperCase()
+                : "";
+            const hasValidCurrent =
+              currentNormalized === "LONG" || currentNormalized === "SHORT";
+
+            if (!isValidIncoming && hasValidCurrent) {
+              continue;
+            }
+            if (isValidIncoming) {
+              updatedValue = normalized;
+            }
+          }
 
           const currentValue = trade[tradeKey as keyof TradeOrder];
           if (currentValue === updatedValue) continue;
