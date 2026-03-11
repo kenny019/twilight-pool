@@ -1,5 +1,5 @@
 import { TradeOrder } from "@/lib/types";
-import { queryTransactionHashes } from "../api/rest";
+import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "../api/rest";
 import { retry } from "../helpers";
 import {
   createQueryTradeOrderMsg,
@@ -91,7 +91,7 @@ export async function settleOrder(
 
       output = transactionHashResult.result.find(
         (result) => result.order_id === trade.uuid && result.output
-      )?.output;
+      )?.output ?? undefined;
 
       if (typeof output !== "string") {
         console.log(transactionHashResult);
@@ -141,8 +141,7 @@ export async function settleOrder(
             (r) =>
               r.order_status === "SETTLED" &&
               r.order_id === trade.uuid &&
-              r.tx_hash &&
-              !r.tx_hash.includes("Error")
+              !isErrorStatus(r.order_status)
           );
           return !!found;
         }
@@ -308,7 +307,7 @@ export async function settleOrderSltp(
 
       output = transactionHashRes.data.result.find(
         (result) => result.order_id === trade.uuid && result.output
-      )?.output;
+      )?.output ?? undefined;
 
       if (typeof output !== "string") {
         return {
@@ -427,18 +426,17 @@ export async function cancelZkOrder(
       };
     }
 
-    // Poll for a CANCELLED tx record. The backend records every cancel —
-    // including partial SLTP cancels — as a CANCELLED tx entry, so this
-    // condition works for both full and partial cancellations.
+    // Poll for a cancel tx record. The backend records cancels as CANCELLED,
+    // CancelledStopLoss, or CancelledTakeProfit — isCancelStatus() covers all.
     const transactionHashCondition = (
       txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
     ) => {
       if (txHashResult.result) {
         return txHashResult.result.some(
           (result) =>
-            result.order_status === "CANCELLED" &&
+            isCancelStatus(result.order_status) &&
             result.order_id === trade.uuid &&
-            !result.tx_hash.includes("Error")
+            !isErrorStatus(result.order_status)
         );
       }
       return false;
@@ -465,9 +463,9 @@ export async function cancelZkOrder(
 
     const cancelTx = transactionHashRes.data.result.find(
       (r) =>
-        r.order_status === "CANCELLED" &&
+        isCancelStatus(r.order_status) &&
         r.order_id === trade.uuid &&
-        !r.tx_hash.includes("Error")
+        !isErrorStatus(r.order_status)
     );
 
     const txHash = cancelTx?.tx_hash ?? "";

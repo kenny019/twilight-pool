@@ -174,7 +174,7 @@ export const useSyncTrades = () => {
         );
 
         const updatedTradeData: Record<string, unknown> = {
-          tx_hash: foundTxHashData[0] ? foundTxHashData[0].tx_hash : undefined,
+          tx_hash: foundTxHashData[0] ? (foundTxHashData[0].tx_hash || undefined) : undefined,
         };
 
         for (const [key, value] of Object.entries(traderOrderInfo)) {

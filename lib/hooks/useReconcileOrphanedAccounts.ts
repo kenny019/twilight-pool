@@ -3,7 +3,7 @@ import { useIsStoreHydrated, useTwilightStore } from "../providers/store";
 import { createQueryTradeOrderMsg } from "../twilight/zkos";
 import { useSessionStore } from "../providers/session";
 import { queryTradeOrder } from "../api/relayer";
-import { queryTransactionHashes } from "../api/rest";
+import { queryTransactionHashes, LIFECYCLE_STATUSES } from "../api/rest";
 import type { TransactionHash } from "../api/rest";
 import type { QueryTradeOrderData } from "../api/relayer";
 import Big from "big.js";
@@ -113,10 +113,23 @@ export const useReconcileOrphanedAccounts = () => {
 
           const txHashEntries = txHashesRes.result as TransactionHash[];
 
-          const latestEntry = txHashEntries.sort(
+          const lifecycleEntries = txHashEntries.filter((e) =>
+            LIFECYCLE_STATUSES.has(e.order_status)
+          );
+
+          if (lifecycleEntries.length === 0) continue;
+
+          const latestEntry = lifecycleEntries.sort(
             (a, b) =>
               new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
           )[0];
+
+          const filledEntry = txHashEntries.find(
+            (e) =>
+              e.order_status === "FILLED" &&
+              e.output &&
+              e.order_id === latestEntry.order_id
+          );
 
           const queryTradeOrderMsg = await createQueryTradeOrderMsg({
             address: account.address,
@@ -154,10 +167,10 @@ export const useReconcileOrphanedAccounts = () => {
             orderStatus: traderOrderInfo.order_status,
             positionType: traderOrderInfo.position_type,
             orderType: traderOrderInfo.order_type,
-            tx_hash: latestEntry.tx_hash,
+            tx_hash: latestEntry.tx_hash || "",
             uuid: traderOrderInfo.uuid || latestEntry.order_id,
             value: account.value ?? initialMargin,
-            output: latestEntry.output,
+            output: (filledEntry?.output ?? latestEntry.output) ?? undefined,
             entryPrice: new Big(traderOrderInfo.entryprice).toNumber(),
             leverage: parseInt(traderOrderInfo.leverage, 10) || 1,
             date: dayjs(traderOrderInfo.timestamp).toDate(),

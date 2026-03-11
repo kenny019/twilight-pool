@@ -13,7 +13,7 @@ import { Slider } from "@/components/slider";
 import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from "@/lib/api/relayer";
-import { queryTransactionHashes } from "@/lib/api/rest";
+import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
 import { queryUtxoForAddress } from "@/lib/api/zkos";
 import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
@@ -539,9 +539,8 @@ const OrderLimitForm = () => {
         if (txHashResult.result) {
           const found = txHashResult.result.find(
             (r) =>
-              r.tx_hash &&
-              !r.tx_hash.includes("Error") &&
-              r.order_status !== "CANCELLED"
+              !isErrorStatus(r.order_status) &&
+              !isCancelStatus(r.order_status)
           );
           return !!found;
         }
@@ -552,7 +551,7 @@ const OrderLimitForm = () => {
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
         return txHashResult.result?.some(
-          (r) => r.order_status === "CANCELLED"
+          (r) => isCancelStatus(r.order_status) || isErrorStatus(r.order_status)
         ) ?? false;
       };
 
@@ -588,9 +587,8 @@ const OrderLimitForm = () => {
 
       const orderData = transactionHashRes.data.result.find(
         (r) =>
-          r.tx_hash &&
-          !r.tx_hash.includes("Error") &&
-          r.order_status !== "CANCELLED"
+          !isErrorStatus(r.order_status) &&
+          !isCancelStatus(r.order_status)
       );
 
       if (!orderData) {
@@ -629,7 +627,7 @@ const OrderLimitForm = () => {
         tx_hash: orderData.order_status === "PENDING" ? "" : orderData.tx_hash,
         uuid: orderData.order_id,
         value: btcAmountInSats,
-        output: orderData.output,
+        output: orderData.output ?? undefined,
         entryPrice: new Big(traderOrderInfo.entryprice).toNumber(),
         leverage: leverage,
         date: dayjs(traderOrderInfo.timestamp).toDate(),

@@ -184,7 +184,7 @@ const Page = () => {
       }
 
       const msg = await executeTradeLendOrderMsg({
-        outputMemo: lendOrderData.output,
+        outputMemo: lendOrderData.output ?? "",
         signature: privateKey,
         address: lendOrderData.account_id,
         uuid: lendOrderData.order_id,
