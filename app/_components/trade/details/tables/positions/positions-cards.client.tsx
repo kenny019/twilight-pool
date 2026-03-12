@@ -4,6 +4,7 @@ import Button from "@/components/button";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
 import { formatSatsMBtc } from "@/lib/helpers";
+import { usdNumberFormatter } from "@/lib/utils/format";
 import { useSessionStore } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useLimitDialog } from "@/lib/providers/limit-dialogs";
@@ -12,7 +13,7 @@ import { TradeOrder } from "@/lib/types";
 import { PnlCell } from "@/lib/components/pnl-display";
 import Big from "big.js";
 import dayjs from "dayjs";
-import { Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { calculateUpnl } from "../../../orderbook/my-trades/columns";
 
@@ -35,11 +36,21 @@ const PositionsCards = React.memo(function PositionsCards({
 
   const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [maxHeight, setMaxHeight] = useState<number>(0);
 
   const openFundingDialog = useCallback((trade: TradeOrder) => {
     setFundingDialogTrade(trade);
     setIsFundingDialogOpen(true);
+  }, []);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -70,25 +81,22 @@ const PositionsCards = React.memo(function PositionsCards({
         className="relative w-full overflow-auto overscroll-none px-3 py-2"
         style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}
       >
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-2.5">
           {sorted.length === 0 ? (
             <div className="py-10 text-center text-sm text-primary-accent">No results.</div>
           ) : (
             sorted.map((trade) => {
               const markPrice = getCurrentPrice() || trade.entryPrice;
-              const positionSizeUsd = new BTC("sats", Big(trade.positionSize))
-                .convert("BTC")
-                .toFixed(2);
-              const positionValue = new BTC(
-                "sats",
-                Big(Math.abs(trade.positionSize / markPrice))
-              ).convert("BTC");
+              const isSettling = isSettlingOrder(trade.uuid);
+              const isExpanded = expandedIds.has(trade.uuid);
+
               const calculatedUnrealizedPnl = calculateUpnl(
                 trade.entryPrice,
                 getCurrentPrice(),
                 trade.positionType,
                 trade.positionSize
               );
+
               const funding =
                 trade.fundingApplied != null
                   ? Number(trade.fundingApplied)
@@ -98,187 +106,259 @@ const PositionsCards = React.memo(function PositionsCards({
                         trade.feeFilled +
                         (trade.unrealizedPnl || 0)
                     );
-              const isSettling = isSettlingOrder(trade.uuid);
 
+              // Zone 1
+              const accentBar =
+                trade.positionType === "LONG" ? "bg-green-medium/70" : "bg-red/70";
+              const sideClass =
+                trade.positionType === "LONG"
+                  ? "bg-green-medium/10 text-green-medium"
+                  : "bg-red/10 text-red";
+
+              // Zone 2
+              const entryLabel = `$${usdNumberFormatter.format(trade.entryPrice)}`;
+              const markLabel = `$${usdNumberFormatter.format(markPrice)}`;
+              const hasPnl = calculatedUnrealizedPnl !== 0;
+
+              // Zone 3: risk row (never wraps)
+              const notionalLabel = `$${usdNumberFormatter.format(
+                Number(new BTC("sats", Big(trade.positionSize)).convert("BTC").toFixed(2)) || 0
+              )}`;
+              const levLabel = `${trade.leverage.toFixed(1)}x`;
+              const liqLabel = `$${usdNumberFormatter.format(trade.liquidationPrice)}`;
+
+              // Zone 3b: conditional anchors
               const limitPrice = trade.settleLimit?.price
-                ? `$${Number(trade.settleLimit.price).toFixed(2)}`
+                ? usdNumberFormatter.format(Number(trade.settleLimit.price))
                 : null;
               const slPrice = trade.stopLoss?.price
-                ? `$${Number(trade.stopLoss.price).toFixed(2)}`
+                ? usdNumberFormatter.format(Number(trade.stopLoss.price))
                 : null;
               const tpPrice = trade.takeProfit?.price
-                ? `$${Number(trade.takeProfit.price).toFixed(2)}`
+                ? usdNumberFormatter.format(Number(trade.takeProfit.price))
                 : null;
+              const hasAnchors = !!(limitPrice || slPrice || tpPrice);
+
+              // Expanded secondary details
+              const positionValue = new BTC(
+                "sats",
+                Big(Math.abs(trade.positionSize / markPrice))
+              ).convert("BTC");
+              const availLabel = BTC.format(
+                new BTC("sats", Big(trade.availableMargin)).convert("BTC"),
+                "BTC"
+              );
+              const maintLabel = BTC.format(
+                new BTC("sats", Big(trade.maintenanceMargin)).convert("BTC"),
+                "BTC"
+              );
 
               return (
                 <div
                   key={trade.uuid}
-                  className="group rounded-xl border border-border/60 bg-gradient-to-b from-background to-background/80 p-4 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] transition-all duration-200 hover:-translate-y-[1px] hover:border-theme/30 hover:shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
+                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-theme/35 hover:shadow-md"
                 >
-                  <div className="mb-3 h-px w-full bg-gradient-to-r from-theme/40 via-theme/15 to-transparent opacity-70 transition-opacity duration-200 group-hover:opacity-100" />
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "rounded px-2 py-1 text-xs font-medium transition-colors duration-200",
-                          trade.positionType === "LONG"
-                            ? "bg-green-medium/10 text-green-medium"
-                            : "bg-red/10 text-red"
-                        )}
-                      >
-                        {trade.positionType}
-                      </span>
-                      <span className="text-[11px] text-primary/65">
-                        {dayjs(trade.date).format("DD/MM/YYYY HH:mm:ss")}
-                      </span>
-                    </div>
-                    <PnlCell pnlSats={calculatedUnrealizedPnl} btcPriceUsd={btcPriceUsd} />
-                  </div>
+                  {/* Left accent bar — direction-coded */}
+                  <div className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)} />
 
-                  <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-border/40 bg-theme/5 p-2">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wide text-primary/55">Entry / Mark</div>
-                      <div className="text-sm font-semibold">
-                        ${trade.entryPrice.toFixed(2)} / ${markPrice.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wide text-primary/55">Leverage</div>
-                      <div className="text-sm font-semibold">{trade.leverage.toFixed(2)}x</div>
-                    </div>
-                  </div>
+                  <div className="px-3 py-2.5 pl-[14px]">
+                    {/* Main content: left = position + actions, right = time + anchors */}
+                    <div className="mb-2 flex items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        {/* Row 1 — Position state */}
+                        <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "rounded px-1.5 py-0.5 text-xs font-semibold",
+                                sideClass
+                              )}
+                            >
+                              {trade.positionType}
+                            </span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-medium" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                              Entry
+                            </span>
+                            <span className="text-base font-semibold text-primary">{entryLabel}</span>
+                            <span className="text-xs text-primary/30">→</span>
+                            <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                              Mark
+                            </span>
+                            <span className="text-base font-semibold text-primary">{markLabel}</span>
+                            {hasPnl && (
+                              <>
+                                <span className="text-primary/25">·</span>
+                                <PnlCell
+                                  pnlSats={calculatedUnrealizedPnl}
+                                  btcPriceUsd={btcPriceUsd}
+                                  className="text-sm font-semibold"
+                                />
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="font-medium text-primary/45">Notional</span>
+                            <span className="font-semibold text-primary">{notionalLabel}</span>
+                            <span className="text-primary/25">•</span>
+                            <span className="font-medium text-primary/45">Leverage</span>
+                            <span className="font-semibold text-primary">{levLabel}</span>
+                            <span className="text-primary/25">•</span>
+                            <span className="font-medium text-primary/45">Liquidation</span>
+                            <span className="font-semibold text-primary">{liqLabel}</span>
+                          </div>
+                        </div>
 
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Position Size (USD)</div>
-                      <div className="font-medium">${positionSizeUsd}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Position Value (BTC)</div>
-                      <div className="font-medium">{BTC.format(positionValue, "BTC")}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Entry Price</div>
-                      <div className="font-medium">${trade.entryPrice.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Mark Price</div>
-                      <div className="font-medium">${markPrice.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Leverage</div>
-                      <div className="font-medium">{trade.leverage.toFixed(2)}x</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Liq. Price</div>
-                      <div className="font-medium">${trade.liquidationPrice.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Avail. Margin</div>
-                      <div className="font-medium">
-                        {BTC.format(
-                          new BTC("sats", Big(trade.availableMargin)).convert("BTC"),
-                          "BTC"
-                        )}
+                        {/* Row 2 — Close actions (left) */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              await settleMarketOrder(trade, getCurrentPrice());
+                            }}
+                            variant="ui"
+                            size="small"
+                            disabled={isSettling}
+                            title="Close at market price"
+                            className="h-8 px-3 text-xs font-semibold border-theme/30 transition-all duration-150 hover:brightness-110"
+                          >
+                            {isSettling ? "Closing..." : "Close Market"}
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openConditionalDialog(trade.accountAddress, "limit");
+                            }}
+                            variant="ui"
+                            size="small"
+                            disabled={isSettling}
+                            className={cn(
+                              "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
+                              limitPrice ? "border-yellow-400/40 text-yellow-400" : ""
+                            )}
+                          >
+                            Close Limit
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openConditionalDialog(trade.accountAddress, "sltp");
+                            }}
+                            variant="ui"
+                            size="small"
+                            disabled={isSettling}
+                            className={cn(
+                              "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
+                              slPrice || tpPrice ? "border-theme/40 text-theme" : ""
+                            )}
+                          >
+                            Set SL / TP
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Maint. Margin</div>
-                      <div className="font-medium">
-                        {BTC.format(
-                          new BTC("sats", Big(trade.maintenanceMargin)).convert("BTC"),
-                          "BTC"
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Funding (mBTC)</div>
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "font-medium",
-                            funding > 0
-                              ? "text-green-medium"
-                              : funding < 0
-                                ? "text-red"
-                                : ""
-                          )}
-                        >
-                          {formatSatsMBtc(funding)}
+
+                      {/* Right column: timestamp + anchors */}
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span className="text-xs tabular-nums text-primary/55">
+                          {dayjs(trade.date).format("DD MMM HH:mm:ss")}
                         </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openFundingDialog(trade);
-                          }}
-                          className="rounded p-0.5 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
-                          aria-label="View funding history"
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
+                        {hasAnchors && (
+                          <div className="flex flex-wrap justify-end gap-x-2 gap-y-1">
+                            {slPrice && (
+                              <span className="rounded bg-red/10 px-1.5 py-0.5 text-sm font-medium text-red/90">
+                                Stop Loss ${slPrice}
+                              </span>
+                            )}
+                            {tpPrice && (
+                              <span className="rounded bg-green-medium/10 px-1.5 py-0.5 text-sm font-medium text-green-medium/90">
+                                Take Profit ${tpPrice}
+                              </span>
+                            )}
+                            {limitPrice && (
+                              <span className="rounded bg-yellow-500/10 px-1.5 py-0.5 text-sm font-medium text-yellow-500/90">
+                                Limit ${limitPrice}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-primary/60">Fee (mBTC)</div>
-                      <div className="font-medium">{formatSatsMBtc(trade.feeFilled)}</div>
-                    </div>
-                  </div>
 
-                  <div className="mt-3 border-t border-border/50 pt-3">
-                    <div className="mb-2 text-[11px] uppercase tracking-wide text-primary/60">
-                      Close Controls
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        await settleMarketOrder(trade, getCurrentPrice());
-                      }}
-                      variant="ui"
-                      size="small"
-                      disabled={isSettling}
-                      title="Close at market price"
-                      className="transition-all duration-150 hover:brightness-110"
-                    >
-                      {isSettling ? "Closing..." : "Close MKT"}
-                    </Button>
-                    <Button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openConditionalDialog(trade.accountAddress, "limit");
-                      }}
-                      variant="ui"
-                      size="small"
-                      disabled={isSettling}
-                      className={cn(
-                        "transition-all duration-150 hover:brightness-110",
-                        limitPrice ? "border-yellow-400/40 text-yellow-400" : ""
+                    {/* Row 3 — Details */}
+                    <div className="border-t border-border/30 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(trade.uuid)}
+                        className="flex w-full items-center justify-between rounded py-0.5 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60"
+                      >
+                        <span>Details</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                              Pos. Value
+                            </span>
+                            <span className="font-medium">
+                              {BTC.format(positionValue, "BTC")}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                              Avail. Margin
+                            </span>
+                            <span className="font-medium">{availLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                              Maint. Margin
+                            </span>
+                            <span className="font-medium">{maintLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                              Fee
+                            </span>
+                            <span className="font-medium">{formatSatsMBtc(trade.feeFilled)}</span>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                              Funding
+                            </span>
+                            <span
+                              className={cn(
+                                "font-medium",
+                                funding > 0
+                                  ? "text-green-medium"
+                                  : funding < 0
+                                    ? "text-red"
+                                    : ""
+                              )}
+                            >
+                              {formatSatsMBtc(funding)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openFundingDialog(trade);
+                              }}
+                              className="rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
+                              aria-label="View funding history"
+                            >
+                              <Info className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    >
-                      {limitPrice ? `Limit ${limitPrice}` : "Set Limit"}
-                    </Button>
-                    <Button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openConditionalDialog(trade.accountAddress, "sltp");
-                      }}
-                      variant="ui"
-                      size="small"
-                      disabled={isSettling}
-                      className={cn(
-                        "transition-all duration-150 hover:brightness-110",
-                        slPrice || tpPrice ? "border-theme/40 text-theme" : ""
-                      )}
-                    >
-                      {slPrice && tpPrice
-                        ? `SL ${slPrice} / TP ${tpPrice}`
-                        : slPrice
-                          ? `SL ${slPrice}`
-                          : tpPrice
-                            ? `TP ${tpPrice}`
-                            : "Set SL / TP"}
-                    </Button>
                     </div>
                   </div>
                 </div>

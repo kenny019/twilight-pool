@@ -23,6 +23,7 @@ import EditOrderDialog from "@/components/edit-order-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 import Button from "@/components/button";
 import { formatCurrency } from "@/lib/twilight/ticker";
+import { ArrowLeftRight } from "lucide-react";
 
 // A row in the Open Orders table. Regular rows = plain TradeOrder.
 // Rows synthesised from SLTP legs carry `_sltpLeg` to identify which leg they
@@ -469,44 +470,21 @@ const DetailsPanel = () => {
           currentTab === "open-orders" ||
           currentTab === "trader-history" ||
           currentTab === "history") && (
-          <div className="mb-2 flex items-center gap-1 self-end rounded-lg border border-border/60 bg-gradient-to-b from-background to-background/80 p-1 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
-            <Button
-              variant="ui"
-              size="small"
-              aria-pressed={currentView === "table"}
-              className={
-                currentView === "table"
-                  ? "border-theme/40 bg-theme/10 text-theme transition-all duration-150"
-                  : "transition-all duration-150 hover:brightness-110"
-              }
-              onClick={() =>
-                setViewByTab((prev) => ({
-                  ...prev,
-                  [currentTab]: "table",
-                }))
-              }
-            >
-              Table
-            </Button>
-            <Button
-              variant="ui"
-              size="small"
-              aria-pressed={currentView === "cards"}
-              className={
-                currentView === "cards"
-                  ? "border-theme/40 bg-theme/10 text-theme transition-all duration-150"
-                  : "transition-all duration-150 hover:brightness-110"
-              }
-              onClick={() =>
-                setViewByTab((prev) => ({
-                  ...prev,
-                  [currentTab]: "cards",
-                }))
-              }
-            >
-              Cards
-            </Button>
-          </div>
+          <button
+            type="button"
+            aria-label="Toggle table and cards view"
+            className="mb-2 flex flex-shrink-0 flex-row items-center justify-center gap-1 self-end rounded-md border border-outline px-2 py-1 text-xs transition-colors duration-300 hover:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+            onClick={() =>
+              setViewByTab((prev) => ({
+                ...prev,
+                [currentTab]: currentView === "table" ? "cards" : "table",
+              }))
+            }
+          >
+            {currentView === "table" ? "Table" : "Cards"}
+            <ArrowLeftRight className="h-3 w-3" />
+            {currentView === "table" ? "Cards" : "Table"}
+          </button>
         )}
       </div>
       <div className="">
