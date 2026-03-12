@@ -184,7 +184,7 @@ const Page = () => {
       }
 
       const msg = await executeTradeLendOrderMsg({
-        outputMemo: lendOrderData.output,
+        outputMemo: lendOrderData.output ?? "",
         signature: privateKey,
         address: lendOrderData.account_id,
         uuid: lendOrderData.order_id,
@@ -566,25 +566,25 @@ const Page = () => {
           </div>
         </DialogContent>
       </Dialog>
-      {/* Pool Performance */}
-      <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
-        <Text heading="h2" className="mb-4 text-lg font-medium">
-          Pool Performance
-        </Text>
-        <PoolInfo selectedApyPeriod={selectedApyPeriod} />
-      </div>
-      {/* Pool Health */}
-      <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
-        <Text heading="h2" className="mb-4 text-lg font-medium">
-          Pool Health
-        </Text>
-        <PoolHealth />
-      </div>
-
-      {/* APY Chart and Add Liquidity */}
+      {/* Top section: Pool Performance + Pool Health | APY History */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* APY Chart */}
-        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
+        {/* Left column: stacked */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
+            <Text heading="h2" className="mb-4 text-lg font-medium">
+              Pool Performance
+            </Text>
+            <PoolInfo selectedApyPeriod={selectedApyPeriod} />
+          </div>
+          <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
+            <Text heading="h2" className="mb-4 text-lg font-medium">
+              Pool Health
+            </Text>
+            <PoolHealth />
+          </div>
+        </div>
+        {/* Right column: APY History (stretches to match left column height) */}
+        <div className="bg-card flex flex-col rounded-lg border border-outline p-4 md:p-6">
           <Text heading="h2" className="mb-4 text-lg font-medium">
             APY History (fallback ={" "}
             {selectedApyPeriod === "1D"
@@ -594,12 +594,20 @@ const Page = () => {
                 : "30 Days"}
             )
           </Text>
-          <ApyChart
-            selectedPeriod={selectedApyPeriod}
-            onPeriodChange={setSelectedApyPeriod}
-          />
+          <div className="flex-1">
+            <ApyChart
+              selectedPeriod={selectedApyPeriod}
+              onPeriodChange={setSelectedApyPeriod}
+            />
+          </div>
         </div>
+      </div>
 
+      {/* Bottom section: My Investment | Add Liquidity */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
+          <MyInvestment />
+        </div>
         <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
           <Text heading="h2" className="mb-4 text-lg font-medium">
             Add Liquidity
@@ -612,13 +620,6 @@ const Page = () => {
               </p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* My Investment */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="bg-card rounded-lg border border-outline p-4 md:p-6">
-          <MyInvestment />
         </div>
       </div>
 

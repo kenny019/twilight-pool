@@ -3,6 +3,8 @@ import { executeTradeOrder } from "@/lib/api/client";
 import {
   queryTransactionHashByRequestId,
   queryTransactionHashes,
+  isErrorStatus,
+  isCancelStatus,
 } from "@/lib/api/rest";
 import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
@@ -371,7 +373,7 @@ const OrderMyTrades = () => {
                 (r.order_status === "PENDING" || r.order_status === "SETTLED") &&
                 r.order_id === tradeOrder.uuid &&
                 r.tx_hash &&
-                !r.tx_hash.includes("Error")
+                !isErrorStatus(r.order_status)
             );
             return !!found;
           }
@@ -634,21 +636,12 @@ const OrderMyTrades = () => {
           txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
         ) => {
           if (txHashResult.result) {
-            const transactionHashes = txHashResult.result;
-
-            let hasSettled = false;
-            transactionHashes.forEach((result) => {
-              if (result.order_status !== "CANCELLED") {
-                console.log(result.order_status);
-                return;
-              }
-
-              hasSettled =
+            return txHashResult.result.some(
+              (result) =>
+                isCancelStatus(result.order_status) &&
                 result.order_id === tradeOrder.uuid &&
-                !result.tx_hash.includes("Error");
-            });
-
-            return hasSettled;
+                !isErrorStatus(result.order_status)
+            );
           }
           return false;
         };
