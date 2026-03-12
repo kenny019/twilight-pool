@@ -195,19 +195,40 @@ export const useSyncTrades = () => {
             updatedValue = new Big(value as string | number).toNumber();
           }
 
-          // For take_profit / stop_loss: only skip a null update when the
-          // local value is already non-null (protects an optimistic SLTP value
-          // that was set locally but the API hasn't confirmed yet). Once the
-          // API returns the real object the guard won't fire and the update
-          // will land. If the local value is already null/undefined, allow the
-          // update through so the equality check below handles it normally.
           const currentValueForGuard = trade[tradeKey as keyof TradeOrder];
+          // Don't overwrite a valid positionSize with 0 — some API endpoints
+          // (e.g. SLTP placement response) omit positionsize, causing the field
+          // to come back as 0 and breaking all PnL calculations in the dialog.
           if (
-            (key === "take_profit" || key === "stop_loss") &&
-            updatedValue === null &&
-            currentValueForGuard != null
+            key === "positionsize" &&
+            updatedValue === 0 &&
+            (currentValueForGuard as number) > 0
           ) {
             continue;
+          }
+          // Some relayer responses can transiently return an empty/invalid
+          // position_type. Keep a valid local value in that case so downstream
+          // PnL calculations don't collapse to 0.
+          if (key === "position_type") {
+            const normalized =
+              typeof updatedValue === "string"
+                ? updatedValue.toUpperCase()
+                : "";
+            const isValidIncoming =
+              normalized === "LONG" || normalized === "SHORT";
+            const currentNormalized =
+              typeof currentValueForGuard === "string"
+                ? currentValueForGuard.toUpperCase()
+                : "";
+            const hasValidCurrent =
+              currentNormalized === "LONG" || currentNormalized === "SHORT";
+
+            if (!isValidIncoming && hasValidCurrent) {
+              continue;
+            }
+            if (isValidIncoming) {
+              updatedValue = normalized;
+            }
           }
 
           const currentValue = trade[tradeKey as keyof TradeOrder];

@@ -13,12 +13,17 @@ import Big from "big.js";
 import OpenOrdersTable from "./tables/open-orders/open-orders-table.client";
 import TraderHistoryTable from "./tables/trader-history/trader-history-table.client";
 import OrderHistoryTable from "./tables/order-history/order-history-table.client";
+import OpenOrdersCards from "./tables/open-orders/open-orders-cards.client";
+import PositionsCards from "./tables/positions/positions-cards.client";
+import TraderHistoryCards from "./tables/trader-history/trader-history-cards.client";
+import OrderHistoryCards from "./tables/order-history/order-history-cards.client";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
 import EditOrderDialog from "@/components/edit-order-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 import Button from "@/components/button";
 import { formatCurrency } from "@/lib/twilight/ticker";
+import { ArrowLeftRight } from "lucide-react";
 
 // A row in the Open Orders table. Regular rows = plain TradeOrder.
 // Rows synthesised from SLTP legs carry `_sltpLeg` to identify which leg they
@@ -31,6 +36,8 @@ type TabType =
   | "positions"
   | "open-orders"
   | "trader-history";
+
+type ViewMode = "table" | "cards";
 
 // State for the "cancel one SLTP leg — ask about the other?" confirmation.
 type SltpCancelPending = {
@@ -51,6 +58,14 @@ const DetailsPanel = () => {
   const [editingOrders, setEditingOrders] = useState<Set<string>>(new Set());
   const [sltpCancelPending, setSltpCancelPending] =
     useState<SltpCancelPending | null>(null);
+  const [viewByTab, setViewByTab] = useState<
+    Record<"positions" | "open-orders" | "trader-history" | "history", ViewMode>
+  >({
+    positions: "table",
+    "open-orders": "table",
+    "trader-history": "table",
+    history: "table",
+  });
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
 
@@ -242,9 +257,12 @@ const DetailsPanel = () => {
 
       setCancellingOrders((prev) => new Set(prev).add(order.uuid));
 
-      const isSltp = !!(order.takeProfit || order.stopLoss);
-      const cancelledSl = isSltp && (options?.sl_bool ?? !!order.stopLoss);
-      const cancelledTp = isSltp && (options?.tp_bool ?? !!order.takeProfit);
+      // Derive SLTP mode from explicit cancel intent, not order contents.
+      // A trade can contain both limit-close and SL/TP legs.
+      const isSltpRequest =
+        options?.sl_bool !== undefined || options?.tp_bool !== undefined;
+      const cancelledSl = isSltpRequest ? (options?.sl_bool ?? false) : false;
+      const cancelledTp = isSltpRequest ? (options?.tp_bool ?? false) : false;
 
       try {
         toast({
@@ -266,7 +284,7 @@ const DetailsPanel = () => {
 
         const cancelOrderData = cancelOrderResult.data;
 
-        if (isSltp) {
+        if (isSltpRequest) {
           // SLTP cancel: position stays FILLED. Optimistically clear the
           // cancelled leg(s) in local state so the UI updates immediately.
           // useSyncTrades will reconcile on the next poll using the actual
@@ -321,10 +339,10 @@ const DetailsPanel = () => {
         await queryClient.invalidateQueries({ queryKey: ["sync-trades"] });
 
         toast({
-          title: isSltp ? "SLTP order cancelled" : "Order cancelled",
+          title: isSltpRequest ? "SLTP order cancelled" : "Order cancelled",
           description: (
             <div className="opacity-90">
-              {isSltp
+              {isSltpRequest
                 ? `Successfully cancelled ${cancelledSl && cancelledTp ? "Stop Loss and Take Profit" : cancelledSl ? "Stop Loss" : "Take Profit"}.`
                 : "Successfully cancelled order."}{" "}
               {cancelOrderData.tx_hash && (
@@ -405,9 +423,17 @@ const DetailsPanel = () => {
       : `Stop Loss at ${formatCurrency(Number(sltpCancelPending.trade.stopLoss?.price ?? 0))}`
     : "";
 
+  const currentView =
+    currentTab === "positions" ||
+    currentTab === "open-orders" ||
+    currentTab === "trader-history" ||
+    currentTab === "history"
+      ? viewByTab[currentTab]
+      : "table";
+
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="sticky top-0 z-10 flex w-full items-center border-b bg-background pl-3 pt-2">
+      <div className="sticky top-0 z-10 flex w-full flex-col gap-2 border-b bg-background px-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <Tabs defaultValue={currentTab}>
           <TabsList className="flex w-full border-b-0" variant="underline">
             <TabsTrigger
@@ -440,28 +466,73 @@ const DetailsPanel = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        {(currentTab === "positions" ||
+          currentTab === "open-orders" ||
+          currentTab === "trader-history" ||
+          currentTab === "history") && (
+          <button
+            type="button"
+            aria-label="Toggle table and cards view"
+            className="mb-2 flex flex-shrink-0 flex-row items-center justify-center gap-1 self-end rounded-md border border-outline px-2 py-1 text-xs transition-colors duration-300 hover:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+            onClick={() =>
+              setViewByTab((prev) => ({
+                ...prev,
+                [currentTab]: currentView === "table" ? "cards" : "table",
+              }))
+            }
+          >
+            {currentView === "table" ? "Table" : "Cards"}
+            <ArrowLeftRight className="h-3 w-3" />
+            {currentView === "table" ? "Cards" : "Table"}
+          </button>
+        )}
       </div>
       <div className="">
         {currentTab === "positions" && (
-          <PositionsTable
-            data={positionsData}
-            settleMarketOrder={settleMarketOrder}
-            isSettlingOrder={isSettlingOrder}
-          />
+          currentView === "table" ? (
+            <PositionsTable
+              data={positionsData}
+              settleMarketOrder={settleMarketOrder}
+              isSettlingOrder={isSettlingOrder}
+            />
+          ) : (
+            <PositionsCards
+              data={positionsData}
+              settleMarketOrder={settleMarketOrder}
+              isSettlingOrder={isSettlingOrder}
+            />
+          )
         )}
         {currentTab === "open-orders" && (
-          <OpenOrdersTable
-            data={openOrdersRows}
-            cancelOrder={cancelOrder}
-            openEditDialog={openEditDialog}
-            isCancellingOrder={isCancellingOrder}
-          />
+          currentView === "table" ? (
+            <OpenOrdersTable
+              data={openOrdersRows}
+              cancelOrder={cancelOrder}
+              openEditDialog={openEditDialog}
+              isCancellingOrder={isCancellingOrder}
+            />
+          ) : (
+            <OpenOrdersCards
+              data={openOrdersRows}
+              cancelOrder={cancelOrder}
+              openEditDialog={openEditDialog}
+              isCancellingOrder={isCancellingOrder}
+            />
+          )
         )}
         {currentTab === "trader-history" && (
-          <TraderHistoryTable data={traderHistoryData} />
+          currentView === "table" ? (
+            <TraderHistoryTable data={traderHistoryData} />
+          ) : (
+            <TraderHistoryCards data={traderHistoryData} />
+          )
         )}
         {currentTab === "history" && (
-          <OrderHistoryTable data={orderHistoryData} />
+          currentView === "table" ? (
+            <OrderHistoryTable data={orderHistoryData} />
+          ) : (
+            <OrderHistoryCards data={orderHistoryData} />
+          )
         )}
       </div>
 

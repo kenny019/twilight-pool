@@ -35,6 +35,8 @@ interface NumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   maxValue?: number;
   allowNegative?: boolean;
   formatDecimals?: number;
+  hideBid?: boolean;
+  syncWhileFocused?: boolean;
 }
 
 const NumberInput = ({
@@ -48,6 +50,8 @@ const NumberInput = ({
   currentPrice,
   allowNegative = false,
   formatDecimals,
+  hideBid = false,
+  syncWhileFocused = false,
   ...props
 }: NumberInputProps) => {
   const id = useId();
@@ -57,12 +61,15 @@ const NumberInput = ({
   // Sync external value changes to the DOM input — but only when the input
   // is not focused, so we don't clobber the user's in-progress keystrokes.
   useEffect(() => {
-    if (inputRef.current && document.activeElement !== inputRef.current) {
+    if (
+      inputRef.current &&
+      (syncWhileFocused || document.activeElement !== inputRef.current)
+    ) {
       inputRef.current.value = formatDecimals != null
         ? inputValue.toFixed(formatDecimals)
         : inputValue.toString();
     }
-  }, [inputValue, formatDecimals]);
+  }, [inputValue, formatDecimals, syncWhileFocused]);
 
   return (
     <div className="relative flex w-full">
@@ -129,14 +136,16 @@ const NumberInput = ({
         }}
         {...props}
       />
-      <div className="">
-        <button className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-primary" onClick={(e) => {
-          e.preventDefault();
-          setInputValue(currentPrice);
-        }}
-          disabled={props.disabled}
-        >Bid</button>
-      </div>
+      {!hideBid && (
+        <div className="">
+          <button className="text-sm absolute inset-y-0 right-2 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center hover:text-theme transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-primary" onClick={(e) => {
+            e.preventDefault();
+            setInputValue(currentPrice);
+          }}
+            disabled={props.disabled}
+          >Bid</button>
+        </div>
+      )}
     </div>
   );
 };
