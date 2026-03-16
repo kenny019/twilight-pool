@@ -841,7 +841,7 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[limitSliderPct]}
                     onValueChange={([pct]) =>
-                      setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))
+                      setLimitPrice(entryPrice * (1 + pct / 100))
                     }
                   />
                 </div>
@@ -856,7 +856,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
+                      onClick={() => setLimitPrice(entryPrice * (1 + pct / 100))}
                       className="rounded border border-green-medium/40 bg-green-medium/10 px-2.5 py-1 text-xs font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -869,7 +869,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => setLimitPrice(parseFloat((entryPrice * (1 + pct / 100)).toFixed(2)))}
+                      onClick={() => setLimitPrice(entryPrice * (1 + pct / 100))}
                       className="rounded border border-red/40 bg-red/10 px-2.5 py-1 text-xs font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -1146,7 +1146,7 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[slSliderPct]}
                     onValueChange={([pct]) =>
-                      handleSlPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))
+                      handleSlPriceChange(markPrice * (1 + pct / 100))
                     }
                   />
                 </div>
@@ -1165,7 +1165,7 @@ function ConditionalCloseDialog({
                     step={0.1}
                     value={[tpSliderPct]}
                     onValueChange={([pct]) =>
-                      handleTpPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))
+                      handleTpPriceChange(markPrice * (1 + pct / 100))
                     }
                   />
                 </div>
@@ -1176,7 +1176,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => handleSlPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))}
+                      onClick={() => handleSlPriceChange(markPrice * (1 + pct / 100))}
                       className="rounded border border-red/40 bg-red/10 px-1.5 py-0.5 text-[10px] font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%
@@ -1188,7 +1188,7 @@ function ConditionalCloseDialog({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => handleTpPriceChange(parseFloat((markPrice * (1 + pct / 100)).toFixed(2)))}
+                      onClick={() => handleTpPriceChange(markPrice * (1 + pct / 100))}
                       className="rounded border border-green-medium/40 bg-green-medium/10 px-1.5 py-0.5 text-[10px] font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
                     >
                       {pct > 0 ? "+" : ""}{pct}%

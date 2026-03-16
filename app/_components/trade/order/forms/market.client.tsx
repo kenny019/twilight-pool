@@ -1,6 +1,7 @@
 import ConnectWallet from "@/app/_components/layout/connect-wallet.client";
 import Button from "@/components/button";
 import ExchangeResource from "@/components/exchange-resource";
+import FundingTradeButton from "@/components/fund-trade-button";
 import { Input } from "@/components/input";
 import { Slider } from "@/components/slider";
 import { sendTradeOrder } from "@/lib/api/client";
@@ -722,6 +723,22 @@ const OrderMarketForm = () => {
       onSubmit={(e) => e.preventDefault()}
       className="flex flex-col gap-3 px-3 py-4"
     >
+      {status === "Connected" && !tradingAccountBalance && (
+        <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
+          <p className="text-sm text-primary/90">
+            Add funds to your trading account to start trading.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <FundingTradeButton type="large" defaultTransferType="fund" />
+            <Link
+              href="/deposit"
+              className="text-xs text-theme underline hover:opacity-80"
+            >
+              Deposit to Funding
+            </Link>
+          </div>
+        </div>
+      )}
       {/* 1. Header / Account Context */}
       <div className="flex items-baseline justify-between gap-2">
         <span className={cn("text-sm text-primary/60", width < 350 && "text-xs")}>Available:</span>
