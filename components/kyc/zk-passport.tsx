@@ -45,7 +45,7 @@ export default function ZKPassportComponent({
 
         const request = await zkPassport.request({
           name: "Twilight Pool Region Verification",
-          logo: "https://staging-frontend.twilight.rest/images/twilight.png",
+          logo: process.env.NEXT_PUBLIC_APP_LOGO_URL as string,
           purpose: "adult",
           scope: "adult",
           devMode: isMockPassport ? true : false,

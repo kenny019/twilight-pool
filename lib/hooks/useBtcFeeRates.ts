@@ -11,7 +11,7 @@ export default function useBtcFeeRates() {
   return useQuery({
     queryKey: ["bitcoin-info"],
     queryFn: async (): Promise<BitcoinInfo> => {
-      const res = await fetch("https://indexer.twilight.org/api/bitcoin/info");
+      const res = await fetch(process.env.NEXT_PUBLIC_BTC_INDEXER_URL as string);
       if (!res.ok) throw new Error("Failed to fetch bitcoin info");
       return res.json();
     },

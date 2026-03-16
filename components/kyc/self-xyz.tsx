@@ -52,7 +52,7 @@ export default function SelfQRComponent({
           appName: "Twilight Self Passport",
           scope: "twilight-relayer-passport",
           endpoint: `${BACKEND_URL}/api/verify${isMockPassport ? "/self/mock" : ""}`,
-          logoBase64: "https://staging-frontend.twilight.rest/images/twilight.png",
+          logoBase64: process.env.NEXT_PUBLIC_APP_LOGO_URL as string,
           userId: userId,
           userIdType: "uuid",
           endpointType: "staging_https",
