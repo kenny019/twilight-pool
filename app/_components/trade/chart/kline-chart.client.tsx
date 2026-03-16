@@ -9,7 +9,6 @@ import { getCandleData } from "@/lib/api/rest";
 import { CandleInterval } from "@/lib/types";
 import {
   transformCandleData,
-  transformBinanceKline,
   getThemeStyles,
   periodToCandleInterval,
   CANDLE_INTERVAL_TO_PERIOD,
@@ -44,14 +43,6 @@ const INTERVAL_OFFSETS: Record<
   [CandleInterval.TWELVE_HOUR]: { unit: "day", amount: 151 },
   [CandleInterval.ONE_DAY]: { unit: "day", amount: 301 },
   [CandleInterval.ONE_DAY_CHANGE]: { unit: "day", amount: 1 },
-};
-
-const BINANCE_INTERVAL_MAP: Record<string, string> = {
-  [CandleInterval.ONE_MINUTE]: "1m",
-  [CandleInterval.FIFTEEN_MINUTE]: "15m",
-  [CandleInterval.ONE_HOUR]: "1h",
-  [CandleInterval.FOUR_HOUR]: "4h",
-  [CandleInterval.ONE_DAY]: "1d",
 };
 
 const KLineChart = () => {
@@ -141,15 +132,25 @@ const KLineChart = () => {
         callback: (data: any) => void;
       }) => {
         const interval = periodToCandleInterval(period);
-        const bi = BINANCE_INTERVAL_MAP[interval];
-        if (!bi) return;
         const ws = new WebSocket(
-          `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
+          process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS!
         );
+        ws.onopen = () => {
+          ws.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              method: "subscribe_candle_data",
+              params: { interval },
+              id: 123,
+            })
+          );
+        };
         ws.onmessage = (event) => {
           try {
             const parsed = JSON.parse(event.data);
-            const kd = transformBinanceKline(parsed.k);
+            if (parsed.method !== "s_candle_data") return;
+            const candle = parsed.params.result[0];
+            const kd = transformCandleData(candle);
             callback(kd);
             addPriceRef.current(kd.close);
           } catch (err) {

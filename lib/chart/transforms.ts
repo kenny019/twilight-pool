@@ -13,24 +13,6 @@ export function transformCandleData(candle: CandleData): KLineData {
   };
 }
 
-export function transformBinanceKline(k: {
-  t: number;
-  o: string;
-  h: string;
-  l: string;
-  c: string;
-  v: string;
-}): KLineData {
-  return {
-    timestamp: k.t,
-    open: parseFloat(k.o),
-    high: parseFloat(k.h),
-    low: parseFloat(k.l),
-    close: parseFloat(k.c),
-    volume: 0,
-  };
-}
-
 export const CANDLE_INTERVAL_TO_PERIOD: Record<
   string,
   { span: number; type: PeriodType }
