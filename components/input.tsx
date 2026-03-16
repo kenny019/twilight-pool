@@ -143,7 +143,7 @@ const NumberInput = ({
             setInputValue(currentPrice);
           }}
             disabled={props.disabled}
-          >Bid</button>
+          >Mark</button>
         </div>
       )}
     </div>
