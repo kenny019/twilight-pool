@@ -32,10 +32,9 @@ export const twilightTestnet: Chain = {
   explorers: [
     {
       kind: "blockExplorer",
-      url: "https://explorer.twilight.rest",
-      tx_page: "https://explorer.twilight.rest/txs/%7BtxHash%7D",
-      account_page:
-        "https://explorer.twilight.rest/account/%7BaccountAddress%7D",
+      url: process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL as string,
+      tx_page: `${process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL}/txs/%7BtxHash%7D`,
+      account_page: `${process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL}/account/%7BaccountAddress%7D`,
     },
   ],
   bech32_config: {
@@ -88,8 +87,8 @@ export const twilightTestnetAssets: AssetList = {
       display: "nyks",
       symbol: "NYKS",
       logo_URIs: {
-        svg: "https://twilight-pool.vercel.app/images/twilight.svg",
-        png: "https://twilight-pool.vercel.app/images/twilight.png",
+        svg: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.svg`,
+        png: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.png`,
       },
     },
     {
@@ -108,8 +107,8 @@ export const twilightTestnetAssets: AssetList = {
       display: "sats",
       symbol: "SATS",
       logo_URIs: {
-        svg: "https://twilight-pool.vercel.app/images/twilight.svg",
-        png: "https://twilight-pool.vercel.app/images/twilight.png",
+        svg: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.svg`,
+        png: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.png`,
       },
     },
   ],

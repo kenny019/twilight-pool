@@ -52,8 +52,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           endpointOptions={{
             endpoints: {
               nyks: {
-                rpc: [process.env.TWILIGHT_API_RPC as string],
-                rest: [process.env.TWILIGHT_API_REST as string],
+                rpc: [process.env.NEXT_PUBLIC_TWILIGHT_API_RPC as string],
+                rest: [process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string],
               },
             },
           }}

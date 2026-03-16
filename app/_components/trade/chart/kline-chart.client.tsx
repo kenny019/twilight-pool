@@ -144,7 +144,7 @@ const KLineChart = () => {
         const bi = BINANCE_INTERVAL_MAP[interval];
         if (!bi) return;
         const ws = new WebSocket(
-          `wss://stream.binance.com/ws/btcusdt@kline_${bi}`
+          `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
         );
         ws.onmessage = (event) => {
           try {
