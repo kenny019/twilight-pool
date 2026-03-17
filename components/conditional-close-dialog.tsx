@@ -147,7 +147,10 @@ function ConditionalCloseDialog({
   const [limitPrice, setLimitPrice] = useState(currentPrice || 0);
 
   // ── sltp tab state ───────────────────────────────────────────────────────
-  // Prices (set by price field OR derived from PnL field)
+  // Explicit enable/disable per leg — 0 no longer means "not set"
+  const [slEnabled, setSlEnabled] = useState(false);
+  const [tpEnabled, setTpEnabled] = useState(false);
+  // Prices (set by price field OR derived from PnL field) — preserved when leg is removed
   const [slPrice, setSlPrice] = useState(0);
   const [tpPrice, setTpPrice] = useState(0);
   // PnL fields — when null the value is derived from the price; when non-null
@@ -196,6 +199,7 @@ function ConditionalCloseDialog({
   const positionSizeUsd = new BTC("sats", Big(positionSize)).convert("BTC").toFixed(2);
 
   const hasSltp = !!(selectedTrade?.takeProfit || selectedTrade?.stopLoss);
+  const hasLimit = !!selectedTrade?.settleLimit;
 
   // ── initialise state when dialog opens ──────────────────────────────────
   // Pre-populate SL/TP from existing values if they are set; otherwise start
@@ -213,6 +217,8 @@ function ConditionalCloseDialog({
       ? Number(selectedTrade.takeProfit.price)
       : 0;
 
+    setSlEnabled(existingSl > 0);
+    setTpEnabled(existingTp > 0);
     setSlPrice(existingSl);
     setTpPrice(existingTp);
 
@@ -356,11 +362,11 @@ function ConditionalCloseDialog({
     : (isLong ? 5 : -5);
 
   // Pool equity warning (non-blocking)
-  const showTpPoolWarning = poolEquityBtc != null && tpPrice > 0
+  const showTpPoolWarning = tpEnabled && poolEquityBtc != null && tpPrice > 0
     && displayTpPnlBtc > TP_WARNING_POOL_EQUITY_RATIO * poolEquityBtc;
 
   // Near-liquidation warning (non-blocking)
-  const slNearLiquidation = slPrice > 0 && liquidationPrice > 0 && (
+  const slNearLiquidation = slEnabled && slPrice > 0 && liquidationPrice > 0 && (
     (isLong && slPrice < liquidationPrice * 1.05) ||
     (!isLong && slPrice > liquidationPrice * 0.95)
   );
@@ -369,8 +375,14 @@ function ConditionalCloseDialog({
   const slPresets = isLong ? [-2, -5, -10] : [2, 5, 10];
   const tpPresets = isLong ? [5, 10, 25] : [-5, -10, -25];
 
-  // Visualization bar
-  const barPrices = [liquidationPrice, slPrice, entryPrice, tpPrice, markPrice].filter((p) => p > 0);
+  // Visualization bar — only include enabled legs' prices
+  const barPrices = [
+    liquidationPrice,
+    ...(slEnabled && slPrice > 0 ? [slPrice] : []),
+    entryPrice,
+    ...(tpEnabled && tpPrice > 0 ? [tpPrice] : []),
+    markPrice,
+  ].filter((p) => p > 0);
   const barMin = barPrices.length > 0 ? Math.min(...barPrices) * 0.99 : 0;
   const barMax = barPrices.length > 0 ? Math.max(...barPrices) * 1.01 : 1;
   const barRange = barMax - barMin;
@@ -378,13 +390,13 @@ function ConditionalCloseDialog({
     barRange > 0 ? Math.min(Math.max(((p - barMin) / barRange) * 100, 0), 100) : 0;
 
   const liqBarPct = liquidationPrice > 0 ? toBarPct(liquidationPrice) : null;
-  const slBarPct = slPrice > 0 ? toBarPct(slPrice) : null;
+  const slBarPct = slEnabled && slPrice > 0 ? toBarPct(slPrice) : null;
   const entryBarPct = entryPrice > 0 ? toBarPct(entryPrice) : null;
-  const tpBarPct = tpPrice > 0 ? toBarPct(tpPrice) : null;
+  const tpBarPct = tpEnabled && tpPrice > 0 ? toBarPct(tpPrice) : null;
   const markBarPct = markPrice > 0 ? toBarPct(markPrice) : null;
 
-  // R:R — only meaningful when SL is a loss (negative PnL) and TP is a gain (positive PnL)
-  const hasRR = slPrice > 0 && tpPrice > 0;
+  // R:R — only meaningful when both legs enabled and SL is loss, TP is gain
+  const hasRR = slEnabled && tpEnabled && slPrice > 0 && tpPrice > 0;
   const rrRatio =
     hasRR &&
     displaySlPnlBtc < 0 &&
@@ -431,14 +443,20 @@ function ConditionalCloseDialog({
   // ── validation ───────────────────────────────────────────────────────────
   function getValidationErrors(): ValidationErrors {
     const errors: ValidationErrors = {};
-    const hasSl = slPrice > 0;
-    const hasTp = tpPrice > 0;
 
-    if (!hasSl && !hasTp) {
-      errors.global = "Set at least one stop loss or take profit value.";
+    if (!slEnabled && !tpEnabled) {
+      errors.global = "Add at least one of Stop Loss or Take Profit.";
       return errors;
     }
-    if (hasSl) {
+    if (slEnabled && slPrice <= 0) {
+      errors.sl = "Enter a stop loss price.";
+      return errors;
+    }
+    if (tpEnabled && tpPrice <= 0) {
+      errors.tp = "Enter a take profit price.";
+      return errors;
+    }
+    if (slEnabled) {
       if (isLong) {
         if (slPrice >= markPrice * (1 - MIN_PRICE_DISTANCE_PCT))
           errors.sl = "Stop loss must be below the current price.";
@@ -451,7 +469,7 @@ function ConditionalCloseDialog({
           errors.sl = "Stop loss must remain below liquidation price.";
       }
     }
-    if (hasTp) {
+    if (tpEnabled) {
       const tpPnlBtc = pnlBtcFromPrice(tpPrice, entryPrice, positionSize, positionType) ?? 0;
       if (isLong) {
         if (tpPrice <= markPrice * (1 + MIN_PRICE_DISTANCE_PCT))
@@ -465,7 +483,7 @@ function ConditionalCloseDialog({
           errors.tp = "Take profit must be less than the position size in BTC.";
       }
     }
-    if (hasSl && hasTp) {
+    if (slEnabled && tpEnabled) {
       if ((isLong && slPrice >= tpPrice) || (!isLong && tpPrice >= slPrice))
         errors.global = "Stop loss and take profit values are crossed.";
     }
@@ -476,7 +494,35 @@ function ConditionalCloseDialog({
   const hasBlockingError = !!(
     validationErrors.sl || validationErrors.tp || validationErrors.global
   );
-  const hasUserInput = slPrice > 0 || tpPrice > 0;
+  const hasUserInput = slEnabled || tpEnabled;
+
+  // Block Update when values are unchanged (avoids redundant API calls).
+  // When a leg is disabled, only compare enabled legs — disabling a leg
+  // alone (same values for the rest) is treated as no change.
+  const existingSlPrice = selectedTrade?.stopLoss
+    ? Number(selectedTrade.stopLoss.price)
+    : undefined;
+  const existingTpPrice = selectedTrade?.takeProfit
+    ? Number(selectedTrade.takeProfit.price)
+    : undefined;
+  const proposedSl = slEnabled && slPrice > 0 ? slPrice : undefined;
+  const proposedTp = tpEnabled && tpPrice > 0 ? tpPrice : undefined;
+  const PRICE_EPSILON = 0.01;
+  const slMatches =
+    (proposedSl == null && existingSlPrice == null) ||
+    (proposedSl != null &&
+      existingSlPrice != null &&
+      Math.abs(proposedSl - existingSlPrice) < PRICE_EPSILON);
+  const tpMatches =
+    (proposedTp == null && existingTpPrice == null) ||
+    (proposedTp != null &&
+      existingTpPrice != null &&
+      Math.abs(proposedTp - existingTpPrice) < PRICE_EPSILON);
+  // Only require match for enabled legs; disabled legs are ignored
+  const isNoChange =
+    hasSltp &&
+    (slEnabled ? slMatches : true) &&
+    (tpEnabled ? tpMatches : true);
 
   // ── submit handlers ──────────────────────────────────────────────────────
   async function handleSettleLimit() {
@@ -632,8 +678,8 @@ function ConditionalCloseDialog({
         "Please do not close this page while your order is being processed...",
     });
 
-    const sl = slPrice > 0 ? slPrice : undefined;
-    const tp = tpPrice > 0 ? tpPrice : undefined;
+    const sl = slEnabled && slPrice > 0 ? slPrice : undefined;
+    const tp = tpEnabled && tpPrice > 0 ? tpPrice : undefined;
 
     const result = await settleOrderSltp(
       selectedTrade,
@@ -989,7 +1035,9 @@ function ConditionalCloseDialog({
                 <span className="text-sm font-medium">${positionSizeUsd}</span>
               </div>
 
-              <Button onClick={handleSettleLimit}>Confirm</Button>
+              <Button onClick={handleSettleLimit}>
+                {hasLimit ? "Update Limit" : "Confirm"}
+              </Button>
             </div>
           </TabsPrimitive.Content>
 
@@ -1021,26 +1069,12 @@ function ConditionalCloseDialog({
                 </div>
               </div>
 
-              {/* Position Amount + explainer */}
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-primary-accent/70 max-w-[60%]">
+              {/* Position Amount + explainer + unit toggle */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-primary-accent/70 max-w-[50%]">
                   SL/TP trigger a market close when the mark price reaches the set level.
                 </p>
-                <div className="text-right">
-                  <span className="text-[10px] text-primary-accent block">Position Amount</span>
-                  <span className="text-sm font-medium">${positionSizeUsd}</span>
-                </div>
-              </div>
-
-              {/* 2 + 3. Stop Loss | Take Profit — responsive side-by-side grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
-
-                {/* ── Row 1: headers + unit toggle ── */}
-                <div>
-                  <span className="text-xs font-medium text-red">Stop Loss</span>
-                </div>
-                <div className="flex items-center justify-between sm:border-l sm:border-outline sm:pl-3">
-                  <span className="text-xs font-medium text-green-medium">Take Profit</span>
+                <div className="flex items-center gap-2">
                   <div className="flex rounded border border-outline overflow-hidden">
                     {(["BTC", "mBTC"] as const).map((u) => (
                       <button
@@ -1054,162 +1088,216 @@ function ConditionalCloseDialog({
                       >{u}</button>
                     ))}
                   </div>
-                </div>
-
-                {/* ── Row 2: price inputs ── */}
-                <div className="space-y-1">
-                  <label className="text-xs text-primary-accent" htmlFor="input-sl-price">
-                    Price (USD)
-                  </label>
-                  <NumberInput
-                    id="input-sl-price"
-                    inputValue={slPrice}
-                    setInputValue={handleSlPriceChange}
-                    currentPrice={currentPrice}
-                    placeholder="0.00"
-                    formatDecimals={2}
-                    hideBid
-                  />
-                  {slPrice > 0 && isFinite(displaySlPnlBtc) && displaySlPnlBtc !== 0 && btcPrice > 0 && (
-                    <p className="text-xs text-primary-accent mt-0.5">
-                      PnL ≈ <span className={displaySlPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displaySlPnlUsd)}</span>
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
-                  <label className="text-xs text-primary-accent" htmlFor="input-tp-price">
-                    Price (USD)
-                  </label>
-                  <NumberInput
-                    id="input-tp-price"
-                    inputValue={tpPrice}
-                    setInputValue={handleTpPriceChange}
-                    currentPrice={currentPrice}
-                    placeholder="0.00"
-                    formatDecimals={2}
-                    hideBid
-                  />
-                  {tpPrice > 0 && isFinite(displayTpPnlBtc) && displayTpPnlBtc !== 0 && btcPrice > 0 && (
-                    <p className="text-xs text-primary-accent mt-0.5">
-                      PnL ≈ <span className={displayTpPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displayTpPnlUsd)}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* ── Row 3: target PnL inputs ── */}
-                <div className="space-y-1">
-                  <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
-                    Target PnL
-                  </label>
-                  <NumberInput
-                    id="input-sl-pnl"
-                    allowNegative
-                    hideBid
-                    formatDecimals={pnlDecimals}
-                    inputValue={slPnlDisplay}
-                    syncWhileFocused={slLastEdited === "price"}
-                    setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
-                    currentPrice={0}
-                    placeholder="0.00000000"
-                  />
-                </div>
-                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
-                  <label className="text-xs text-primary-accent" htmlFor="input-tp-pnl">
-                    Target PnL
-                  </label>
-                  <NumberInput
-                    id="input-tp-pnl"
-                    allowNegative
-                    hideBid
-                    formatDecimals={pnlDecimals}
-                    inputValue={tpPnlDisplay}
-                    syncWhileFocused={tpLastEdited === "price"}
-                    setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
-                    currentPrice={0}
-                    placeholder="0.00000000"
-                  />
-                </div>
-
-                {/* ── Row 4: sliders (% from mark) ── */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">From mark</span>
-                    <span className="text-xs font-medium">
-                      {slDistanceFromMarkPct != null
-                        ? `${slDistanceFromMarkPct >= 0 ? "+" : ""}${slDistanceFromMarkPct.toFixed(1)}%`
-                        : "—"}
-                    </span>
+                  <div className="text-right">
+                    <span className="text-[10px] text-primary-accent block">Position Amount</span>
+                    <span className="text-sm font-medium">${positionSizeUsd}</span>
                   </div>
-                  <Slider
-                    min={slSliderRange.min}
-                    max={slSliderRange.max}
-                    step={0.1}
-                    value={[slSliderPct]}
-                    onValueChange={([pct]) =>
-                      handleSlPriceChange(markPrice * (1 + pct / 100))
-                    }
-                  />
                 </div>
-                <div className="space-y-1 sm:border-l sm:border-outline sm:pl-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">From mark</span>
-                    <span className="text-xs font-medium">
-                      {tpDistanceFromMarkPct != null
-                        ? `${tpDistanceFromMarkPct >= 0 ? "+" : ""}${tpDistanceFromMarkPct.toFixed(1)}%`
-                        : "—"}
-                    </span>
+              </div>
+
+              {/* 2 + 3. Stop Loss | Take Profit — responsive side-by-side grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+
+                {/* ── SL column ── */}
+                <div className="flex flex-col gap-2">
+                {slEnabled ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-red">Stop Loss</span>
+                      <button
+                        type="button"
+                        onClick={() => setSlEnabled(false)}
+                        className="text-[10px] text-primary-accent hover:text-primary transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-primary-accent" htmlFor="input-sl-price">
+                        Price (USD)
+                      </label>
+                      <NumberInput
+                        id="input-sl-price"
+                        inputValue={slPrice}
+                        setInputValue={handleSlPriceChange}
+                        currentPrice={currentPrice}
+                        placeholder="0.00"
+                        formatDecimals={2}
+                        hideBid
+                      />
+                      {slPrice > 0 && isFinite(displaySlPnlBtc) && displaySlPnlBtc !== 0 && btcPrice > 0 && (
+                        <p className="text-xs text-primary-accent mt-0.5">
+                          PnL ≈ <span className={displaySlPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displaySlPnlUsd)}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-primary-accent" htmlFor="input-sl-pnl">
+                        Target PnL
+                      </label>
+                      <NumberInput
+                        id="input-sl-pnl"
+                        allowNegative
+                        hideBid
+                        formatDecimals={pnlDecimals}
+                        inputValue={slPnlDisplay}
+                        syncWhileFocused={slLastEdited === "price"}
+                        setInputValue={(val) => handleSlPnlChange(val / pnlScale)}
+                        currentPrice={0}
+                        placeholder="0.00000000"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-primary-accent">From mark</span>
+                        <span className="text-xs font-medium">
+                          {slDistanceFromMarkPct != null
+                            ? `${slDistanceFromMarkPct >= 0 ? "+" : ""}${slDistanceFromMarkPct.toFixed(1)}%`
+                            : "—"}
+                        </span>
+                      </div>
+                      <Slider
+                        min={slSliderRange.min}
+                        max={slSliderRange.max}
+                        step={0.1}
+                        value={[slSliderPct]}
+                        onValueChange={([pct]) =>
+                          handleSlPriceChange(markPrice * (1 + pct / 100))
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {slPresets.map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => handleSlPriceChange(markPrice * (1 + pct / 100))}
+                          className="rounded border border-red/40 bg-red/10 px-1.5 py-0.5 text-[10px] font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
+                        >
+                          {pct > 0 ? "+" : ""}{pct}%
+                        </button>
+                      ))}
+                    </div>
+                    <div className="min-h-[1.25rem]">
+                      {validationErrors.sl ? (
+                        <p className="text-xs text-red">{validationErrors.sl}</p>
+                      ) : slNearLiquidation ? (
+                        <p className="text-xs text-yellow-500">SL is near liquidation price.</p>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-[200px] rounded border border-dashed border-outline">
+                    <button
+                      type="button"
+                      onClick={() => setSlEnabled(true)}
+                      className="text-xs font-medium text-red hover:text-red/80 transition-colors"
+                    >
+                      + Add Stop Loss
+                    </button>
                   </div>
-                  <Slider
-                    min={tpSliderRange.min}
-                    max={tpSliderRange.max}
-                    step={0.1}
-                    value={[tpSliderPct]}
-                    onValueChange={([pct]) =>
-                      handleTpPriceChange(markPrice * (1 + pct / 100))
-                    }
-                  />
+                )}
                 </div>
 
-                {/* ── Row 5: preset chips ── */}
-                <div className="flex flex-wrap gap-1">
-                  {slPresets.map((pct) => (
+                {/* ── TP column ── */}
+                <div className="flex flex-col gap-2 sm:border-l sm:border-outline sm:pl-3">
+                {tpEnabled ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-green-medium">Take Profit</span>
+                      <button
+                        type="button"
+                        onClick={() => setTpEnabled(false)}
+                        className="text-[10px] text-primary-accent hover:text-primary transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-primary-accent" htmlFor="input-tp-price">
+                        Price (USD)
+                      </label>
+                      <NumberInput
+                        id="input-tp-price"
+                        inputValue={tpPrice}
+                        setInputValue={handleTpPriceChange}
+                        currentPrice={currentPrice}
+                        placeholder="0.00"
+                        formatDecimals={2}
+                        hideBid
+                      />
+                      {tpPrice > 0 && isFinite(displayTpPnlBtc) && displayTpPnlBtc !== 0 && btcPrice > 0 && (
+                        <p className="text-xs text-primary-accent mt-0.5">
+                          PnL ≈ <span className={displayTpPnlBtc >= 0 ? "text-green-medium" : "text-red"}>{formatCurrency(displayTpPnlUsd)}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-primary-accent" htmlFor="input-tp-pnl">
+                        Target PnL
+                      </label>
+                      <NumberInput
+                        id="input-tp-pnl"
+                        allowNegative
+                        hideBid
+                        formatDecimals={pnlDecimals}
+                        inputValue={tpPnlDisplay}
+                        syncWhileFocused={tpLastEdited === "price"}
+                        setInputValue={(val) => handleTpPnlChange(val / pnlScale)}
+                        currentPrice={0}
+                        placeholder="0.00000000"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-primary-accent">From mark</span>
+                        <span className="text-xs font-medium">
+                          {tpDistanceFromMarkPct != null
+                            ? `${tpDistanceFromMarkPct >= 0 ? "+" : ""}${tpDistanceFromMarkPct.toFixed(1)}%`
+                            : "—"}
+                        </span>
+                      </div>
+                      <Slider
+                        min={tpSliderRange.min}
+                        max={tpSliderRange.max}
+                        step={0.1}
+                        value={[tpSliderPct]}
+                        onValueChange={([pct]) =>
+                          handleTpPriceChange(markPrice * (1 + pct / 100))
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {tpPresets.map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => handleTpPriceChange(markPrice * (1 + pct / 100))}
+                          className="rounded border border-green-medium/40 bg-green-medium/10 px-1.5 py-0.5 text-[10px] font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
+                        >
+                          {pct > 0 ? "+" : ""}{pct}%
+                        </button>
+                      ))}
+                    </div>
+                    <div className="min-h-[1.25rem]">
+                      {validationErrors.tp ? (
+                        <p className="text-xs text-red">{validationErrors.tp}</p>
+                      ) : showTpPoolWarning ? (
+                        <p className="text-xs text-yellow-500">TP exceeds 2% of pool equity.</p>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-[200px] rounded border border-dashed border-outline">
                     <button
-                      key={pct}
                       type="button"
-                      onClick={() => handleSlPriceChange(markPrice * (1 + pct / 100))}
-                      className="rounded border border-red/40 bg-red/10 px-1.5 py-0.5 text-[10px] font-medium text-red hover:bg-red/20 active:bg-red/30 transition-colors cursor-pointer"
+                      onClick={() => setTpEnabled(true)}
+                      className="text-xs font-medium text-green-medium hover:text-green-medium/80 transition-colors"
                     >
-                      {pct > 0 ? "+" : ""}{pct}%
+                      + Add Take Profit
                     </button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-1 sm:border-l sm:border-outline sm:pl-3">
-                  {tpPresets.map((pct) => (
-                    <button
-                      key={pct}
-                      type="button"
-                      onClick={() => handleTpPriceChange(markPrice * (1 + pct / 100))}
-                      className="rounded border border-green-medium/40 bg-green-medium/10 px-1.5 py-0.5 text-[10px] font-medium text-green-medium hover:bg-green-medium/20 active:bg-green-medium/30 transition-colors cursor-pointer"
-                    >
-                      {pct > 0 ? "+" : ""}{pct}%
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── Row 6: warnings ── */}
-                <div className="min-h-[1.25rem]">
-                  {validationErrors.sl ? (
-                    <p className="text-xs text-red">{validationErrors.sl}</p>
-                  ) : slNearLiquidation ? (
-                    <p className="text-xs text-yellow-500">SL is near liquidation price.</p>
-                  ) : null}
-                </div>
-                <div className="min-h-[1.25rem] sm:border-l sm:border-outline sm:pl-3">
-                  {validationErrors.tp ? (
-                    <p className="text-xs text-red">{validationErrors.tp}</p>
-                  ) : showTpPoolWarning ? (
-                    <p className="text-xs text-yellow-500">TP exceeds 2% of pool equity.</p>
-                  ) : null}
+                  </div>
+                )}
                 </div>
 
               </div>
@@ -1267,7 +1355,7 @@ function ConditionalCloseDialog({
 
                   {/* Legend — flex-wrap, never overlaps */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-                    {slPrice > 0 && (
+                    {slEnabled && slPrice > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-orange-500">
                         <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
                         SL {formatCurrency(slPrice)}
@@ -1283,7 +1371,7 @@ function ConditionalCloseDialog({
                         Mark {formatCurrency(markPrice)}
                       </div>
                     )}
-                    {tpPrice > 0 && (
+                    {tpEnabled && tpPrice > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-green-medium">
                         <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
                         TP {formatCurrency(tpPrice)}
@@ -1326,16 +1414,18 @@ function ConditionalCloseDialog({
                 </div>
               )}
 
-              {/* Global error — only shown once the user has entered something */}
+              {/* Global error */}
               <div className="min-h-[1.25rem]">
-                {validationErrors.global && hasUserInput && (
+                {validationErrors.global && (
                   <p className="text-xs text-red">{validationErrors.global}</p>
                 )}
               </div>
 
               {hasSltp && (
                 <p className="text-xs text-primary-accent">
-                  You already have an active SL/TP — confirming will update it.
+                  {isNoChange
+                    ? "Change the values to update your SL/TP."
+                    : "You already have an active SL/TP — confirming will update it."}
                 </p>
               )}
 
@@ -1343,7 +1433,11 @@ function ConditionalCloseDialog({
 
               <Button
                 onClick={handleSettleSltp}
-                disabled={hasBlockingError && hasUserInput}
+                disabled={
+                  (!slEnabled && !tpEnabled) ||
+                  (hasUserInput && hasBlockingError) ||
+                  isNoChange
+                }
               >
                 {hasSltp ? "Update SL/TP" : "Confirm"}
               </Button>

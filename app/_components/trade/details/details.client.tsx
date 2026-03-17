@@ -61,8 +61,8 @@ const DetailsPanel = () => {
   const [viewByTab, setViewByTab] = useState<
     Record<"positions" | "open-orders" | "trader-history" | "history", ViewMode>
   >({
-    positions: "table",
-    "open-orders": "table",
+    positions: "cards",
+    "open-orders": "cards",
     "trader-history": "table",
     history: "table",
   });
@@ -494,12 +494,16 @@ const DetailsPanel = () => {
               data={positionsData}
               settleMarketOrder={settleMarketOrder}
               isSettlingOrder={isSettlingOrder}
+              cancelOrder={cancelOrder}
+              isCancellingOrder={isCancellingOrder}
             />
           ) : (
             <PositionsCards
               data={positionsData}
               settleMarketOrder={settleMarketOrder}
               isSettlingOrder={isSettlingOrder}
+              cancelOrder={cancelOrder}
+              isCancellingOrder={isCancellingOrder}
             />
           )
         )}

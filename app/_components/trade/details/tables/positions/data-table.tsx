@@ -23,6 +23,11 @@ interface DataTableProps<TData, TValue> {
   openFundingDialog: (trade: TradeOrder) => void;
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
 export function PositionsDataTable<TData, TValue>({
@@ -34,7 +39,9 @@ export function PositionsDataTable<TData, TValue>({
   openConditionalDialog,
   openFundingDialog,
   settleMarketOrder,
-  isSettlingOrder
+  isSettlingOrder,
+  cancelOrder,
+  isCancellingOrder,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
@@ -50,7 +57,9 @@ export function PositionsDataTable<TData, TValue>({
     openConditionalDialog,
     openFundingDialog,
     settleMarketOrder,
-    isSettlingOrder
+    isSettlingOrder,
+    cancelOrder,
+    isCancellingOrder,
   };
 
   const table = useReactTable({

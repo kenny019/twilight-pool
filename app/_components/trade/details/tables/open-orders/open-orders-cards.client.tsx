@@ -256,7 +256,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                       disabled={isCancelling}
                       className="h-7 px-2.5 text-[11px] font-medium transition-all duration-150 hover:brightness-110 hover:text-red/90 hover:border-red/30"
                     >
-                      {isCancelling ? "Cancelling..." : "Cancel"}
+                      {isCancelling ? "Removing..." : "Remove"}
                     </Button>
                     {trade._sltpLeg && (
                       <Button

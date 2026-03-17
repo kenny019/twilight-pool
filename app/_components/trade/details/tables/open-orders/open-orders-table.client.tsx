@@ -5,6 +5,7 @@ import { TradeOrder } from '@/lib/types';
 import { OpenOrderRow } from '../../details.client';
 import { openOrdersColumns } from './columns';
 import { OpenOrdersDataTable } from './data-table';
+import { useLimitDialog } from '@/lib/providers/limit-dialogs';
 
 interface OpenOrdersTableProps {
   data: OpenOrderRow[];
@@ -22,12 +23,15 @@ const OpenOrdersTable = React.memo(function OpenOrdersTable({
   openEditDialog,
   isCancellingOrder,
 }: OpenOrdersTableProps) {
+  const { openConditionalDialog } = useLimitDialog();
+
   return (
     <OpenOrdersDataTable
       columns={openOrdersColumns}
       data={data}
       cancelOrder={cancelOrder}
       openEditDialog={openEditDialog}
+      openConditionalDialog={openConditionalDialog}
       isCancellingOrder={isCancellingOrder}
     />
   );

@@ -1,4 +1,5 @@
 import Button from "@/components/button";
+import { RemoveOrdersDropdown } from "./remove-orders-dropdown";
 import { Info } from "lucide-react";
 import cn from "@/lib/cn";
 import { capitaliseFirstLetter, formatSatsMBtc } from '@/lib/helpers';
@@ -19,6 +20,11 @@ interface PositionsTableMeta {
   openLimitDialog: (account: string) => void;
   openConditionalDialog: (account: string, mode: "limit" | "sltp") => void;
   openFundingDialog: (trade: TradeOrder) => void;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
 // Update the interface to remove currentPrice and privateKey from row data
@@ -207,6 +213,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
         ? `$${Number(trade.takeProfit.price).toFixed(2)}`
         : null;
 
+      const sltpActive = !!(slPrice || tpPrice);
       const sltpLabel = slPrice && tpPrice
         ? (
           <span className="flex flex-col items-start leading-tight">
@@ -218,10 +225,10 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
           ? `SL ${slPrice}`
           : tpPrice
             ? `TP ${tpPrice}`
-            : "SLTP";
-
-      const sltpActive = !!(slPrice || tpPrice);
+            : "Set SL/TP";
       const limitActive = !!limitPrice;
+      const hasAnchors = limitActive || sltpActive;
+      const isCancelling = meta.isCancellingOrder(trade.uuid);
 
       return (
         <div className="flex flex-row gap-1">
@@ -245,7 +252,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
-            title={limitActive ? `Limit close at ${limitPrice}` : "Close with limit order"}
+            title={limitActive ? `Update close limit at ${limitPrice}` : "Close with limit order"}
             className={limitActive ? "text-yellow-400 border-yellow-400/40" : undefined}
           >
             {limitActive ? limitPrice! : "LMT"}
@@ -258,11 +265,20 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
-            title={sltpActive ? `Edit SL/TP` : "Set Stop Loss / Take Profit"}
+            title={sltpActive ? "Update SL/TP" : "Set Stop Loss / Take Profit"}
             className={sltpActive ? "text-theme border-theme/40" : undefined}
           >
             {sltpLabel}
           </Button>
+          {hasAnchors && (
+            <RemoveOrdersDropdown
+              trade={trade}
+              cancelOrder={meta.cancelOrder}
+              isCancelling={isCancelling}
+              disabled={isSettling}
+              variant="table"
+            />
+          )}
         </div>
       );
     },
