@@ -34,12 +34,16 @@ export function RemoveOrdersDropdown({
   const hasSltp = hasSl || hasTp;
   const hasAny = hasLimit || hasSltp;
 
-  const handleRemoveAll = () => {
-    if (hasSltp) {
-      void cancelOrder(trade, { sl_bool: true, tp_bool: true });
-    }
-    if (hasLimit) {
-      void cancelOrder(trade);
+  const handleRemoveAll = async () => {
+    try {
+      if (hasSltp) {
+        await cancelOrder(trade, { sl_bool: true, tp_bool: true });
+      }
+      if (hasLimit) {
+        await cancelOrder(trade);
+      }
+    } catch (err) {
+      console.error("Failed to remove orders:", err);
     }
   };
 

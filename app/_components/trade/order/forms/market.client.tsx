@@ -178,7 +178,6 @@ const OrderMarketForm = () => {
         return "0.00";
       }
 
-      Big.DP = 2;
       return new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -195,7 +194,6 @@ const OrderMarketForm = () => {
       const leverageBig = Big(leverage || "1");
       const usdBig = Big(usdAmount);
       if (usdBig.lte(0) || leverageBig.lte(0)) return "0.000000";
-      Big.DP = 20;
       const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig).toNumber();
       return Number(btcValue.toFixed(6)).toLocaleString("en-US", {
         minimumFractionDigits: 2,

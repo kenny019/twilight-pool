@@ -38,7 +38,6 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -56,7 +55,6 @@ const OrderLimitForm = () => {
   const marketStats = useGetMarketStats();
   const storeApi = useTwilightStoreApi();
 
-  const leverageRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leverage, setLeverage] = useState<string>("5");
   const [percent, setPercent] = useState<number>(0);
@@ -314,7 +312,7 @@ const OrderLimitForm = () => {
         throw "Unable to create limit order with price lower than 0";
       }
 
-      const leverageVal = parseInt(leverage || leverageRef.current?.value || "1", 10);
+      const leverageVal = parseInt(leverage || "1", 10);
       const positionType = action === "sell" ? "SHORT" : "LONG";
 
       const orderValue = btcAmountInSats * leverageVal;
@@ -420,7 +418,7 @@ const OrderLimitForm = () => {
       }
 
       const { newZkAccount } = queueResult;
-      const leverageNum = parseInt(leverageRef.current?.value || leverage || "1", 10);
+      const leverageNum = parseInt(leverage || "1", 10);
 
       const { success, msg } = await createZkOrder({
         leverage: leverageNum,
@@ -807,7 +805,6 @@ const OrderLimitForm = () => {
         <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Leverage</label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <Input
-            ref={leverageRef}
             type="text"
             inputMode="numeric"
             placeholder="5"
