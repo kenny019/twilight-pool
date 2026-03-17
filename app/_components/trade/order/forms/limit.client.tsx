@@ -601,20 +601,20 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 2. Order Price — Limit only */}
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         <div className="flex items-center justify-between">
           <label htmlFor="input-order-price" className={cn("text-sm font-medium text-primary/90", width < 350 && "text-xs")}>
             Order Price
           </label>
           {markPrice > 0 && (
-            <span className="flex items-baseline gap-1 text-xs text-primary/60">
+            <span className="flex items-baseline gap-1 text-sm text-primary/60">
               <span>Mark:</span>
               <span className="tabular-nums font-medium text-primary">${usdNumberFormatter.format(markPrice)}</span>
             </span>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <span className="text-[10px] text-primary/50">From Mark</span>
+          <span className="text-xs text-primary/50">From Mark</span>
           {PRICE_PRESETS.map((pct) => (
             <button
               key={pct}
@@ -628,7 +628,7 @@ const OrderLimitForm = () => {
           ))}
         </div>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
-          <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1">
             <Input
               id="input-order-price"
               type="text"
@@ -639,14 +639,14 @@ const OrderLimitForm = () => {
                 if (!Number.isNaN(n) && n >= 0) setOrderPrice(n);
                 else if (v === "") setOrderPrice(0);
               }}
-              className="h-9 min-w-0 flex-1 border-0 bg-transparent tabular-nums shadow-none focus-visible:ring-0"
+              className="h-6 min-w-0 flex-1 border-0 bg-transparent text-base tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
             <button
               type="button"
               onClick={() => markPrice > 0 && setOrderPrice(Math.round(markPrice * 100) / 100)}
               disabled={!tradingAccountBalance || markPrice <= 0}
-              className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+              className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
             >
               Mark
             </button>
@@ -656,7 +656,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => adjustPrice(PRICE_STEP)}
               disabled={!tradingAccountBalance}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -664,7 +664,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => adjustPrice(-PRICE_STEP)}
               disabled={!tradingAccountBalance}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -672,13 +672,11 @@ const OrderLimitForm = () => {
         </div>
       </div>
 
-      {/* 3. Margin Amount + Leverage — 2-column grid (62.5% / 37.5% for visual parity) */}
-      <div className="grid grid-cols-[1.25fr_0.75fr] gap-3">
-      {/* Margin Amount (Collateral) */}
-      <div className="space-y-1">
+      {/* 3. Margin Amount */}
+      <div className="space-y-0.5">
         <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Margin Amount</label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
-          <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1.5">
+          <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1">
             <Input
               type="text"
               inputMode="decimal"
@@ -723,7 +721,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => adjustCollateral(collateralStep)}
               disabled={!tradingAccountBalance || (collateralUnit === "usd" && !markPrice)}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -731,7 +729,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => adjustCollateral(-collateralStep)}
               disabled={!tradingAccountBalance || (collateralUnit === "usd" && !markPrice)}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -741,7 +739,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => setCollateralUnit("btc")}
               className={cn(
-                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                "px-2 py-0.5 text-xs font-medium transition-colors",
                 collateralUnit === "btc"
                   ? "bg-theme/20 text-theme"
                   : "text-primary/50 hover:text-primary/80"
@@ -753,7 +751,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => setCollateralUnit("usd")}
               className={cn(
-                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                "px-2 py-0.5 text-xs font-medium transition-colors",
                 collateralUnit === "usd"
                   ? "bg-theme/20 text-theme"
                   : "text-primary/50 hover:text-primary/80"
@@ -804,8 +802,8 @@ const OrderLimitForm = () => {
         />
       </div>
 
-      {/* Leverage */}
-      <div className="space-y-1">
+      {/* 4. Leverage — own row */}
+      <div className="space-y-0.5">
         <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Leverage</label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <Input
@@ -823,7 +821,7 @@ const OrderLimitForm = () => {
                 setLeverage("");
               }
             }}
-            className="h-9 min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+            className="h-6 min-w-0 flex-1 border-0 bg-transparent px-2 py-1 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
             disabled={!tradingAccountBalance}
           />
           <div className="flex flex-col border-l border-outline">
@@ -831,7 +829,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
               disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -839,7 +837,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
               disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
-              className="flex h-[18px] w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -876,10 +874,9 @@ const OrderLimitForm = () => {
           ))}
         </div>
       </div>
-      </div>
 
       {/* 5. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="tabular-nums text-sm font-medium">${positionSize}</span>
@@ -901,9 +898,9 @@ const OrderLimitForm = () => {
       {/* 6. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-row gap-2">
             <Button
-              className="w-full border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-green-medium py-1 text-base text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
               variant="ui"
               type="submit"
               value="buy"
@@ -912,7 +909,7 @@ const OrderLimitForm = () => {
               {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : buyLabel}
             </Button>
             <Button
-              className="w-full border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-red py-1 text-base text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
               variant="ui"
               type="submit"
               value="sell"
