@@ -18,6 +18,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   cancelOrder: (order: TradeOrder, options?: { sl_bool?: boolean; tp_bool?: boolean }) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
+  openConditionalDialog: (account: string, mode: "limit" | "sltp") => void;
   isCancellingOrder: (uuid: string) => boolean;
 }
 
@@ -26,6 +27,7 @@ export function OpenOrdersDataTable<TData, TValue>({
   data,
   cancelOrder,
   openEditDialog,
+  openConditionalDialog,
   isCancellingOrder,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
@@ -36,6 +38,7 @@ export function OpenOrdersDataTable<TData, TValue>({
   const tableMeta: OpenOrdersTableMeta = {
     cancelOrder,
     openEditDialog,
+    openConditionalDialog,
     isCancellingOrder,
   };
 

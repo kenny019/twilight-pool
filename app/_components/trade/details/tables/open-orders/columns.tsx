@@ -15,6 +15,7 @@ interface OpenOrdersTableMeta {
     options?: { sl_bool?: boolean; tp_bool?: boolean }
   ) => Promise<void>;
   openEditDialog: (order: TradeOrder) => void;
+  openConditionalDialog: (account: string, mode: "limit" | "sltp") => void;
   isCancellingOrder: (uuid: string) => boolean;
 }
 
@@ -206,39 +207,65 @@ export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
 
       if (trade._sltpLeg === "sl") {
         return (
-          <Button
-            onClick={async (e) => {
-              e.preventDefault();
-              await meta.cancelOrder(trade, { sl_bool: true, tp_bool: false });
-            }}
-            variant="ui"
-            size="small"
-            disabled={isCancelling}
-          >
-            {isCancelling ? "Cancelling..." : "Cancel"}
-          </Button>
+          <div className="flex flex-row gap-1">
+            <Button
+              onClick={async (e) => {
+                e.preventDefault();
+                await meta.cancelOrder(trade, { sl_bool: true, tp_bool: false });
+              }}
+              variant="ui"
+              size="small"
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Removing..." : "Remove"}
+            </Button>
+            <Button
+              variant="ui"
+              size="small"
+              disabled={isCancelling}
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openConditionalDialog(trade.accountAddress, "sltp");
+              }}
+            >
+              Edit
+            </Button>
+          </div>
         );
       }
 
       if (trade._sltpLeg === "tp") {
         return (
-          <Button
-            onClick={async (e) => {
-              e.preventDefault();
-              await meta.cancelOrder(trade, { sl_bool: false, tp_bool: true });
-            }}
-            variant="ui"
-            size="small"
-            disabled={isCancelling}
-          >
-            {isCancelling ? "Cancelling..." : "Cancel"}
-          </Button>
+          <div className="flex flex-row gap-1">
+            <Button
+              onClick={async (e) => {
+                e.preventDefault();
+                await meta.cancelOrder(trade, { sl_bool: false, tp_bool: true });
+              }}
+              variant="ui"
+              size="small"
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Removing..." : "Remove"}
+            </Button>
+            <Button
+              variant="ui"
+              size="small"
+              disabled={isCancelling}
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openConditionalDialog(trade.accountAddress, "sltp");
+              }}
+            >
+              Edit
+            </Button>
+          </div>
         );
       }
 
       // Regular limit/entry row
       return (
-        <div className="flex flex-row justify-start gap-1">
+        <div className="flex flex-row gap-1">
           <Button
             onClick={async (e) => {
               e.preventDefault();
@@ -248,8 +275,21 @@ export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
             size="small"
             disabled={isCancelling}
           >
-            {isCancelling ? "Cancelling..." : "Cancel"}
+            {isCancelling ? "Removing..." : "Remove"}
           </Button>
+          {trade.settleLimit && (
+            <Button
+              variant="ui"
+              size="small"
+              disabled={isCancelling}
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openEditDialog(trade);
+              }}
+            >
+              Edit
+            </Button>
+          )}
         </div>
       );
     },

@@ -13,15 +13,25 @@ interface PositionsTableProps {
   data: TradeOrder[];
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
-const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOrder, isSettlingOrder }: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({
+  data,
+  settleMarketOrder,
+  isSettlingOrder,
+  cancelOrder,
+  isCancellingOrder,
+}: PositionsTableProps) {
   const { openLimitDialog, openConditionalDialog } = useLimitDialog();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
-
   const openFundingDialog = useCallback((trade: TradeOrder) => {
     setFundingDialogTrade(trade);
     setIsFundingDialogOpen(true);
@@ -44,6 +54,8 @@ const PositionsTable = React.memo(function PositionsTable({ data, settleMarketOr
         openLimitDialog={openLimitDialog}
         openConditionalDialog={openConditionalDialog}
         openFundingDialog={openFundingDialog}
+        cancelOrder={cancelOrder}
+        isCancellingOrder={isCancellingOrder}
       />
       <FundingHistoryDialog
         trade={fundingDialogTrade}

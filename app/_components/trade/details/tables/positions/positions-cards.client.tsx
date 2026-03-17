@@ -14,6 +14,7 @@ import { PnlCell } from "@/lib/components/pnl-display";
 import Big from "big.js";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
+import { RemoveOrdersDropdown } from "./remove-orders-dropdown";
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { calculateUpnl } from "../../../orderbook/my-trades/columns";
 
@@ -21,12 +22,19 @@ interface PositionsCardsProps {
   data: TradeOrder[];
   settleMarketOrder: (trade: TradeOrder, currentPrice: number) => Promise<void>;
   isSettlingOrder: (uuid: string) => boolean;
+  cancelOrder: (
+    order: TradeOrder,
+    options?: { sl_bool?: boolean; tp_bool?: boolean }
+  ) => Promise<void>;
+  isCancellingOrder: (uuid: string) => boolean;
 }
 
 const PositionsCards = React.memo(function PositionsCards({
   data,
   settleMarketOrder,
   isSettlingOrder,
+  cancelOrder,
+  isCancellingOrder,
 }: PositionsCardsProps) {
   const { openConditionalDialog } = useLimitDialog();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
@@ -234,12 +242,13 @@ const PositionsCards = React.memo(function PositionsCards({
                             variant="ui"
                             size="small"
                             disabled={isSettling}
+                            title={limitPrice ? "Update Limit" : "Close with limit order"}
                             className={cn(
                               "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
                               limitPrice ? "border-yellow-400/40 text-yellow-400" : ""
                             )}
                           >
-                            Close Limit
+                            {limitPrice ? "Update Limit" : "Close Limit"}
                           </Button>
                           <Button
                             onClick={(e) => {
@@ -249,13 +258,23 @@ const PositionsCards = React.memo(function PositionsCards({
                             variant="ui"
                             size="small"
                             disabled={isSettling}
+                            title={slPrice || tpPrice ? "Update SL/TP" : "Set Stop Loss / Take Profit"}
                             className={cn(
                               "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
                               slPrice || tpPrice ? "border-theme/40 text-theme" : ""
                             )}
                           >
-                            Set SL / TP
+                            {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
                           </Button>
+                          {hasAnchors && (
+                            <RemoveOrdersDropdown
+                              trade={trade}
+                              cancelOrder={cancelOrder}
+                              isCancelling={isCancellingOrder(trade.uuid)}
+                              disabled={isSettling}
+                              variant="cards"
+                            />
+                          )}
                         </div>
                       </div>
 

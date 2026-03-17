@@ -1,11 +1,9 @@
 import ConnectWallet from "@/app/_components/layout/connect-wallet.client";
 import Button from "@/components/button";
 import ExchangeResource from "@/components/exchange-resource";
-import { Input, NumberInput } from "@/components/input";
-import Resource from "@/components/resource";
-import Skeleton from "@/components/skeleton";
+import FundingTradeButton from "@/components/fund-trade-button";
+import { Input } from "@/components/input";
 import { Slider } from "@/components/slider";
-import { Text } from "@/components/typography";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from "@/lib/api/relayer";
 import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
@@ -26,6 +24,7 @@ import { createZkAccountWithBalance, createZkOrder } from "@/lib/twilight/zk";
 import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
 import { ZkAccount } from "@/lib/types";
 import { ZkPrivateAccount } from "@/lib/zk/account";
+import { usdNumberFormatter } from "@/lib/utils/format";
 import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
 import {
   hasUtxoData,
@@ -36,7 +35,7 @@ import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import dayjs from "dayjs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import React, {
   useCallback,
@@ -46,6 +45,11 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
+
+const COLLATERAL_STEP_BTC = 0.000001;
+const COLLATERAL_STEP_USD = 10;
+const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
+const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
 
 const OrderMarketForm = () => {
   const { width } = useGrid();
@@ -76,8 +80,6 @@ const OrderMarketForm = () => {
 
   const { status } = useWallet();
 
-  const btcRef = useRef<HTMLInputElement>(null);
-  const usdRef = useRef<HTMLInputElement>(null);
   const leverageRef = useRef<HTMLInputElement>(null);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
@@ -103,15 +105,61 @@ const OrderMarketForm = () => {
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [usdAmount, setUsdAmount] = useState<string>("");
-  const [leverage, setLeverage] = useState<string>("1");
-
+  const [btcAmount, setBtcAmount] = useState<string>("");
+  const [leverage, setLeverage] = useState<string>("5");
   const [percent, setPercent] = useState<number>(0);
+  const [collateralUnit, setCollateralUnit] = useState<"btc" | "usd">("btc");
+
+  const usdAmount = useMemo(() => {
+    if (!btcAmount || !currentPrice || currentPrice <= 0) return "";
+    const btc = parseFloat(btcAmount);
+    if (!Number.isFinite(btc) || btc <= 0) return "";
+    return Big(btc).mul(currentPrice).toFixed(2);
+  }, [btcAmount, currentPrice]);
 
   const updatePercent = useCallback((value: number) => {
     const finalValue = Math.max(0, Math.min(value, 100));
     setPercent(finalValue);
   }, []);
+
+  const adjustCollateralBtc = useCallback(
+    (delta: number) => {
+      const current = parseFloat(btcAmount || "0") || 0;
+      const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+      const newBtc = Math.max(0, Math.min(current + delta, maxBtc));
+      setBtcAmount(newBtc > 0 ? newBtc.toFixed(8) : "");
+      if (tradingAccountBalance > 0 && maxBtc > 0) {
+        updatePercent((newBtc / maxBtc) * 100);
+      }
+    },
+    [btcAmount, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+  );
+
+  const adjustCollateralUsd = useCallback(
+    (delta: number) => {
+      if (!currentPrice || currentPrice <= 0) return;
+      const currentBtc = parseFloat(btcAmount || "0") || 0;
+      const btcDelta = delta / currentPrice;
+      const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+      const newBtc = Math.max(0, Math.min(currentBtc + btcDelta, maxBtc));
+      setBtcAmount(newBtc > 0 ? newBtc.toFixed(8) : "");
+      if (tradingAccountBalance > 0 && maxBtc > 0) {
+        updatePercent((newBtc / maxBtc) * 100);
+      }
+    },
+    [btcAmount, currentPrice, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+  );
+
+  const adjustCollateral = useCallback(
+    (delta: number) => {
+      if (collateralUnit === "btc") {
+        adjustCollateralBtc(delta);
+      } else {
+        adjustCollateralUsd(delta);
+      }
+    },
+    [collateralUnit, adjustCollateralBtc, adjustCollateralUsd]
+  );
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -130,7 +178,6 @@ const OrderMarketForm = () => {
         return "0.00";
       }
 
-      Big.DP = 2;
       return new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -142,113 +189,84 @@ const OrderMarketForm = () => {
   }, [usdAmount, leverage]);
 
   const positionSizeBtc = useMemo(() => {
-    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) return "0";
+    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) return "0.000000";
     try {
       const leverageBig = Big(leverage || "1");
       const usdBig = Big(usdAmount);
-      if (usdBig.lte(0) || leverageBig.lte(0)) return "0";
-      Big.DP = 20;
-      const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig);
-      return BTC.format(btcValue, "BTC");
+      if (usdBig.lte(0) || leverageBig.lte(0)) return "0.000000";
+      const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig).toNumber();
+      return Number(btcValue.toFixed(6)).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      });
     } catch {
-      return "0";
+      return "0.000000";
     }
   }, [usdAmount, leverage, currentPrice]);
 
   const liquidationPrices = useMemo(() => {
-    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) {
+    if (
+      !currentPrice ||
+      !leverage ||
+      !btcAmount ||
+      currentPrice <= 0 ||
+      Big(btcAmount || "0").lte(0) ||
+      Big(leverage || "0").lte(0)
+    ) {
       return { long: "0.00", short: "0.00" };
     }
 
     try {
-      const initialMargin = Big(usdAmount || "0");
-      const leverageBig = Big(leverage || "1");
       const entryPrice = Big(currentPrice);
+      const leverageBig = Big(leverage || "1");
+      const mmRate = 0.004; // 0.4% - matches backend maintenancemargin
 
-      if (initialMargin.lte(0) || leverageBig.lte(0)) {
-        return { long: "0.00", short: "0.00" };
+      if (leverageBig.lte(0)) return { long: "0.00", short: "0.00" };
+
+      const usdFormatter = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+      // Inverse perps: liqLong = entry × leverage × (1 + mmRate) / (leverage + 1)
+      const liqLong = entryPrice
+        .mul(leverageBig)
+        .mul(Big(1).plus(mmRate))
+        .div(leverageBig.plus(1));
+      const liqLongNum = Number(liqLong.toFixed(2));
+      const entryPriceNum = Number(entryPrice.toFixed(2));
+
+      // Inverse perps: liqShort = entry × leverage × (1 - mmRate) / (leverage - 1)
+      // At leverage 1, denominator is 0 → infinite (fully collateralized, no liquidation)
+      const denomShort = leverageBig.minus(1);
+      let shortDisplay = "0.00";
+      if (denomShort.gt(0)) {
+        const liqShort = entryPrice
+          .mul(leverageBig)
+          .mul(Big(1).minus(mmRate))
+          .div(denomShort);
+        const liqShortNum = Number(liqShort.toFixed(2));
+        shortDisplay =
+          liqShortNum <= entryPriceNum || !Number.isFinite(liqShortNum)
+            ? "0.00"
+            : usdFormatter.format(liqShortNum);
+      } else {
+        // Leverage 1 short: no liquidation (infinite liq price)
+        shortDisplay = "—";
       }
 
-      // entryvalue = initial_margin * leverage
-      const entryValue = initialMargin.mul(leverageBig);
-      // positionsize = entryvalue * entryprice
-      const positionSizeCalc = entryValue.mul(entryPrice);
-
-      // bankruptcyprice for LONG = entryprice * leverage / (leverage + 1)
-      const bankruptcyPriceLong = entryPrice
-        .mul(leverageBig)
-        .div(leverageBig.plus(1));
-      // bankruptcyprice for SHORT = entryprice * leverage / (leverage - 1) (if leverage > 1, else 0)
-      const bankruptcyPriceShort = leverageBig.gt(1)
-        ? entryPrice.mul(leverageBig).div(leverageBig.minus(1))
-        : Big(0);
-
-      // bankruptcyvalue = positionsize / bankruptcyprice
-      const bankruptcyValueLong = bankruptcyPriceLong.gt(0)
-        ? positionSizeCalc.div(bankruptcyPriceLong)
-        : Big(0);
-      const bankruptcyValueShort = bankruptcyPriceShort.gt(0)
-        ? positionSizeCalc.div(bankruptcyPriceShort)
-        : Big(0);
-
-      // maintenancemargin = (0.4 * entry_value + fee * bankruptcyvalue + funding * bankruptcyvalue) / 100
-      // fee and funding are hardcoded to 0
-      const fee = 0;
-      const funding = 0;
-      const mmLong = Big(0.4)
-        .mul(entryValue)
-        .plus(Big(fee).mul(bankruptcyValueLong))
-        .plus(Big(funding).mul(bankruptcyValueLong))
-        .div(100);
-      const mmShort = Big(0.4)
-        .mul(entryValue)
-        .plus(Big(fee).mul(bankruptcyValueShort))
-        .plus(Big(funding).mul(bankruptcyValueShort))
-        .div(100);
-
-      // liquidationprice = entryprice * positionsize / ((positionside * entryprice * (mm - im)) + positionsize)
-      // positionside: LONG = -1, SHORT = 1
-      // im = initial_margin (in USD)
-      const im = initialMargin;
-
-      // LONG: positionside = -1
-      const longDenominator = Big(-1)
-        .mul(entryPrice)
-        .mul(mmLong.minus(im))
-        .plus(positionSizeCalc);
-      const liquidationPriceLong = longDenominator.eq(0)
-        ? Big(0)
-        : entryPrice.mul(positionSizeCalc).div(longDenominator);
-
-      // SHORT: positionside = 1
-      const shortDenominator = Big(1)
-        .mul(entryPrice)
-        .mul(mmShort.minus(im))
-        .plus(positionSizeCalc);
-      const liquidationPriceShort = shortDenominator.eq(0)
-        ? Big(0)
-        : entryPrice.mul(positionSizeCalc).div(shortDenominator);
-
-      Big.DP = 2;
       return {
-        long: liquidationPriceLong.lte(0)
-          ? "0.00"
-          : new Intl.NumberFormat("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }).format(Number(liquidationPriceLong.toFixed(2))),
-        short: liquidationPriceShort.lte(0)
-          ? "0.00"
-          : new Intl.NumberFormat("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }).format(Number(liquidationPriceShort.toFixed(2))),
+        long:
+          liqLongNum <= 0 || liqLongNum >= entryPriceNum || !Number.isFinite(liqLongNum)
+            ? "0.00"
+            : usdFormatter.format(liqLongNum),
+        short: shortDisplay,
       };
     } catch (error) {
       console.error("Error calculating liquidation prices:", error);
       return { long: "0.00", short: "0.00" };
     }
-  }, [usdAmount, leverage, currentPrice]);
+  }, [currentPrice, leverage, btcAmount]);
 
   async function submitMarket(type: "SELL" | "BUY") {
     const positionType = type === "BUY" ? "LONG" : "SHORT";
@@ -273,7 +291,7 @@ const OrderMarketForm = () => {
       return;
     }
 
-    if (!btcRef.current?.value) {
+    if (!btcAmount || Big(btcAmount).lte(0)) {
       toast({
         variant: "error",
         title: "Invalid amount",
@@ -282,9 +300,9 @@ const OrderMarketForm = () => {
       return;
     }
 
-    const btcValue = btcRef.current?.value;
+    const btcValue = btcAmount;
 
-    if (btcValue && Big(btcValue).lte(0.00001)) {
+    if (Big(btcValue).lte(0.00001)) {
       toast({
         variant: "error",
         title: "Invalid amount",
@@ -315,7 +333,7 @@ const OrderMarketForm = () => {
         return;
       }
 
-      const leverageVal = parseInt(leverageRef.current?.value || "1");
+      const leverageVal = parseInt(leverage || "1", 10);
       const orderValue = satsValue * leverageVal;
       const maxPosition =
         positionType === "LONG"
@@ -465,10 +483,8 @@ const OrderMarketForm = () => {
 
       const { newZkAccount } = queueResult;
 
-      const leverage = parseInt(leverageRef.current?.value || "1");
-
       const { success, msg } = await createZkOrder({
-        leverage: leverage,
+        leverage: leverageVal,
         orderType: "MARKET",
         positionType,
         signature: privateKey,
@@ -621,7 +637,7 @@ const OrderMarketForm = () => {
         value: satsValue,
         output: orderData.output ?? undefined,
         entryPrice: new Big(traderOrderInfo.entryprice).toNumber(),
-        leverage: leverage,
+        leverage: leverageVal,
         isOpen: true,
         date: dayjs(traderOrderInfo.timestamp).toDate(),
         availableMargin: new Big(traderOrderInfo.available_margin).toNumber(),
@@ -671,12 +687,9 @@ const OrderMarketForm = () => {
       });
 
       // Clear form
-      setUsdAmount("");
-      setLeverage("1");
+      setBtcAmount("");
+      setLeverage("5");
       setPercent(0);
-      if (btcRef.current) btcRef.current.value = "";
-      if (usdRef.current) usdRef.current.value = "";
-      if (leverageRef.current) leverageRef.current.value = "";
     } catch (err) {
       console.error(err);
     } finally {
@@ -684,225 +697,300 @@ const OrderMarketForm = () => {
     }
   }
 
+  const primaryValue = collateralUnit === "btc" ? btcAmount : usdAmount;
+  const secondaryRef =
+    collateralUnit === "btc"
+      ? currentPrice > 0 && usdAmount
+        ? `≈ $${usdNumberFormatter.format(parseFloat(usdAmount))}`
+        : null
+      : btcAmount
+        ? `≈ ${btcAmount} BTC`
+        : null;
+
+  const step = collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
+
+  const setMaxCollateral = useCallback(() => {
+    if (!tradingAccountBalance) return;
+    const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+    setBtcAmount(maxBtc > 0 ? maxBtc.toFixed(8) : "");
+    setPercent(100);
+  }, [tradingAccountBalance, tradingAccountBalanceString]);
+
   return (
     <form
       onSubmit={(e) => e.preventDefault()}
-      className="flex flex-col space-y-2 px-3 pb-2"
+      className="flex flex-col gap-3 px-3 py-4"
     >
-      <div className="flex justify-between text-xs">
-        <span className="opacity-80">Avbl to trade</span>
-        <Resource
-          isLoaded={!isSatsLoading}
-          placeholder={<Skeleton className="h-4 w-[80px]" />}
-        >
-          <span>{tradingAccountBalanceString} BTC</span>
-        </Resource>
-      </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-green-medium">
-          Liq. Price ≈ ${liquidationPrices.long}
-        </span>
-        <span className="text-red">
-          Liq. Price ≈ ${liquidationPrices.short}
-        </span>
-      </div>
-      <div className="flex justify-between space-x-4">
-        <div>
-          <Text
-            className={cn("mb-1 text-sm opacity-80", width < 350 && "text-xs")}
-            asChild
-          >
-            <label htmlFor="input-market-amount-btc">Amount (BTC)</label>
-          </Text>
-          <Input
-            type="text"
-            id="input-market-amount-btc"
-            placeholder="0.000"
-            ref={btcRef}
-            onChange={(e) => {
-              if (!usdRef.current) return;
-
-              let value = e.currentTarget.value;
-
-              // Remove any non-numeric characters except decimal point
-              value = value.replace(/[^0-9.]/g, "");
-
-              // Prevent multiple decimal points
-              const decimalCount = (value.match(/\./g) || []).length;
-              if (decimalCount > 1) {
-                const firstDecimalIndex = value.indexOf(".");
-                value =
-                  value.substring(0, firstDecimalIndex + 1) +
-                  value.substring(firstDecimalIndex + 1).replace(/\./g, "");
-              }
-
-              // Limit to 8 decimal places (BTC precision)
-              const decimalIndex = value.indexOf(".");
-              if (
-                decimalIndex !== -1 &&
-                value.substring(decimalIndex + 1).length > 8
-              ) {
-                value = value.substring(0, decimalIndex + 9);
-              }
-
-              // Prevent leading zeros except for decimal values
-              if (value.length > 1 && value[0] === "0" && value[1] !== ".") {
-                value = value.substring(1);
-              }
-
-              // Update the input field value
-              e.currentTarget.value = value;
-
-              if (!value || Big(value).lte(0)) {
-                usdRef.current.value = "";
-                setUsdAmount("");
-                return;
-              }
-
-              const usdPrecise = Big(currentPrice).mul(value);
-              usdRef.current.value = usdPrecise.toFixed(2);
-              setUsdAmount(usdPrecise.toString());
-
-              if (!tradingAccountBalance) return;
-              updatePercent(
-                Big(value)
-                  .div(Big(tradingAccountBalanceString))
-                  .mul(100)
-                  .toNumber()
-              );
-            }}
-            disabled={!isPageLoaded || !tradingAccountBalance}
-            autoComplete="off"
-          />
+      {status === "Connected" && !tradingAccountBalance && (
+        <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
+          <p className="text-sm text-primary/90">
+            Add funds to your trading account to start trading.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <FundingTradeButton type="large" defaultTransferType="fund" />
+            <Link
+              href="/deposit"
+              className="text-xs text-theme underline hover:opacity-80"
+            >
+              Deposit to Funding
+            </Link>
+          </div>
         </div>
-        <div>
-          <Text
-            className={cn("mb-1 text-sm opacity-80", width < 350 && "text-xs")}
-            asChild
-          >
-            <label htmlFor="input-market-amount-usd">Amount (USD)</label>
-          </Text>
-
-          <Input
-            autoComplete="off"
-            type="text"
-            id="input-market-amount-usd"
-            placeholder="$0.00"
-            ref={usdRef}
-            onChange={(e) => {
-              if (!btcRef.current) return;
-
-              const usdInput = e.currentTarget.value;
-              setUsdAmount(usdInput);
-
-              if (!usdInput || Big(usdInput).eq(0) || Big(usdInput).lt(0)) {
-                btcRef.current.value = "";
-                return;
-              }
-              Big.DP = 8;
-
-              btcRef.current.value = new Big(usdInput)
-                .div(currentPrice || 1)
-                .toString();
-            }}
-            disabled={!isPageLoaded || !tradingAccountBalance}
-          />
-        </div>
+      )}
+      {/* 1. Header / Account Context */}
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={cn("text-sm text-primary/60", width < 350 && "text-xs")}>Available:</span>
+        <span className="tabular-nums text-sm font-medium">
+          {tradingAccountBalanceString} BTC
+          {currentPrice > 0 && (
+            <span className="text-primary/70">
+              {" "}(${usdNumberFormatter.format(parseFloat(tradingAccountBalanceString || "0") * currentPrice)})
+            </span>
+          )}
+        </span>
       </div>
 
-      <div className="flex items-center space-x-2">
+      {/* 2. Margin Amount — single master input */}
+      <div className="-mt-1 space-y-1">
+        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Margin Amount</label>
+        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+          <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1.5">
+            <div className="flex items-center gap-1">
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={primaryValue}
+                onChange={(e) => {
+                const v = e.target.value.replace(/[^\d.]/g, "");
+                if (!v) {
+                  setBtcAmount("");
+                  setPercent(0);
+                  return;
+                }
+                const n = parseFloat(v);
+                if (!Number.isNaN(n) && n >= 0) {
+                  if (collateralUnit === "btc") {
+                    setBtcAmount(v);
+                    if (tradingAccountBalance > 0) {
+                      const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                      updatePercent((n / maxBtc) * 100);
+                    }
+                  } else {
+                    if (currentPrice > 0) {
+                      const btc = n / currentPrice;
+                      setBtcAmount(btc.toFixed(8));
+                      if (tradingAccountBalance > 0) {
+                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                        updatePercent((btc / maxBtc) * 100);
+                      }
+                    }
+                  }
+                }
+              }}
+              className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+              <button
+                type="button"
+                onClick={setMaxCollateral}
+                disabled={!tradingAccountBalance}
+                className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+              >
+                Max
+              </button>
+            </div>
+            {secondaryRef && (
+              <span className="text-xs text-primary/50">{secondaryRef}</span>
+            )}
+          </div>
+          <div className="flex flex-col border-l border-outline">
+            <button
+              type="button"
+              onClick={() => adjustCollateral(step)}
+              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !currentPrice)}
+              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => adjustCollateral(-step)}
+              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !currentPrice)}
+              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="flex flex-col border-l border-outline">
+            <button
+              type="button"
+              onClick={() => setCollateralUnit("btc")}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                collateralUnit === "btc"
+                  ? "bg-theme/20 text-theme"
+                  : "text-primary/50 hover:text-primary/80"
+              )}
+            >
+              BTC
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollateralUnit("usd")}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                collateralUnit === "usd"
+                  ? "bg-theme/20 text-theme"
+                  : "text-primary/50 hover:text-primary/80"
+              )}
+            >
+              USD
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {COLLATERAL_PRESETS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                if (!tradingAccountBalance) return;
+                const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                const btc = maxBtc * (v / 100);
+                setBtcAmount(btc > 0 ? btc.toFixed(8) : "");
+                setPercent(v);
+              }}
+              disabled={!tradingAccountBalance}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
+                percent === v
+                  ? "border-theme/50 bg-theme/20 text-theme"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+              )}
+            >
+              {v}%
+            </button>
+          ))}
+        </div>
         <Slider
-          onValueChange={(value) => {
-            if (!btcRef.current || !usdRef.current) return;
-            const newBtcAmount = new Big(tradingAccountBalanceString)
-              .mul(value[0] / 100)
-              .toFixed(8);
-            btcRef.current.value = newBtcAmount;
-            setPercent(value[0]);
-
-            const usdPrecise = Big(currentPrice).mul(newBtcAmount);
-            usdRef.current.value = usdPrecise.toFixed(2);
-            setUsdAmount(usdPrecise.toString());
-          }}
           value={[percent]}
-          defaultValue={[1]}
-          min={1}
+          onValueChange={(val) => {
+            if (!tradingAccountBalance) return;
+            const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+            const btc = maxBtc * (val[0] / 100);
+            setBtcAmount(btc > 0 ? btc.toFixed(8) : "");
+            setPercent(val[0]);
+          }}
+          min={0}
           max={100}
           step={1}
-          disabled={!isPageLoaded || !tradingAccountBalance}
+          disabled={!tradingAccountBalance}
+          className="w-full"
         />
-        <span className="w-10 text-right text-xs opacity-80">{percent}%</span>
       </div>
-      <div>
-        <Text
-          className={cn("mb-1 text-sm opacity-80", width < 350 && "text-xs")}
-          asChild
-        >
-          <label htmlFor="input-market-leverage">Leverage (x)</label>
-        </Text>
-        <Input
-          autoComplete="off"
-          ref={leverageRef}
-          onChange={(e) => {
-            const value = e.target.value.replace(/[^\d]/, "");
 
-            if (leverageRef.current) {
-              if (parseInt(value) > 50) {
-                leverageRef.current.value = "50";
-                setLeverage("50");
-                return;
+      {/* 3. Leverage — input first, then slider, then presets */}
+      <div className="space-y-1">
+        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Leverage</label>
+        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+          <Input
+            ref={leverageRef}
+            type="text"
+            inputMode="numeric"
+            placeholder="5"
+            value={leverage}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, "");
+              const n = parseInt(v || "5", 10);
+              if (n >= 1 && n <= 50) {
+                setLeverage(String(n));
+              } else if (v === "") {
+                setLeverage("");
               }
-
-              if (parseInt(value) < 1) {
-                leverageRef.current.value = "1";
-                setLeverage("1");
-                return;
-              }
-
-              leverageRef.current.value = value;
-              setLeverage(value);
-            }
+            }}
+            className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+            disabled={!tradingAccountBalance}
+          />
+          <div className="flex flex-col border-l border-outline">
+            <button
+              type="button"
+              onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
+              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
+              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
+              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
+              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+        <Slider
+          value={[Math.min(50, Math.max(1, parseInt(leverage, 10) || 1))]}
+          onValueChange={(val) => {
+            const v = Math.min(50, Math.max(1, val[0]));
+            setLeverage(String(v));
           }}
-          placeholder="1"
-          id="input-market-leverage"
-          disabled={!isPageLoaded || !tradingAccountBalance}
+          min={1}
+          max={50}
+          step={1}
+          disabled={!tradingAccountBalance}
+          className="w-full"
         />
+        <div className="flex flex-wrap gap-1">
+          {LEVERAGE_PRESETS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setLeverage(String(v))}
+              disabled={!tradingAccountBalance}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
+                parseInt(leverage, 10) === v
+                  ? "border-theme/50 bg-theme/20 text-theme"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+              )}
+            >
+              {v}x
+            </button>
+          ))}
+        </div>
       </div>
 
-      <Slider
-        onValueChange={(value) => {
-          if (!leverageRef.current) return;
-          leverageRef.current.value = value[0].toString();
-          setLeverage(value[0].toString());
-        }}
-        value={[parseInt(leverage)]}
-        defaultValue={[1]}
-        min={1}
-        max={50}
-        step={1}
-        disabled={!isPageLoaded || !tradingAccountBalance}
-      />
-      <div className="flex justify-between">
-        <Text className={"mb-1 text-xs opacity-80"}>Position Size (USD)</Text>
-        <Text className={"mb-1 text-xs opacity-80"}>${positionSize}</Text>
-      </div>
-      <div className="flex justify-between">
-        <Text className={"mb-1 text-xs opacity-80"}>Position Size (BTC)</Text>
-        <Text className={"mb-1 text-xs opacity-80"}>{positionSizeBtc} BTC</Text>
+      {/* 4. Trade Summary / Risk */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="flex flex-col gap-px">
+          <span className="text-xs text-primary/60">Position Value</span>
+          <span className="tabular-nums text-sm font-medium">${positionSize}</span>
+        </div>
+        <div className="flex flex-col gap-px">
+          <span className="text-xs text-primary/60">Exposure</span>
+          <span className="tabular-nums text-sm font-medium">{positionSizeBtc} BTC</span>
+        </div>
+        <div className="flex flex-col gap-px">
+          <span className="text-xs text-green-medium/70">Liq Buy</span>
+          <span className="tabular-nums text-sm font-medium text-green-medium/90">${liquidationPrices.long}</span>
+        </div>
+        <div className="flex flex-col gap-px">
+          <span className="text-xs text-red/70">Liq Sell</span>
+          <span className="tabular-nums text-sm font-medium text-red/90">${liquidationPrices.short}</span>
+        </div>
       </div>
 
+      {/* 5. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div
-            className={cn(
-              "flex justify-between",
-              width < 350 ? "flex-col space-y-2" : "flex-row space-x-4"
-            )}
-          >
+          <div className="flex flex-col gap-2">
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"
-              className="border-green-medium py-2 text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium disabled:hover:opacity-40"
+              className="w-full border-green-medium py-2 text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
               variant="ui"
               disabled={
                 isSubmitting ||
@@ -910,71 +998,25 @@ const OrderMarketForm = () => {
                 Big(tradingAccountBalance).lte(0)
               }
             >
-              {isSubmitting ? (
-                <Loader2 className="animate-spin text-primary opacity-60" />
-              ) : (
-                "Buy"
-              )}
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Buy"}
             </Button>
             <Button
               onClick={() => submitMarket("SELL")}
               id="btn-market-sell"
               variant="ui"
-              className="border-red py-2 text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red disabled:hover:opacity-40"
+              className="w-full border-red py-2 text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||
                 Big(tradingAccountBalance).lte(0)
               }
             >
-              {isSubmitting ? (
-                <Loader2 className="animate-spin text-primary opacity-60" />
-              ) : (
-                "Sell"
-              )}
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sell"}
             </Button>
-            {/* <Button
-            onClick={() => {
-              toast({
-                title: "Success",
-                description: (
-                  <div className="flex items-center space-x-1 opacity-90">
-                    <span>Successfully submitted trade order.</span>
-                    <Button
-                      variant="link"
-                      className="inline-flex text-sm opacity-90 hover:opacity-100"
-                      asChild
-                    >
-                      <Link
-                        href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/BRCs50fMzA3AW7q0HuzkA`}
-                        target={"_blank"}
-                      >
-                        Explorer link
-                      </Link>
-                    </Button>
-                  </div>
-                ),
-              });
-
-              addTradeHistory({
-                accountAddress: currentZkAccount.address,
-                orderStatus: "FILLED",
-                orderType: "MARKET",
-                tx_hash: "BRCs50fMzA3AW7q0HuzkA",
-                uuid: "BRCs50fMzA3AW7q0Hu_zkA",
-                value: 100,
-                output: "",
-                positionType: "LONG",
-                date: new Date(),
-              });
-            }}
-          >
-            Test
-          </Button> */}
           </div>
         </ExchangeResource>
       ) : (
-        <div className="flex justify-center">
+        <div className="flex w-full justify-center">
           <ConnectWallet />
         </div>
       )}
