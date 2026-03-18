@@ -3,7 +3,7 @@ import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
-import { Zap } from "lucide-react";
+import { ChevronDown, Zap } from "lucide-react";
 import { usePriceFeed } from "@/lib/providers/feed";
 import cn from "@/lib/cn";
 import { formatCurrency } from "@/lib/twilight/ticker";
@@ -42,6 +42,7 @@ const TickerWrapper = () => {
 
   const [oiShowBtc, setOiShowBtc] = useState(false);
   const [countdownString, setCountdownString] = useState("00:00:00");
+  const [isExpanded, setIsExpanded] = useState(false);
   const hasResetRef = useRef(false);
 
   useEffect(() => {
@@ -80,6 +81,170 @@ const TickerWrapper = () => {
   }, [fundingTimestamp, resetFunding]);
 
   return (
+    <>
+    {/* Mobile ticker */}
+    <div className="flex flex-col px-3 py-2 lg:hidden">
+      {/* Row 1: icon, price, 24h change, chevron */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Image
+            width={24}
+            height={24}
+            src={"/images/btc-icon.png"}
+            alt={"bitcoin-icon"}
+          />
+          <Resource
+            isLoaded={finalPrice !== 0 && hasInit}
+            placeholder={<Skeleton className="h-5 w-[80px]" />}
+          >
+            <span className="text-sm font-semibold">
+              {currentPrice
+                ? formatCurrency(currentPrice)
+                : formatCurrency(btcPrice)}
+            </span>
+          </Resource>
+          <Resource
+            isLoaded={finalPrice !== 0 && hasInit}
+            placeholder={<Skeleton className="h-4 w-[40px]" />}
+          >
+            <span
+              className={cn(
+                "text-xs font-medium",
+                change === 0 && "text-primary",
+                change > 0 ? "text-green-medium" : "text-red"
+              )}
+            >
+              {change === 0
+                ? `${change.toFixed(2)}%`
+                : change > 0
+                  ? `+${change.toFixed(2)}%`
+                  : `${change.toFixed(2)}%`}
+            </span>
+          </Resource>
+        </div>
+        <button
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="p-1"
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform",
+              isExpanded && "rotate-180"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Row 2: funding rate + countdown, open interest */}
+      <div className="mt-1 flex items-center justify-between text-xs text-primary-accent">
+        <Resource
+          isLoaded={hasInit && fundingRate !== "00:00:00"}
+          placeholder={<Skeleton className="h-3 w-[120px]" />}
+        >
+          <div className="flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            <span>FR:</span>
+            <span
+              className={cn(
+                parseFloat(fundingRate) === 0
+                  ? "text-primary"
+                  : parseFloat(fundingRate) > 0
+                    ? "text-green-medium"
+                    : "text-red"
+              )}
+            >
+              {fundingRate}%
+            </span>
+            <span>/ {countdownString}</span>
+          </div>
+        </Resource>
+        <Resource
+          isLoaded={finalPrice !== 0 && hasInit}
+          placeholder={<Skeleton className="h-3 w-[80px]" />}
+        >
+          <span>OI: {formatCurrency(openInterest, "short")}</span>
+        </Resource>
+      </div>
+
+      {/* Collapsible rows */}
+      {isExpanded && (
+        <div className="mt-2 space-y-1.5 border-t pt-2 text-xs">
+          {/* Row 3: 24H High / Low */}
+          <div className="flex justify-between">
+            <Resource
+              isLoaded={finalPrice !== 0 && hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <span className="text-primary-accent">24H High: <span className="text-primary">{formatCurrency(high)}</span></span>
+            </Resource>
+            <Resource
+              isLoaded={finalPrice !== 0 && hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <span className="text-primary-accent">24H Low: <span className="text-primary">{formatCurrency(low)}</span></span>
+            </Resource>
+          </div>
+
+          {/* Row 4: Turnover / Skew */}
+          <div className="flex items-center justify-between">
+            <Resource
+              isLoaded={finalPrice !== 0 && hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <span className="text-primary-accent">Turnover: <span className="text-primary">{formatCurrency(turnover)}</span></span>
+            </Resource>
+            <Resource
+              isLoaded={hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-primary-accent">Skew:</span>
+                <div className="flex h-1.5 w-[60px] overflow-hidden rounded-sm">
+                  <div className="bg-green-medium" style={{ width: `${longPercent}%` }} />
+                  <div className="bg-red" style={{ width: `${shortPercent}%` }} />
+                </div>
+                <span>
+                  <span className="text-green-medium">{longPercent.toFixed(0)}%L</span>
+                  <span className="text-primary-accent">/</span>
+                  <span className="text-red">{shortPercent.toFixed(0)}%S</span>
+                </span>
+              </div>
+            </Resource>
+          </div>
+
+          {/* Row 5: Max Long / Short */}
+          <div className="flex justify-between">
+            <Resource
+              isLoaded={!!marketStats.data}
+              placeholder={<Skeleton className="h-3 w-[160px]" />}
+            >
+              {(() => {
+                const longSats = marketStats.data?.max_long_btc ?? 0;
+                const shortSats = marketStats.data?.max_short_btc ?? 0;
+                const longBtc = longSats / 1e8;
+                const shortBtc = shortSats / 1e8;
+                const useMBTC =
+                  (longBtc > 0 && longBtc < 0.1) ||
+                  (shortBtc > 0 && shortBtc < 0.1);
+                const denom = useMBTC ? "mBTC" : "BTC";
+                const divisor = useMBTC ? 1e5 : 1e8;
+                return (
+                  <span className="text-primary-accent">
+                    Max L/S:{" "}
+                    <span className="text-green-medium">{(longSats / divisor).toFixed(2)}</span>
+                    <span className="text-primary-accent"> / </span>
+                    <span className="text-red">{(shortSats / divisor).toFixed(2)}</span>
+                    <span className="text-primary-accent"> {denom}</span>
+                  </span>
+                );
+              })()}
+            </Resource>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Desktop ticker */}
     <div className="hidden space-x-2 px-4 py-2 lg:flex">
       {/* bitcoin ticker */}
       <div className="flex items-center">
@@ -267,6 +432,7 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
     </div>
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import useWindow from "@/lib/hooks/useWindow";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
@@ -24,10 +25,9 @@ const layout = [
 ];
 
 const layoutSmall = [
-  { i: "order", x: 0, y: 11, w: 2, h: 12, minW: 2, minH: 12 },
   { i: "chart", x: 0, y: 0, w: 4, h: 11, minW: 2, minH: 8 },
-  { i: "orderbook", x: 2, y: 11, w: 2, h: 11, minW: 2 },
-  { i: "details", x: 0, y: 22, w: 4, h: 5, minW: 4, minH: 4 },
+  { i: "order", x: 0, y: 11, w: 4, h: 12, minW: 2, minH: 12 },
+  { i: "details", x: 0, y: 23, w: 4, h: 5, minW: 4, minH: 4 },
 ];
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -45,6 +45,8 @@ function calculateGridDimensions(
 
 const TradeWrapper = () => {
   const [hasMounted, setHasMounted] = useState(false);
+  const { width: windowWidth } = useWindow();
+  const showOrderbook = windowWidth >= 996;
 
   const setPrice = useSessionStore((state) => state.price.setPrice);
   const { data: candleData } = useCandleData(CandleInterval.ONE_MINUTE);
@@ -87,11 +89,11 @@ const TradeWrapper = () => {
   }
 
   return (
+    <div className="pb-20 lg:pb-0">
     <ResponsiveGridLayout
       layouts={{ lg: layout, sm: layoutSmall }}
       cols={{ lg: 12, md: 12, sm: 4, xs: 4, xxs: 4 }}
       rowHeight={GRID_ROW_HEIGHT}
-      className="pb-4"
       draggableHandle=".draggable"
       onResizeStart={() => {
         const widgets = document.querySelectorAll(".react-grid-item");
@@ -147,15 +149,17 @@ const TradeWrapper = () => {
       >
         <KLineChart />
       </DragWrapper>
-      <DragWrapper
-        dimension={gridDimensionRefs.current}
-        name="orderbook"
-        title="Trades"
-        key="orderbook"
-        id="orderbook"
-      >
-        <Orderbook />
-      </DragWrapper>
+      {showOrderbook && (
+        <DragWrapper
+          dimension={gridDimensionRefs.current}
+          name="orderbook"
+          title="Trades"
+          key="orderbook"
+          id="orderbook"
+        >
+          <Orderbook />
+        </DragWrapper>
+      )}
       <DragWrapper
         dimension={gridDimensionRefs.current}
         name="details"
@@ -166,6 +170,7 @@ const TradeWrapper = () => {
         <DetailsPanel />
       </DragWrapper>
     </ResponsiveGridLayout>
+    </div>
   );
 };
 

@@ -593,7 +593,7 @@ const Page = () => {
                 isLoaded={!satsLoading}
                 placeholder={<Skeleton className="h-10 w-[200px]" />}
               >
-                <Text className="text-sm md:text-4xl">
+                <Text className="text-xl sm:text-2xl md:text-4xl">
                   {totalBTCBalanceString}
                   <span className="ml-0 inline-flex text-sm md:ml-1">BTC</span>
                 </Text>
