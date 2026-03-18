@@ -1,14 +1,21 @@
 "use client";
 
-import { Dialog, DialogContent, DialogTrigger } from "@/components/dialog";
-import { Menu } from "lucide-react";
+import {
+  Root,
+  Trigger,
+  Portal,
+  Overlay,
+  Content,
+  Close,
+} from "@radix-ui/react-dialog";
+import { Menu, X } from "lucide-react";
 import React, { useState } from "react";
-import SubaccountSelect from "./subaccount/subaccount-select.client";
 import { Text } from "@/components/typography";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import cn from "@/lib/cn";
 import { TWILIGHT_NETWORK_TYPE } from "@/lib/constants";
+import { marketSubLinks, btcSubLinks } from "./nav-links";
 
 const MobileNav = () => {
   const path = usePathname();
@@ -33,37 +40,56 @@ const MobileNav = () => {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Root open={open} onOpenChange={setOpen}>
+      <Trigger asChild>
         <button>
           <Menu />
         </button>
-      </DialogTrigger>
+      </Trigger>
 
-      <DialogContent className="left-auto right-0 top-0 min-h-screen max-w-xs translate-x-0 translate-y-[0%] rounded-none border-r-0 data-[state=closed]:slide-out-to-top-[0%] data-[state=open]:slide-in-from-top-[0%]">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <Text className="font-ui text-xs uppercase text-primary/80">
-              Links
-            </Text>
-            <div className="space-y-2">
-              <MobileLink href="/" text="Trade" />
-              <MobileLink href="/lend" text="Lend" />
-              <MobileLink href="/wallet" text="Wallet" />
-              {TWILIGHT_NETWORK_TYPE === "testnet" ? (
-                <MobileLink href="/faucet" text="Faucet" />
-              ) : (
-                <>
-                  <MobileLink href="/deposit" text="Deposit" />
-                  <MobileLink href="/withdrawal" text="Withdraw" />
-                </>
-              )}
-              <MobileLink href="https://docs.twilight.org/" text="Docs" />
+      <Portal>
+        <Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Content
+          className="fixed right-0 top-0 z-50 min-h-screen w-full max-w-xs border-l bg-background px-6 py-4 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+        >
+          <Close className="absolute right-4 top-4 rounded-md border-0 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-primary disabled:pointer-events-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Close>
+          <div className="space-y-4 pt-8">
+            <div className="space-y-1">
+              <Text className="font-ui text-xs uppercase text-primary/80">
+                Links
+              </Text>
+              <div className="space-y-2">
+                {marketSubLinks.map((link) => (
+                  <MobileLink
+                    key={link.href}
+                    href={link.href}
+                    text={link.title}
+                  />
+                ))}
+                {TWILIGHT_NETWORK_TYPE === "testnet" ? (
+                  <MobileLink href="/faucet" text="Faucet" />
+                ) : (
+                  btcSubLinks.map((link) => (
+                    <MobileLink
+                      key={link.href}
+                      href={link.href}
+                      text={link.title}
+                    />
+                  ))
+                )}
+                <MobileLink
+                  href="https://docs.twilight.org/"
+                  text="Docs"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </Content>
+      </Portal>
+    </Root>
   );
 };
 

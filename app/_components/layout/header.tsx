@@ -15,32 +15,7 @@ import { usePathname } from 'next/navigation';
 import cn from '@/lib/cn';
 import { TWILIGHT_NETWORK_TYPE } from '@/lib/constants';
 import MultiLink from './multi-link.client';
-
-const marketSubLinks = [
-  {
-    href: "/",
-    title: "Trade"
-  },
-  {
-    href: "/lend",
-    title: "Lend",
-  },
-  {
-    href: "/wallet",
-    title: "Wallet",
-  },
-] as const;
-
-const btcSubLinks = [
-  {
-    href: "/deposit",
-    title: "Deposit",
-  },
-  {
-    href: "/withdrawal",
-    title: "Withdraw",
-  },
-] as const;
+import { marketSubLinks, btcSubLinks } from './nav-links';
 
 const UserGuideLinks = [
   {
