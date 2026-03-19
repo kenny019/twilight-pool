@@ -2,14 +2,14 @@ import Button from "@/components/button";
 import { RemoveOrdersDropdown } from "./remove-orders-dropdown";
 import { Info } from "lucide-react";
 import cn from "@/lib/cn";
-import { capitaliseFirstLetter, formatSatsMBtc } from '@/lib/helpers';
-import BTC from '@/lib/twilight/denoms';
-import { TradeOrder } from '@/lib/types';
-import { ColumnDef } from '@tanstack/react-table';
-import Big from 'big.js';
-import dayjs from 'dayjs';
-import { calculateUpnl } from '../../../orderbook/my-trades/columns';
-import { PnlCell, PnlHeader } from '@/lib/components/pnl-display';
+import { capitaliseFirstLetter, formatSatsMBtc } from "@/lib/helpers";
+import BTC from "@/lib/twilight/denoms";
+import { TradeOrder } from "@/lib/types";
+import { ColumnDef } from "@tanstack/react-table";
+import Big from "big.js";
+import dayjs from "dayjs";
+import { calculateUpnl } from "../../../orderbook/my-trades/columns";
+import { PnlCell, PnlHeader } from "@/lib/components/pnl-display";
 
 // Define the TableMeta interface for global table data
 interface PositionsTableMeta {
@@ -37,7 +37,14 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
     accessorKey: "date",
     header: "Time",
     sortingFn: "datetime",
-    cell: (row) => dayjs(row.row.original.date).format("DD/MM/YYYY HH:mm:ss"),
+    cell: (row) => (
+      <div className="flex flex-col leading-tight">
+        <span>{dayjs(row.row.original.date).format("DD/MM/YYYY")}</span>
+        <span className="text-primary-accent">
+          {dayjs(row.row.original.date).format("HH:mm:ss")}
+        </span>
+      </div>
+    ),
   },
   {
     accessorKey: "positionSize",
@@ -46,13 +53,9 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const positionSize = new BTC("sats", Big(trade.positionSize))
         .convert("BTC")
-        .toFixed(2)
+        .toFixed(2);
 
-      return (
-        <span className="font-medium">
-          ${positionSize}
-        </span>
-      );
+      return <span className="font-medium">${positionSize}</span>;
     },
   },
   {
@@ -65,25 +68,25 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       const currentPrice = meta.getCurrentPrice();
 
       const markPrice = currentPrice || trade.entryPrice;
-      const positionValue = new BTC("sats", Big(Math.abs(trade.positionSize / markPrice)))
-        .convert("BTC")
+      const positionValue = new BTC(
+        "sats",
+        Big(Math.abs(trade.positionSize / markPrice))
+      ).convert("BTC");
 
       return (
-        <span className="font-medium">
-          {BTC.format(positionValue, "BTC")}
-        </span>
+        <span className="font-medium">{BTC.format(positionValue, "BTC")}</span>
       );
     },
   },
   {
     accessorKey: "entryPrice",
     header: "Entry Price (USD)",
-    accessorFn: (row) => `$${row.entryPrice.toFixed(2)}`
+    accessorFn: (row) => `$${row.entryPrice.toFixed(2)}`,
   },
   {
     accessorKey: "leverage",
     header: "Leverage",
-    accessorFn: (row) => `${row.leverage.toFixed(2)}x`
+    accessorFn: (row) => `${row.leverage.toFixed(2)}x`,
   },
   {
     accessorKey: "markPrice",
@@ -94,12 +97,8 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
 
       const currentPrice = meta.getCurrentPrice();
       const markPrice = currentPrice || trade.entryPrice;
-      return (
-        <span className="font-medium">
-          ${markPrice.toFixed(2)}
-        </span>
-      );
-    }
+      return <span className="font-medium">${markPrice.toFixed(2)}</span>;
+    },
   },
   {
     accessorKey: "unrealizedPnl",
@@ -111,25 +110,40 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       const btcPriceUsd = meta.getBtcPriceUsd();
 
       const positionSize = trade.positionSize;
-      const calculatedUnrealizedPnl = calculateUpnl(trade.entryPrice, currentPrice, trade.positionType, positionSize);
+      const calculatedUnrealizedPnl = calculateUpnl(
+        trade.entryPrice,
+        currentPrice,
+        trade.positionType,
+        positionSize
+      );
 
-      return <PnlCell pnlSats={calculatedUnrealizedPnl} btcPriceUsd={btcPriceUsd} />;
+      return (
+        <PnlCell pnlSats={calculatedUnrealizedPnl} btcPriceUsd={btcPriceUsd} />
+      );
     },
   },
   {
     accessorKey: "liquidationPrice",
     header: "Liquidation Price (USD)",
-    accessorFn: (row) => `$${row.liquidationPrice.toFixed(2)}`
+    accessorFn: (row) => `$${row.liquidationPrice.toFixed(2)}`,
   },
   {
     accessorKey: "availableMargin",
     header: "Avail. Margin (BTC)",
-    accessorFn: (row) => BTC.format(new BTC("sats", Big(row.availableMargin)).convert("BTC"), "BTC")
+    accessorFn: (row) =>
+      BTC.format(
+        new BTC("sats", Big(row.availableMargin)).convert("BTC"),
+        "BTC"
+      ),
   },
   {
     accessorKey: "maintenanceMargin",
     header: "Maint. Margin (BTC)",
-    accessorFn: (row) => BTC.format(new BTC("sats", Big(row.maintenanceMargin)).convert("BTC"), "BTC")
+    accessorFn: (row) =>
+      BTC.format(
+        new BTC("sats", Big(row.maintenanceMargin)).convert("BTC"),
+        "BTC"
+      ),
   },
   {
     accessorKey: "funding",
@@ -139,17 +153,24 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       const meta = row.table.options.meta as PositionsTableMeta;
 
       const pnl = trade.unrealizedPnl || 0;
-      const funding = trade.fundingApplied != null
-        ? Number(trade.fundingApplied)
-        : Math.round(trade.initialMargin - trade.availableMargin - trade.feeFilled + pnl);
+      const funding =
+        trade.fundingApplied != null
+          ? Number(trade.fundingApplied)
+          : Math.round(
+              trade.initialMargin -
+                trade.availableMargin -
+                trade.feeFilled +
+                pnl
+            );
 
       return (
         <div className="flex items-center gap-1.5">
-          <span className={cn("font-medium",
-            funding > 0 ? "text-green-medium" :
-              funding < 0 ? "text-red" :
-                ""
-          )}>
+          <span
+            className={cn(
+              "font-medium",
+              funding > 0 ? "text-green-medium" : funding < 0 ? "text-red" : ""
+            )}
+          >
             {formatSatsMBtc(funding)}
           </span>
           <button
@@ -158,7 +179,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
               e.preventDefault();
               meta.openFundingDialog(trade);
             }}
-            className="text-primary-accent/40 hover:text-primary-accent p-0.5 rounded hover:bg-theme/20 transition-colors"
+            className="rounded p-0.5 text-primary-accent/40 transition-colors hover:bg-theme/20 hover:text-primary-accent"
             aria-label="View funding history"
           >
             <Info className="h-3.5 w-3.5" />
@@ -170,7 +191,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
   {
     accessorKey: "feeFilled",
     header: "Fee (mBTC)",
-    accessorFn: (row) => formatSatsMBtc(row.feeFilled)
+    accessorFn: (row) => formatSatsMBtc(row.feeFilled),
   },
   {
     accessorKey: "positionType",
@@ -181,7 +202,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       return (
         <span
           className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
+            "rounded px-2 py-1 text-xs font-medium",
             positionType === "LONG"
               ? "bg-green-medium/10 text-green-medium"
               : "bg-red/10 text-red"
@@ -214,18 +235,19 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
         : null;
 
       const sltpActive = !!(slPrice || tpPrice);
-      const sltpLabel = slPrice && tpPrice
-        ? (
+      const sltpLabel =
+        slPrice && tpPrice ? (
           <span className="flex flex-col items-start leading-tight">
             <span className="text-red">SL {slPrice}</span>
             <span className="text-green-medium">TP {tpPrice}</span>
           </span>
-        )
-        : slPrice
-          ? `SL ${slPrice}`
-          : tpPrice
-            ? `TP ${tpPrice}`
-            : "Set SL/TP";
+        ) : slPrice ? (
+          `SL ${slPrice}`
+        ) : tpPrice ? (
+          `TP ${tpPrice}`
+        ) : (
+          "Set SL/TP"
+        );
       const limitActive = !!limitPrice;
       const hasAnchors = limitActive || sltpActive;
       const isCancelling = meta.isCancellingOrder(trade.uuid);
@@ -252,8 +274,14 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             variant="ui"
             size="small"
             disabled={isSettling}
-            title={limitActive ? `Update close limit at ${limitPrice}` : "Close with limit order"}
-            className={limitActive ? "text-yellow-400 border-yellow-400/40" : undefined}
+            title={
+              limitActive
+                ? `Update close limit at ${limitPrice}`
+                : "Close with limit order"
+            }
+            className={
+              limitActive ? "border-yellow-400/40 text-yellow-400" : undefined
+            }
           >
             {limitActive ? limitPrice! : "LMT"}
           </Button>
@@ -266,7 +294,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
             size="small"
             disabled={isSettling}
             title={sltpActive ? "Update SL/TP" : "Set Stop Loss / Take Profit"}
-            className={sltpActive ? "text-theme border-theme/40" : undefined}
+            className={sltpActive ? "border-theme/40 text-theme" : undefined}
           >
             {sltpLabel}
           </Button>
@@ -283,7 +311,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
       );
     },
   },
-]
+];
 
 // Export the TableMeta type for use in the data table component
 export type { PositionsTableMeta };

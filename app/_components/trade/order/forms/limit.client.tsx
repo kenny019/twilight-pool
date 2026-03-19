@@ -6,7 +6,11 @@ import { Input } from "@/components/input";
 import { Slider } from "@/components/slider";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from "@/lib/api/relayer";
-import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
+import {
+  queryTransactionHashes,
+  isErrorStatus,
+  isCancelStatus,
+} from "@/lib/api/rest";
 import { queryUtxoForAddress } from "@/lib/api/zkos";
 import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
@@ -87,7 +91,9 @@ const OrderLimitForm = () => {
   const orderSats = useMemo(() => {
     if (!btcAmount) return 0;
     try {
-      return Math.floor(new BTC("BTC", Big(btcAmount)).convert("sats").toNumber());
+      return Math.floor(
+        new BTC("BTC", Big(btcAmount)).convert("sats").toNumber()
+      );
     } catch {
       return 0;
     }
@@ -103,8 +109,12 @@ const OrderLimitForm = () => {
   const positionSize = useMemo(() => {
     if (!orderPrice || !leverage || !orderSats) return "0.00";
     try {
-      const btcValue = new BTC("sats", Big(orderSats)).convert("BTC").toNumber();
-      const psize = Big(btcValue).mul(orderPrice).mul(Big(leverage || "1"));
+      const btcValue = new BTC("sats", Big(orderSats))
+        .convert("BTC")
+        .toNumber();
+      const psize = Big(btcValue)
+        .mul(orderPrice)
+        .mul(Big(leverage || "1"));
       return usdNumberFormatter.format(Number(psize.toFixed(2)));
     } catch {
       return "0.00";
@@ -172,7 +182,9 @@ const OrderLimitForm = () => {
 
       return {
         long:
-          liqLongNum <= 0 || liqLongNum >= entryPriceNum || !Number.isFinite(liqLongNum)
+          liqLongNum <= 0 ||
+          liqLongNum >= entryPriceNum ||
+          !Number.isFinite(liqLongNum)
             ? "0.00"
             : usdNumberFormatter.format(liqLongNum),
         short: shortDisplay,
@@ -186,20 +198,29 @@ const OrderLimitForm = () => {
   const privateKey = useSessionStore((state) => state.privateKey);
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
-  const addTradeHistory = useTwilightStore((state) => state.trade_history.addTrade);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
   const tradingAccount = zkAccounts.find((account) => account.tag === "main");
   const tradingAccountBalance = tradingAccount?.value || 0;
-  const tradingAccountBalanceString = new BTC("sats", Big(tradingAccountBalance))
+  const tradingAccountBalanceString = new BTC(
+    "sats",
+    Big(tradingAccountBalance)
+  )
     .convert("BTC")
     .toFixed(8);
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
-  const addTransactionHistory = useTwilightStore((state) => state.history.addTransaction);
+  const addTransactionHistory = useTwilightStore(
+    (state) => state.history.addTransaction
+  );
 
-  const buyWouldExecuteImmediately = markPrice > 0 && orderPrice > 0 && orderPrice >= markPrice;
-  const sellWouldExecuteImmediately = markPrice > 0 && orderPrice > 0 && orderPrice <= markPrice;
+  const buyWouldExecuteImmediately =
+    markPrice > 0 && orderPrice > 0 && orderPrice >= markPrice;
+  const sellWouldExecuteImmediately =
+    markPrice > 0 && orderPrice > 0 && orderPrice <= markPrice;
 
   const buyLabel = buyWouldExecuteImmediately ? "Buy (MKT)" : "Buy";
   const sellLabel = sellWouldExecuteImmediately ? "Sell (MKT)" : "Sell";
@@ -227,7 +248,12 @@ const OrderLimitForm = () => {
         updatePercent((newBtc / maxBtc) * 100);
       }
     },
-    [btcAmount, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+    [
+      btcAmount,
+      tradingAccountBalance,
+      tradingAccountBalanceString,
+      updatePercent,
+    ]
   );
 
   const adjustCollateralUsd = useCallback(
@@ -242,7 +268,13 @@ const OrderLimitForm = () => {
         updatePercent((newBtc / maxBtc) * 100);
       }
     },
-    [btcAmount, markPrice, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+    [
+      btcAmount,
+      markPrice,
+      tradingAccountBalance,
+      tradingAccountBalanceString,
+      updatePercent,
+    ]
   );
 
   const adjustCollateral = useCallback(
@@ -256,12 +288,17 @@ const OrderLimitForm = () => {
     [collateralUnit, adjustCollateralBtc, adjustCollateralUsd]
   );
 
-  async function submitLimitOrder(e: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
+  async function submitLimitOrder(
+    e: SyntheticEvent<HTMLFormElement, SubmitEvent>
+  ) {
     e.preventDefault();
     const chainWallet = mainWallet?.getChainWallet("nyks");
 
     if (!chainWallet) {
-      toast({ title: "Wallet is not connected", description: "Please connect your wallet to deposit." });
+      toast({
+        title: "Wallet is not connected",
+        description: "Please connect your wallet to deposit.",
+      });
       return;
     }
 
@@ -269,7 +306,8 @@ const OrderLimitForm = () => {
       toast({
         variant: "error",
         title: "No funds available",
-        description: "Please transfer funds to your trading account before placing an order.",
+        description:
+          "Please transfer funds to your trading account before placing an order.",
       });
       return;
     }
@@ -278,7 +316,11 @@ const OrderLimitForm = () => {
     if (!twilightAddress || !tradingAccount) return;
 
     if (!btcAmount || Big(btcAmount).lte(0)) {
-      toast({ variant: "error", title: "Invalid amount", description: "Please enter an amount to trade." });
+      toast({
+        variant: "error",
+        title: "Invalid amount",
+        description: "Please enter an amount to trade.",
+      });
       return;
     }
 
@@ -294,7 +336,8 @@ const OrderLimitForm = () => {
         toast({
           variant: "error",
           title: "Insufficient funds",
-          description: "You do not have enough funds to submit this trade order",
+          description:
+            "You do not have enough funds to submit this trade order",
         });
         return;
       }
@@ -317,7 +360,9 @@ const OrderLimitForm = () => {
 
       const orderValue = btcAmountInSats * leverageVal;
       const maxPosition =
-        positionType === "LONG" ? marketStats.data?.max_long_btc : marketStats.data?.max_short_btc;
+        positionType === "LONG"
+          ? marketStats.data?.max_long_btc
+          : marketStats.data?.max_short_btc;
       if (maxPosition !== undefined && orderValue > maxPosition) {
         toast({
           variant: "error",
@@ -328,7 +373,10 @@ const OrderLimitForm = () => {
       }
 
       setIsSubmitting(true);
-      toast({ title: "Placing order", description: "Order is being placed, please do not close this page." });
+      toast({
+        title: "Placing order",
+        description: "Order is being placed, please do not close this page.",
+      });
 
       const { account: newTradingAccount } = await createZkAccountWithBalance({
         tag: "limit",
@@ -343,7 +391,11 @@ const OrderLimitForm = () => {
             .getState()
             .zk.zkAccounts.find((a) => a.tag === "main");
 
-          if (!currentTradingAccount || !currentTradingAccount.isOnChain || !currentTradingAccount.value) {
+          if (
+            !currentTradingAccount ||
+            !currentTradingAccount.isOnChain ||
+            !currentTradingAccount.value
+          ) {
             throw new Error("Master trading account not found or not on-chain");
           }
 
@@ -351,27 +403,38 @@ const OrderLimitForm = () => {
             throw new Error("Insufficient funds in master trading account");
           }
 
-          const utxoBefore = await queryUtxoForAddress(currentTradingAccount.address);
-          const previousTxid = hasUtxoData(utxoBefore) ? serializeTxid(utxoBefore.txid) : "";
+          const utxoBefore = await queryUtxoForAddress(
+            currentTradingAccount.address
+          );
+          const previousTxid = hasUtxoData(utxoBefore)
+            ? serializeTxid(utxoBefore.txid)
+            : "";
 
           const senderZkPrivateAccount = await ZkPrivateAccount.create({
             signature: privateKey,
             existingAccount: currentTradingAccount,
           });
 
-          const privateTxSingleResult = await senderZkPrivateAccount.privateTxSingle(
-            btcAmountInSats,
-            newTradingAccount.address
-          );
+          const privateTxSingleResult =
+            await senderZkPrivateAccount.privateTxSingle(
+              btcAmountInSats,
+              newTradingAccount.address
+            );
 
           if (!privateTxSingleResult.success) {
             throw new Error(privateTxSingleResult.message);
           }
 
-          const { txId, scalar: updatedTradingAccountScalar, updatedAddress: updatedTradingAccountAddress } =
-            privateTxSingleResult.data;
+          const {
+            txId,
+            scalar: updatedTradingAccountScalar,
+            updatedAddress: updatedTradingAccountAddress,
+          } = privateTxSingleResult.data;
 
-          await waitForUtxoUpdate(senderZkPrivateAccount.get().address, previousTxid);
+          await waitForUtxoUpdate(
+            senderZkPrivateAccount.get().address,
+            previousTxid
+          );
 
           const newZkAccount: ZkAccount = {
             scalar: updatedTradingAccountScalar,
@@ -411,7 +474,9 @@ const OrderLimitForm = () => {
         toast({
           title: "Error with submitting trade order",
           description:
-            err instanceof Error ? err.message : "An error occurred when transferring funds from the trading account.",
+            err instanceof Error
+              ? err.message
+              : "An error occurred when transferring funds from the trading account.",
           variant: "error",
         });
         return;
@@ -433,19 +498,31 @@ const OrderLimitForm = () => {
 
       if (!success || !msg) throw "Error with creating limit order";
 
-      const data = await sendTradeOrder(msg, optInLeaderboard ? twilightAddress : undefined);
-      if (!data.result || !data.result.id_key) throw "Error with creating limit order";
+      const data = await sendTradeOrder(
+        msg,
+        optInLeaderboard ? twilightAddress : undefined
+      );
+      if (!data.result || !data.result.id_key)
+        throw "Error with creating limit order";
 
-      const transactionHashCondition = (txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>) => {
+      const transactionHashCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
         return !!txHashResult.result?.find(
-          (r) => !isErrorStatus(r.order_status) && !isCancelStatus(r.order_status)
+          (r) =>
+            !isErrorStatus(r.order_status) && !isCancelStatus(r.order_status)
         );
       };
 
-      const transactionHashFailCondition = (txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>) => {
-        return txHashResult.result?.some(
-          (r) => isCancelStatus(r.order_status) || isErrorStatus(r.order_status)
-        ) ?? false;
+      const transactionHashFailCondition = (
+        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
+      ) => {
+        return (
+          txHashResult.result?.some(
+            (r) =>
+              isCancelStatus(r.order_status) || isErrorStatus(r.order_status)
+          ) ?? false
+        );
       };
 
       const transactionHashRes = await retry(
@@ -460,7 +537,9 @@ const OrderLimitForm = () => {
       if (!transactionHashRes.success) {
         toast({
           variant: "error",
-          title: transactionHashRes.cancelled ? "Order request denied" : "Error",
+          title: transactionHashRes.cancelled
+            ? "Order request denied"
+            : "Error",
           description: transactionHashRes.cancelled
             ? "Your order request was denied by the relayer. Your funds remain in your account."
             : "Unable to get tx hash of order",
@@ -473,7 +552,11 @@ const OrderLimitForm = () => {
       );
 
       if (!orderData) {
-        toast({ variant: "error", title: "Error", description: "Unable to get tx hash of order" });
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Unable to get tx hash of order",
+        });
         return;
       }
 
@@ -509,7 +592,9 @@ const OrderLimitForm = () => {
         executionPrice: new Big(traderOrderInfo.execution_price).toNumber(),
         initialMargin: new Big(traderOrderInfo.initial_margin).toNumber(),
         liquidationPrice: new Big(traderOrderInfo.liquidation_price).toNumber(),
-        maintenanceMargin: new Big(traderOrderInfo.maintenance_margin).toNumber(),
+        maintenanceMargin: new Big(
+          traderOrderInfo.maintenance_margin
+        ).toNumber(),
         positionSize: new Big(traderOrderInfo.positionsize).toNumber(),
         settlementPrice: new Big(traderOrderInfo.settlement_price).toNumber(),
         unrealizedPnl: new Big(traderOrderInfo.unrealized_pnl).toNumber(),
@@ -548,7 +633,11 @@ const OrderLimitForm = () => {
       setOrderPrice(markPrice ? Math.round(markPrice * 100) / 100 : 0);
     } catch (err) {
       if (typeof err === "string") {
-        toast({ variant: "error", title: "Error creating limit order", description: err });
+        toast({
+          variant: "error",
+          title: "Error creating limit order",
+          description: err,
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -565,10 +654,14 @@ const OrderLimitForm = () => {
         ? `≈ ${btcAmount} BTC`
         : null;
 
-  const collateralStep = collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
+  const collateralStep =
+    collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
 
   return (
-    <form onSubmit={submitLimitOrder} className="flex flex-col gap-2 px-3 py-3">
+    <form
+      onSubmit={submitLimitOrder}
+      className="flex flex-col gap-2 px-3 py-2.5"
+    >
       {status === "Connected" && !tradingAccountBalance && (
         <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
           <p className="text-sm text-primary/90">
@@ -587,12 +680,21 @@ const OrderLimitForm = () => {
       )}
       {/* 1. Header / Account Context */}
       <div className="flex items-baseline justify-between gap-2">
-        <span className={cn("text-sm text-primary/60", width < 350 && "text-xs")}>Available:</span>
-        <span className="tabular-nums text-sm font-medium">
+        <span
+          className={cn("text-sm text-primary/60", width < 350 && "text-xs")}
+        >
+          Available:
+        </span>
+        <span className="text-sm font-medium tabular-nums">
           {tradingAccountBalanceString} BTC
           {markPrice > 0 && (
             <span className="text-primary/70">
-              {" "}(${usdNumberFormatter.format(parseFloat(tradingAccountBalanceString || "0") * markPrice)})
+              {" "}
+              ($
+              {usdNumberFormatter.format(
+                parseFloat(tradingAccountBalanceString || "0") * markPrice
+              )}
+              )
             </span>
           )}
         </span>
@@ -601,17 +703,25 @@ const OrderLimitForm = () => {
       {/* 2. Order Price — Limit only */}
       <div className="space-y-0.5">
         <div className="flex items-center justify-between">
-          <label htmlFor="input-order-price" className={cn("text-sm font-medium text-primary/90", width < 350 && "text-xs")}>
+          <label
+            htmlFor="input-order-price"
+            className={cn(
+              "text-sm font-medium text-primary/90",
+              width < 350 && "text-xs"
+            )}
+          >
             Order Price
           </label>
           {markPrice > 0 && (
             <span className="flex items-baseline gap-1 text-sm text-primary/60">
               <span>Mark:</span>
-              <span className="tabular-nums font-medium text-primary">${usdNumberFormatter.format(markPrice)}</span>
+              <span className="font-medium tabular-nums text-primary">
+                ${usdNumberFormatter.format(markPrice)}
+              </span>
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-primary/50">From Mark</span>
           {PRICE_PRESETS.map((pct) => (
             <button
@@ -621,7 +731,8 @@ const OrderLimitForm = () => {
               disabled={!tradingAccountBalance || markPrice <= 0}
               className="rounded border border-outline px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:border-theme/30 hover:bg-theme/10 disabled:opacity-40"
             >
-              {pct > 0 ? "+" : ""}{pct}%
+              {pct > 0 ? "+" : ""}
+              {pct}%
             </button>
           ))}
         </div>
@@ -642,7 +753,10 @@ const OrderLimitForm = () => {
             />
             <button
               type="button"
-              onClick={() => markPrice > 0 && setOrderPrice(Math.round(markPrice * 100) / 100)}
+              onClick={() =>
+                markPrice > 0 &&
+                setOrderPrice(Math.round(markPrice * 100) / 100)
+              }
               disabled={!tradingAccountBalance || markPrice <= 0}
               className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
             >
@@ -672,7 +786,14 @@ const OrderLimitForm = () => {
 
       {/* 3. Margin Amount */}
       <div className="space-y-0.5">
-        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Margin Amount</label>
+        <label
+          className={cn(
+            "block text-sm font-medium text-primary/90",
+            width < 350 && "text-xs"
+          )}
+        >
+          Margin Amount
+        </label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1">
             <Input
@@ -692,7 +813,9 @@ const OrderLimitForm = () => {
                   if (collateralUnit === "btc") {
                     setBtcAmount(v);
                     if (tradingAccountBalance > 0) {
-                      const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                      const maxBtc = parseFloat(
+                        tradingAccountBalanceString || "0"
+                      );
                       updatePercent((n / maxBtc) * 100);
                     }
                   } else {
@@ -700,7 +823,9 @@ const OrderLimitForm = () => {
                       const btc = n / markPrice;
                       setBtcAmount(btc.toFixed(8));
                       if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                        const maxBtc = parseFloat(
+                          tradingAccountBalanceString || "0"
+                        );
                         updatePercent((btc / maxBtc) * 100);
                       }
                     }
@@ -718,7 +843,10 @@ const OrderLimitForm = () => {
             <button
               type="button"
               onClick={() => adjustCollateral(collateralStep)}
-              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !markPrice)}
+              disabled={
+                !tradingAccountBalance ||
+                (collateralUnit === "usd" && !markPrice)
+              }
               className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
@@ -726,7 +854,10 @@ const OrderLimitForm = () => {
             <button
               type="button"
               onClick={() => adjustCollateral(-collateralStep)}
-              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !markPrice)}
+              disabled={
+                !tradingAccountBalance ||
+                (collateralUnit === "usd" && !markPrice)
+              }
               className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
@@ -759,7 +890,7 @@ const OrderLimitForm = () => {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {COLLATERAL_PRESETS.map((v) => (
             <button
               key={v}
@@ -802,7 +933,14 @@ const OrderLimitForm = () => {
 
       {/* 4. Leverage — own row */}
       <div className="space-y-0.5">
-        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Leverage</label>
+        <label
+          className={cn(
+            "block text-sm font-medium text-primary/90",
+            width < 350 && "text-xs"
+          )}
+        >
+          Leverage
+        </label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <Input
             type="text"
@@ -824,16 +962,28 @@ const OrderLimitForm = () => {
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
-              onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
-              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
+              onClick={() =>
+                setLeverage(
+                  String(Math.min(50, (parseInt(leverage, 10) || 1) + 1))
+                )
+              }
+              disabled={
+                !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
+              }
               className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               type="button"
-              onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
-              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
+              onClick={() =>
+                setLeverage(
+                  String(Math.max(1, (parseInt(leverage, 10) || 1) - 1))
+                )
+              }
+              disabled={
+                !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
+              }
               className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
@@ -852,7 +1002,7 @@ const OrderLimitForm = () => {
           disabled={!tradingAccountBalance}
           className="w-full"
         />
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {LEVERAGE_PRESETS.map((v) => (
             <button
               key={v}
@@ -873,46 +1023,62 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 5. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
-          <span className="tabular-nums text-sm font-medium">${positionSize}</span>
+          <span className="text-sm font-medium tabular-nums">
+            ${positionSize}
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Exposure</span>
-          <span className="tabular-nums text-sm font-medium">{positionSizeBtc} BTC</span>
+          <span className="text-sm font-medium tabular-nums">
+            {positionSizeBtc} BTC
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-green-medium/70">Liq Buy</span>
-          <span className="tabular-nums text-sm font-medium text-green-medium/90">${liquidationPrices.long}</span>
+          <span className="text-sm font-medium tabular-nums text-green-medium/90">
+            ${liquidationPrices.long}
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-red/70">Liq Sell</span>
-          <span className="tabular-nums text-sm font-medium text-red/90">${liquidationPrices.short}</span>
+          <span className="text-sm font-medium tabular-nums text-red/90">
+            ${liquidationPrices.short}
+          </span>
         </div>
       </div>
 
       {/* 6. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 pt-0.5">
             <Button
-              className="min-w-0 flex-1 border-green-medium py-1 text-base text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-green-medium py-1 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
               variant="ui"
               type="submit"
               value="buy"
               disabled={isSubmitting || Big(tradingAccountBalance).lte(0)}
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : buyLabel}
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                buyLabel
+              )}
             </Button>
             <Button
-              className="min-w-0 flex-1 border-red py-1 text-base text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-red py-1 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
               variant="ui"
               type="submit"
               value="sell"
               disabled={isSubmitting || Big(tradingAccountBalance).lte(0)}
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : sellLabel}
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                sellLabel
+              )}
             </Button>
           </div>
         </ExchangeResource>

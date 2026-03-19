@@ -181,6 +181,10 @@ const KLineChart = () => {
 
     // Volume sub-pane
     chart.createIndicator("VOL", false, { height: 80 });
+    chart.overrideIndicator({
+      name: "VOL",
+      calcParams: [],
+    });
 
     const container = containerRef.current;
     return () => {

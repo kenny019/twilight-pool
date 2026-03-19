@@ -3,7 +3,7 @@
 import Button from "@/components/button";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatSatsMBtc } from "@/lib/helpers";
+import { formatSatsCompact, formatSatsMBtc } from "@/lib/helpers";
 import { usdNumberFormatter } from "@/lib/utils/format";
 import { useSessionStore } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -15,7 +15,13 @@ import Big from "big.js";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import { RemoveOrdersDropdown } from "./remove-orders-dropdown";
-import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { calculateUpnl } from "../../../orderbook/my-trades/columns";
 
 interface PositionsCardsProps {
@@ -39,10 +45,15 @@ const PositionsCards = React.memo(function PositionsCards({
   const { openConditionalDialog } = useLimitDialog();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
   const { getCurrentPrice, subscribe } = usePriceFeed();
-  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const currentPrice = useSyncExternalStore(
+    subscribe,
+    getCurrentPrice,
+    () => 0
+  );
   const btcPriceUsd = currentPrice || storedBtcPrice;
 
-  const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
+  const [fundingDialogTrade, setFundingDialogTrade] =
+    useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [maxHeight, setMaxHeight] = useState<number>(0);
@@ -79,7 +90,10 @@ const PositionsCards = React.memo(function PositionsCards({
   }, []);
 
   const sorted = useMemo(
-    () => [...data].sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf()),
+    () =>
+      [...data].sort(
+        (a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
+      ),
     [data]
   );
 
@@ -91,7 +105,9 @@ const PositionsCards = React.memo(function PositionsCards({
       >
         <div className="grid grid-cols-1 gap-2.5">
           {sorted.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">No results.</div>
+            <div className="py-10 text-center text-sm text-primary-accent">
+              No results.
+            </div>
           ) : (
             sorted.map((trade) => {
               const markPrice = getCurrentPrice() || trade.entryPrice;
@@ -117,7 +133,9 @@ const PositionsCards = React.memo(function PositionsCards({
 
               // Zone 1
               const accentBar =
-                trade.positionType === "LONG" ? "bg-green-medium/70" : "bg-red/70";
+                trade.positionType === "LONG"
+                  ? "bg-green-medium/70"
+                  : "bg-red/70";
               const sideClass =
                 trade.positionType === "LONG"
                   ? "bg-green-medium/10 text-green-medium"
@@ -130,7 +148,11 @@ const PositionsCards = React.memo(function PositionsCards({
 
               // Zone 3: risk row (never wraps)
               const notionalLabel = `$${usdNumberFormatter.format(
-                Number(new BTC("sats", Big(trade.positionSize)).convert("BTC").toFixed(2)) || 0
+                Number(
+                  new BTC("sats", Big(trade.positionSize))
+                    .convert("BTC")
+                    .toFixed(2)
+                ) || 0
               )}`;
               const levLabel = `${trade.leverage.toFixed(1)}x`;
               const liqLabel = `$${usdNumberFormatter.format(trade.liquidationPrice)}`;
@@ -152,22 +174,18 @@ const PositionsCards = React.memo(function PositionsCards({
                 "sats",
                 Big(Math.abs(trade.positionSize / markPrice))
               ).convert("BTC");
-              const availLabel = BTC.format(
-                new BTC("sats", Big(trade.availableMargin)).convert("BTC"),
-                "BTC"
-              );
-              const maintLabel = BTC.format(
-                new BTC("sats", Big(trade.maintenanceMargin)).convert("BTC"),
-                "BTC"
-              );
+              const availLabel = formatSatsCompact(trade.availableMargin);
+              const maintLabel = formatSatsCompact(trade.maintenanceMargin);
 
               return (
                 <div
                   key={trade.uuid}
-                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-theme/35 hover:shadow-md"
+                  className="border-border/70 hover:border-theme/35 group relative overflow-hidden rounded-xl border bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md"
                 >
                   {/* Left accent bar — direction-coded */}
-                  <div className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)} />
+                  <div
+                    className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)}
+                  />
 
                   <div className="px-3 py-2.5 pl-[14px]">
                     {/* Main content: left = position + actions, right = time + anchors */}
@@ -187,15 +205,19 @@ const PositionsCards = React.memo(function PositionsCards({
                             <span className="h-1.5 w-1.5 rounded-full bg-green-medium" />
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 text-[10px] uppercase tracking-wide">
                               Entry
                             </span>
-                            <span className="text-base font-semibold text-primary">{entryLabel}</span>
+                            <span className="text-base font-semibold text-primary">
+                              {entryLabel}
+                            </span>
                             <span className="text-xs text-primary/30">→</span>
-                            <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 text-[10px] uppercase tracking-wide">
                               Mark
                             </span>
-                            <span className="text-base font-semibold text-primary">{markLabel}</span>
+                            <span className="text-base font-semibold text-primary">
+                              {markLabel}
+                            </span>
                             {hasPnl && (
                               <>
                                 <span className="text-primary/25">·</span>
@@ -208,14 +230,37 @@ const PositionsCards = React.memo(function PositionsCards({
                             )}
                           </div>
                           <div className="flex items-center gap-2 text-xs">
-                            <span className="font-medium text-primary/45">Notional</span>
-                            <span className="font-semibold text-primary">{notionalLabel}</span>
+                            <span className="text-primary/45 font-medium">
+                              Notional
+                            </span>
+                            <span className="font-semibold text-primary">
+                              {notionalLabel}
+                            </span>
                             <span className="text-primary/25">•</span>
-                            <span className="font-medium text-primary/45">Leverage</span>
-                            <span className="font-semibold text-primary">{levLabel}</span>
+                            <span className="text-primary/45 font-medium">
+                              Exposure
+                            </span>
+                            <span className="font-semibold text-primary">
+                              {formatSatsCompact(
+                                Math.round(
+                                  positionValue.mul(100_000_000).toNumber()
+                                )
+                              )}
+                            </span>
                             <span className="text-primary/25">•</span>
-                            <span className="font-medium text-primary/45">Liquidation</span>
-                            <span className="font-semibold text-primary">{liqLabel}</span>
+                            <span className="text-primary/45 font-medium">
+                              Leverage
+                            </span>
+                            <span className="font-semibold text-primary">
+                              {levLabel}
+                            </span>
+                            <span className="text-primary/25">•</span>
+                            <span className="text-primary/45 font-medium">
+                              Liquidation
+                            </span>
+                            <span className="font-semibold text-primary">
+                              {liqLabel}
+                            </span>
                           </div>
                         </div>
 
@@ -230,22 +275,31 @@ const PositionsCards = React.memo(function PositionsCards({
                             size="small"
                             disabled={isSettling}
                             title="Close at market price"
-                            className="h-8 px-3 text-xs font-semibold border-theme/30 transition-all duration-150 hover:brightness-110"
+                            className="h-8 border-theme/30 px-3 text-xs font-semibold transition-all duration-150 hover:brightness-110"
                           >
                             {isSettling ? "Closing..." : "Close Market"}
                           </Button>
                           <Button
                             onClick={(e) => {
                               e.preventDefault();
-                              openConditionalDialog(trade.accountAddress, "limit");
+                              openConditionalDialog(
+                                trade.accountAddress,
+                                "limit"
+                              );
                             }}
                             variant="ui"
                             size="small"
                             disabled={isSettling}
-                            title={limitPrice ? "Update Limit" : "Close with limit order"}
+                            title={
+                              limitPrice
+                                ? "Update Limit"
+                                : "Close with limit order"
+                            }
                             className={cn(
                               "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
-                              limitPrice ? "border-yellow-400/40 text-yellow-400" : ""
+                              limitPrice
+                                ? "border-yellow-400/40 text-yellow-400"
+                                : ""
                             )}
                           >
                             {limitPrice ? "Update Limit" : "Close Limit"}
@@ -253,15 +307,24 @@ const PositionsCards = React.memo(function PositionsCards({
                           <Button
                             onClick={(e) => {
                               e.preventDefault();
-                              openConditionalDialog(trade.accountAddress, "sltp");
+                              openConditionalDialog(
+                                trade.accountAddress,
+                                "sltp"
+                              );
                             }}
                             variant="ui"
                             size="small"
                             disabled={isSettling}
-                            title={slPrice || tpPrice ? "Update SL/TP" : "Set Stop Loss / Take Profit"}
+                            title={
+                              slPrice || tpPrice
+                                ? "Update SL/TP"
+                                : "Set Stop Loss / Take Profit"
+                            }
                             className={cn(
                               "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
-                              slPrice || tpPrice ? "border-theme/40 text-theme" : ""
+                              slPrice || tpPrice
+                                ? "border-theme/40 text-theme"
+                                : ""
                             )}
                           >
                             {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
@@ -280,7 +343,7 @@ const PositionsCards = React.memo(function PositionsCards({
 
                       {/* Right column: timestamp + anchors */}
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <span className="text-xs tabular-nums text-primary/55">
+                        <span className="text-primary/55 text-xs tabular-nums">
                           {dayjs(trade.date).format("DD MMM HH:mm:ss")}
                         </span>
                         {hasAnchors && (
@@ -306,7 +369,7 @@ const PositionsCards = React.memo(function PositionsCards({
                     </div>
 
                     {/* Row 3 — Details */}
-                    <div className="border-t border-border/30 pt-1">
+                    <div className="border-border/30 border-t pt-1">
                       <button
                         type="button"
                         onClick={() => toggleExpand(trade.uuid)}
@@ -323,7 +386,7 @@ const PositionsCards = React.memo(function PositionsCards({
                       {isExpanded && (
                         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 shrink-0 text-[10px] uppercase tracking-wide">
                               Pos. Value
                             </span>
                             <span className="font-medium">
@@ -331,25 +394,27 @@ const PositionsCards = React.memo(function PositionsCards({
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 shrink-0 text-[10px] uppercase tracking-wide">
                               Avail. Margin
                             </span>
                             <span className="font-medium">{availLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 shrink-0 text-[10px] uppercase tracking-wide">
                               Maint. Margin
                             </span>
                             <span className="font-medium">{maintLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 shrink-0 text-[10px] uppercase tracking-wide">
                               Fee
                             </span>
-                            <span className="font-medium">{formatSatsMBtc(trade.feeFilled)}</span>
+                            <span className="font-medium">
+                              {formatSatsMBtc(trade.feeFilled)}
+                            </span>
                           </div>
                           <div className="col-span-2 flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="text-primary/45 shrink-0 text-[10px] uppercase tracking-wide">
                               Funding
                             </span>
                             <span

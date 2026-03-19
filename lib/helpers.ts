@@ -165,6 +165,29 @@ export function formatSatsMBtc(sats: number): string {
   return s === "-0" ? "0" : s;
 }
 
+export function formatSatsCompact(
+  sats: number,
+  options?: { signed?: boolean }
+): string {
+  if (!Number.isFinite(sats)) return "0 BTC";
+
+  const signed = options?.signed ?? false;
+  const abs = Math.abs(sats);
+  const prefix = signed && sats > 0 ? "+" : sats < 0 ? "-" : "";
+
+  if (abs < 100_000) {
+    return `${prefix}${abs.toFixed(0)} sats`;
+  }
+
+  if (abs < 1_000_000) {
+    const value = (abs / 100_000).toFixed(3).replace(/\.?0+$/, "");
+    return `${prefix}${value} mBTC`;
+  }
+
+  const value = (abs / 100_000_000).toFixed(6).replace(/\.?0+$/, "");
+  return `${prefix}${value} BTC`;
+}
+
 export function truncateHash(
   hash: string | null | undefined,
   startLength: number = 8,

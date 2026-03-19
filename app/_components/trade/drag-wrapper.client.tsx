@@ -4,15 +4,17 @@ import { GridProvider } from "@/lib/providers/grid";
 import React, { forwardRef } from "react";
 
 type Props = {
-  title?: string;
+  title?: React.ReactNode;
   name: string;
   dimension: { name: string; width: number; height: number }[];
   children?: React.ReactNode;
 };
 
+type WrapperDivProps = Omit<React.ComponentPropsWithoutRef<"div">, "title">;
+
 const DragWrapper = forwardRef<
   HTMLDivElement,
-  React.PropsWithoutRef<Props> & React.ComponentPropsWithoutRef<"div">
+  React.PropsWithoutRef<Props> & WrapperDivProps
 >(({ title, name, dimension, children, className, ...props }, ref) => {
   const { width: windowWidth } = useWindow();
 
@@ -42,7 +44,9 @@ const DragWrapper = forwardRef<
           windowWidth < 500 ? "" : "draggable"
         )}
       >
-        {title}
+        <div className="flex items-center justify-between gap-2 pr-3">
+          <div className="min-w-0">{title}</div>
+        </div>
       </div>
       <div
         className="flex min-h-0 flex-1 flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden"
