@@ -66,7 +66,7 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
         </div>
       </div>
 
-      <div className="min-h-64 w-full flex-1 rounded-lg border border-primary/20 p-4">
+      <div className="min-h-[300px] w-full flex-1 rounded-lg border border-primary/20 p-4">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData ?? []}>
             <defs>
