@@ -171,14 +171,6 @@ const KLineChart = () => {
     });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[timeInterval]);
 
-    // MA overlays
-    chart.createIndicator("MA", true, { id: "candle_pane" });
-    chart.overrideIndicator({
-      name: "MA",
-      calcParams: [7, 25, 99],
-      paneId: "candle_pane",
-    });
-
     // Volume sub-pane
     chart.createIndicator("VOL", false, { height: 80 });
     chart.overrideIndicator({
