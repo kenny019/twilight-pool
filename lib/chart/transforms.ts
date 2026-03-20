@@ -564,7 +564,11 @@ export function getThemeStyles(theme: string | undefined, mobile = false): Recor
     ...base,
     candle: {
       ...base.candle,
-      tooltip: { ...base.candle.tooltip, showRule: "none" as const, custom: [] },
+      tooltip: {
+        ...base.candle.tooltip,
+        showRule: "none" as const,
+        legend: { template: [] },
+      },
     },
   };
 }
