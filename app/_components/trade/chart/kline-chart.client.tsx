@@ -75,9 +75,10 @@ const KLineChart = () => {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const isMobile = window.innerWidth < 768;
     const chart = init(containerRef.current, {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      styles: getThemeStyles(theme),
+      styles: getThemeStyles(theme, isMobile),
     });
 
     if (!chart) return;
@@ -196,7 +197,8 @@ const KLineChart = () => {
   // Theme changes
   useEffect(() => {
     if (!chartRef.current) return;
-    chartRef.current.setStyles(getThemeStyles(theme));
+    const isMobile = window.innerWidth < 768;
+    chartRef.current.setStyles(getThemeStyles(theme, isMobile));
   }, [theme]);
 
   const handleIntervalChange = useCallback(

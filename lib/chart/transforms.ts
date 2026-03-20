@@ -557,8 +557,16 @@ export const lightThemeStyles = {
   },
 };
 
-export function getThemeStyles(theme: string | undefined): Record<string, any> {
-  return theme === "light" ? lightThemeStyles : darkThemeStyles;
+export function getThemeStyles(theme: string | undefined, mobile = false): Record<string, any> {
+  const base = theme === "light" ? lightThemeStyles : darkThemeStyles;
+  if (!mobile) return base;
+  return {
+    ...base,
+    candle: {
+      ...base.candle,
+      tooltip: { ...base.candle.tooltip, showRule: "none" as const, custom: [] },
+    },
+  };
 }
 
 export const apyChartStyles = {
