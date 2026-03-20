@@ -10,6 +10,8 @@ import cn from "@/lib/cn";
 import Button from '@/components/button';
 import Link from 'next/link';
 import { truncateHash } from '@/lib/helpers';
+import { PoolSharesCell } from "@/components/pool-shares-cell";
+import { Tooltip } from "@/components/tooltip";
 
 export interface LendHistoryTableMeta {
   getCurrentPrice: () => number;
@@ -66,7 +68,7 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
   },
   {
     accessorKey: "npoolshare",
-    header: "No of Shares",
+    header: "Shares",
     cell: (row) => {
       const order = row.row.original;
 
@@ -78,18 +80,23 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
         )
       }
 
-      const shares = order.npoolshare / 10_000;
-
       return (
         <Text className="font-medium">
-          {shares.toLocaleString() || "0"} shares
+          <PoolSharesCell npoolshare={order.npoolshare} />
         </Text>
       );
     },
   },
   {
     accessorKey: "pool_share_price",
-    header: "Entry Share NAV",
+    header: () => (
+      <Tooltip
+        title="Entry Share NAV"
+        body="Implied Share NAV at the time of deposit"
+      >
+        <span>NAV</span>
+      </Tooltip>
+    ),
     cell: (row) => {
       const deposit = row.row.original.value;
       const npoolshare = row.row.original.npoolshare;
@@ -109,7 +116,7 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
   },
   {
     accessorKey: "payment",
-    header: "Profit/Loss (BTC)",
+    header: "PnL (BTC)",
     cell: (row) => {
       const order = row.row.original;
 

@@ -62,7 +62,10 @@ export function LendOrdersDataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <table cellSpacing={0} className="relative w-full overflow-auto">
+      <table
+        cellSpacing={0}
+        className="relative min-w-[880px] w-full"
+      >
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -72,7 +75,7 @@ export function LendOrdersDataTable<TData, TValue>({
               {headerGroup.headers.map((header, index) => {
                 return (
                   <th
-                    className={cn("font-medium text-start")}
+                    className={cn("px-2 py-2 text-start font-medium")}
                     key={header.id}
                   >
                     {header.isPlaceholder
@@ -96,7 +99,7 @@ export function LendOrdersDataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell, index) => (
                   <td
-                    className={cn("px-1 py-2 whitespace-nowrap")}
+                    className={cn("px-2 py-2 whitespace-nowrap")}
                     key={cell.id}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -106,7 +109,7 @@ export function LendOrdersDataTable<TData, TValue>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center">
+              <td colSpan={columns.length} className="h-24 px-2 text-center">
                 No active lend orders.
               </td>
             </tr>

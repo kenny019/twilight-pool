@@ -49,7 +49,10 @@ export function LendHistoryDataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <table cellSpacing={0} className="relative w-full overflow-auto">
+      <table
+        cellSpacing={0}
+        className="relative min-w-[720px] w-full"
+      >
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -59,7 +62,7 @@ export function LendHistoryDataTable<TData, TValue>({
               {headerGroup.headers.map((header, index) => {
                 return (
                   <th
-                    className={cn("font-medium text-start")}
+                    className={cn("px-2 py-2 text-start font-medium")}
                     key={header.id}
                   >
                     {header.isPlaceholder
@@ -83,7 +86,7 @@ export function LendHistoryDataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell, index) => (
                   <td
-                    className={cn("text-start")}
+                    className={cn("px-2 py-2 text-start whitespace-nowrap")}
                     key={cell.id}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -93,7 +96,7 @@ export function LendHistoryDataTable<TData, TValue>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center">
+              <td colSpan={columns.length} className="h-24 px-2 text-center">
                 No lend history.
               </td>
             </tr>
