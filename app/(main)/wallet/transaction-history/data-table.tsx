@@ -44,62 +44,73 @@ export function TransactionHistoryDataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div style={{ minHeight: `${pagination.pageSize * 34 + 20}px` }}>
-      <table cellSpacing={0} className="relative w-full overflow-auto">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              className="text-xs font-normal text-primary-accent"
-              key={headerGroup.id}
-            >
-              {headerGroup.headers.map((header, index) => {
-                return (
-                  <th
-                    className={cn(
-                      "px-1 font-medium",
-                      index === headerGroup.headers.length - 1
-                        ? "text-end"
-                        : "text-start"
-                    )}
-                    key={header.id}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
+      <div
+        className="overflow-x-auto"
+        style={{ minHeight: `${pagination.pageSize * 34 + 20}px` }}
+      >
+        <table
+          cellSpacing={0}
+          className="relative min-w-[640px] w-full"
+        >
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr
-                className="h-[34px] text-xs hover:bg-theme/20 data-[state=selected]:bg-theme"
-                key={row.id}
-                data-state={row.getIsSelected() && "selected"}
+                className="text-xs font-normal text-primary-accent"
+                key={headerGroup.id}
               >
-                {row.getVisibleCells().map((cell, index) => (
-                  <td
-                    className={cn("px-1 py-2 whitespace-nowrap")}
-                    key={cell.id}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+                {headerGroup.headers.map((header, index) => {
+                  return (
+                    <th
+                      className={cn(
+                        "px-2 py-2 font-medium",
+                        index === headerGroup.headers.length - 1
+                          ? "text-end"
+                          : "text-start"
+                      )}
+                      key={header.id}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                    </th>
+                  );
+                })}
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={columns.length} className="h-24 text-center"></td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <tr
+                  className="h-[34px] text-xs hover:bg-theme/20 data-[state=selected]:bg-theme"
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell, index) => (
+                    <td
+                      className={cn("px-2 py-2 whitespace-nowrap")}
+                      key={cell.id}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="h-24 px-2 py-2 text-center text-xs text-primary-accent"
+                >
+                  No transactions yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
       {table.getPageCount() > 1 && (
         <div className="flex items-center justify-between pt-3 text-xs text-primary-accent">

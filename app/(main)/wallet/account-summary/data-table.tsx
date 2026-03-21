@@ -67,8 +67,11 @@ export function AccountSummaryDataTable<TData, TValue>({
   });
 
   return (
-    <div className="w-full">
-      <table cellSpacing={0} className="relative w-full overflow-auto">
+    <div className="w-full overflow-x-auto">
+      <table
+        cellSpacing={0}
+        className="relative min-w-[640px] w-full"
+      >
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -79,7 +82,7 @@ export function AccountSummaryDataTable<TData, TValue>({
                 return (
                   <th
                     className={cn(
-                      "px-1 font-medium",
+                      "px-2 py-2 font-medium",
                       index === headerGroup.headers.length - 1
                         ? "text-end"
                         : "text-start"
@@ -108,12 +111,12 @@ export function AccountSummaryDataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell, index) => (
                   <td
-                    className={cn("px-1 py-2 whitespace-nowrap",
+                    className={cn(
+                      "px-2 py-2 whitespace-nowrap",
                       index === row.getVisibleCells().length - 1
                         ? "text-end"
                         : "text-start"
                     )}
-
                     key={cell.id}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -123,7 +126,12 @@ export function AccountSummaryDataTable<TData, TValue>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center"></td>
+              <td
+                colSpan={columns.length}
+                className="h-24 px-2 py-2 text-center text-xs text-primary-accent"
+              >
+                No active accounts.
+              </td>
             </tr>
           )}
         </tbody>

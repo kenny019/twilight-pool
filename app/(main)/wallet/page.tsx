@@ -43,6 +43,7 @@ import FundingTradeButton from "@/components/fund-trade-button";
 import useGetNyksBalance from "@/lib/hooks/useGetNyksBalance";
 import dayjs from "dayjs";
 import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/columns";
+import { Tooltip } from "@/components/tooltip";
 
 type TabType = "account-summary" | "transaction-history";
 
@@ -145,9 +146,17 @@ const Page = () => {
     .mul(finalPrice)
     .toFixed(2);
 
+  /** Non-main Memo accounts (margin / utilized in open positions). */
   const zkAccountSatsBalance = zkAccounts
     .filter((account) => account.tag !== "main" && account.type === "Memo")
     .reduce((acc, account) => acc + (account.value || 0), 0);
+
+  /** All ZK balances: main, subaccounts, lend collateral, etc. (exclusive of on-chain funding). */
+  const totalZkSatsBalance = useMemo(
+    () =>
+      zkAccounts.reduce((acc, account) => acc + (account.value || 0), 0),
+    [zkAccounts]
+  );
 
   const zkAccountBTCString = new BTC("sats", Big(zkAccountSatsBalance))
     .convert("BTC")
@@ -236,7 +245,9 @@ const Page = () => {
     .toFixed(8);
   const lendPnlBTC = new BTC("sats", Big(lendPnl)).convert("BTC").toFixed(8);
 
-  const totalSatsBalance = Big(twilightSats).plus(zkAccountSatsBalance || 0);
+  // Total assets = NYKS funding (on-chain sats) + every ZK account balance.
+  // Lend deposits and trading margin are already included in zkAccounts; do not add lends again.
+  const totalSatsBalance = Big(twilightSats).plus(totalZkSatsBalance || 0);
 
   const totalBTCBalanceString = new BTC("sats", totalSatsBalance)
     .convert("BTC")
@@ -583,30 +594,42 @@ const Page = () => {
   return (
     <div className="mx-4 mt-4 space-y-4 md:mx-8 md:space-y-8">
       <div className="flex flex-col space-y-4 md:grid md:grid-cols-12 md:gap-4 md:space-y-0">
-        <div className="rounded-md border p-4 md:col-span-4 md:space-y-4 md:p-4">
-          <div className="space-y-1">
-            <Text heading="h1" className="mb-0 text-lg font-normal">
+        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-4 md:p-6">
+          <div className="space-y-3">
+            <Text
+              heading="h2"
+              className="text-sm font-medium text-primary-accent"
+            >
               Asset Overview
             </Text>
-            <div>
+            <div className="space-y-2">
               <Resource
                 isLoaded={!satsLoading}
                 placeholder={<Skeleton className="h-10 w-[200px]" />}
               >
-                <Text className="text-xl sm:text-2xl md:text-4xl">
+                <Text className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl md:text-4xl">
                   {totalBTCBalanceString}
-                  <span className="ml-0 inline-flex text-sm md:ml-1">BTC</span>
+                  <span className="ml-1 inline text-base font-medium text-primary-accent sm:text-lg md:ml-2 md:text-2xl">
+                    BTC
+                  </span>
                 </Text>
               </Resource>
 
-              <Text className="text-xs text-primary-accent">
-                = {totalBalanceUSDString} USD
+              <Text className="text-sm tabular-nums text-primary-accent">
+                ≈ {totalBalanceUSDString} USD
+              </Text>
+              <Text className="text-xs leading-relaxed text-primary-accent/90">
+                On-chain funding plus zero knowledge account balances.
               </Text>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Text className="text-sm">Twilight Address</Text>
+          <Separator />
+
+          <div className="space-y-2">
+            <Text className="text-xs text-primary-accent">
+              Twilight address
+            </Text>
             <Text
               onClick={(e) => {
                 if (!twilightAddress) return;
@@ -617,91 +640,121 @@ const Page = () => {
                 });
                 navigator.clipboard.writeText(twilightAddress);
               }}
-              className="cursor-pointer text-xs text-primary-accent"
+              className="cursor-pointer break-all text-sm text-primary-accent underline-offset-2 hover:underline"
             >
               {twilightAddress}
             </Text>
           </div>
-          <div className="space-y-1">
-            <Text className="text-sm">NYKS Balance</Text>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Text className="text-xs text-primary-accent">
+              Network fee balance (NYKS)
+            </Text>
             <Resource
               isLoaded={!nyksLoading}
               placeholder={<Skeleton className="h-4 w-[80px]" />}
             >
-              <Text className="text-xs text-primary-accent">
+              <Text className="text-sm tabular-nums text-primary-accent">
                 {Intl.NumberFormat("en-US", {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 8,
-                }).format(nyksBalance)}{" "}
-                NYKS
+                }).format(nyksBalance)}
               </Text>
             </Resource>
           </div>
         </div>
-        <div className="space-y-4 rounded-md border p-4 md:col-span-3 md:p-4">
-          <Text heading="h2" className="text-sm text-primary-accent">
-            Trades
-          </Text>
-
-          <div className="flex justify-between">
-            <Text className="text-xs text-primary-accent">PNL</Text>
-            <Resource
-              isLoaded={!satsLoading}
-              placeholder={<Skeleton className="h-4 w-[80px]" />}
+        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-3 md:p-6">
+          <div className="space-y-4">
+            <Text
+              heading="h2"
+              className="text-sm font-medium text-primary-accent"
             >
-              <Text className={`text-xs ${pnlColor(totalPnl)}`}>
-                {totalPnl > 0 ? "+" : ""}
-                {totalPnlBTC} BTC
-              </Text>
-            </Resource>
-          </div>
+              Trades
+            </Text>
 
-          <div className="flex justify-between">
-            <Text className="text-xs text-primary-accent">Volume</Text>
-            <Resource
-              isLoaded={!satsLoading}
-              placeholder={<Skeleton className="h-4 w-[80px]" />}
-            >
-              <Text className="text-xs">{totalVolumeBTC} BTC</Text>
-            </Resource>
+            <div className="flex justify-between gap-4">
+              <Text className="text-xs text-primary-accent">Trade PnL</Text>
+              <Resource
+                isLoaded={!satsLoading}
+                placeholder={<Skeleton className="h-4 w-[80px]" />}
+              >
+                <Text className={`text-xs tabular-nums ${pnlColor(totalPnl)}`}>
+                  {totalPnl > 0 ? "+" : ""}
+                  {totalPnlBTC} BTC
+                </Text>
+              </Resource>
+            </div>
+
+            <div className="flex justify-between gap-4">
+              <Text className="text-xs text-primary-accent">Volume</Text>
+              <Resource
+                isLoaded={!satsLoading}
+                placeholder={<Skeleton className="h-4 w-[80px]" />}
+              >
+                <Text className="text-xs tabular-nums">
+                  {totalVolumeBTC} BTC
+                </Text>
+              </Resource>
+            </div>
           </div>
 
           <Separator />
 
-          <Text heading="h2" className="text-sm text-primary-accent">
-            Lend
-          </Text>
-
-          <div className="flex justify-between">
-            <Text className="text-xs text-primary-accent">Lend U. Rewards</Text>
-            <Resource
-              isLoaded={!satsLoading}
-              placeholder={<Skeleton className="h-4 w-[80px]" />}
+          <div className="space-y-4">
+            <Text
+              heading="h2"
+              className="text-sm font-medium text-primary-accent"
             >
-              <Text className="text-xs">{lendUnrealizedRewardsBTC} BTC</Text>
-            </Resource>
-          </div>
+              Lend
+            </Text>
 
-          <div className="flex justify-between">
-            <Text className="text-xs text-primary-accent">Lend PnL</Text>
-            <Resource
-              isLoaded={!satsLoading}
-              placeholder={<Skeleton className="h-4 w-[80px]" />}
-            >
-              <Text className={`text-xs ${pnlColor(lendPnl)}`}>
-                {lendPnl > 0 ? "+" : ""}
-                {lendPnlBTC} BTC
-              </Text>
-            </Resource>
+            <div className="flex justify-between gap-4">
+              <Text className="text-xs text-primary-accent">Accrued Yield</Text>
+              <Resource
+                isLoaded={!satsLoading}
+                placeholder={<Skeleton className="h-4 w-[80px]" />}
+              >
+                <Text className="text-xs tabular-nums">
+                  {lendUnrealizedRewardsBTC} BTC
+                </Text>
+              </Resource>
+            </div>
+
+            <div className="flex justify-between gap-4">
+              <Text className="text-xs text-primary-accent">Lend PnL</Text>
+              <Resource
+                isLoaded={!satsLoading}
+                placeholder={<Skeleton className="h-4 w-[80px]" />}
+              >
+                <Text className={`text-xs tabular-nums ${pnlColor(lendPnl)}`}>
+                  {lendPnl > 0 ? "+" : ""}
+                  {lendPnlBTC} BTC
+                </Text>
+              </Resource>
+            </div>
           </div>
         </div>
-        <div className="flex flex-col rounded-md border p-4 md:col-span-5 md:p-4">
-          <Text heading="h2" className="text-sm text-primary-accent">
+        <div className="bg-card flex flex-col rounded-lg border border-outline p-4 md:col-span-5 md:p-6">
+          <Text
+            heading="h2"
+            className="text-sm font-medium text-primary-accent"
+          >
             My Accounts
           </Text>
-          <div className="space-y-4">
-            <div className="grid w-full grid-cols-3">
-              <Text className="text-sm md:text-base">Funding</Text>
+          <div className="mt-4 space-y-4">
+            <div className="grid w-full grid-cols-3 items-center gap-2">
+              <div className="min-w-0">
+                <Tooltip
+                  title="Funding"
+                  body="Base balance for deposits, withdrawals, and transfers to Trading or Lending."
+                >
+                  <span className="text-sm font-medium text-primary/80 md:text-base">
+                    Funding
+                  </span>
+                </Tooltip>
+              </div>
               <div className="mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
@@ -716,7 +769,7 @@ const Page = () => {
                   placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
                   <Text className="text-xs text-primary-accent">
-                    = {twilightBalanceUSDString} USD
+                    ≈ {twilightBalanceUSDString} USD
                   </Text>
                 </Resource>
               </div>
@@ -727,8 +780,10 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3">
-              <Text className="text-sm md:text-base">Trading</Text>
+            <div className="grid w-full grid-cols-3 items-center gap-2">
+              <Text className="text-sm font-medium text-primary/80 md:text-base">
+                Trading
+              </Text>
               <div className="mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
@@ -743,7 +798,7 @@ const Page = () => {
                   placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
                   <Text className="text-xs text-primary-accent">
-                    = {tradingAccountBTCUSDString} USD
+                    ≈ {tradingAccountBTCUSDString} USD
                   </Text>
                 </Resource>
               </div>
@@ -754,8 +809,10 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3">
-              <Text className="text-sm md:text-base">Lending</Text>
+            <div className="grid w-full grid-cols-3 items-center gap-2">
+              <Text className="text-sm font-medium text-primary/80 md:text-base">
+                Lending
+              </Text>
               <div className="mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
@@ -770,7 +827,7 @@ const Page = () => {
                   placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
                   <Text className="text-xs text-primary-accent">
-                    = {lendingAccountBTCUSDString} USD
+                    ≈ {lendingAccountBTCUSDString} USD
                   </Text>
                 </Resource>
               </div>
@@ -779,9 +836,18 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3">
-              <Text className="col-span-1 text-sm md:text-base">Utilized</Text>
-              <div className="col-span-1 mx-auto">
+            <div className="grid w-full grid-cols-3 items-center gap-2">
+              <div className="min-w-0">
+                <Tooltip
+                  title="Allocated"
+                  body="Funds currently used in trades and lending"
+                >
+                  <span className="text-sm font-medium text-primary/80 md:text-base">
+                    Allocated
+                  </span>
+                </Tooltip>
+              </div>
+              <div className="mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -795,16 +861,17 @@ const Page = () => {
                   placeholder={<Skeleton className="mt-1 h-4 w-[80px]" />}
                 >
                   <Text className="text-xs text-primary-accent">
-                    = {zkAccountBTCUSDString} USD
+                    ≈ {zkAccountBTCUSDString} USD
                   </Text>
                 </Resource>
               </div>
+              <div className="flex flex-row justify-end" aria-hidden />
             </div>
           </div>
         </div>
       </div>
-      <div className="space-y-1 rounded-md border p-4 md:space-y-2 md:p-6">
-        <div className="flex w-full justify-between border-b">
+      <div className="bg-card space-y-1 rounded-lg border border-outline p-4 md:space-y-2 md:p-6">
+        <div className="flex w-full justify-between border-b border-outline">
           <Tabs defaultValue={currentTab}>
             <TabsList className="flex w-full border-b-0" variant="underline">
               <TabsTrigger
@@ -824,13 +891,23 @@ const Page = () => {
             </TabsList>
           </Tabs>
 
-          <div className="flex space-x-2">
-            <button onClick={importData} className="text-xs">
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="link"
+              className="min-h-0 px-2 py-1.5 text-xs"
+              onClick={importData}
+            >
               Import
-            </button>
-            <button onClick={exportData} className="text-xs">
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              className="min-h-0 px-2 py-1.5 text-xs"
+              onClick={exportData}
+            >
               Export
-            </button>
+            </Button>
           </div>
         </div>
 
