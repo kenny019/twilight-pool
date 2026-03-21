@@ -34,6 +34,8 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
 
   const { toast } = useToast();
 
+  const isMobileWallet = wallet.id === "keplr-mobile";
+
   async function connectWallet(
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
@@ -46,7 +48,9 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
     if (!chainWallet) {
       return toast({
         title: "Error getting wallet",
-        description: `Please install ${wallet.name} before connecting!`,
+        description: isMobileWallet
+          ? "Could not initialize Keplr Mobile connection."
+          : `Please install ${wallet.name} before connecting!`,
         variant: "error",
       });
     }
@@ -65,6 +69,14 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
     const depositAddress = chainWallet.address || "";
 
     if (!depositAddress) {
+      if (isMobileWallet) {
+        toast({
+          title: "Connection failed",
+          description: "Could not connect to Keplr Mobile. Please try again.",
+          variant: "error",
+        });
+        return;
+      }
 
       if (wallet.name === "Metamask") {
         toast({
@@ -77,7 +89,7 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
       }
 
       toast({
-        title: "Error getting wallet ",
+        title: "Error getting wallet",
         description: `Please install ${wallet.name} before connecting!`,
         variant: "error",
       });

@@ -59,9 +59,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
           signerOptions={signerOptions}
           sessionOptions={{ duration: 86_400_000 }} // 1 day in ms
-          // walletConnectOptions={{ // todo: implement for keplr wallet
-          //   signClient:
-          // }}
+          walletConnectOptions={{
+            signClient: {
+              projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+            },
+          }}
         >
           <TwilightProvider>
             <SessionStoreProvider>

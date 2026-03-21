@@ -6,31 +6,35 @@ import WalletProviderButton from "./wallet-provider-button.client";
 import cn from "@/lib/cn";
 import Link from 'next/link';
 import Button from '@/components/button';
+import { isMobileBrowser } from "@/lib/utils/is-mobile";
 
-const availableWallets = [
+const allWallets = [
   {
     id: "keplr-extension",
     name: "Keplr",
     src: "/images/keplr-logo.png",
+    desktopOnly: true,
+  },
+  {
+    id: "keplr-mobile",
+    name: "Keplr Mobile",
+    src: "/images/keplr-logo.png",
+    mobileOnly: true,
   },
   {
     id: "leap-metamask-cosmos-snap",
     name: "Metamask",
     src: "/images/metamask-logo.png",
+    desktopOnly: true,
   },
-  // {
-  //   id: "cosmostation-extension",
-  //   name: "Cosmos Station",
-  //   src: "/images/cosmostation-logo.png",
-  // },
-  // {
-  //   id: "leap-extension",
-  //   name: "Leap",
-  //   src: "/images/leap-logo.png",
-  // },
 ] as const;
 
 const WalletProvidersView = ({ }: WalletViewProps) => {
+  const isMobile = isMobileBrowser();
+  const availableWallets = allWallets.filter((w) =>
+    isMobile ? !w.desktopOnly : !w.mobileOnly
+  );
+
   return (
     <>
       <DialogTitle>Connect wallet</DialogTitle>
@@ -52,12 +56,14 @@ const WalletProvidersView = ({ }: WalletViewProps) => {
                 index === availableWallets.length - 1 && "rounded-b-md border-t"
               )}
               wallet={wallet}
-              key={index}
+              key={wallet.id}
             />
           ))}
-          <Text className="col-span-1 leading-6 mt-2 opacity-50 text-sm">
-            Note: For Metamask, only the Cosmos Snap is supported. Transfers to other Twilight accounts are not supported by the Cosmos Snap. Install it <Button asChild variant="link" className="inline-flex"><Link href="https://snaps.metamask.io/snap/npm/leapwallet/metamask-cosmos-snap/" target="__blank">here</Link></Button>.
-          </Text>
+          {!isMobile && (
+            <Text className="col-span-1 leading-6 mt-2 opacity-50 text-sm">
+              Note: For Metamask, only the Cosmos Snap is supported. Transfers to other Twilight accounts are not supported by the Cosmos Snap. Install it <Button asChild variant="link" className="inline-flex"><Link href="https://snaps.metamask.io/snap/npm/leapwallet/metamask-cosmos-snap/" target="__blank">here</Link></Button>.
+            </Text>
+          )}
         </div>
       </DialogDescription>
     </>
