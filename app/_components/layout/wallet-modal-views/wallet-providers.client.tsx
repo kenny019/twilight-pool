@@ -32,7 +32,7 @@ const allWallets = [
 const WalletProvidersView = ({ }: WalletViewProps) => {
   const isMobile = isMobileBrowser();
   const availableWallets = allWallets.filter((w) =>
-    isMobile ? !w.desktopOnly : !w.mobileOnly
+    isMobile ? !("desktopOnly" in w) : !("mobileOnly" in w)
   );
 
   return (
