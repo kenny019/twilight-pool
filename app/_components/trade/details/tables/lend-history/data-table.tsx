@@ -48,7 +48,7 @@ export function LendHistoryDataTable<TData, TValue>({
   });
 
   return (
-    <div className="w-full">
+    <div className="w-full overflow-x-auto">
       <table
         cellSpacing={0}
         className="relative min-w-[720px] w-full"

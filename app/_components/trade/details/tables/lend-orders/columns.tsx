@@ -12,6 +12,7 @@ import cn from "@/lib/cn";
 import { calculateAPR } from "@/lib/helpers";
 import { Tooltip } from "@/components/tooltip";
 import { PoolSharesCell } from "@/components/pool-shares-cell";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const MIN_HOLDING_SECONDS = 3600; // 1 hour - don't annualize before this
 
@@ -88,7 +89,7 @@ export const lendOrdersColumns: ColumnDef<
       }
 
       const entryShareNavSats = Math.round(
-        Big(deposit).mul(10_000).div(npoolshare).toNumber()
+        Big(deposit).mul(POOL_SHARE_DECIMALS_SCALE).div(npoolshare).toNumber()
       );
 
       return (
@@ -113,7 +114,7 @@ export const lendOrdersColumns: ColumnDef<
       const orderTimestampMs = dayjs(order.timestamp).valueOf();
 
       const rewards =
-        currentSharePrice * (order.npoolshare / 10000) - order.value;
+        currentSharePrice * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
       const timeElapsedSeconds = (Date.now() - orderTimestampMs) / 1000;
 
       const apr =
@@ -157,7 +158,7 @@ export const lendOrdersColumns: ColumnDef<
       const shareQty = order.npoolshare;
 
       const accruedRewards =
-        currentSharePrice * (shareQty / 10000) - order.value;
+        currentSharePrice * (shareQty / POOL_SHARE_DECIMALS_SCALE) - order.value;
 
       if (accruedRewards < 100) {
         return <Text className="font-medium">0</Text>;

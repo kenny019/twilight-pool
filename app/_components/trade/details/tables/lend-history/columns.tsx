@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { truncateHash } from '@/lib/helpers';
 import { PoolSharesCell } from "@/components/pool-shares-cell";
 import { Tooltip } from "@/components/tooltip";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 export interface LendHistoryTableMeta {
   getCurrentPrice: () => number;
@@ -105,7 +106,7 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
         return <Text className="font-medium">0.00000000</Text>;
       }
 
-      const shareValue = Big(deposit).div(npoolshare).div(10_000)
+      const shareValue = Big(deposit).div(npoolshare).div(POOL_SHARE_DECIMALS_SCALE)
 
       return (
         <Text className="font-medium">

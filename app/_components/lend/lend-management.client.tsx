@@ -28,6 +28,7 @@ import Link from 'next/link';
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { ZkPrivateAccount } from '@/lib/zk/account';
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const LendManagement = () => {
   const { toast } = useToast();
@@ -294,7 +295,7 @@ const LendManagement = () => {
         );
         const fallbackNpoolshare =
           poolInfo?.pool_share && npoolshare === 0
-            ? Math.round((transferAmount / poolInfo.pool_share) * 10_000)
+            ? Math.round((transferAmount / poolInfo.pool_share) * POOL_SHARE_DECIMALS_SCALE)
             : npoolshare;
 
         const newLendOrder = {

@@ -37,7 +37,7 @@ export function PoolSharesCell({ npoolshare, className }: PoolSharesCellProps) {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-primary-accent transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary-accent transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:ring-2 focus-visible:ring-primary/40"
             aria-label="View exact pool share units"
             aria-expanded={open}
           >

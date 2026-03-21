@@ -43,6 +43,7 @@ import FundingTradeButton from "@/components/fund-trade-button";
 import useGetNyksBalance from "@/lib/hooks/useGetNyksBalance";
 import dayjs from "dayjs";
 import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/columns";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { Tooltip } from "@/components/tooltip";
 
 type TabType = "account-summary" | "transaction-history";
@@ -152,10 +153,9 @@ const Page = () => {
     .reduce((acc, account) => acc + (account.value || 0), 0);
 
   /** All ZK balances: main, subaccounts, lend collateral, etc. (exclusive of on-chain funding). */
-  const totalZkSatsBalance = useMemo(
-    () =>
-      zkAccounts.reduce((acc, account) => acc + (account.value || 0), 0),
-    [zkAccounts]
+  const totalZkSatsBalance = zkAccounts.reduce(
+    (acc, account) => acc + (account.value || 0),
+    0
   );
 
   const zkAccountBTCString = new BTC("sats", Big(zkAccountSatsBalance))
@@ -224,7 +224,7 @@ const Page = () => {
     if (!poolSharePrice) return 0;
     return activeLends.reduce((acc, lend) => {
       const shares = lend.npoolshare || 0;
-      const rewards = poolSharePrice * (shares / 10000) - lend.value;
+      const rewards = poolSharePrice * (shares / POOL_SHARE_DECIMALS_SCALE) - lend.value;
       return acc + Math.max(0, rewards);
     }, 0);
   }, [activeLends, poolSharePrice]);
@@ -865,7 +865,7 @@ const Page = () => {
                   </Text>
                 </Resource>
               </div>
-              <div className="flex flex-row justify-end" aria-hidden />
+              <div />
             </div>
           </div>
         </div>
