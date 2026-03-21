@@ -10,6 +10,7 @@ import { AccountSummaryTableMeta } from "./data-table";
 import { ActiveAccount } from "../page";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { Tooltip } from "@/components/tooltip";
 
 export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   {
@@ -83,7 +84,14 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   },
   {
     accessorKey: "utilized",
-    header: "Utilized",
+    header: () => (
+      <Tooltip
+        title="Allocated"
+        body="Funds currently used in trades and lending"
+      >
+        <span>Allocated</span>
+      </Tooltip>
+    ),
     accessorFn: (row) => (row.utilized ? "Yes" : "No"),
   },
   {

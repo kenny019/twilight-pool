@@ -11,6 +11,8 @@ import { Loader2 } from "lucide-react";
 import cn from "@/lib/cn";
 import { calculateAPR } from "@/lib/helpers";
 import { Tooltip } from "@/components/tooltip";
+import { PoolSharesCell } from "@/components/pool-shares-cell";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const MIN_HOLDING_SECONDS = 3600; // 1 hour - don't annualize before this
 
@@ -53,7 +55,7 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "npoolshare",
-    header: "No of Shares",
+    header: "Shares",
     cell: (row) => {
       const order = row.row.original;
 
@@ -61,11 +63,9 @@ export const lendOrdersColumns: ColumnDef<
         return <Text className="font-medium">-</Text>;
       }
 
-      const shares = order.npoolshare / 10_000;
-
       return (
         <Text className="font-medium">
-          {shares.toLocaleString() || "0"} shares
+          <PoolSharesCell npoolshare={order.npoolshare} />
         </Text>
       );
     },
@@ -75,9 +75,9 @@ export const lendOrdersColumns: ColumnDef<
     header: () => (
       <Tooltip
         title="Entry Share NAV"
-        body="Implied Share NAV at the time you deposited, computed from your deposit amount and the pool shares you received."
+        body="Implied Share NAV at the time of deposit"
       >
-        <span>Entry Share NAV</span>
+        <span>NAV</span>
       </Tooltip>
     ),
     cell: (row) => {
@@ -89,7 +89,7 @@ export const lendOrdersColumns: ColumnDef<
       }
 
       const entryShareNavSats = Math.round(
-        Big(deposit).mul(10_000).div(npoolshare).toNumber()
+        Big(deposit).mul(POOL_SHARE_DECIMALS_SCALE).div(npoolshare).toNumber()
       );
 
       return (
@@ -101,7 +101,7 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "apy",
-    header: "Ann. Returns",
+    header: "Ann. Ret.",
     cell: (row) => {
       const order = row.row.original;
       const meta = row.table.options.meta as LendOrdersTableMeta;
@@ -114,7 +114,7 @@ export const lendOrdersColumns: ColumnDef<
       const orderTimestampMs = dayjs(order.timestamp).valueOf();
 
       const rewards =
-        currentSharePrice * (order.npoolshare / 10000) - order.value;
+        currentSharePrice * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
       const timeElapsedSeconds = (Date.now() - orderTimestampMs) / 1000;
 
       const apr =
@@ -144,7 +144,7 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "accrued_rewards",
-    header: "U.Rewards (BTC)",
+    header: "PnL (BTC)",
     cell: (row) => {
       const order = row.row.original;
       const meta = row.table.options.meta as LendOrdersTableMeta;
@@ -158,7 +158,7 @@ export const lendOrdersColumns: ColumnDef<
       const shareQty = order.npoolshare;
 
       const accruedRewards =
-        currentSharePrice * (shareQty / 10000) - order.value;
+        currentSharePrice * (shareQty / POOL_SHARE_DECIMALS_SCALE) - order.value;
 
       if (accruedRewards < 100) {
         return <Text className="font-medium">0</Text>;

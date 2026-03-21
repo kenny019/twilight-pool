@@ -13,6 +13,7 @@ import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import dayjs from "dayjs";
 import React, { useMemo } from "react";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const MyInvestment = () => {
   const lendOrders = useTwilightStore((state) => state.lend.lends);
@@ -51,7 +52,7 @@ const MyInvestment = () => {
         if (!order.npoolshare || !order.value) continue;
 
         const rewards =
-          poolShareValue * (order.npoolshare / 10000) - order.value;
+          poolShareValue * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
         if (rewards >= 100 || rewards < 0) {
           pendingRewardsSats += rewards;
         } else if (rewards > 0) {

@@ -28,6 +28,7 @@ import Link from 'next/link';
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { ZkPrivateAccount } from '@/lib/zk/account';
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const LendManagement = () => {
   const { toast } = useToast();
@@ -43,7 +44,7 @@ const LendManagement = () => {
   const lendOrders = useTwilightStore((state) => state.lend.lends);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
 
-  const [approxPoolShare, setApproxPoolShare] = useState<string>("0.00000000");
+  const [approxPoolShare, setApproxPoolShare] = useState<string>("0.00");
 
   const addLendOrder = useTwilightStore((state) => state.lend.addLend);
   const addLendHistory = useTwilightStore((state) => state.lend.addLendHistory);
@@ -294,7 +295,7 @@ const LendManagement = () => {
         );
         const fallbackNpoolshare =
           poolInfo?.pool_share && npoolshare === 0
-            ? Math.round((transferAmount / poolInfo.pool_share) * 10_000)
+            ? Math.round((transferAmount / poolInfo.pool_share) * POOL_SHARE_DECIMALS_SCALE)
             : npoolshare;
 
         const newLendOrder = {
@@ -328,10 +329,11 @@ const LendManagement = () => {
           type: "Memo",
         });
 
-        // Reset form
+        // Reset form and approx pool share (was only clearing input before)
         if (depositRef.current) {
           depositRef.current.value = "";
         }
+        setApproxPoolShare("0.00");
 
       } else {
         toast({
@@ -363,13 +365,22 @@ const LendManagement = () => {
     .convert("BTC"), "BTC")
 
   const calculateApproxPoolShare = useCallback((value: string) => {
-    const amount = Big(value || 0).toNumber()
-    const sats = new BTC(depositDenom as BTCDenoms, Big(amount)).convert("sats").toNumber()
+    const amount = Big(value || 0).toNumber();
+    const sats = new BTC(depositDenom as BTCDenoms, Big(amount))
+      .convert("sats")
+      .toNumber();
 
-    const poolShare = (sats / (poolInfo?.pool_share || 0));
+    const sharePrice = poolInfo?.pool_share;
+    if (!sharePrice || sharePrice <= 0) {
+      setApproxPoolShare("0.00");
+      return;
+    }
 
-    setApproxPoolShare(poolShare.toFixed(2))
-  }, [depositDenom, poolInfo?.pool_share])
+    const poolShare = sats / sharePrice;
+    setApproxPoolShare(
+      Number.isFinite(poolShare) ? poolShare.toFixed(2) : "0.00"
+    );
+  }, [depositDenom, poolInfo?.pool_share]);
 
   function renderDepositForm() {
     return (
