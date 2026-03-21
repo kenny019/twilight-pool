@@ -31,7 +31,9 @@ const ConnectWallet = () => {
         <Button
           onClick={async (e) => {
             e.preventDefault();
-            await mainWallet?.disconnect();
+            await mainWallet?.disconnect(false, {
+              walletconnect: { removeAllPairings: true },
+            });
           }}
           size="small"
           className="w-[180px]"
