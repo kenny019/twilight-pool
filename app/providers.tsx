@@ -25,6 +25,7 @@ import { TwilightStoreProvider } from "@/lib/providers/store";
 import { SessionStoreProvider } from "@/lib/providers/session";
 import { DialogProvider } from "@/lib/providers/limit-dialogs";
 import LeaderboardOptInDialog from "@/app/_components/layout/leaderboard-opt-in-dialog.client";
+import { patchKeplrWallets } from "@/lib/wallets/keplr";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -37,22 +38,22 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const wallets = [
+    ...patchKeplrWallets(keplr as unknown as MainWalletBase[]),
+    ...cosmos,
+    ...leap,
+    ...leapMetamaskCosmosSnap,
+    ...cosmostationMobile,
+    ...leapMobile,
+  ] as unknown as MainWalletBase[];
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" attribute="class">
         <ChainProvider
           chains={[twilightTestnet]}
           assetLists={[twilightTestnetAssets]}
-          wallets={
-            [
-              ...keplr,
-              ...cosmos,
-              ...leap,
-              ...leapMetamaskCosmosSnap,
-              ...cosmostationMobile,
-              ...leapMobile,
-            ] as unknown as MainWalletBase[]
-          }
+          wallets={wallets}
           endpointOptions={{
             endpoints: {
               nyks: {
