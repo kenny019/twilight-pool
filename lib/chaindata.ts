@@ -4,6 +4,14 @@ import { SignerOptions } from "@cosmos-kit/core";
 import { GasPrice, SigningStargateClientOptions } from "@cosmjs/stargate";
 import { TWILIGHT_NETWORK_TYPE } from "./constants";
 
+const DEFAULT_APP_URL = "https://twilight-pool.vercel.app";
+const DEFAULT_EXPLORER_URL = "https://explorer.twilight.rest";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL;
+const EXPLORER_URL =
+  process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL ||
+  process.env.NEXT_PUBLIC_EXPLORER_URL ||
+  DEFAULT_EXPLORER_URL;
+
 export const twilightTestnet: Chain = {
   chain_name: "nyks",
   chain_type: "cosmos",
@@ -32,9 +40,9 @@ export const twilightTestnet: Chain = {
   explorers: [
     {
       kind: "blockExplorer",
-      url: process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL as string,
-      tx_page: `${process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL}/txs/%7BtxHash%7D`,
-      account_page: `${process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL}/account/%7BaccountAddress%7D`,
+      url: EXPLORER_URL,
+      tx_page: `${EXPLORER_URL}/txs/%7BtxHash%7D`,
+      account_page: `${EXPLORER_URL}/account/%7BaccountAddress%7D`,
     },
   ],
   bech32_config: {
@@ -87,8 +95,8 @@ export const twilightTestnetAssets: AssetList = {
       display: "nyks",
       symbol: "NYKS",
       logo_URIs: {
-        svg: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.svg`,
-        png: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.png`,
+        svg: `${APP_URL}/images/twilight.svg`,
+        png: `${APP_URL}/images/twilight.png`,
       },
     },
     {
@@ -107,8 +115,8 @@ export const twilightTestnetAssets: AssetList = {
       display: "sats",
       symbol: "SATS",
       logo_URIs: {
-        svg: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.svg`,
-        png: `${process.env.NEXT_PUBLIC_APP_URL}/images/twilight.png`,
+        svg: `${APP_URL}/images/twilight.svg`,
+        png: `${APP_URL}/images/twilight.png`,
       },
     },
   ],
