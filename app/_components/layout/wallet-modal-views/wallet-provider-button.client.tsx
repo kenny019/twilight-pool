@@ -1,18 +1,11 @@
 "use client";
 import NextImage from "@/components/next-image";
-import cn from "@/lib/cn";
 import { useTwilight } from "@/lib/providers/twilight";
 import { useChainWallet } from "@cosmos-kit/react-lite";
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { useWalletDialog } from "../connect-wallet.client";
 import { useToast } from "@/lib/hooks/useToast";
-
-declare global {
-  interface Window {
-    okxwallet?: unknown;
-  }
-}
+import { ChevronRight, Loader2 } from "lucide-react";
 
 type Wallet = {
   id: string;
@@ -25,16 +18,14 @@ type Props = {
   className?: string;
 };
 
-const WalletProviderButton = ({ wallet, className }: Props) => {
+const WalletProviderButton = ({ wallet }: Props) => {
   const { chainWallet } = useChainWallet("nyks", wallet.id);
-
-  const router = useRouter();
   const { hasInit, setHasInit } = useTwilight();
   const { setOpen } = useWalletDialog();
-
   const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const isMobileWallet = wallet.id === "keplr-mobile";
+  const isMobileWallet = wallet.id.endsWith("-mobile");
 
   async function connectWallet(
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
@@ -55,71 +46,57 @@ const WalletProviderButton = ({ wallet, className }: Props) => {
       });
     }
 
-    if (wallet.name === "Metamask" && typeof window !== "undefined" && window.okxwallet) {
+    setIsConnecting(true);
+    try {
+      await chainWallet.connect(true);
+
+      if (!chainWallet.address) {
+        toast({
+          title: `${wallet.name} not found`,
+          description: `Please install the ${wallet.name} extension and try again.`,
+          variant: "error",
+        });
+        return;
+      }
+    } catch (err) {
+      console.error(`Failed to connect ${wallet.name}:`, err);
       toast({
-        title: "OKX wallet is currently not supported",
-        description: `Please disable the OKX wallet extension before connecting, currently only the Leap Metamask Cosmos Snap is supported.`,
+        title: "Connection failed",
+        description: `Could not connect to ${wallet.name}. Please try again.`,
         variant: "error",
       });
       return;
+    } finally {
+      setIsConnecting(false);
     }
-
-    await chainWallet.connect(true);
-
-    const depositAddress = chainWallet.address || "";
-
-    if (!depositAddress) {
-      if (isMobileWallet) {
-        toast({
-          title: "Connection failed",
-          description: "Could not connect to Keplr Mobile. Please try again.",
-          variant: "error",
-        });
-        return;
-      }
-
-      if (wallet.name === "Metamask") {
-        toast({
-          title: "Metamask Cosmos Snap is not installed",
-          description: `Please install the Leap Metamask Cosmos Snap before connecting, currently there is a known conflict with the OKX wallet extension`,
-          variant: "error",
-        });
-
-        return;
-      }
-
-      toast({
-        title: "Error getting wallet",
-        description: `Please install ${wallet.name} before connecting!`,
-        variant: "error",
-      });
-      return
-    }
-
-    // const { success } = await getBTCDepositAddress(depositAddress);
 
     setOpen(false);
-
-    // if (!success) {
-    //   router.push("/registration");
-    // }
   }
 
   return (
-    <div className={cn("flex cursor-pointer flex-col border p-1", className)}>
-      <button
-        className="flex h-full flex-col items-center justify-center rounded-lg py-2 transition-colors duration-300 hover:bg-primary hover:text-background"
-        onClick={connectWallet}
-      >
+    <button
+      className="group flex w-full items-center gap-3 rounded-lg border border-outline/50 px-3 py-2.5 transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.04] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
+      onClick={connectWallet}
+      disabled={isConnecting}
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/[0.06]">
         <NextImage
           alt={`${wallet.name} logo`}
           src={wallet.src}
-          width={48}
-          height={48}
+          width={24}
+          height={24}
+          className="rounded-sm"
         />
-        <p className="select-none text-2xl font-semibold">{wallet.name}</p>
-      </button>
-    </div>
+      </div>
+
+      <span className="flex-1 text-left text-sm font-medium">{wallet.name}</span>
+
+      {isConnecting ? (
+        <Loader2 className="h-4 w-4 animate-spin text-primary-accent" />
+      ) : (
+        <ChevronRight className="h-4 w-4 text-primary-accent/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-primary-accent" />
+      )}
+    </button>
   );
 };
 

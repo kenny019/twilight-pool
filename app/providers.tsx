@@ -6,6 +6,8 @@ import { wallets as keplr } from "@cosmos-kit/keplr";
 import { wallets as cosmos } from "@cosmos-kit/cosmostation-extension";
 import { wallets as leap } from "@cosmos-kit/leap-extension";
 import { wallets as leapMetamaskCosmosSnap } from "@cosmos-kit/leap-metamask-cosmos-snap";
+import { wallets as cosmostationMobile } from "@cosmos-kit/cosmostation-mobile";
+import { wallets as leapMobile } from "@cosmos-kit/leap-mobile";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import React from "react";
@@ -47,6 +49,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               ...cosmos,
               ...leap,
               ...leapMetamaskCosmosSnap,
+              ...cosmostationMobile,
+              ...leapMobile,
             ] as unknown as MainWalletBase[]
           }
           endpointOptions={{
