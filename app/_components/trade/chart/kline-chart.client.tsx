@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as klinecharts from "klinecharts";
-import type { Chart, Period } from "klinecharts";
+import type { Chart, Period, AxisCreateRangeParams } from "klinecharts";
 import { useGrid } from "@/lib/providers/grid";
 import { useTheme } from "next-themes";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -79,6 +79,18 @@ const KLineChart = () => {
     const chart = init(containerRef.current, {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       styles: getThemeStyles(theme, isMobile),
+      formatter: {
+        formatDate: ({
+          timestamp,
+          type,
+        }: {
+          timestamp: number;
+          type: string;
+        }) => {
+          const d = dayjs(timestamp);
+          return d.format("YYYY-MM-DD HH:mm");
+        },
+      },
     });
 
     if (!chart) return;
@@ -172,8 +184,64 @@ const KLineChart = () => {
     });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[timeInterval]);
 
-    // Volume sub-pane
-    chart.createIndicator("VOL", false, { height: 80 });
+    // Render Y-axis labels inside the chart area so candles use the full width.
+    // On mobile, also disable Y-axis scroll/zoom and clamp range to ±10% of
+    // visible data to prevent swipe gestures pulling the axis to volume values.
+    chart.setPaneOptions({
+      id: "candle_pane",
+      axis: {
+        inside: true,
+        ...(isMobile && {
+          scrollZoomEnabled: false,
+          createRange: ({ chart: c, defaultRange }: AxisCreateRangeParams) => {
+            const dataList = c.getDataList();
+            const visible = c.getVisibleRange();
+            if (dataList.length === 0) return defaultRange;
+
+            const start = Math.max(0, visible.from);
+            const end = Math.min(dataList.length - 1, visible.to);
+
+            let minLow = Infinity;
+            let maxHigh = -Infinity;
+            for (let i = start; i <= end; i++) {
+              const d = dataList[i];
+              if (d.low < minLow) minLow = d.low;
+              if (d.high > maxHigh) maxHigh = d.high;
+            }
+            if (minLow === Infinity) return defaultRange;
+
+            const padding = (maxHigh - minLow) * 0.1;
+            const clampedFrom = minLow - padding;
+            const clampedTo = maxHigh + padding;
+
+            const from = Math.max(defaultRange.from, clampedFrom);
+            const to = Math.min(defaultRange.to, clampedTo);
+            const range = to - from;
+
+            return {
+              from,
+              to,
+              range,
+              realFrom: from,
+              realTo: to,
+              realRange: range,
+              displayFrom: from,
+              displayTo: to,
+              displayRange: range,
+            } as any;
+          },
+        }),
+      },
+    });
+
+    // Volume sub-pane — inside axis + disable Y-axis drag on mobile
+    chart.createIndicator("VOL", false, {
+      height: 80,
+      axis: {
+        inside: true,
+        ...(isMobile && { scrollZoomEnabled: false }),
+      },
+    });
     chart.overrideIndicator({
       name: "VOL",
       calcParams: [],
@@ -211,8 +279,8 @@ const KLineChart = () => {
   );
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex h-[40px] w-full border-b bg-background/40">
+    <div className="flex h-full w-full touch-none flex-col overflow-hidden">
+      <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40">
         {TIME_INTERVALS.map((item) => (
           <button
             className={cn(
@@ -228,10 +296,9 @@ const KLineChart = () => {
       </div>
       <div
         ref={containerRef}
-        className="relative"
+        className="relative min-h-0 flex-1 touch-none"
         style={{
           width: width > 0 ? width - 20 : "100%",
-          height: height > 0 ? height - 120 : "100%",
         }}
       />
     </div>
