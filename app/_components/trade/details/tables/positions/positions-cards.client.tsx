@@ -83,7 +83,7 @@ const PositionsCards = React.memo(function PositionsCards({
       <div
         className="relative w-full overscroll-none px-3 py-2 max-md:px-4 max-md:py-3"
       >
-        <div className="grid grid-cols-1 gap-3 max-md:gap-3.5">
+        <div className="grid grid-cols-1 gap-3 max-md:gap-3.5 xl:grid-cols-2">
           {sorted.length === 0 ? (
             <div className="py-10 text-center text-sm text-primary-accent">
               No results.
@@ -168,8 +168,73 @@ const PositionsCards = React.memo(function PositionsCards({
                   />
 
                   <div className="px-3 py-2.5 pl-[14px] max-md:px-3 max-md:py-3">
-                    {/* Header: side badge + timestamp */}
-                    <div className="mb-2 flex items-center justify-between">
+                    {/* ── Desktop header: badges left, PnL right ── */}
+                    <div className="mb-3 hidden items-center justify-between md:flex">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-xs font-semibold",
+                            sideClass
+                          )}
+                        >
+                          {trade.positionType}
+                        </span>
+                        <span className="rounded bg-primary/8 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-primary/70">
+                          {levLabel}
+                        </span>
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
+                        <span className="text-[11px] tabular-nums text-primary/45">
+                          {dayjs(trade.date).format("DD MMM HH:mm:ss")}
+                        </span>
+                      </div>
+                      {hasPnl && (
+                        <PnlCell
+                          pnlSats={calculatedUnrealizedPnl}
+                          btcPriceUsd={btcPriceUsd}
+                          className="text-sm font-semibold"
+                          layout="responsive"
+                        />
+                      )}
+                    </div>
+
+                    {/* ── Desktop stats grid ── */}
+                    <div className="mb-3 hidden grid-cols-4 gap-x-4 md:grid">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Entry
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums text-primary">
+                          {entryLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Mark
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums text-primary">
+                          {markLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Notional
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums text-primary">
+                          {notionalLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Liquidation
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums text-primary">
+                          {liqLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ── Mobile header ── */}
+                    <div className="mb-2 flex items-center justify-between md:hidden">
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
@@ -181,42 +246,12 @@ const PositionsCards = React.memo(function PositionsCards({
                         </span>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
                       </div>
-                      <span className="text-primary/55 text-[11px] tabular-nums">
+                      <span className="text-[11px] tabular-nums text-primary/55">
                         {dayjs(trade.date).format("DD MMM HH:mm:ss")}
                       </span>
                     </div>
 
-                    {/* Entry / Mark / PnL — mobile: 3-column grid; desktop: inline row */}
-                    <div className="mb-3 hidden md:flex md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-                        <span className="text-gray-500 text-[10px] uppercase tracking-wide">
-                          Entry
-                        </span>
-                        <span className="text-base font-semibold tabular-nums text-primary">
-                          {entryLabel}
-                        </span>
-                        <span className="text-xs text-primary/30">→</span>
-                        <span className="text-gray-500 text-[10px] uppercase tracking-wide">
-                          Mark
-                        </span>
-                        <span className="text-base font-semibold tabular-nums text-primary">
-                          {markLabel}
-                        </span>
-                      </div>
-                      {hasPnl && (
-                        <div className="flex items-center gap-x-2 border-l border-border/50 pl-6">
-                          <span className="text-gray-500 text-[10px] uppercase tracking-wide">
-                            PnL
-                          </span>
-                          <PnlCell
-                            pnlSats={calculatedUnrealizedPnl}
-                            btcPriceUsd={btcPriceUsd}
-                            className="font-semibold md:text-sm"
-                            layout="responsive"
-                          />
-                        </div>
-                      )}
-                    </div>
+                    {/* ── Mobile: Entry / Mark / PnL ── */}
                     <div className="mb-3 grid grid-cols-3 gap-y-1 md:hidden">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[10px] uppercase tracking-wide text-gray-500">
@@ -249,7 +284,7 @@ const PositionsCards = React.memo(function PositionsCards({
                       )}
                     </div>
 
-                    {/* Risk stats — mobile: 2×2 grid; desktop: inline with bullets */}
+                    {/* ── Mobile: risk stats 2×2 ── */}
                     <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 md:hidden">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[10px] uppercase tracking-wide text-gray-500">
@@ -288,41 +323,8 @@ const PositionsCards = React.memo(function PositionsCards({
                         </span>
                       </div>
                     </div>
-                    <div className="mb-4 hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-xs md:flex">
-                      <span className="text-gray-500 font-medium">
-                        Notional
-                      </span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        {notionalLabel}
-                      </span>
-                      <span className="text-primary/25">•</span>
-                      <span className="text-gray-500 font-medium">
-                        Exposure
-                      </span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        {formatSatsCompact(
-                          Math.round(
-                            positionValue.mul(100_000_000).toNumber()
-                          )
-                        )}
-                      </span>
-                      <span className="text-primary/25">•</span>
-                      <span className="text-gray-500 font-medium">
-                        Leverage
-                      </span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        {levLabel}
-                      </span>
-                      <span className="text-primary/25">•</span>
-                      <span className="text-gray-500 font-medium">
-                        Liquidation
-                      </span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        {liqLabel}
-                      </span>
-                    </div>
 
-                    {/* Anchor pills — full width on mobile */}
+                    {/* Anchor pills */}
                     {hasAnchors && (
                       <div className="mb-3 flex flex-wrap gap-1.5">
                         {slPrice && (
@@ -343,92 +345,92 @@ const PositionsCards = React.memo(function PositionsCards({
                       </div>
                     )}
 
-                    {/* Close actions — mobile: full-width buttons; desktop: row */}
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-2">
-                      <Button
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          await settleMarketOrder(trade, getCurrentPrice());
-                        }}
-                        variant="ui"
-                        size="small"
-                        disabled={isSettling}
-                        title="Close at market price"
-                        className="h-8 border-theme/40 px-3 text-xs font-semibold transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:w-full max-md:border-theme/50 max-md:text-[13px]"
-                      >
-                        {isSettling ? "Closing..." : "Close Market"}
-                      </Button>
-                      <div className="grid grid-cols-2 gap-2 md:contents">
+                    {/* Actions */}
+                    <div className="border-t border-border/40 pt-2">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-2">
                         <Button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.preventDefault();
-                            openConditionalDialog(
-                              trade.accountAddress,
-                              "limit"
-                            );
+                            await settleMarketOrder(trade, getCurrentPrice());
                           }}
                           variant="ui"
                           size="small"
                           disabled={isSettling}
-                          title={
-                            limitPrice
-                              ? "Update Limit"
-                              : "Close with limit order"
-                          }
-                          className={cn(
-                            "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:text-[13px]",
-                            limitPrice
-                              ? "border-yellow-400/40 text-yellow-400"
-                              : ""
-                          )}
+                          title="Close at market price"
+                          className="h-7 border-theme/40 px-2.5 text-[11px] font-semibold transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:w-full max-md:border-theme/50 max-md:text-[13px]"
                         >
-                          {limitPrice ? "Update Limit" : "Close Limit"}
+                          {isSettling ? "Closing..." : "Close Market"}
                         </Button>
-                        <Button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openConditionalDialog(
-                              trade.accountAddress,
-                              "sltp"
-                            );
-                          }}
-                          variant="ui"
-                          size="small"
-                          disabled={isSettling}
-                          title={
-                            slPrice || tpPrice
-                              ? "Update SL/TP"
-                              : "Set Stop Loss / Take Profit"
-                          }
-                          className={cn(
-                            "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:text-[13px]",
-                            slPrice || tpPrice
-                              ? "border-theme/40 text-theme"
-                              : ""
-                          )}
-                        >
-                          {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
-                        </Button>
-                      </div>
-                      {hasAnchors && (
-                        <div className="max-md:flex max-md:justify-center md:inline">
-                          <RemoveOrdersDropdown
-                            trade={trade}
-                            cancelOrder={cancelOrder}
-                            isCancelling={isCancellingOrder(trade.uuid)}
+                        <div className="grid grid-cols-2 gap-2 md:contents">
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openConditionalDialog(
+                                trade.accountAddress,
+                                "limit"
+                              );
+                            }}
+                            variant="ui"
+                            size="small"
                             disabled={isSettling}
-                            variant="cards"
-                          />
+                            title={
+                              limitPrice
+                                ? "Update Limit"
+                                : "Close with limit order"
+                            }
+                            className={cn(
+                              "h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:text-[13px]",
+                              limitPrice
+                                ? "border-yellow-400/40 text-yellow-400"
+                                : ""
+                            )}
+                          >
+                            {limitPrice ? "Update Limit" : "Close Limit"}
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openConditionalDialog(
+                                trade.accountAddress,
+                                "sltp"
+                              );
+                            }}
+                            variant="ui"
+                            size="small"
+                            disabled={isSettling}
+                            title={
+                              slPrice || tpPrice
+                                ? "Update SL/TP"
+                                : "Set Stop Loss / Take Profit"
+                            }
+                            className={cn(
+                              "h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:text-[13px]",
+                              slPrice || tpPrice
+                                ? "border-theme/40 text-theme"
+                                : ""
+                            )}
+                          >
+                            {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
+                          </Button>
                         </div>
-                      )}
-                    </div>
+                        {hasAnchors && (
+                          <div className="max-md:flex max-md:justify-center md:inline">
+                            <RemoveOrdersDropdown
+                              trade={trade}
+                              cancelOrder={cancelOrder}
+                              isCancelling={isCancellingOrder(trade.uuid)}
+                              disabled={isSettling}
+                              variant="cards"
+                            />
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Row 3 — Details */}
-                    <div className="border-border/30 border-t pt-1 max-md:pt-2">
+                      {/* Expandable details */}
                       <button
                         type="button"
                         onClick={() => toggleExpand(trade.uuid)}
-                        className="flex min-h-[44px] w-full items-center justify-between rounded-md px-0.5 py-2 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[48px] md:min-h-0 md:py-0.5"
+                        className="mt-1 flex min-h-[44px] w-full items-center justify-between rounded-md px-0.5 py-1.5 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[48px] md:min-h-0 md:py-0.5"
                       >
                         <span>Details</span>
                         {isExpanded ? (
@@ -439,62 +441,76 @@ const PositionsCards = React.memo(function PositionsCards({
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 shrink-0 text-[10px] uppercase tracking-wide">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 pb-1 text-[11px] md:grid-cols-3">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Pos. Value
                             </span>
-                            <span className="font-medium">
+                            <span className="font-medium tabular-nums">
                               {formatSatsCompact(Math.round(positionValue.mul(100_000_000).toNumber()))}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 shrink-0 text-[10px] uppercase tracking-wide">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Avail. Margin
                             </span>
-                            <span className="font-medium">{availLabel}</span>
+                            <span className="font-medium tabular-nums">{availLabel}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 shrink-0 text-[10px] uppercase tracking-wide">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Maint. Margin
                             </span>
-                            <span className="font-medium">{maintLabel}</span>
+                            <span className="font-medium tabular-nums">{maintLabel}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 shrink-0 text-[10px] uppercase tracking-wide">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Fee
                             </span>
-                            <span className="font-medium">
+                            <span className="font-medium tabular-nums">
                               {formatSatsCompact(trade.feeFilled)}
                             </span>
                           </div>
-                          <div className="col-span-2 flex items-center gap-2">
-                            <span className="text-gray-500 shrink-0 text-[10px] uppercase tracking-wide">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Funding
                             </span>
-                            <span
-                              className={cn(
-                                "font-medium",
-                                funding > 0
-                                  ? "text-green-medium"
-                                  : funding < 0
-                                    ? "text-red"
-                                    : ""
-                              )}
-                            >
-                              {formatSatsCompact(funding)}
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "font-medium tabular-nums",
+                                  funding > 0
+                                    ? "text-green-medium"
+                                    : funding < 0
+                                      ? "text-red"
+                                      : ""
+                                )}
+                              >
+                                {formatSatsCompact(funding)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openFundingDialog(trade);
+                                }}
+                                className="rounded p-0.5 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
+                                aria-label="View funding history"
+                              >
+                                <Info className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                              Exposure
                             </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openFundingDialog(trade);
-                              }}
-                              className="rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
-                              aria-label="View funding history"
-                            >
-                              <Info className="h-3 w-3" />
-                            </button>
+                            <span className="font-medium tabular-nums">
+                              {formatSatsCompact(
+                                Math.round(
+                                  positionValue.mul(100_000_000).toNumber()
+                                )
+                              )}
+                            </span>
                           </div>
                         </div>
                       )}
