@@ -19,9 +19,16 @@ type PnlCellProps = {
   pnlSats: number | null | undefined;
   btcPriceUsd: number;
   className?: string;
+  /** stacked = table default; inline = one line BTC + ( ~USD); responsive = mobile matches Entry/Mark row + type scale; desktop inline from md */
+  layout?: "stacked" | "inline" | "responsive";
 };
 
-export function PnlCell({ pnlSats, btcPriceUsd, className }: PnlCellProps) {
+export function PnlCell({
+  pnlSats,
+  btcPriceUsd,
+  className,
+  layout = "stacked",
+}: PnlCellProps) {
   if (pnlSats === undefined || pnlSats === null) {
     return <span className={cn("text-xs text-gray-500", className)}>—</span>;
   }
@@ -41,6 +48,70 @@ export function PnlCell({ pnlSats, btcPriceUsd, className }: PnlCellProps) {
     !isPositive && !isNegative && "text-gray-500"
   );
 
+  if (layout === "inline") {
+    return (
+      <span
+        className={cn(
+          "inline-flex min-w-0 flex-wrap items-baseline gap-x-1 leading-tight",
+          toneClass
+        )}
+      >
+        <span className={cn("text-sm font-semibold", toneClass, className)}>
+          {prefix}
+          {btcValue} BTC
+        </span>
+        {usdValue && (
+          <span className={cn("shrink-0 whitespace-nowrap text-xs", toneClass)}>
+            ( ~{usdValue})
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  if (layout === "responsive") {
+    return (
+      <span
+        className={cn(
+          "flex min-w-0 flex-row flex-wrap items-center gap-x-2 leading-tight md:inline-flex md:flex-row md:flex-wrap md:items-center md:gap-x-1.5",
+          toneClass
+        )}
+      >
+        <span
+          className={cn(
+            "min-w-0 shrink text-base font-semibold tabular-nums md:text-sm",
+            toneClass,
+            className
+          )}
+        >
+          {prefix}
+          {btcValue} BTC
+        </span>
+        {usdValue && (
+          <>
+            <span
+              className={cn(
+                "text-base font-semibold tabular-nums md:hidden",
+                toneClass
+              )}
+            >
+              {prefix}
+              {usdValue}
+            </span>
+            <span
+              className={cn(
+                "hidden shrink-0 whitespace-nowrap text-xs tabular-nums md:block",
+                toneClass
+              )}
+            >
+              ( ~{usdValue})
+            </span>
+          </>
+        )}
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex flex-col leading-tight">
       <span className={cn("text-xs font-medium", toneClass, className)}>
@@ -48,7 +119,7 @@ export function PnlCell({ pnlSats, btcPriceUsd, className }: PnlCellProps) {
         {btcValue} BTC
       </span>
       {usdValue && (
-        <span className={cn("text-[10px]", toneClass)}>
+        <span className={cn("text-xs", toneClass)}>
           {prefix}
           {usdValue}
         </span>

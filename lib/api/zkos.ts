@@ -28,7 +28,18 @@ async function queryUtxoForAddress(
     return {};
   }
 
-  return result[0];
+  // Empty array or missing [0] → empty object so callers never get undefined
+  // (avoids Object.hasOwn throwing in hasUtxoData; indexer may lag after a tx).
+  if (!Array.isArray(result) || result.length === 0) {
+    return {};
+  }
+
+  const first = result[0];
+  if (first == null || typeof first !== "object") {
+    return {};
+  }
+
+  return first as UtxoData;
 }
 
 async function queryUtxoForOutput(
