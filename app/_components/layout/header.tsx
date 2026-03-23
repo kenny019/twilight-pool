@@ -120,6 +120,7 @@ const Header = () => {
             {/* <KycStatus /> */}
             <RelayerStatus dotOnly />
             <ConnectWallet />
+            <Settings />
             <MobileNav />
           </div>
         </div>

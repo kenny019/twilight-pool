@@ -77,7 +77,7 @@ const Order = () => {
             </DropdownGroup>
           </DropdownContent>
         </DropdownMenu> */}
-        <div className="absolute bottom-1 right-1 hidden lg:block">
+        <div className="absolute bottom-1 right-1">
           <FundingTradeButton />
         </div>
         </div>
