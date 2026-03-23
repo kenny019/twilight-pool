@@ -100,10 +100,10 @@ const PositionsCards = React.memo(function PositionsCards({
   return (
     <>
       <div
-        className="relative w-full overflow-auto overscroll-none px-3 py-2"
+        className="relative w-full overflow-auto overscroll-none px-3 py-2 max-md:px-4 max-md:py-3"
         style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}
       >
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-3 max-md:gap-3.5">
           {sorted.length === 0 ? (
             <div className="py-10 text-center text-sm text-primary-accent">
               No results.
@@ -146,7 +146,7 @@ const PositionsCards = React.memo(function PositionsCards({
               const markLabel = `$${usdNumberFormatter.format(markPrice)}`;
               const hasPnl = calculatedUnrealizedPnl !== 0;
 
-              // Zone 3: risk row (never wraps)
+              // Zone 3: risk row (flex-wrap on small screens)
               const notionalLabel = `$${usdNumberFormatter.format(
                 Number(
                   new BTC("sats", Big(trade.positionSize))
@@ -180,92 +180,145 @@ const PositionsCards = React.memo(function PositionsCards({
               return (
                 <div
                   key={trade.uuid}
-                  className="border-border/70 hover:border-theme/35 group relative overflow-hidden rounded-xl border bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md"
+                  className="border-border/70 hover:border-theme/35 group relative overflow-hidden rounded-xl border bg-zinc-50/95 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md dark:bg-zinc-900/55"
                 >
                   {/* Left accent bar — direction-coded */}
                   <div
                     className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)}
                   />
 
-                  <div className="px-3 py-2.5 pl-[14px]">
+                  <div className="px-3 py-2.5 pl-[14px] max-md:px-4 max-md:py-4">
                     {/* Main content: left = position + actions, right = time + anchors */}
-                    <div className="mb-2 flex items-start gap-4">
-                      <div className="min-w-0 flex-1">
-                        {/* Row 1 — Position state */}
-                        <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "rounded px-1.5 py-0.5 text-xs font-semibold",
-                                sideClass
-                              )}
-                            >
-                              {trade.positionType}
-                            </span>
-                            <span className="h-1.5 w-1.5 rounded-full bg-green-medium" />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-primary/45 text-[10px] uppercase tracking-wide">
-                              Entry
-                            </span>
-                            <span className="text-base font-semibold text-primary">
-                              {entryLabel}
-                            </span>
-                            <span className="text-xs text-primary/30">→</span>
-                            <span className="text-primary/45 text-[10px] uppercase tracking-wide">
-                              Mark
-                            </span>
-                            <span className="text-base font-semibold text-primary">
-                              {markLabel}
-                            </span>
+                    <div className="mb-2 flex items-start gap-3 max-md:gap-3 md:gap-4">
+                      <div className="flex min-w-0 flex-1 flex-col gap-4">
+                        {/* Quote strip: mobile = framed panel; desktop = md:contents unwraps to single row */}
+                        <div className="md:contents max-md:space-y-3 max-md:rounded-xl max-md:border max-md:border-border/50 max-md:bg-primary/[0.04] max-md:p-3">
+                          {/* Row 1 — Position state: desktop = one row; mobile = stacked */}
+                          <div className="mb-3 flex flex-col gap-2 md:mb-4 md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2">
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span
+                                className={cn(
+                                  "rounded px-1.5 py-0.5 text-xs font-semibold",
+                                  sideClass
+                                )}
+                              >
+                                {trade.positionType}
+                              </span>
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
+                            </div>
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+                              <span className="text-primary/45 text-[10px] uppercase tracking-wide">
+                                Entry
+                              </span>
+                              <span className="text-base font-semibold tabular-nums text-primary">
+                                {entryLabel}
+                              </span>
+                              <span className="text-xs text-primary/30">→</span>
+                              <span className="text-primary/45 text-[10px] uppercase tracking-wide">
+                                Mark
+                              </span>
+                              <span className="text-base font-semibold tabular-nums text-primary">
+                                {markLabel}
+                              </span>
+                            </div>
                             {hasPnl && (
-                              <>
-                                <span className="text-primary/25">·</span>
+                              <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1 md:gap-y-0 md:border-l md:border-border/50 md:pl-6">
+                                <span className="text-primary/45 text-[10px] uppercase tracking-wide">
+                                  PnL
+                                </span>
                                 <PnlCell
                                   pnlSats={calculatedUnrealizedPnl}
                                   btcPriceUsd={btcPriceUsd}
-                                  className="text-sm font-semibold"
+                                  className="font-semibold md:text-sm"
+                                  layout="responsive"
                                 />
-                              </>
+                              </div>
                             )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-primary/45 font-medium">
-                              Notional
-                            </span>
-                            <span className="font-semibold text-primary">
-                              {notionalLabel}
-                            </span>
-                            <span className="text-primary/25">•</span>
-                            <span className="text-primary/45 font-medium">
-                              Exposure
-                            </span>
-                            <span className="font-semibold text-primary">
-                              {formatSatsCompact(
-                                Math.round(
-                                  positionValue.mul(100_000_000).toNumber()
-                                )
-                              )}
-                            </span>
-                            <span className="text-primary/25">•</span>
-                            <span className="text-primary/45 font-medium">
-                              Leverage
-                            </span>
-                            <span className="font-semibold text-primary">
-                              {levLabel}
-                            </span>
-                            <span className="text-primary/25">•</span>
-                            <span className="text-primary/45 font-medium">
-                              Liquidation
-                            </span>
-                            <span className="font-semibold text-primary">
-                              {liqLabel}
-                            </span>
                           </div>
                         </div>
 
-                        {/* Row 2 — Close actions (left) */}
-                        <div className="flex items-center gap-2">
+                        {/* Risk — mobile: 2×2 grid; desktop: inline with bullets */}
+                        <div className="hidden max-md:block">
+                          <div className="border-border/35 mb-4 border-t pt-4">
+                            <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-primary/40">
+                              Position
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                              <div className="flex min-w-0 flex-col gap-1">
+                                <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                                  Notional
+                                </span>
+                                <span className="truncate font-semibold tabular-nums text-sm text-primary">
+                                  {notionalLabel}
+                                </span>
+                              </div>
+                              <div className="flex min-w-0 flex-col gap-1">
+                                <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                                  Exposure
+                                </span>
+                                <span className="truncate font-semibold tabular-nums text-sm text-primary">
+                                  {formatSatsCompact(
+                                    Math.round(
+                                      positionValue.mul(100_000_000).toNumber()
+                                    )
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex min-w-0 flex-col gap-1">
+                                <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                                  Leverage
+                                </span>
+                                <span className="font-semibold tabular-nums text-sm text-primary">
+                                  {levLabel}
+                                </span>
+                              </div>
+                              <div className="flex min-w-0 flex-col gap-1">
+                                <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                                  Liquidation
+                                </span>
+                                <span className="truncate font-semibold tabular-nums text-sm text-primary">
+                                  {liqLabel}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mb-4 hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-xs md:flex">
+                          <span className="text-primary/45 font-medium">
+                            Notional
+                          </span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            {notionalLabel}
+                          </span>
+                          <span className="text-primary/25">•</span>
+                          <span className="text-primary/45 font-medium">
+                            Exposure
+                          </span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            {formatSatsCompact(
+                              Math.round(
+                                positionValue.mul(100_000_000).toNumber()
+                              )
+                            )}
+                          </span>
+                          <span className="text-primary/25">•</span>
+                          <span className="text-primary/45 font-medium">
+                            Leverage
+                          </span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            {levLabel}
+                          </span>
+                          <span className="text-primary/25">•</span>
+                          <span className="text-primary/45 font-medium">
+                            Liquidation
+                          </span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            {liqLabel}
+                          </span>
+                        </div>
+
+                        {/* Close actions — mobile: stacked + larger touch targets; desktop: row */}
+                        <div className="flex flex-col gap-2.5 max-md:pt-1 md:flex-row md:items-center md:gap-2">
                           <Button
                             onClick={async (e) => {
                               e.preventDefault();
@@ -275,68 +328,72 @@ const PositionsCards = React.memo(function PositionsCards({
                             size="small"
                             disabled={isSettling}
                             title="Close at market price"
-                            className="h-8 border-theme/30 px-3 text-xs font-semibold transition-all duration-150 hover:brightness-110"
+                            className="h-8 border-theme/40 px-3 text-xs font-semibold transition-all duration-150 hover:brightness-110 max-md:min-h-11 max-md:w-full max-md:border-theme/50 max-md:text-sm"
                           >
                             {isSettling ? "Closing..." : "Close Market"}
                           </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openConditionalDialog(
-                                trade.accountAddress,
-                                "limit"
-                              );
-                            }}
-                            variant="ui"
-                            size="small"
-                            disabled={isSettling}
-                            title={
-                              limitPrice
-                                ? "Update Limit"
-                                : "Close with limit order"
-                            }
-                            className={cn(
-                              "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
-                              limitPrice
-                                ? "border-yellow-400/40 text-yellow-400"
-                                : ""
-                            )}
-                          >
-                            {limitPrice ? "Update Limit" : "Close Limit"}
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openConditionalDialog(
-                                trade.accountAddress,
-                                "sltp"
-                              );
-                            }}
-                            variant="ui"
-                            size="small"
-                            disabled={isSettling}
-                            title={
-                              slPrice || tpPrice
-                                ? "Update SL/TP"
-                                : "Set Stop Loss / Take Profit"
-                            }
-                            className={cn(
-                              "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110",
-                              slPrice || tpPrice
-                                ? "border-theme/40 text-theme"
-                                : ""
-                            )}
-                          >
-                            {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
-                          </Button>
-                          {hasAnchors && (
-                            <RemoveOrdersDropdown
-                              trade={trade}
-                              cancelOrder={cancelOrder}
-                              isCancelling={isCancellingOrder(trade.uuid)}
+                          <div className="grid grid-cols-2 gap-2 md:contents">
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openConditionalDialog(
+                                  trade.accountAddress,
+                                  "limit"
+                                );
+                              }}
+                              variant="ui"
+                              size="small"
                               disabled={isSettling}
-                              variant="cards"
-                            />
+                              title={
+                                limitPrice
+                                  ? "Update Limit"
+                                  : "Close with limit order"
+                              }
+                              className={cn(
+                                "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110 max-md:min-h-11 max-md:text-sm",
+                                limitPrice
+                                  ? "border-yellow-400/40 text-yellow-400"
+                                  : ""
+                              )}
+                            >
+                              {limitPrice ? "Update Limit" : "Close Limit"}
+                            </Button>
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openConditionalDialog(
+                                  trade.accountAddress,
+                                  "sltp"
+                                );
+                              }}
+                              variant="ui"
+                              size="small"
+                              disabled={isSettling}
+                              title={
+                                slPrice || tpPrice
+                                  ? "Update SL/TP"
+                                  : "Set Stop Loss / Take Profit"
+                              }
+                              className={cn(
+                                "h-8 px-3 text-xs transition-all duration-150 hover:brightness-110 max-md:min-h-11 max-md:text-sm",
+                                slPrice || tpPrice
+                                  ? "border-theme/40 text-theme"
+                                  : ""
+                              )}
+                            >
+                              {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
+                            </Button>
+                          </div>
+                          {hasAnchors && (
+                            <div className="max-md:flex max-md:justify-center md:inline">
+                              <RemoveOrdersDropdown
+                                trade={trade}
+                                cancelOrder={cancelOrder}
+                                isCancelling={isCancellingOrder(trade.uuid)}
+                                disabled={isSettling}
+                                variant="cards"
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -369,11 +426,11 @@ const PositionsCards = React.memo(function PositionsCards({
                     </div>
 
                     {/* Row 3 — Details */}
-                    <div className="border-border/30 border-t pt-1">
+                    <div className="border-border/30 border-t pt-1 max-md:pt-2">
                       <button
                         type="button"
                         onClick={() => toggleExpand(trade.uuid)}
-                        className="flex w-full items-center justify-between rounded py-0.5 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60"
+                        className="flex min-h-[44px] w-full items-center justify-between rounded-md px-0.5 py-2 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[48px] md:min-h-0 md:py-0.5"
                       >
                         <span>Details</span>
                         {isExpanded ? (

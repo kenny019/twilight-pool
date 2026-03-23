@@ -45,13 +45,20 @@ export async function waitForUtxoUpdate(
   const minWaitDeadline = Date.now() + minWaitMs;
 
   while (Date.now() < deadline) {
-    const result = await queryUtxoForAddress(address);
+    try {
+      const result = await queryUtxoForAddress(address);
 
-    if (hasUtxoData(result)) {
-      const currentTxid = serializeTxid(result.txid);
-      if (currentTxid !== previousTxid && Date.now() >= minWaitDeadline) {
-        return { success: true };
+      if (hasUtxoData(result)) {
+        const currentTxid = serializeTxid(result.txid);
+        if (currentTxid !== previousTxid && Date.now() >= minWaitDeadline) {
+          return { success: true };
+        }
       }
+    } catch (err) {
+      console.warn(
+        "[waitForUtxoUpdate] queryUtxoForAddress failed, will retry:",
+        err
+      );
     }
 
     await sleep(pollIntervalMs);
@@ -75,10 +82,14 @@ export function serializeTxid(txid: number[]): string {
 /**
  * Type-guard: checks whether a queryUtxoForAddress result contains real
  * UtxoData (vs the empty Record<string, never> returned on failure).
+ * Safe for null/undefined (e.g. legacy callers or malformed API responses).
  */
 export function hasUtxoData(
-  result: Record<string, never> | UtxoData
+  result: Record<string, never> | UtxoData | null | undefined
 ): result is UtxoData {
+  if (result == null || typeof result !== "object") {
+    return false;
+  }
   return Object.hasOwn(result, "txid");
 }
 
