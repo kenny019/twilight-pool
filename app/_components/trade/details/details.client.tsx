@@ -487,7 +487,7 @@ const DetailsPanel = () => {
           </button>
         )}
       </div>
-      <div className="">
+      <div className="min-h-0 flex-1 overflow-auto" style={{ scrollbarWidth: "none" }}>
         {currentTab === "positions" && (
           currentView === "table" ? (
             <PositionsTable

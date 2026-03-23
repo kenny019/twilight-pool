@@ -14,7 +14,7 @@ import Big from "big.js";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 interface OrderHistoryCardsProps {
   data: TradeOrder[];
@@ -32,7 +32,6 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
   const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [maxHeight, setMaxHeight] = useState<number>(0);
 
   const openFundingDialog = useCallback((trade: TradeOrder) => {
     setFundingDialogTrade(trade);
@@ -48,22 +47,6 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
     });
   }, []);
 
-  useEffect(() => {
-    const detailsElement = document.querySelector("#details");
-    if (!detailsElement) return;
-    const updateHeight = () => setMaxHeight(detailsElement.clientHeight - 69);
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => updateHeight());
-    resizeObserver.observe(detailsElement);
-    window.addEventListener("resize", updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, []);
-
   const sorted = useMemo(
     () => [...data].sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf()),
     [data]
@@ -72,8 +55,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
   return (
     <>
       <div
-        className="relative w-full overflow-auto overscroll-none px-3 py-2"
-        style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}
+        className="relative w-full overscroll-none px-3 py-2"
       >
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
           {sorted.length === 0 ? (

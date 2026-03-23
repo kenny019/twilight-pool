@@ -9,7 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { OrderHistoryTableMeta } from "./columns";
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -54,37 +54,8 @@ export function OrderHistoryDataTable<TData, TValue>({
     meta: tableMeta, // Pass the meta data to the table
   });
 
-  const [maxHeight, setMaxHeight] = useState<number>(0);
-
-  useEffect(() => {
-    const detailsElement = document.querySelector("#details");
-    if (!detailsElement) return;
-
-    const updateHeight = () => {
-      setMaxHeight(detailsElement.clientHeight - 69);
-    };
-
-    // Initial height calculation
-    updateHeight();
-
-    // Use ResizeObserver to watch for changes to the details element
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeight();
-    });
-
-    resizeObserver.observe(detailsElement);
-
-    // Also listen to window resize for responsive layout changes
-    window.addEventListener('resize', updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updateHeight);
-    };
-  }, []);
-
   return (
-    <div className="px-3 w-full overflow-auto overscroll-none relative" style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}>
+    <div className="px-3 w-full overscroll-none relative">
       <table cellSpacing={0} className="w-full overflow-auto table-auto">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (

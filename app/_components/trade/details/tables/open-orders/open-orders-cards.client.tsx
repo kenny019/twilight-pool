@@ -10,7 +10,7 @@ import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
 import Big from "big.js";
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { OpenOrderRow } from "../../details.client";
 
 interface OpenOrdersCardsProps {
@@ -62,24 +62,6 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
 }: OpenOrdersCardsProps) {
   const { toast } = useToast();
   const { openConditionalDialog } = useLimitDialog();
-  const [maxHeight, setMaxHeight] = useState<number>(0);
-
-  useEffect(() => {
-    const detailsElement = document.querySelector("#details");
-    if (!detailsElement) return;
-
-    const updateHeight = () => setMaxHeight(detailsElement.clientHeight - 69);
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => updateHeight());
-    resizeObserver.observe(detailsElement);
-    window.addEventListener("resize", updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, []);
 
   const sorted = useMemo(
     () => [...data].sort((a, b) => getOpenOrderTimestamp(b) - getOpenOrderTimestamp(a)),
@@ -88,8 +70,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
 
   return (
     <div
-      className="relative w-full overflow-auto overscroll-none px-3 py-2"
-      style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}
+      className="relative w-full overscroll-none px-3 py-2"
     >
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {sorted.length === 0 ? (

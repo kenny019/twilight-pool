@@ -17,7 +17,6 @@ import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import { RemoveOrdersDropdown } from "./remove-orders-dropdown";
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -56,7 +55,6 @@ const PositionsCards = React.memo(function PositionsCards({
     useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [maxHeight, setMaxHeight] = useState<number>(0);
 
   const openFundingDialog = useCallback((trade: TradeOrder) => {
     setFundingDialogTrade(trade);
@@ -72,23 +70,6 @@ const PositionsCards = React.memo(function PositionsCards({
     });
   }, []);
 
-  useEffect(() => {
-    const detailsElement = document.querySelector("#details");
-    if (!detailsElement) return;
-
-    const updateHeight = () => setMaxHeight(detailsElement.clientHeight - 69);
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => updateHeight());
-    resizeObserver.observe(detailsElement);
-    window.addEventListener("resize", updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, []);
-
   const sorted = useMemo(
     () =>
       [...data].sort(
@@ -100,8 +81,7 @@ const PositionsCards = React.memo(function PositionsCards({
   return (
     <>
       <div
-        className="relative w-full overflow-auto overscroll-none px-3 py-2 max-md:px-4 max-md:py-3"
-        style={{ scrollbarWidth: "none", maxHeight: `${maxHeight}px` }}
+        className="relative w-full overscroll-none px-3 py-2 max-md:px-4 max-md:py-3"
       >
         <div className="grid grid-cols-1 gap-3 max-md:gap-3.5">
           {sorted.length === 0 ? (
