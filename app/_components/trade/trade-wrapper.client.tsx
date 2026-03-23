@@ -43,7 +43,7 @@ function makeDesktopLayoutWithoutTrades(detailsH: number) {
 const layoutSmall = [
   { i: "chart", x: 0, y: 0, w: 4, h: 11, minW: 2, minH: 8 },
   { i: "order", x: 0, y: 11, w: 4, h: 15, minW: 2, minH: 12 },
-  { i: "details", x: 0, y: 26, w: 4, h: 15, minW: 4, minH: 4 },
+  { i: "details", x: 0, y: 26, w: 4, h: 20, minW: 4, minH: 4 },
 ];
 
 const TRADES_PANEL_STORAGE_KEY = "twilight-trades-panel-visible";

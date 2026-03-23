@@ -63,8 +63,8 @@ const DetailsPanel = () => {
   >({
     positions: "cards",
     "open-orders": "cards",
-    "trader-history": "table",
-    history: "table",
+    "trader-history": "cards",
+    history: "cards",
   });
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);

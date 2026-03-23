@@ -3,7 +3,7 @@
 import Button from "@/components/button";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatSatsCompact, formatSatsMBtc } from "@/lib/helpers";
+import { formatSatsCompact } from "@/lib/helpers";
 import { usdNumberFormatter } from "@/lib/utils/format";
 import { useSessionStore } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -465,7 +465,7 @@ const PositionsCards = React.memo(function PositionsCards({
                               Pos. Value
                             </span>
                             <span className="font-medium">
-                              {BTC.format(positionValue, "BTC")}
+                              {formatSatsCompact(Math.round(positionValue.mul(100_000_000).toNumber()))}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -485,7 +485,7 @@ const PositionsCards = React.memo(function PositionsCards({
                               Fee
                             </span>
                             <span className="font-medium">
-                              {formatSatsMBtc(trade.feeFilled)}
+                              {formatSatsCompact(trade.feeFilled)}
                             </span>
                           </div>
                           <div className="col-span-2 flex items-center gap-2">
@@ -502,7 +502,7 @@ const PositionsCards = React.memo(function PositionsCards({
                                     : ""
                               )}
                             >
-                              {formatSatsMBtc(funding)}
+                              {formatSatsCompact(funding)}
                             </span>
                             <button
                               type="button"

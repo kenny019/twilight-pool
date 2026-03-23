@@ -2,7 +2,7 @@
 
 import Button from "@/components/button";
 import cn from "@/lib/cn";
-import { capitaliseFirstLetter, truncateHash } from "@/lib/helpers";
+import { capitaliseFirstLetter, formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
 import { useLimitDialog } from "@/lib/providers/limit-dialogs";
 import { usdNumberFormatter } from "@/lib/utils/format";
@@ -138,7 +138,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
             return (
               <div
                 key={`${trade.uuid}_${trade._sltpLeg ?? "base"}`}
-                className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 px-3 py-2.5 pl-[14px] shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-theme/35 hover:shadow-md"
+                className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-theme/35 hover:shadow-md"
               >
                 <div
                   className={cn(
@@ -151,141 +151,205 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                   )}
                 />
 
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "rounded px-1.5 py-0.5 text-[11px] font-semibold",
-                        side === "LONG"
-                          ? "bg-green-medium/10 text-green-medium"
-                          : "bg-red/10 text-red"
-                      )}
-                    >
-                      {side}
-                    </span>
-                    <span
-                      className={cn(
-                        "rounded px-1.5 py-0.5 text-[11px] font-semibold",
-                        pill.className
-                      )}
-                    >
-                      {pill.label}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 text-[11px] text-primary/65">
-                      <span>{timestamp}</span>
+                <div className="px-3 py-2.5 pl-[14px] max-md:px-3 max-md:py-3">
+                  {/* Header: badges + timestamp */}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[11px] font-semibold",
+                          side === "LONG"
+                            ? "bg-green-medium/10 text-green-medium"
+                            : "bg-red/10 text-red"
+                        )}
+                      >
+                        {side}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[11px] font-semibold",
+                          pill.className
+                        )}
+                      >
+                        {pill.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-primary/55">
+                      <span className="tabular-nums">{timestamp}</span>
                       <span className={cn("h-1.5 w-1.5 rounded-full", statusColor)} />
                     </div>
                   </div>
-                </div>
 
-                <div className="mb-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                  <span className="text-primary/45">Trigger</span>
-                  <span className="text-base font-semibold leading-none text-primary">
-                    {triggerPrice}
-                  </span>
-                  <span className="text-primary/35">•</span>
-                  <span className="text-primary/45">Notional</span>
-                  <span className="font-medium text-primary/80">${positionSize}</span>
-                  <span className="text-primary/35">•</span>
-                  <span className="text-primary/45">Lev</span>
-                  <span className="font-medium text-primary/80">
-                    {trade.leverage.toFixed(1)}x
-                  </span>
-                </div>
+                  {/* Trigger / Notional / Lev — mobile: grid; desktop: inline */}
+                  <div className="mb-2 grid grid-cols-3 gap-y-1 md:hidden">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        Trigger
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums text-primary">
+                        {triggerPrice}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        Notional
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums text-primary">
+                        ${positionSize}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        Leverage
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums text-primary">
+                        {trade.leverage.toFixed(1)}x
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mb-1.5 hidden flex-wrap items-center gap-x-4 gap-y-1.5 text-xs md:flex">
+                    <span className="text-gray-500">Trigger</span>
+                    <span className="text-base font-semibold leading-none text-primary">
+                      {triggerPrice}
+                    </span>
+                    <span className="text-primary/35">•</span>
+                    <span className="text-gray-500">Notional</span>
+                    <span className="font-medium text-primary/80">${positionSize}</span>
+                    <span className="text-primary/35">•</span>
+                    <span className="text-gray-500">Lev</span>
+                    <span className="font-medium text-primary/80">
+                      {trade.leverage.toFixed(1)}x
+                    </span>
+                  </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
-                  <span className="text-[10px] uppercase tracking-wide text-primary/45">
-                    Order ID
-                  </span>
-                  <button
-                    type="button"
-                    className="rounded font-medium transition-colors duration-150 hover:text-primary hover:underline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(uuid);
-                      toast({
-                        title: "Copied to clipboard",
-                        description: `Order ID ${truncatedUuid} copied to clipboard`,
-                      });
-                    }}
-                  >
-                    {truncatedUuid}
-                  </button>
-                  <span className="text-primary/30">•</span>
-                  <span className="text-[10px] uppercase tracking-wide text-primary/45">
-                    Avail
-                  </span>
-                  <span className="font-medium">
-                    {BTC.format(
-                      new BTC("sats", Big(trade.availableMargin)).convert("BTC"),
-                      "BTC"
+                  {/* Order ID / Avail / Type — mobile: grid; desktop: inline */}
+                  <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-2 md:hidden">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        Order ID
+                      </span>
+                      <button
+                        type="button"
+                        className="w-fit rounded text-sm font-medium transition-colors duration-150 hover:text-primary hover:underline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(uuid);
+                          toast({
+                            title: "Copied to clipboard",
+                            description: `Order ID ${truncatedUuid} copied to clipboard`,
+                          });
+                        }}
+                      >
+                        {truncatedUuid}
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        Avail
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatSatsCompact(trade.availableMargin)}
+                      </span>
+                    </div>
+                    {shouldShowOrderType && (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Type
+                        </span>
+                        <span className="text-sm font-medium">
+                          {capitaliseFirstLetter(trade.orderType)}
+                        </span>
+                      </div>
                     )}
-                  </span>
-                  {shouldShowOrderType && (
-                    <>
-                      <span className="text-primary/30">•</span>
-                      <span className="text-[10px] uppercase tracking-wide text-primary/45">
-                        Type
-                      </span>
-                      <span className="font-medium">
-                        {capitaliseFirstLetter(trade.orderType)}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-2 border-t border-border/50 pt-2">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        if (trade._sltpLeg === "sl") {
-                          await cancelOrder(trade, { sl_bool: true, tp_bool: false });
-                          return;
-                        }
-                        if (trade._sltpLeg === "tp") {
-                          await cancelOrder(trade, { sl_bool: false, tp_bool: true });
-                          return;
-                        }
-                        await cancelOrder(trade);
+                  </div>
+                  <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:flex">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                      Order ID
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded font-medium transition-colors duration-150 hover:text-primary hover:underline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(uuid);
+                        toast({
+                          title: "Copied to clipboard",
+                          description: `Order ID ${truncatedUuid} copied to clipboard`,
+                        });
                       }}
-                      variant="ui"
-                      size="small"
-                      disabled={isCancelling}
-                      className="h-7 px-2.5 text-[11px] font-medium transition-all duration-150 hover:brightness-110 hover:text-red/90 hover:border-red/30"
                     >
-                      {isCancelling ? "Removing..." : "Remove"}
-                    </Button>
-                    {trade._sltpLeg && (
+                      {truncatedUuid}
+                    </button>
+                    <span className="text-primary/30">•</span>
+                    <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                      Avail
+                    </span>
+                    <span className="font-medium">
+                      {formatSatsCompact(trade.availableMargin)}
+                    </span>
+                    {shouldShowOrderType && (
+                      <>
+                        <span className="text-primary/30">•</span>
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Type
+                        </span>
+                        <span className="font-medium">
+                          {capitaliseFirstLetter(trade.orderType)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-2 border-t border-border/50 pt-2">
+                    <div className="flex items-center justify-end gap-2 max-md:justify-stretch">
                       <Button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          if (trade._sltpLeg === "sl") {
+                            await cancelOrder(trade, { sl_bool: true, tp_bool: false });
+                            return;
+                          }
+                          if (trade._sltpLeg === "tp") {
+                            await cancelOrder(trade, { sl_bool: false, tp_bool: true });
+                            return;
+                          }
+                          await cancelOrder(trade);
+                        }}
                         variant="ui"
                         size="small"
                         disabled={isCancelling}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openConditionalDialog(trade.accountAddress, "sltp");
-                        }}
-                        className="h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110"
+                        className="h-7 px-2.5 text-[11px] font-medium transition-all duration-150 hover:border-red/30 hover:text-red/90 hover:brightness-110 max-md:h-10 max-md:flex-1 max-md:text-[13px]"
                       >
-                        Edit
+                        {isCancelling ? "Removing..." : "Remove"}
                       </Button>
-                    )}
-                    {!trade._sltpLeg && !!trade.settleLimit && (
-                      <Button
-                        variant="ui"
-                        size="small"
-                        disabled={isCancelling}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openEditDialog(trade);
-                        }}
-                        className="h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110"
-                      >
-                        Edit
-                      </Button>
-                    )}
+                      {trade._sltpLeg && (
+                        <Button
+                          variant="ui"
+                          size="small"
+                          disabled={isCancelling}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openConditionalDialog(trade.accountAddress, "sltp");
+                          }}
+                          className="h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:flex-1 max-md:text-[13px]"
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {!trade._sltpLeg && !!trade.settleLimit && (
+                        <Button
+                          variant="ui"
+                          size="small"
+                          disabled={isCancelling}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openEditDialog(trade);
+                          }}
+                          className="h-7 px-2.5 text-[11px] transition-all duration-150 hover:brightness-110 max-md:h-10 max-md:flex-1 max-md:text-[13px]"
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

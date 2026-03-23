@@ -2,7 +2,7 @@
 
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatSatsMBtc, truncateHash } from "@/lib/helpers";
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { usdNumberFormatter } from "@/lib/utils/format";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -100,7 +100,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                         pnl
                     );
 
-              const fee = trade.orderStatus === "FILLED" ? trade.feeFilled : trade.feeSettled;
+              const feeRaw = trade.orderStatus === "FILLED" ? trade.feeFilled : trade.feeSettled;
               const isClosed =
                 trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
               const hasPnl =
@@ -156,24 +156,14 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                 Number(new BTC("sats", Big(trade.positionSize)).convert("BTC").toFixed(2)) || 0
               )}`;
               const levLabel = `${trade.leverage.toFixed(1)}x`;
-              const feeLabel = showFee ? formatSatsMBtc(fee) : "—";
-              const availLabel = BTC.format(
-                new BTC("sats", Big(trade.availableMargin)).convert("BTC"),
-                "BTC"
-              );
+              const feeLabel = showFee ? formatSatsCompact(feeRaw) : "—";
+              const availLabel = formatSatsCompact(trade.availableMargin);
 
               // Expanded: secondary details
-              const posValueLabel = BTC.format(
-                new BTC(
-                  "sats",
-                  Big(
-                    Math.abs(
-                      trade.positionSize / (trade.settlementPrice || trade.entryPrice || 1)
-                    )
-                  )
-                ).convert("BTC"),
-                "BTC"
+              const posValueSats = Math.round(
+                Math.abs(trade.positionSize / (trade.settlementPrice || trade.entryPrice || 1))
               );
+              const posValueLabel = formatSatsCompact(posValueSats);
               const truncatedTxHash = trade.tx_hash ? truncateHash(trade.tx_hash) : null;
 
               return (
@@ -184,9 +174,9 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                   {/* Left accent bar */}
                   <div className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)} />
 
-                  <div className="px-3 py-2.5 pl-[14px]">
+                  <div className="px-3 py-2.5 pl-[14px] max-md:px-3 max-md:py-3">
                     {/* Zone 1 — Identity */}
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <div className="mb-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <span
                           className={cn(
@@ -213,11 +203,11 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                       </div>
                     </div>
 
-                    {/* Zone 2 — Price Story */}
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                    {/* Zone 2 — Price Story: mobile grid; desktop inline */}
+                    <div className="mb-3 hidden md:flex md:items-center md:justify-between md:gap-3">
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
                             Entry
                           </span>
                           <span className="text-sm font-semibold text-primary">{entryLabel}</span>
@@ -226,7 +216,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                           <>
                             <span className="shrink-0 text-[11px] text-primary/30">→</span>
                             <div className="flex items-baseline gap-1">
-                              <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                              <span className="text-[10px] uppercase tracking-wide text-gray-500">
                                 Close
                               </span>
                               <span className="text-sm font-semibold text-primary">
@@ -238,26 +228,83 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                       </div>
                       {hasPnl && (
                         <div className="flex shrink-0 items-center gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-primary/45">
+                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
                             PnL
                           </span>
                           <PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} />
                         </div>
                       )}
                     </div>
+                    <div className="mb-3 grid grid-cols-3 gap-y-1 md:hidden">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Entry
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-primary">
+                          {entryLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          {closeLabel ? "Close" : "Mark"}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-primary">
+                          {closeLabel ?? "—"}
+                        </span>
+                      </div>
+                      {hasPnl && (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                            PnL
+                          </span>
+                          <PnlCell
+                            pnlSats={pnl}
+                            btcPriceUsd={btcPriceUsd}
+                            className="text-sm font-semibold"
+                            layout="stacked"
+                          />
+                        </div>
+                      )}
+                    </div>
 
-                    {/* Zone 3 — Cost Row (never wraps) */}
-                    <div className="flex items-center gap-2 overflow-hidden text-[11px]">
-                      <span className="shrink-0 text-primary/45">Notional</span>
+                    {/* Zone 3 — Cost: mobile grid; desktop inline */}
+                    <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-2 md:hidden">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Notional
+                        </span>
+                        <span className="text-sm font-medium text-primary">{notionalLabel}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Leverage
+                        </span>
+                        <span className="text-sm font-medium text-primary">{levLabel}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Fee
+                        </span>
+                        <span className="text-sm font-medium text-primary">{feeLabel}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                          Avail
+                        </span>
+                        <span className="text-sm font-medium text-primary">{availLabel}</span>
+                      </div>
+                    </div>
+                    <div className="hidden items-center gap-2 overflow-hidden text-[11px] md:flex">
+                      <span className="shrink-0 text-gray-500">Notional</span>
                       <span className="shrink-0 font-medium text-primary/80">{notionalLabel}</span>
                       <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-primary/45">Lev</span>
+                      <span className="shrink-0 text-gray-500">Lev</span>
                       <span className="shrink-0 font-medium text-primary/80">{levLabel}</span>
                       <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-primary/45">Fee</span>
+                      <span className="shrink-0 text-gray-500">Fee</span>
                       <span className="shrink-0 font-medium text-primary/80">{feeLabel}</span>
                       <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-primary/45">Avail</span>
+                      <span className="shrink-0 text-gray-500">Avail</span>
                       <span className="shrink-0 font-medium text-primary/80">{availLabel}</span>
                       {canShowFundingInfo && (
                         <button
@@ -275,11 +322,11 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                     </div>
 
                     {/* Expand toggle + secondary details */}
-                    <div className="mt-1.5 border-t border-border/30 pt-1">
+                    <div className="mt-1.5 border-t border-border/30 pt-1 max-md:pt-2">
                       <button
                         type="button"
                         onClick={() => toggleExpand(cardId)}
-                        className="flex w-full items-center justify-between rounded py-0.5 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60"
+                        className="flex w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[44px] md:py-0.5"
                       >
                         <span>Details</span>
                         {isExpanded ? (
@@ -292,7 +339,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                       {isExpanded && (
                         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Order ID
                             </span>
                             <button
@@ -310,19 +357,19 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                             </button>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Type
                             </span>
                             <span className="font-medium">{trade.orderType}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Pos. Value
                             </span>
                             <span className="font-medium">{posValueLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                               Funding
                             </span>
                             <span
@@ -335,14 +382,14 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                                     : ""
                               )}
                             >
-                              {formatSatsMBtc(funding)}
+                              {formatSatsCompact(funding)}
                             </span>
                           </div>
                           {truncatedTxHash &&
                             trade.orderStatus !== "CANCELLED" &&
                             trade.orderStatus !== "PENDING" && (
                               <div className="col-span-2 flex items-center gap-2">
-                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/45">
+                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
                                   Tx Hash
                                 </span>
                                 <Link
