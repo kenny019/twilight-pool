@@ -27,7 +27,7 @@ export function transformBinanceKline(k: {
     high: parseFloat(k.h),
     low: parseFloat(k.l),
     close: parseFloat(k.c),
-    volume: parseFloat(k.v),
+    volume: 0,
   };
 }
 
@@ -557,7 +557,10 @@ export const lightThemeStyles = {
   },
 };
 
-export function getThemeStyles(theme: string | undefined, mobile = false): Record<string, any> {
+export function getThemeStyles(
+  theme: string | undefined,
+  mobile = false
+): Record<string, any> {
   const base = theme === "light" ? lightThemeStyles : darkThemeStyles;
   if (!mobile) return base;
   return {

@@ -161,22 +161,54 @@ const KLineChart = () => {
         callback: (data: any) => void;
       }) => {
         const interval = periodToCandleInterval(period);
-        const bi = BINANCE_INTERVAL_MAP[interval];
-        if (!bi) return;
-        const ws = new WebSocket(
-          `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
-        );
-        ws.onmessage = (event) => {
-          try {
-            const parsed = JSON.parse(event.data);
-            const kd = transformBinanceKline(parsed.k);
-            callback(kd);
-            addPriceRef.current(kd.close);
-          } catch (err) {
-            console.error(err);
-          }
-        };
-        wsRef.current = ws;
+        const useRelayer =
+          process.env.NEXT_PUBLIC_CHART_WS_SOURCE === "relayer";
+
+        if (useRelayer) {
+          const ws = new WebSocket(
+            process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS!
+          );
+          ws.onopen = () => {
+            ws.send(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                method: "subscribe_candle_data",
+                params: { interval },
+                id: 123,
+              })
+            );
+          };
+          ws.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              if (parsed.method !== "s_candle_data") return;
+              const candle = parsed.params.result[0];
+              const kd = transformCandleData(candle);
+              callback(kd);
+              addPriceRef.current(kd.close);
+            } catch (err) {
+              console.error(err);
+            }
+          };
+          wsRef.current = ws;
+        } else {
+          const bi = BINANCE_INTERVAL_MAP[interval];
+          if (!bi) return;
+          const ws = new WebSocket(
+            `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
+          );
+          ws.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              const kd = transformBinanceKline(parsed.k);
+              callback(kd);
+              addPriceRef.current(kd.close);
+            } catch (err) {
+              console.error(err);
+            }
+          };
+          wsRef.current = ws;
+        }
       },
       unsubscribeBar: () => {
         wsRef.current?.close();
