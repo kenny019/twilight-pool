@@ -18,18 +18,27 @@ import { useCandleData } from "@/lib/hooks/useCandleData";
 import { useSessionStore } from "@/lib/providers/session";
 import Button from "@/components/button";
 
-const desktopLayoutWithTrades = [
-  { i: "order", x: 10, y: 0, w: 3, h: 14, minW: 2, minH: 12 },
-  { i: "chart", x: 0, y: 0, w: 7, h: 14, minW: 2, minH: 8 },
-  { i: "orderbook", x: 7, y: 0, w: 2, h: 14, minW: 2 },
-  { i: "details", x: 0, y: 14, w: 12, h: 8, minW: 4, minH: 4 },
-];
+const TOP_ROW_H = 14;
+const MIN_DETAILS_H = 4;
+const GRID_MARGIN = 10; // react-grid-layout default margin
+const ROW_UNIT = GRID_ROW_HEIGHT + GRID_MARGIN; // actual px per grid row (30 + 10)
 
-const desktopLayoutWithoutTrades = [
-  { i: "order", x: 9, y: 0, w: 3, h: 14, minW: 2, minH: 12 },
-  { i: "chart", x: 0, y: 0, w: 9, h: 14, minW: 2, minH: 8 },
-  { i: "details", x: 0, y: 14, w: 12, h: 8, minW: 4, minH: 4 },
-];
+function makeDesktopLayoutWithTrades(detailsH: number) {
+  return [
+    { i: "order", x: 10, y: 0, w: 3, h: TOP_ROW_H, minW: 2, minH: 12 },
+    { i: "chart", x: 0, y: 0, w: 7, h: TOP_ROW_H, minW: 2, minH: 8 },
+    { i: "orderbook", x: 7, y: 0, w: 2, h: TOP_ROW_H, minW: 2 },
+    { i: "details", x: 0, y: TOP_ROW_H, w: 12, h: detailsH, minW: 4, minH: MIN_DETAILS_H },
+  ];
+}
+
+function makeDesktopLayoutWithoutTrades(detailsH: number) {
+  return [
+    { i: "order", x: 9, y: 0, w: 3, h: TOP_ROW_H, minW: 2, minH: 12 },
+    { i: "chart", x: 0, y: 0, w: 9, h: TOP_ROW_H, minW: 2, minH: 8 },
+    { i: "details", x: 0, y: TOP_ROW_H, w: 12, h: detailsH, minW: 4, minH: MIN_DETAILS_H },
+  ];
+}
 
 const layoutSmall = [
   { i: "chart", x: 0, y: 0, w: 4, h: 11, minW: 2, minH: 8 },
@@ -58,12 +67,40 @@ const TradeWrapper = () => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(TRADES_PANEL_STORAGE_KEY) === "true";
   });
-  const { width: windowWidth } = useWindow();
+  const { width: windowWidth, height: windowHeight } = useWindow();
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [gridTop, setGridTop] = useState<number | null>(null);
+
+  // Measure the grid's fixed offset from the top of the page (scroll-independent)
+  useEffect(() => {
+    if (!gridContainerRef.current) return;
+    let top = 0;
+    let el: HTMLElement | null = gridContainerRef.current;
+    while (el) {
+      top += el.offsetTop;
+      el = el.offsetParent as HTMLElement | null;
+    }
+    setGridTop(top);
+  }, [hasMounted]);
+
   const showOrderbook = windowWidth >= 996;
+
+  // On desktop, compute details height to fill remaining viewport.
+  // gridTop includes navbar + ticker. The top row occupies
+  // TOP_ROW_H * ROW_UNIT + GRID_MARGIN (container padding) pixels.
+  const topRowPixels = TOP_ROW_H * ROW_UNIT + GRID_MARGIN;
+  const detailsH =
+    showOrderbook && gridTop !== null
+      ? Math.max(
+          MIN_DETAILS_H,
+          Math.floor((windowHeight - gridTop - topRowPixels) / ROW_UNIT)
+        )
+      : MIN_DETAILS_H + 4; // fallback before measurement
+
   const activeDesktopLayout =
     showOrderbook && isTradesPanelVisible
-      ? desktopLayoutWithTrades
-      : desktopLayoutWithoutTrades;
+      ? makeDesktopLayoutWithTrades(detailsH)
+      : makeDesktopLayoutWithoutTrades(detailsH);
   const activeGridLayout = showOrderbook ? activeDesktopLayout : layoutSmall;
 
   const setPrice = useSessionStore((state) => state.price.setPrice);
@@ -118,7 +155,7 @@ const TradeWrapper = () => {
   }
 
   return (
-    <div className="pb-20 lg:pb-0">
+    <div ref={gridContainerRef} className="pb-20 lg:pb-0">
       <ResponsiveGridLayout
         layouts={{ lg: activeDesktopLayout, sm: layoutSmall }}
         cols={{ lg: 12, md: 12, sm: 4, xs: 4, xxs: 4 }}

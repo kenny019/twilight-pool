@@ -225,6 +225,16 @@ html.purple {
     cursor: se-resize;
     border-right: 1px solid hsl(var(--primary-accent));
     border-bottom: 1px solid hsl(var(--primary-accent));
+    touch-action: none;
+    z-index: 10;
+  }
+
+  @media (max-width: 768px) {
+    .react-grid-layout > .react-grid-item > .react-resizable-handle {
+      width: 24px;
+      height: 24px;
+      padding: 0 8px 8px 0;
+    }
   }
 
   .noselect {
