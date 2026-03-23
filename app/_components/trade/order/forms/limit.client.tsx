@@ -42,11 +42,16 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 
 const PRICE_STEP = 50;
+/** Delay before rapid repeat starts (ms). */
+const PRICE_REPEAT_INITIAL_DELAY_MS = 450;
+/** Interval between repeats while held (ms). */
+const PRICE_REPEAT_INTERVAL_MS = 55;
 const PRICE_PRESETS = [-3, -2, -1, 1, 2, 3] as const;
 const COLLATERAL_STEP_BTC = 0.000001;
 const COLLATERAL_STEP_USD = 10;
@@ -238,6 +243,39 @@ const OrderLimitForm = () => {
     setOrderPrice((p) => Math.max(0.01, Math.round((p + delta) * 100) / 100));
   }, []);
 
+  const priceRepeatRef = useRef<{
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    intervalId: ReturnType<typeof setInterval> | null;
+  }>({ timeoutId: null, intervalId: null });
+
+  const clearPriceRepeat = useCallback(() => {
+    const t = priceRepeatRef.current;
+    if (t.timeoutId != null) {
+      clearTimeout(t.timeoutId);
+      t.timeoutId = null;
+    }
+    if (t.intervalId != null) {
+      clearInterval(t.intervalId);
+      t.intervalId = null;
+    }
+  }, []);
+
+  const startPriceRepeat = useCallback(
+    (delta: number) => {
+      clearPriceRepeat();
+      adjustPrice(delta);
+      priceRepeatRef.current.timeoutId = setTimeout(() => {
+        priceRepeatRef.current.timeoutId = null;
+        priceRepeatRef.current.intervalId = setInterval(() => {
+          adjustPrice(delta);
+        }, PRICE_REPEAT_INTERVAL_MS);
+      }, PRICE_REPEAT_INITIAL_DELAY_MS);
+    },
+    [adjustPrice, clearPriceRepeat]
+  );
+
+  useEffect(() => () => clearPriceRepeat(), [clearPriceRepeat]);
+
   const adjustCollateralBtc = useCallback(
     (delta: number) => {
       const current = parseFloat(btcAmount || "0") || 0;
@@ -287,6 +325,41 @@ const OrderLimitForm = () => {
     },
     [collateralUnit, adjustCollateralBtc, adjustCollateralUsd]
   );
+
+  const collateralRepeatRef = useRef<{
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    intervalId: ReturnType<typeof setInterval> | null;
+  }>({ timeoutId: null, intervalId: null });
+
+  const collateralStepRef = useRef<number>(COLLATERAL_STEP_BTC);
+
+  const clearCollateralRepeat = useCallback(() => {
+    const t = collateralRepeatRef.current;
+    if (t.timeoutId != null) {
+      clearTimeout(t.timeoutId);
+      t.timeoutId = null;
+    }
+    if (t.intervalId != null) {
+      clearInterval(t.intervalId);
+      t.intervalId = null;
+    }
+  }, []);
+
+  const startCollateralRepeat = useCallback(
+    (sign: 1 | -1) => {
+      clearCollateralRepeat();
+      adjustCollateral(sign * collateralStepRef.current);
+      collateralRepeatRef.current.timeoutId = setTimeout(() => {
+        collateralRepeatRef.current.timeoutId = null;
+        collateralRepeatRef.current.intervalId = setInterval(() => {
+          adjustCollateral(sign * collateralStepRef.current);
+        }, PRICE_REPEAT_INTERVAL_MS);
+      }, PRICE_REPEAT_INITIAL_DELAY_MS);
+    },
+    [adjustCollateral, clearCollateralRepeat]
+  );
+
+  useEffect(() => () => clearCollateralRepeat(), [clearCollateralRepeat]);
 
   async function submitLimitOrder(
     e: SyntheticEvent<HTMLFormElement, SubmitEvent>
@@ -656,6 +729,10 @@ const OrderLimitForm = () => {
 
   const collateralStep =
     collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
+  collateralStepRef.current = collateralStep;
+
+  const marginStepDisabled =
+    !tradingAccountBalance || (collateralUnit === "usd" && !markPrice);
 
   return (
     <form
@@ -766,17 +843,33 @@ const OrderLimitForm = () => {
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
-              onClick={() => adjustPrice(PRICE_STEP)}
               disabled={!tradingAccountBalance}
-              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              onPointerDown={(e) => {
+                if (!tradingAccountBalance || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startPriceRepeat(PRICE_STEP);
+              }}
+              onPointerUp={clearPriceRepeat}
+              onPointerCancel={clearPriceRepeat}
+              onLostPointerCapture={clearPriceRepeat}
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               type="button"
-              onClick={() => adjustPrice(-PRICE_STEP)}
               disabled={!tradingAccountBalance}
-              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              onPointerDown={(e) => {
+                if (!tradingAccountBalance || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startPriceRepeat(-PRICE_STEP);
+              }}
+              onPointerUp={clearPriceRepeat}
+              onPointerCancel={clearPriceRepeat}
+              onLostPointerCapture={clearPriceRepeat}
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -842,23 +935,33 @@ const OrderLimitForm = () => {
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
-              onClick={() => adjustCollateral(collateralStep)}
-              disabled={
-                !tradingAccountBalance ||
-                (collateralUnit === "usd" && !markPrice)
-              }
-              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              disabled={marginStepDisabled}
+              onPointerDown={(e) => {
+                if (marginStepDisabled || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startCollateralRepeat(1);
+              }}
+              onPointerUp={clearCollateralRepeat}
+              onPointerCancel={clearCollateralRepeat}
+              onLostPointerCapture={clearCollateralRepeat}
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               type="button"
-              onClick={() => adjustCollateral(-collateralStep)}
-              disabled={
-                !tradingAccountBalance ||
-                (collateralUnit === "usd" && !markPrice)
-              }
-              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              disabled={marginStepDisabled}
+              onPointerDown={(e) => {
+                if (marginStepDisabled || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startCollateralRepeat(-1);
+              }}
+              onPointerUp={clearCollateralRepeat}
+              onPointerCancel={clearCollateralRepeat}
+              onLostPointerCapture={clearCollateralRepeat}
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>

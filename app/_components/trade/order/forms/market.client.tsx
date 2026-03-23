@@ -48,6 +48,9 @@ import React, {
 
 const COLLATERAL_STEP_BTC = 0.000001;
 const COLLATERAL_STEP_USD = 10;
+/** Same timing as limit order price / margin repeat. */
+const COLLATERAL_REPEAT_INITIAL_DELAY_MS = 450;
+const COLLATERAL_REPEAT_INTERVAL_MS = 55;
 const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
 const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
 
@@ -160,6 +163,41 @@ const OrderMarketForm = () => {
     },
     [collateralUnit, adjustCollateralBtc, adjustCollateralUsd]
   );
+
+  const collateralRepeatRef = useRef<{
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    intervalId: ReturnType<typeof setInterval> | null;
+  }>({ timeoutId: null, intervalId: null });
+
+  const collateralStepRef = useRef<number>(COLLATERAL_STEP_BTC);
+
+  const clearCollateralRepeat = useCallback(() => {
+    const t = collateralRepeatRef.current;
+    if (t.timeoutId != null) {
+      clearTimeout(t.timeoutId);
+      t.timeoutId = null;
+    }
+    if (t.intervalId != null) {
+      clearInterval(t.intervalId);
+      t.intervalId = null;
+    }
+  }, []);
+
+  const startCollateralRepeat = useCallback(
+    (sign: 1 | -1) => {
+      clearCollateralRepeat();
+      adjustCollateral(sign * collateralStepRef.current);
+      collateralRepeatRef.current.timeoutId = setTimeout(() => {
+        collateralRepeatRef.current.timeoutId = null;
+        collateralRepeatRef.current.intervalId = setInterval(() => {
+          adjustCollateral(sign * collateralStepRef.current);
+        }, COLLATERAL_REPEAT_INTERVAL_MS);
+      }, COLLATERAL_REPEAT_INITIAL_DELAY_MS);
+    },
+    [adjustCollateral, clearCollateralRepeat]
+  );
+
+  useEffect(() => () => clearCollateralRepeat(), [clearCollateralRepeat]);
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -708,6 +746,10 @@ const OrderMarketForm = () => {
         : null;
 
   const step = collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
+  collateralStepRef.current = step;
+
+  const marginStepDisabled =
+    !tradingAccountBalance || (collateralUnit === "usd" && !currentPrice);
 
   const setMaxCollateral = useCallback(() => {
     if (!tradingAccountBalance) return;
@@ -807,17 +849,33 @@ const OrderMarketForm = () => {
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
-              onClick={() => adjustCollateral(step)}
-              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !currentPrice)}
-              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              disabled={marginStepDisabled}
+              onPointerDown={(e) => {
+                if (marginStepDisabled || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startCollateralRepeat(1);
+              }}
+              onPointerUp={clearCollateralRepeat}
+              onPointerCancel={clearCollateralRepeat}
+              onLostPointerCapture={clearCollateralRepeat}
+              className="flex h-5 w-9 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               type="button"
-              onClick={() => adjustCollateral(-step)}
-              disabled={!tradingAccountBalance || (collateralUnit === "usd" && !currentPrice)}
-              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              disabled={marginStepDisabled}
+              onPointerDown={(e) => {
+                if (marginStepDisabled || e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startCollateralRepeat(-1);
+              }}
+              onPointerUp={clearCollateralRepeat}
+              onPointerCancel={clearCollateralRepeat}
+              onLostPointerCapture={clearCollateralRepeat}
+              className="flex h-5 w-9 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
