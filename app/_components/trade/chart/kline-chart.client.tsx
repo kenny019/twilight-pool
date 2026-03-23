@@ -20,16 +20,26 @@ import dayjs, { type ManipulateType } from "dayjs";
 // klinecharts ships ESM named exports but Next.js 13 may resolve to CJS default
 const { init, dispose } = (klinecharts as any) ?? klinecharts;
 
-const TIME_INTERVALS: {
-  name: string;
-  id: CandleInterval;
-}[] = [
+type IntervalOption = { name: string; id: CandleInterval };
+
+const TIME_INTERVALS: IntervalOption[] = [
   { id: CandleInterval.ONE_MINUTE, name: "1m" },
+  { id: CandleInterval.FIVE_MINUTE, name: "5m" },
   { id: CandleInterval.FIFTEEN_MINUTE, name: "15m" },
   { id: CandleInterval.ONE_HOUR, name: "1h" },
   { id: CandleInterval.FOUR_HOUR, name: "4h" },
-  { id: CandleInterval.ONE_DAY, name: "24h" },
+  { id: CandleInterval.EIGHT_HOUR, name: "8h" },
+  { id: CandleInterval.TWELVE_HOUR, name: "12h" },
+  { id: CandleInterval.ONE_DAY, name: "1d" },
 ];
+
+/** Intervals always visible on mobile */
+const MOBILE_VISIBLE: Set<CandleInterval> = new Set([
+  CandleInterval.ONE_MINUTE,
+  CandleInterval.FIFTEEN_MINUTE,
+  CandleInterval.ONE_HOUR,
+  CandleInterval.ONE_DAY,
+]);
 
 const INTERVAL_OFFSETS: Record<
   string,
@@ -48,9 +58,12 @@ const INTERVAL_OFFSETS: Record<
 
 const BINANCE_INTERVAL_MAP: Record<string, string> = {
   [CandleInterval.ONE_MINUTE]: "1m",
+  [CandleInterval.FIVE_MINUTE]: "5m",
   [CandleInterval.FIFTEEN_MINUTE]: "15m",
   [CandleInterval.ONE_HOUR]: "1h",
   [CandleInterval.FOUR_HOUR]: "4h",
+  [CandleInterval.EIGHT_HOUR]: "8h",
+  [CandleInterval.TWELVE_HOUR]: "12h",
   [CandleInterval.ONE_DAY]: "1d",
 };
 
@@ -80,13 +93,7 @@ const KLineChart = () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       styles: getThemeStyles(theme, isMobile),
       formatter: {
-        formatDate: ({
-          timestamp,
-          type,
-        }: {
-          timestamp: number;
-          type: string;
-        }) => {
+        formatDate: ({ timestamp }: { timestamp: number }) => {
           const d = dayjs(timestamp);
           return d.format("YYYY-MM-DD HH:mm");
         },
@@ -278,9 +285,19 @@ const KLineChart = () => {
     [timeInterval]
   );
 
+  const mobileVisible = TIME_INTERVALS.filter((i) => MOBILE_VISIBLE.has(i.id));
+  const mobileOverflow = TIME_INTERVALS.filter(
+    (i) => !MOBILE_VISIBLE.has(i.id)
+  );
+  const overflowActive = mobileOverflow.some((i) => i.id === timeInterval);
+  const overflowLabel = overflowActive
+    ? mobileOverflow.find((i) => i.id === timeInterval)!.name
+    : "More";
+
   return (
     <div className="flex h-full w-full touch-none flex-col overflow-hidden">
-      <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40">
+      {/* Desktop: show all intervals inline */}
+      <div className="hidden h-[40px] w-full shrink-0 border-b bg-background/40 md:flex">
         {TIME_INTERVALS.map((item) => (
           <button
             className={cn(
@@ -294,12 +311,52 @@ const KLineChart = () => {
           </button>
         ))}
       </div>
+
+      {/* Mobile: show subset + dropdown for the rest */}
+      <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40 md:hidden">
+        {mobileVisible.map((item) => (
+          <button
+            className={cn(
+              "border-r px-3 text-sm text-primary/80 hover:text-theme",
+              timeInterval === item.id && "text-theme"
+            )}
+            key={item.name}
+            onClick={() => handleIntervalChange(item)}
+          >
+            {item.name}
+          </button>
+        ))}
+        <div className="relative border-r">
+          <select
+            value={overflowActive ? timeInterval : ""}
+            onChange={(e) => {
+              const found = TIME_INTERVALS.find((i) => i.id === e.target.value);
+              if (found) handleIntervalChange(found);
+            }}
+            className={cn(
+              "h-full appearance-none bg-transparent px-3 pr-6 text-sm text-primary/80 outline-none",
+              overflowActive && "text-theme"
+            )}
+          >
+            {!overflowActive && (
+              <option value="" disabled>
+                {overflowLabel}
+              </option>
+            )}
+            {mobileOverflow.map((item) => (
+              <option key={item.name} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-xs text-primary/50">
+            ▾
+          </span>
+        </div>
+      </div>
       <div
         ref={containerRef}
-        className="relative min-h-0 flex-1 touch-none"
-        style={{
-          width: width > 0 ? width - 20 : "100%",
-        }}
+        className="relative min-h-0 w-full flex-1 touch-none"
       />
     </div>
   );
