@@ -2,8 +2,7 @@
 
 import cn from "@/lib/cn";
 import { formatPnlWithUsd } from "@/lib/utils/formatPnl";
-import BTC from "@/lib/twilight/denoms";
-import Big from "big.js";
+import { formatSatsCompact } from "@/lib/helpers";
 
 type PnlHeaderProps = {
   variant: "uPnL" | "PnL";
@@ -12,7 +11,7 @@ type PnlHeaderProps = {
 export function PnlHeader({ variant }: PnlHeaderProps) {
   const label = variant === "uPnL" ? "uPnL" : "PnL";
 
-  return <span>{label} (BTC / USD)</span>;
+  return <span>{label}</span>;
 }
 
 type PnlCellProps = {
@@ -36,10 +35,7 @@ export function PnlCell({
   const isPositive = pnlSats > 0;
   const isNegative = pnlSats < 0;
   const prefix = isPositive ? "+" : "";
-  const btcValue = BTC.format(
-    new BTC("sats", Big(pnlSats)).convert("BTC"),
-    "BTC"
-  );
+  const btcValue = formatSatsCompact(Math.abs(pnlSats));
   const showUsdValue = btcPriceUsd > 0;
   const usdValue = showUsdValue ? formatPnlWithUsd(pnlSats, btcPriceUsd) : null;
   const toneClass = cn(
@@ -58,7 +54,7 @@ export function PnlCell({
       >
         <span className={cn("text-sm font-semibold", toneClass, className)}>
           {prefix}
-          {btcValue} BTC
+          {btcValue}
         </span>
         {usdValue && (
           <span className={cn("shrink-0 whitespace-nowrap text-xs", toneClass)}>
@@ -85,7 +81,7 @@ export function PnlCell({
           )}
         >
           {prefix}
-          {btcValue} BTC
+          {btcValue}
         </span>
         {usdValue && (
           <>
@@ -116,7 +112,7 @@ export function PnlCell({
     <span className="inline-flex flex-col leading-tight">
       <span className={cn("text-xs font-medium", toneClass, className)}>
         {prefix}
-        {btcValue} BTC
+        {btcValue}
       </span>
       {usdValue && (
         <span className={cn("text-xs", toneClass)}>
