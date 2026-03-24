@@ -28,6 +28,11 @@ import { ZkAccount } from "@/lib/types";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
 import {
+  assertMasterAccountActionAllowed,
+  createPendingMasterAccountRecovery,
+  getMasterAccountBlockedMessage,
+} from "@/lib/utils/masterAccountRecovery";
+import {
   hasUtxoData,
   serializeTxid,
   waitForUtxoUpdate,
@@ -202,6 +207,15 @@ const OrderLimitForm = () => {
   const { status, mainWallet } = useWallet();
   const privateKey = useSessionStore((state) => state.privateKey);
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const masterAccountBlocked = useTwilightStore(
+    (state) => state.zk.masterAccountBlocked
+  );
+  const masterAccountBlockReason = useTwilightStore(
+    (state) => state.zk.masterAccountBlockReason
+  );
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
   const addTradeHistory = useTwilightStore(
     (state) => state.trade_history.addTrade
@@ -375,6 +389,15 @@ const OrderLimitForm = () => {
       return;
     }
 
+    if (masterAccountBlocked) {
+      toast({
+        variant: "error",
+        title: "Trading account recovery in progress",
+        description: getMasterAccountBlockedMessage(masterAccountBlockReason),
+      });
+      return;
+    }
+
     if (tradingAccountBalance <= 0) {
       toast({
         variant: "error",
@@ -460,9 +483,15 @@ const OrderLimitForm = () => {
       let queueResult: { newZkAccount: ZkAccount; txId: string };
       try {
         queueResult = await masterAccountQueue.enqueue(async () => {
-          const currentTradingAccount = storeApi
-            .getState()
-            .zk.zkAccounts.find((a) => a.tag === "main");
+          const state = storeApi.getState();
+          assertMasterAccountActionAllowed({
+            masterAccountBlocked: state.zk.masterAccountBlocked,
+            masterAccountBlockReason: state.zk.masterAccountBlockReason,
+          });
+
+          const currentTradingAccount = state.zk.zkAccounts.find(
+            (a) => a.tag === "main"
+          );
 
           if (
             !currentTradingAccount ||
@@ -504,11 +533,6 @@ const OrderLimitForm = () => {
             updatedAddress: updatedTradingAccountAddress,
           } = privateTxSingleResult.data;
 
-          await waitForUtxoUpdate(
-            senderZkPrivateAccount.get().address,
-            previousTxid
-          );
-
           const newZkAccount: ZkAccount = {
             scalar: updatedTradingAccountScalar,
             type: "Coin",
@@ -518,6 +542,43 @@ const OrderLimitForm = () => {
             value: btcAmountInSats,
             createdAt: dayjs().unix(),
           };
+
+          const utxoWait = await waitForUtxoUpdate(
+            senderZkPrivateAccount.get().address,
+            previousTxid
+          );
+          if (!utxoWait.success) {
+            updateZkAccount(currentTradingAccount.address, {
+              ...currentTradingAccount,
+              address: senderZkPrivateAccount.get().address,
+              scalar: senderZkPrivateAccount.get().scalar,
+              value: senderZkPrivateAccount.get().value,
+              isOnChain: senderZkPrivateAccount.get().isOnChain,
+            });
+            addZkAccount(newZkAccount);
+            addTransactionHistory({
+              date: new Date(),
+              from: currentTradingAccount.address,
+              fromTag: "Trading Account",
+              to: updatedTradingAccountAddress,
+              toTag: newZkAccount.tag,
+              tx_hash: txId,
+              type: "Transfer",
+              value: btcAmountInSats,
+            });
+            setMasterAccountRecovery(
+              createPendingMasterAccountRecovery({
+                address: senderZkPrivateAccount.get().address,
+                scalar: senderZkPrivateAccount.get().scalar,
+                value: senderZkPrivateAccount.get().value,
+                source: "limit order funding transfer",
+                txId,
+              })
+            );
+            throw new Error(
+              "Trading account recovery is in progress after a delayed UTXO update. Your funds remain visible locally. Please wait for recovery to finish before retrying."
+            );
+          }
 
           addZkAccount(newZkAccount);
 

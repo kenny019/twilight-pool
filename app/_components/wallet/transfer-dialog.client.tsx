@@ -46,9 +46,16 @@ import {
   waitForUtxoUpdate,
 } from "@/lib/utils/waitForUtxoUpdate";
 import { useTwilightStoreApi } from "@/lib/providers/store";
-import { getRegisteredBTCAddress } from '@/lib/twilight/rest';
-import { registerBTCAddress } from '@/lib/utils/btc-registration';
+import { getRegisteredBTCAddress } from "@/lib/twilight/rest";
+import { registerBTCAddress } from "@/lib/utils/btc-registration";
 import dayjs from "dayjs";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import {
+  MasterAccountBlockedError,
+  assertMasterAccountActionAllowed,
+  createPendingMasterAccountRecovery,
+  getMasterAccountBlockedMessage,
+} from "@/lib/utils/masterAccountRecovery";
 
 const renameTag = (tag: string) => tag === "main" ? "Trading Account" : tag;
 
@@ -77,6 +84,15 @@ const TransferDialog = ({
 
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
+  const masterAccountBlocked = useTwilightStore(
+    (state) => state.zk.masterAccountBlocked
+  );
+  const masterAccountBlockReason = useTwilightStore(
+    (state) => state.zk.masterAccountBlockReason
+  );
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -201,6 +217,21 @@ const TransferDialog = ({
           return;
         }
 
+        if (
+          depositZkAccount.tag === "main" &&
+          masterAccountBlocked
+        ) {
+          toast({
+            variant: "error",
+            title: "Trading account unavailable",
+            description: getMasterAccountBlockedMessage(
+              masterAccountBlockReason
+            ),
+          });
+          setIsSubmitLoading(false);
+          return;
+        }
+
         // if (depositZkAccount.value && depositZkAccount.value > 0) {
         //   toast({
         //     title: "Unable to transfer",
@@ -247,10 +278,13 @@ const TransferDialog = ({
 
         const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
 
-        const res = await stargateClient.signAndBroadcast(
-          twilightAddress,
-          [msg],
-          "auto"
+        const res = assertCosmosTxSuccess(
+          await stargateClient.signAndBroadcast(
+            twilightAddress,
+            [msg],
+            "auto"
+          ),
+          "Funding to trading transfer"
         );
 
         console.log("sent sats from funding to trading", transferAmount);
@@ -313,6 +347,18 @@ const TransferDialog = ({
             variant: "error",
             title: "Please select a valid account",
             description: "Please select a valid account to transfer from",
+          });
+          setIsSubmitLoading(false);
+          return;
+        }
+
+        if (senderZkAccount.tag === "main" && masterAccountBlocked) {
+          toast({
+            variant: "error",
+            title: "Trading account unavailable",
+            description: getMasterAccountBlockedMessage(
+              masterAccountBlockReason
+            ),
           });
           setIsSubmitLoading(false);
           return;
@@ -507,6 +553,14 @@ const TransferDialog = ({
             );
             if (!currentSender) return;
 
+            if (currentSender.tag === "main") {
+              const zkState = storeApi.getState().zk;
+              assertMasterAccountActionAllowed({
+                masterAccountBlocked: zkState.masterAccountBlocked,
+                masterAccountBlockReason: zkState.masterAccountBlockReason,
+              });
+            }
+
             const transientZkAccount = await createZkAccount({
               tag: "transient",
               signature: privateKey,
@@ -543,24 +597,68 @@ const TransferDialog = ({
               return;
             }
 
-            if (senderZkAccount.tag === "main") {
-              const utxoWait = await waitForUtxoUpdate(
-                senderZkPrivateAccount.get().address,
-                previousTxid
-              );
-              if (!utxoWait.success) {
-                console.warn(
-                  "transfer-dialog waitForUtxoUpdate timed out:",
-                  utxoWait.message
-                );
-              }
-            }
-
             const {
               scalar: updatedTransientScalar,
               txId,
               updatedAddress: updatedTransientAddress,
             } = privateTxSingleResult.data;
+
+            if (senderZkAccount.tag === "main") {
+              const updatedMainAccount = senderZkPrivateAccount.get();
+              const utxoWait = await waitForUtxoUpdate(
+                updatedMainAccount.address,
+                previousTxid
+              );
+
+              if (!utxoWait.success) {
+                updateZkAccount(currentSender.address, {
+                  ...currentSender,
+                  address: updatedMainAccount.address,
+                  scalar: updatedMainAccount.scalar,
+                  value: updatedMainAccount.value,
+                  isOnChain: true,
+                });
+
+                addZkAccount({
+                  address: updatedTransientAddress,
+                  scalar: updatedTransientScalar,
+                  value: transferAmount,
+                  type: "Coin",
+                  tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+                  isOnChain: true,
+                });
+
+                addTransactionHistory({
+                  date: new Date(),
+                  from: currentSender.address,
+                  fromTag: currentSender.tag,
+                  to: updatedTransientAddress,
+                  toTag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+                  tx_hash: txId,
+                  type: "Transfer",
+                  value: transferAmount,
+                });
+
+                setMasterAccountRecovery(
+                  createPendingMasterAccountRecovery({
+                    address: updatedMainAccount.address,
+                    scalar: updatedMainAccount.scalar,
+                    value: updatedMainAccount.value,
+                    source: "wallet transfer burn",
+                    txId,
+                  })
+                );
+
+                setIsSubmitLoading(false);
+                toast({
+                  variant: "error",
+                  title: "Trading account recovery in progress",
+                  description:
+                    "The transfer paused after an on-chain delay. Recovery will finish automatically once the trading account UTXO is visible again.",
+                });
+                return;
+              }
+            }
 
             console.log("txId", txId, "updatedAddess", updatedTransientAddress);
 
@@ -673,10 +771,13 @@ const TransferDialog = ({
             });
 
             console.log("mintBurnMsg", mintBurnMsg);
-            const mintBurnRes = await stargateClient.signAndBroadcast(
-              twilightAddress,
-              [mintBurnMsg],
-              "auto"
+            const mintBurnRes = assertCosmosTxSuccess(
+              await stargateClient.signAndBroadcast(
+                twilightAddress,
+                [mintBurnMsg],
+                "auto"
+              ),
+              "Trading to funding burn"
             );
 
             updateZkAccount(senderZkAccount.address, {
@@ -736,6 +837,15 @@ const TransferDialog = ({
         toast({
           title: "Transaction rejected",
           description: "You declined the transaction in your wallet.",
+        });
+        setIsSubmitLoading(false);
+        return;
+      }
+      if (err instanceof MasterAccountBlockedError) {
+        toast({
+          variant: "error",
+          title: "Trading account unavailable",
+          description: err.message,
         });
         setIsSubmitLoading(false);
         return;

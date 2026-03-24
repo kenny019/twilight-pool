@@ -1,5 +1,6 @@
-import { ZkAccount } from "@/lib/types";
+import { PendingMasterAccountRecovery, ZkAccount } from "@/lib/types";
 import { AccountSlices, StateImmerCreator } from "../utils";
+import { createBlockedMasterAccountState } from "@/lib/utils/masterAccountRecovery";
 
 export interface ZkAccountSlice {
   blockHeight: number;
@@ -7,9 +8,14 @@ export interface ZkAccountSlice {
   selectedZkAccount: number;
   updateSelectedZkAccount: (index: number) => void;
   zkAccounts: ZkAccount[];
+  masterAccountBlocked: boolean;
+  masterAccountBlockReason: string | null;
+  pendingMasterAccount: PendingMasterAccountRecovery | null;
   updateZkAccount: (zkAddress: string, updatedZkAccount: ZkAccount) => void;
   addZkAccount: (zkAccount: ZkAccount) => void;
   removeZkAccount: (zkAccount: ZkAccount) => void;
+  setMasterAccountRecovery: (pending: PendingMasterAccountRecovery) => void;
+  clearMasterAccountRecovery: () => void;
   resetState: () => void;
 }
 
@@ -17,6 +23,9 @@ export const initialZkAccountSliceState = {
   blockHeight: 0,
   selectedZkAccount: -1,
   zkAccounts: [],
+  masterAccountBlocked: false,
+  masterAccountBlockReason: null,
+  pendingMasterAccount: null,
 };
 
 export const createZkAccountSlice: StateImmerCreator<
@@ -31,6 +40,16 @@ export const createZkAccountSlice: StateImmerCreator<
   updateSelectedZkAccount: (index) =>
     set((state) => {
       state.zk.selectedZkAccount = index;
+    }),
+  setMasterAccountRecovery: (pending) =>
+    set((state) => {
+      Object.assign(state.zk, createBlockedMasterAccountState(pending));
+    }),
+  clearMasterAccountRecovery: () =>
+    set((state) => {
+      state.zk.masterAccountBlocked = false;
+      state.zk.masterAccountBlockReason = null;
+      state.zk.pendingMasterAccount = null;
     }),
   updateZkAccount: (zkAddress, updatedZkAccount) =>
     set((state) => {

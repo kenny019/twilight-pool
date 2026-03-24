@@ -20,6 +20,10 @@ import BTC from "../twilight/denoms";
 import { queryTransactionHashes } from "../api/rest";
 import { masterAccountQueue } from "../utils/masterAccountQueue";
 import {
+  assertMasterAccountActionAllowed,
+  createPendingMasterAccountRecovery,
+} from "../utils/masterAccountRecovery";
+import {
   hasUtxoData,
   serializeTxid,
   waitForUtxoUpdate,
@@ -87,6 +91,10 @@ export const useSyncTrades = () => {
   );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const removeZkAccount = useTwilightStore((state) => state.zk.removeZkAccount);
+  const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
@@ -273,7 +281,7 @@ export const useSyncTrades = () => {
           newTrade.orderStatus === "LIQUIDATE" ||
           newTrade.orderStatus === "CANCELLED";
 
-        if (isTerminal) {
+        if (isTerminal && !storeApi.getState().zk.masterAccountBlocked) {
           if (!isRunActive(runAddress, runPrivateKey)) return true;
           // Re-read zkAccounts from the store at this moment (not from a
           // render-time closure) to avoid acting on a removed account.
@@ -304,6 +312,10 @@ export const useSyncTrades = () => {
 
                   // Read state at task-execution time, not closure time.
                   const state = storeApi.getState();
+                  assertMasterAccountActionAllowed({
+                    masterAccountBlocked: state.zk.masterAccountBlocked,
+                    masterAccountBlockReason: state.zk.masterAccountBlockReason,
+                  });
                   const currentZkAccount = state.zk.zkAccounts.find(
                     (a) => a.address === accountAddress
                   );
@@ -341,6 +353,9 @@ export const useSyncTrades = () => {
                   let privateTxSingleResult: Awaited<
                     ReturnType<typeof senderZkPrivateAccount.privateTxSingle>
                   >;
+                  let utxoWait: Awaited<ReturnType<typeof waitForUtxoUpdate>> | null =
+                    null;
+                  let pendingTradingAccount: ZkAccount;
 
                   if (
                     !currentTradingAccount?.isOnChain ||
@@ -361,17 +376,25 @@ export const useSyncTrades = () => {
                       );
 
                     if (privateTxSingleResult.success) {
-                      const utxoWait = await waitForUtxoUpdate(
+                      utxoWait = await waitForUtxoUpdate(
                         privateTxSingleResult.data.updatedAddress,
                         ""
                       );
-                      if (!utxoWait.success) {
-                        console.warn(
-                          "useSyncTrades waitForUtxoUpdate timed out (fresh master):",
-                          utxoWait.message
-                        );
-                      }
                     }
+
+                    pendingTradingAccount = {
+                      tag: "main",
+                      type: "Coin",
+                      address: privateTxSingleResult.success
+                        ? privateTxSingleResult.data.updatedAddress
+                        : freshMasterAccount.address,
+                      scalar: privateTxSingleResult.success
+                        ? privateTxSingleResult.data.scalar
+                        : freshMasterAccount.scalar,
+                      value: zkAccountToSettle.value,
+                      isOnChain: true,
+                      createdAt: currentTradingAccount?.createdAt,
+                    };
                   } else {
                     // Snapshot current master UTXO txid before broadcast.
                     const utxoBefore = await queryUtxoForAddress(
@@ -389,17 +412,25 @@ export const useSyncTrades = () => {
                       );
 
                     if (privateTxSingleResult.success) {
-                      const utxoWait = await waitForUtxoUpdate(
+                      utxoWait = await waitForUtxoUpdate(
                         privateTxSingleResult.data.updatedAddress,
                         previousTxid
                       );
-                      if (!utxoWait.success) {
-                        console.warn(
-                          "useSyncTrades waitForUtxoUpdate timed out:",
-                          utxoWait.message
-                        );
-                      }
                     }
+
+                    pendingTradingAccount = {
+                      ...currentTradingAccount,
+                      address: privateTxSingleResult.success
+                        ? privateTxSingleResult.data.updatedAddress
+                        : currentTradingAccount.address,
+                      scalar: privateTxSingleResult.success
+                        ? privateTxSingleResult.data.scalar
+                        : currentTradingAccount.scalar,
+                      value: Big(zkAccountToSettle.value)
+                        .add(currentTradingAccount.value ?? 0)
+                        .toNumber(),
+                      isOnChain: true,
+                    };
                   }
 
                   if (!privateTxSingleResult.success) {
@@ -408,6 +439,48 @@ export const useSyncTrades = () => {
                       privateTxSingleResult.message
                     );
                     return;
+                  }
+
+                  if (utxoWait && !utxoWait.success) {
+                    const latestTradingAccount = storeApi
+                      .getState()
+                      .zk.zkAccounts.find((a) => a.tag === "main");
+
+                    if (latestTradingAccount) {
+                      updateZkAccount(latestTradingAccount.address, pendingTradingAccount);
+                    } else {
+                      addZkAccount(pendingTradingAccount);
+                    }
+
+                    if (!isRunActive(runAddress, runPrivateKey)) return;
+                    addTransactionHistory({
+                      date: new Date(),
+                      from: zkAccountToSettle.address,
+                      fromTag: zkAccountToSettle.tag,
+                      to: pendingTradingAccount.address,
+                      toTag: "Trading Account",
+                      tx_hash: privateTxSingleResult.data.txId,
+                      type: "Transfer",
+                      value: zkAccountToSettle.value,
+                    });
+
+                    if (!isRunActive(runAddress, runPrivateKey)) return;
+                    removeZkAccount(zkAccountToSettle);
+                    removeTrade(tradeCopy);
+
+                    setMasterAccountRecovery(
+                      createPendingMasterAccountRecovery({
+                        address: pendingTradingAccount.address,
+                        scalar: pendingTradingAccount.scalar,
+                        value: pendingTradingAccount.value ?? 0,
+                        source: "trade cleanup transfer",
+                        txId: privateTxSingleResult.data.txId,
+                      })
+                    );
+
+                    throw new Error(
+                      "Trading account recovery is in progress after a delayed cleanup UTXO update. Please wait for recovery to finish before placing new trades."
+                    );
                   }
 
                   const {
@@ -427,12 +500,9 @@ export const useSyncTrades = () => {
                     if (!isRunActive(runAddress, runPrivateKey)) return;
                     updateZkAccount(latestTradingAccount.address, {
                       ...latestTradingAccount,
+                      ...pendingTradingAccount,
                       address: updatedTradingAccountAddress,
                       scalar: updatedTradingAccountScalar,
-                      value: Big(zkAccountToSettle.value)
-                        .add(latestTradingAccount.value ?? 0)
-                        .toNumber(),
-                      isOnChain: true,
                     });
                   }
 

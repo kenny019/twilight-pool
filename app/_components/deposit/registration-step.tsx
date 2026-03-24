@@ -15,6 +15,7 @@ import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
 import useGetNyksBalance from '@/lib/hooks/useGetNyksBalance';
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 type Props = {
   onSuccess: (address: string, amount: string) => void;
@@ -127,7 +128,10 @@ const RegistrationStep = ({ onSuccess, btcAddress, isConfirmed }: Props) => {
     });
 
     try {
-      await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], "auto");
+      assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], "auto"),
+        "BTC deposit registration"
+      );
 
       toast({
         title: "Submitting Bitcoin address",
