@@ -80,10 +80,7 @@ export function migrateAccountState(
 
   if (version < 0.2) {
     if (newState.zk) {
-      (
-        newState.zk as typeof initialZkAccountSliceState &
-          Record<string, unknown>
-      ).blockHeight = 0;
+      (newState.zk as unknown as Record<string, unknown>).blockHeight = 0;
     }
   }
 
