@@ -35,7 +35,7 @@ export function PnlCell({
   const isPositive = pnlSats > 0;
   const isNegative = pnlSats < 0;
   const prefix = isPositive ? "+" : "";
-  const btcValue = formatSatsCompact(Math.abs(pnlSats));
+  const btcValue = formatSatsCompact(pnlSats, { signed: true });
   const showUsdValue = btcPriceUsd > 0;
   const usdValue = showUsdValue ? formatPnlWithUsd(pnlSats, btcPriceUsd) : null;
   const toneClass = cn(
@@ -53,7 +53,6 @@ export function PnlCell({
         )}
       >
         <span className={cn("text-sm font-semibold", toneClass, className)}>
-          {prefix}
           {btcValue}
         </span>
         {usdValue && (
@@ -80,7 +79,6 @@ export function PnlCell({
             className
           )}
         >
-          {prefix}
           {btcValue}
         </span>
         {usdValue && (
@@ -111,7 +109,6 @@ export function PnlCell({
   return (
     <span className="inline-flex flex-col leading-tight">
       <span className={cn("text-xs font-medium", toneClass, className)}>
-        {prefix}
         {btcValue}
       </span>
       {usdValue && (

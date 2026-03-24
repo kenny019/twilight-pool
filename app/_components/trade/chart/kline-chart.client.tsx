@@ -41,6 +41,13 @@ const MOBILE_VISIBLE: Set<CandleInterval> = new Set([
   CandleInterval.ONE_DAY,
 ]);
 
+const MOBILE_VISIBLE_INTERVALS = TIME_INTERVALS.filter((i) =>
+  MOBILE_VISIBLE.has(i.id)
+);
+const MOBILE_OVERFLOW_INTERVALS = TIME_INTERVALS.filter(
+  (i) => !MOBILE_VISIBLE.has(i.id)
+);
+
 const INTERVAL_OFFSETS: Record<
   string,
   { unit: ManipulateType; amount: number }
@@ -160,13 +167,20 @@ const KLineChart = () => {
         period: Period;
         callback: (data: any) => void;
       }) => {
+        wsRef.current?.close();
+        wsRef.current = null;
+
         const interval = periodToCandleInterval(period);
         const useRelayer =
           process.env.NEXT_PUBLIC_CHART_WS_SOURCE === "relayer";
 
         if (useRelayer) {
+          if (!process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS) {
+            console.error("NEXT_PUBLIC_TWILIGHT_PRICE_WS is not defined");
+            return;
+          }
           const ws = new WebSocket(
-            process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS!
+            process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS
           );
           ws.onopen = () => {
             ws.send(
@@ -194,6 +208,10 @@ const KLineChart = () => {
         } else {
           const bi = BINANCE_INTERVAL_MAP[interval];
           if (!bi) return;
+          if (!process.env.NEXT_PUBLIC_BINANCE_WS_URL) {
+            console.error("NEXT_PUBLIC_BINANCE_WS_URL is not defined");
+            return;
+          }
           const ws = new WebSocket(
             `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
           );
@@ -317,14 +335,11 @@ const KLineChart = () => {
     [timeInterval]
   );
 
-  const mobileVisible = TIME_INTERVALS.filter((i) => MOBILE_VISIBLE.has(i.id));
-  const mobileOverflow = TIME_INTERVALS.filter(
-    (i) => !MOBILE_VISIBLE.has(i.id)
+  const overflowItem = MOBILE_OVERFLOW_INTERVALS.find(
+    (i) => i.id === timeInterval
   );
-  const overflowActive = mobileOverflow.some((i) => i.id === timeInterval);
-  const overflowLabel = overflowActive
-    ? mobileOverflow.find((i) => i.id === timeInterval)!.name
-    : "More";
+  const overflowActive = !!overflowItem;
+  const overflowLabel = overflowItem?.name ?? "More";
 
   return (
     <div className="flex h-full w-full touch-none flex-col overflow-hidden">
@@ -346,7 +361,7 @@ const KLineChart = () => {
 
       {/* Mobile: show subset + dropdown for the rest */}
       <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40 md:hidden">
-        {mobileVisible.map((item) => (
+        {MOBILE_VISIBLE_INTERVALS.map((item) => (
           <button
             className={cn(
               "border-r px-3 text-sm text-primary/80 hover:text-theme",
@@ -375,7 +390,7 @@ const KLineChart = () => {
                 {overflowLabel}
               </option>
             )}
-            {mobileOverflow.map((item) => (
+            {MOBILE_OVERFLOW_INTERVALS.map((item) => (
               <option key={item.name} value={item.id}>
                 {item.name}
               </option>
