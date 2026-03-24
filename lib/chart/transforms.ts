@@ -27,7 +27,7 @@ export function transformBinanceKline(k: {
     high: parseFloat(k.h),
     low: parseFloat(k.l),
     close: parseFloat(k.c),
-    volume: parseFloat(k.v),
+    volume: 0,
   };
 }
 
@@ -205,7 +205,7 @@ export const darkThemeStyles = {
   },
   xAxis: {
     show: true,
-    size: "auto" as const,
+    size: 28,
     axisLine: {
       show: true,
       color: "rgba(255, 255, 255, 0.12)",
@@ -217,8 +217,8 @@ export const darkThemeStyles = {
       family: "inherit",
       weight: "normal",
       size: 11,
-      marginStart: 4,
-      marginEnd: 4,
+      marginStart: 2,
+      marginEnd: 2,
     },
     tickLine: {
       show: true,
@@ -450,7 +450,7 @@ export const lightThemeStyles = {
   },
   xAxis: {
     show: true,
-    size: "auto" as const,
+    size: 28,
     axisLine: {
       show: true,
       color: "rgba(0, 0, 0, 0.12)",
@@ -462,8 +462,8 @@ export const lightThemeStyles = {
       family: "inherit",
       weight: "normal",
       size: 11,
-      marginStart: 4,
-      marginEnd: 4,
+      marginStart: 2,
+      marginEnd: 2,
     },
     tickLine: {
       show: true,
@@ -557,7 +557,10 @@ export const lightThemeStyles = {
   },
 };
 
-export function getThemeStyles(theme: string | undefined, mobile = false): Record<string, any> {
+export function getThemeStyles(
+  theme: string | undefined,
+  mobile = false
+): Record<string, any> {
   const base = theme === "light" ? lightThemeStyles : darkThemeStyles;
   if (!mobile) return base;
   return {

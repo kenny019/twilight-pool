@@ -63,8 +63,8 @@ const DetailsPanel = () => {
   >({
     positions: "cards",
     "open-orders": "cards",
-    "trader-history": "table",
-    history: "table",
+    "trader-history": "cards",
+    history: "cards",
   });
 
   const tradeOrders = useTwilightStore((state) => state.trade.trades);
@@ -487,7 +487,7 @@ const DetailsPanel = () => {
           </button>
         )}
       </div>
-      <div className="">
+      <div className="min-h-0 flex-1 overflow-auto" style={{ scrollbarWidth: "none" }}>
         {currentTab === "positions" && (
           currentView === "table" ? (
             <PositionsTable

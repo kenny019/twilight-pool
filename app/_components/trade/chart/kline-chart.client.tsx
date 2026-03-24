@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as klinecharts from "klinecharts";
-import type { Chart, Period } from "klinecharts";
+import type { Chart, Period, AxisCreateRangeParams } from "klinecharts";
 import { useGrid } from "@/lib/providers/grid";
 import { useTheme } from "next-themes";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -20,16 +20,26 @@ import dayjs, { type ManipulateType } from "dayjs";
 // klinecharts ships ESM named exports but Next.js 13 may resolve to CJS default
 const { init, dispose } = (klinecharts as any) ?? klinecharts;
 
-const TIME_INTERVALS: {
-  name: string;
-  id: CandleInterval;
-}[] = [
+type IntervalOption = { name: string; id: CandleInterval };
+
+const TIME_INTERVALS: IntervalOption[] = [
   { id: CandleInterval.ONE_MINUTE, name: "1m" },
+  { id: CandleInterval.FIVE_MINUTE, name: "5m" },
   { id: CandleInterval.FIFTEEN_MINUTE, name: "15m" },
   { id: CandleInterval.ONE_HOUR, name: "1h" },
   { id: CandleInterval.FOUR_HOUR, name: "4h" },
-  { id: CandleInterval.ONE_DAY, name: "24h" },
+  { id: CandleInterval.EIGHT_HOUR, name: "8h" },
+  { id: CandleInterval.TWELVE_HOUR, name: "12h" },
+  { id: CandleInterval.ONE_DAY, name: "1d" },
 ];
+
+/** Intervals always visible on mobile */
+const MOBILE_VISIBLE: Set<CandleInterval> = new Set([
+  CandleInterval.ONE_MINUTE,
+  CandleInterval.FIFTEEN_MINUTE,
+  CandleInterval.ONE_HOUR,
+  CandleInterval.ONE_DAY,
+]);
 
 const INTERVAL_OFFSETS: Record<
   string,
@@ -48,9 +58,12 @@ const INTERVAL_OFFSETS: Record<
 
 const BINANCE_INTERVAL_MAP: Record<string, string> = {
   [CandleInterval.ONE_MINUTE]: "1m",
+  [CandleInterval.FIVE_MINUTE]: "5m",
   [CandleInterval.FIFTEEN_MINUTE]: "15m",
   [CandleInterval.ONE_HOUR]: "1h",
   [CandleInterval.FOUR_HOUR]: "4h",
+  [CandleInterval.EIGHT_HOUR]: "8h",
+  [CandleInterval.TWELVE_HOUR]: "12h",
   [CandleInterval.ONE_DAY]: "1d",
 };
 
@@ -79,6 +92,12 @@ const KLineChart = () => {
     const chart = init(containerRef.current, {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       styles: getThemeStyles(theme, isMobile),
+      formatter: {
+        formatDate: ({ timestamp }: { timestamp: number }) => {
+          const d = dayjs(timestamp);
+          return d.format("YYYY-MM-DD HH:mm");
+        },
+      },
     });
 
     if (!chart) return;
@@ -142,22 +161,54 @@ const KLineChart = () => {
         callback: (data: any) => void;
       }) => {
         const interval = periodToCandleInterval(period);
-        const bi = BINANCE_INTERVAL_MAP[interval];
-        if (!bi) return;
-        const ws = new WebSocket(
-          `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
-        );
-        ws.onmessage = (event) => {
-          try {
-            const parsed = JSON.parse(event.data);
-            const kd = transformBinanceKline(parsed.k);
-            callback(kd);
-            addPriceRef.current(kd.close);
-          } catch (err) {
-            console.error(err);
-          }
-        };
-        wsRef.current = ws;
+        const useRelayer =
+          process.env.NEXT_PUBLIC_CHART_WS_SOURCE === "relayer";
+
+        if (useRelayer) {
+          const ws = new WebSocket(
+            process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS!
+          );
+          ws.onopen = () => {
+            ws.send(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                method: "subscribe_candle_data",
+                params: { interval },
+                id: 123,
+              })
+            );
+          };
+          ws.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              if (parsed.method !== "s_candle_data") return;
+              const candle = parsed.params.result[0];
+              const kd = transformCandleData(candle);
+              callback(kd);
+              addPriceRef.current(kd.close);
+            } catch (err) {
+              console.error(err);
+            }
+          };
+          wsRef.current = ws;
+        } else {
+          const bi = BINANCE_INTERVAL_MAP[interval];
+          if (!bi) return;
+          const ws = new WebSocket(
+            `${process.env.NEXT_PUBLIC_BINANCE_WS_URL}/btcusdt@kline_${bi}`
+          );
+          ws.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              const kd = transformBinanceKline(parsed.k);
+              callback(kd);
+              addPriceRef.current(kd.close);
+            } catch (err) {
+              console.error(err);
+            }
+          };
+          wsRef.current = ws;
+        }
       },
       unsubscribeBar: () => {
         wsRef.current?.close();
@@ -172,8 +223,64 @@ const KLineChart = () => {
     });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[timeInterval]);
 
-    // Volume sub-pane
-    chart.createIndicator("VOL", false, { height: 80 });
+    // Render Y-axis labels inside the chart area so candles use the full width.
+    // On mobile, also disable Y-axis scroll/zoom and clamp range to ±10% of
+    // visible data to prevent swipe gestures pulling the axis to volume values.
+    chart.setPaneOptions({
+      id: "candle_pane",
+      axis: {
+        inside: true,
+        ...(isMobile && {
+          scrollZoomEnabled: false,
+          createRange: ({ chart: c, defaultRange }: AxisCreateRangeParams) => {
+            const dataList = c.getDataList();
+            const visible = c.getVisibleRange();
+            if (dataList.length === 0) return defaultRange;
+
+            const start = Math.max(0, visible.from);
+            const end = Math.min(dataList.length - 1, visible.to);
+
+            let minLow = Infinity;
+            let maxHigh = -Infinity;
+            for (let i = start; i <= end; i++) {
+              const d = dataList[i];
+              if (d.low < minLow) minLow = d.low;
+              if (d.high > maxHigh) maxHigh = d.high;
+            }
+            if (minLow === Infinity) return defaultRange;
+
+            const padding = (maxHigh - minLow) * 0.1;
+            const clampedFrom = minLow - padding;
+            const clampedTo = maxHigh + padding;
+
+            const from = Math.max(defaultRange.from, clampedFrom);
+            const to = Math.min(defaultRange.to, clampedTo);
+            const range = to - from;
+
+            return {
+              from,
+              to,
+              range,
+              realFrom: from,
+              realTo: to,
+              realRange: range,
+              displayFrom: from,
+              displayTo: to,
+              displayRange: range,
+            } as any;
+          },
+        }),
+      },
+    });
+
+    // Volume sub-pane — inside axis + disable Y-axis drag on mobile
+    chart.createIndicator("VOL", false, {
+      height: 80,
+      axis: {
+        inside: true,
+        ...(isMobile && { scrollZoomEnabled: false }),
+      },
+    });
     chart.overrideIndicator({
       name: "VOL",
       calcParams: [],
@@ -210,9 +317,19 @@ const KLineChart = () => {
     [timeInterval]
   );
 
+  const mobileVisible = TIME_INTERVALS.filter((i) => MOBILE_VISIBLE.has(i.id));
+  const mobileOverflow = TIME_INTERVALS.filter(
+    (i) => !MOBILE_VISIBLE.has(i.id)
+  );
+  const overflowActive = mobileOverflow.some((i) => i.id === timeInterval);
+  const overflowLabel = overflowActive
+    ? mobileOverflow.find((i) => i.id === timeInterval)!.name
+    : "More";
+
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex h-[40px] w-full border-b bg-background/40">
+    <div className="flex h-full w-full touch-none flex-col overflow-hidden">
+      {/* Desktop: show all intervals inline */}
+      <div className="hidden h-[40px] w-full shrink-0 border-b bg-background/40 md:flex">
         {TIME_INTERVALS.map((item) => (
           <button
             className={cn(
@@ -226,13 +343,52 @@ const KLineChart = () => {
           </button>
         ))}
       </div>
+
+      {/* Mobile: show subset + dropdown for the rest */}
+      <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40 md:hidden">
+        {mobileVisible.map((item) => (
+          <button
+            className={cn(
+              "border-r px-3 text-sm text-primary/80 hover:text-theme",
+              timeInterval === item.id && "text-theme"
+            )}
+            key={item.name}
+            onClick={() => handleIntervalChange(item)}
+          >
+            {item.name}
+          </button>
+        ))}
+        <div className="relative border-r">
+          <select
+            value={overflowActive ? timeInterval : ""}
+            onChange={(e) => {
+              const found = TIME_INTERVALS.find((i) => i.id === e.target.value);
+              if (found) handleIntervalChange(found);
+            }}
+            className={cn(
+              "h-full appearance-none bg-transparent px-3 pr-6 text-sm text-primary/80 outline-none",
+              overflowActive && "text-theme"
+            )}
+          >
+            {!overflowActive && (
+              <option value="" disabled>
+                {overflowLabel}
+              </option>
+            )}
+            {mobileOverflow.map((item) => (
+              <option key={item.name} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-xs text-primary/50">
+            ▾
+          </span>
+        </div>
+      </div>
       <div
         ref={containerRef}
-        className="relative"
-        style={{
-          width: width > 0 ? width - 20 : "100%",
-          height: height > 0 ? height - 120 : "100%",
-        }}
+        className="relative min-h-0 w-full flex-1 touch-none"
       />
     </div>
   );
