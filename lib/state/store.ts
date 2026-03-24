@@ -24,6 +24,127 @@ import {
   initialWithdrawSliceState,
 } from "./local/withdraw";
 
+type PersistedAccountState = Partial<AccountSlices> & Record<string, unknown>;
+
+export const ACCOUNT_STATE_VERSION = 0.7;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function clonePersistedAccountState(
+  persistedState: unknown
+): PersistedAccountState {
+  if (!isRecord(persistedState)) return {};
+  return deepMerge({}, persistedState) as PersistedAccountState;
+}
+
+function mapPersistedTrades(
+  state: PersistedAccountState,
+  sliceKey: "trade" | "trade_history",
+  mapper: (trade: Record<string, unknown>) => Record<string, unknown>
+) {
+  const sliceValue = state[sliceKey];
+  if (!isRecord(sliceValue)) return;
+
+  const slice = sliceValue as { trades?: unknown[] };
+  if (!Array.isArray(slice.trades)) return;
+
+  slice.trades = slice.trades.map((trade) =>
+    isRecord(trade) ? mapper(trade) : trade
+  );
+}
+
+function migrateSltpField(field: unknown) {
+  if (!isRecord(field)) return field;
+
+  return {
+    price: field.price ?? field.sl_price ?? field.tp_price ?? "0",
+    position_type: field.position_type,
+    uuid: field.uuid,
+    created_time: field.created_time ?? field.timestamp,
+  };
+}
+
+/** Versions are intentionally decimal for compatibility with existing storage. */
+export function migrateAccountState(
+  persistedState: unknown,
+  version: number
+): AccountSlices {
+  // Fail closed when this client sees storage from a newer app version.
+  if (version > ACCOUNT_STATE_VERSION) {
+    return {} as AccountSlices;
+  }
+
+  const newState = clonePersistedAccountState(persistedState);
+
+  if (version < 0.2) {
+    if (newState.zk) {
+      (
+        newState.zk as typeof initialZkAccountSliceState &
+          Record<string, unknown>
+      ).blockHeight = 0;
+    }
+  }
+
+  if (version < 0.3) {
+    mapPersistedTrades(newState, "trade", (trade) => ({
+      ...trade,
+      entryPrice: 0,
+    }));
+  }
+
+  if (version < 0.4) {
+    newState.optInLeaderboard = false;
+    newState.hasShownOptInDialog = false;
+  }
+
+  if (version < 0.5) {
+    mapPersistedTrades(newState, "trade", (trade) => ({
+      ...trade,
+      fundingHistory: trade.fundingHistory ?? undefined,
+    }));
+    mapPersistedTrades(newState, "trade_history", (trade) => ({
+      ...trade,
+      fundingHistory: trade.fundingHistory ?? undefined,
+    }));
+  }
+
+  if (version < 0.6) {
+    mapPersistedTrades(newState, "trade", (trade) => ({
+      ...trade,
+      takeProfit: trade.takeProfit ?? undefined,
+      stopLoss: trade.stopLoss ?? undefined,
+      settleLimit: isRecord(trade.settleLimit)
+        ? {
+            ...trade.settleLimit,
+            timestamp: trade.settleLimit.timestamp ?? undefined,
+          }
+        : trade.settleLimit,
+    }));
+    mapPersistedTrades(newState, "trade_history", (trade) => ({
+      ...trade,
+      takeProfit: trade.takeProfit ?? undefined,
+      stopLoss: trade.stopLoss ?? undefined,
+    }));
+  }
+
+  if (version < ACCOUNT_STATE_VERSION) {
+    mapPersistedTrades(newState, "trade", (trade) => ({
+      ...trade,
+      takeProfit: migrateSltpField(trade.takeProfit),
+      stopLoss: migrateSltpField(trade.stopLoss),
+    }));
+    mapPersistedTrades(newState, "trade_history", (trade) => ({
+      ...trade,
+      takeProfit: migrateSltpField(trade.takeProfit),
+      stopLoss: migrateSltpField(trade.stopLoss),
+    }));
+  }
+
+  return newState as AccountSlices;
+}
+
 export const createTwilightStore = (storageKey = "twilight-") => {
   return createStore<
     AccountSlices,
@@ -56,103 +177,8 @@ export const createTwilightStore = (storageKey = "twilight-") => {
         name: storageKey,
         storage: createJSONStorage<AccountSlices>(() => localStorage),
         skipHydration: true,
-        version: 0.7,
-        migrate: (persistedState, version) => {
-          if (version === 0) {
-            const newState = persistedState as AccountSlices;
-            if (newState.zk) {
-              newState.zk.blockHeight = 0;
-            }
-
-            return newState;
-          }
-          if (version === 0.2) {
-            const newState = persistedState as AccountSlices;
-            if (newState.trade && Array.isArray(newState.trade.trades)) {
-              newState.trade.trades = newState.trade.trades.map((trade) => {
-                return {
-                  ...trade,
-                  entryPrice: 0,
-                };
-              });
-            }
-
-            return newState;
-          }
-          if (version === 0.3) {
-            const newState = persistedState as AccountSlices;
-            newState.optInLeaderboard = false;
-            newState.hasShownOptInDialog = false;
-            return newState;
-          }
-          if (version === 0.4) {
-            const newState = persistedState as AccountSlices;
-            if (newState.trade?.trades) {
-              newState.trade.trades = newState.trade.trades.map((t) => ({
-                ...t,
-                fundingHistory: t.fundingHistory ?? undefined,
-              }));
-            }
-            if (newState.trade_history?.trades) {
-              newState.trade_history.trades = newState.trade_history.trades.map((t) => ({
-                ...t,
-                fundingHistory: t.fundingHistory ?? undefined,
-              }));
-            }
-            return newState;
-          }
-          if (version === 0.5) {
-            const newState = persistedState as AccountSlices;
-            if (newState.trade?.trades) {
-              newState.trade.trades = newState.trade.trades.map((t) => ({
-                ...t,
-                takeProfit: t.takeProfit ?? undefined,
-                stopLoss: t.stopLoss ?? undefined,
-                settleLimit: t.settleLimit
-                  ? { ...t.settleLimit, timestamp: t.settleLimit.timestamp ?? undefined }
-                  : t.settleLimit,
-              }));
-            }
-            if (newState.trade_history?.trades) {
-              newState.trade_history.trades = newState.trade_history.trades.map((t) => ({
-                ...t,
-                takeProfit: t.takeProfit ?? undefined,
-                stopLoss: t.stopLoss ?? undefined,
-              }));
-            }
-            return newState;
-          }
-          if (version === 0.6) {
-            // Migrate takeProfit/stopLoss from old {sl_price, tp_price, timestamp}
-            // format to the actual backend format {price, position_type, uuid, created_time}.
-            const migrateSltpField = (field: any) => {
-              if (!field) return field;
-              return {
-                price: field.price ?? field.sl_price ?? field.tp_price ?? "0",
-                position_type: field.position_type,
-                uuid: field.uuid,
-                created_time: field.created_time ?? field.timestamp,
-              };
-            };
-            const newState = persistedState as AccountSlices;
-            if (newState.trade?.trades) {
-              newState.trade.trades = newState.trade.trades.map((t) => ({
-                ...t,
-                takeProfit: migrateSltpField(t.takeProfit),
-                stopLoss: migrateSltpField(t.stopLoss),
-              }));
-            }
-            if (newState.trade_history?.trades) {
-              newState.trade_history.trades = newState.trade_history.trades.map((t) => ({
-                ...t,
-                takeProfit: migrateSltpField(t.takeProfit),
-                stopLoss: migrateSltpField(t.stopLoss),
-              }));
-            }
-            return newState;
-          }
-          return persistedState as AccountSlices;
-        },
+        version: ACCOUNT_STATE_VERSION,
+        migrate: migrateAccountState,
         merge: (persistedState, currentState) => {
           const cleanCurrentState = {
             zk: {
