@@ -78,6 +78,14 @@ export type LendOrder = z.infer<typeof LendOrderSchema>;
 export type PoolInfo = z.infer<typeof PoolInfoSchema>;
 export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;
 export type WithdrawOrder = z.infer<typeof WithdrawOrderSchema>;
+export type PendingMasterAccountRecovery = {
+  address: string;
+  scalar: string;
+  value: number;
+  source: string;
+  txId?: string;
+  createdAt: number;
+};
 
 export type PositionTypes = "LONG" | "SHORT";
 export type OrderTypes = "LIMIT" | "MARKET" | "DARK" | "LEND" | "SLTP";

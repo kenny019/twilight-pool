@@ -16,6 +16,7 @@ import BtcReserveSelect from "../btc-reserve-select";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useTwilightStore } from "@/lib/providers/store";
 import FeeEstimate from "./fee-estimate";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 const BtcWithdrawalForm = () => {
   const { mainWallet } = useWallet();
@@ -129,23 +130,17 @@ const BtcWithdrawalForm = () => {
         description: "Please wait while your Bitcoin is being withdrawn...",
       });
 
-      const res = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [msg],
-        // fee
-        100
+      const res = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [msg],
+          // fee
+          100
+        ),
+        "BTC withdrawal request"
       );
 
       setIsSubmitLoading(false);
-
-      if (res.code !== 0) {
-        toast({
-          variant: "error",
-          title: "Error",
-          description: "There was an error with submitting your withdrawal",
-        });
-        return;
-      }
       console.log("response", res);
 
       addWithdrawal({

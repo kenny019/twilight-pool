@@ -45,6 +45,7 @@ import dayjs from "dayjs";
 import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/columns";
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { Tooltip } from "@/components/tooltip";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 type TabType = "account-summary" | "transaction-history";
 
@@ -428,10 +429,13 @@ const Page = () => {
 
         console.log("mintBurnMsg", mintBurnMsg);
 
-        const mintBurnRes = await stargateClient.signAndBroadcast(
-          twilightAddress,
-          [mintBurnMsg],
-          "auto"
+        const mintBurnRes = assertCosmosTxSuccess(
+          await stargateClient.signAndBroadcast(
+            twilightAddress,
+            [mintBurnMsg],
+            "auto"
+          ),
+          "Subaccount to funding burn"
         );
 
         addTransactionHistory({

@@ -1,6 +1,7 @@
 import { ChainWalletBase } from "@cosmos-kit/core";
 import { twilightproject } from "twilightjs";
 import Long from "long";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 export interface BTCRegistrationOptions {
   btcSatoshiTestAmount?: number;
@@ -57,10 +58,13 @@ export const registerBTCAddress = async (
       ),
     });
 
-    const result = await stargateClient.signAndBroadcast(
-      twilightAddress,
-      [msg],
-      "auto"
+    const result = assertCosmosTxSuccess(
+      await stargateClient.signAndBroadcast(
+        twilightAddress,
+        [msg],
+        "auto"
+      ),
+      "BTC address registration"
     );
 
     return {

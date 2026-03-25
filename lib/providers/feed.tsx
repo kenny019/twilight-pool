@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { useReconcileOrphanedAccounts } from '../hooks/useReconcileOrphanedAccounts';
+import { useRecoverPendingMasterAccount } from '../hooks/useRecoverPendingMasterAccount';
 import { useSyncTrades } from '../hooks/useSyncTrades';
 import { useFundingCycleTrigger } from '../hooks/useFundingCycleTrigger';
 import { useFundingHistoryRefresh } from '../hooks/useFundingHistoryRefresh';
@@ -97,6 +98,7 @@ const PriceFeed: React.FC<PriceFeedProviderProps> = ({ children }) => {
 };
 
 const PriceFeedConsumers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useRecoverPendingMasterAccount();
   useReconcileOrphanedAccounts();
   useSyncTrades();
   useFundingCycleTrigger();

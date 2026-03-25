@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/rest";
 import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -225,10 +226,13 @@ const OrderMyTrades = () => {
       });
 
       console.log("mintBurnMsg", mintBurnMsg);
-      const mintBurnRes = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [mintBurnMsg],
-        "auto"
+      const mintBurnRes = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [mintBurnMsg],
+          "auto"
+        ),
+        "Trade account funding burn"
       );
 
       addTransactionHistory({

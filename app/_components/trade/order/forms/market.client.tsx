@@ -25,6 +25,11 @@ import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
 import { ZkAccount } from "@/lib/types";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import { usdNumberFormatter } from "@/lib/utils/format";
+import {
+  assertMasterAccountActionAllowed,
+  createPendingMasterAccountRecovery,
+  getMasterAccountBlockedMessage,
+} from "@/lib/utils/masterAccountRecovery";
 import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
 import {
   hasUtxoData,
@@ -86,6 +91,15 @@ const OrderMarketForm = () => {
   const leverageRef = useRef<HTMLInputElement>(null);
 
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const masterAccountBlocked = useTwilightStore(
+    (state) => state.zk.masterAccountBlocked
+  );
+  const masterAccountBlockReason = useTwilightStore(
+    (state) => state.zk.masterAccountBlockReason
+  );
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
   const tradingAccount = zkAccounts.find((account) => account.tag === "main");
 
   const tradingAccountBalance = tradingAccount?.value || 0;
@@ -319,6 +333,15 @@ const OrderMarketForm = () => {
       return;
     }
 
+    if (masterAccountBlocked) {
+      toast({
+        variant: "error",
+        title: "Trading account recovery in progress",
+        description: getMasterAccountBlockedMessage(masterAccountBlockReason),
+      });
+      return;
+    }
+
     if (tradingAccountBalance <= 0) {
       toast({
         variant: "error",
@@ -410,9 +433,15 @@ const OrderMarketForm = () => {
       try {
         queueResult = await masterAccountQueue.enqueue(async () => {
           // Read fresh master account at execution time (not from React closure).
-          const currentTradingAccount = storeApi
-            .getState()
-            .zk.zkAccounts.find((a) => a.tag === "main");
+          const state = storeApi.getState();
+          assertMasterAccountActionAllowed({
+            masterAccountBlocked: state.zk.masterAccountBlocked,
+            masterAccountBlockReason: state.zk.masterAccountBlockReason,
+          });
+
+          const currentTradingAccount = state.zk.zkAccounts.find(
+            (a) => a.tag === "main"
+          );
 
           if (!currentTradingAccount) {
             throw new Error("Master trading account not found");
@@ -459,17 +488,6 @@ const OrderMarketForm = () => {
             updatedAddress: updatedTradingAccountAddress,
           } = privateTxSingleResult.data;
 
-          // Wait for the UTXO store to reflect the broadcast before releasing
-          // the lock, so the next queued task starts from consistent state.
-          const utxoWait = await waitForUtxoUpdate(
-            senderZkPrivateAccount.get().address,
-            previousTxid
-          );
-          if (!utxoWait.success) {
-            console.warn("waitForUtxoUpdate timed out:", utxoWait.message);
-          }
-
-          // Persist state updates atomically after UTXO is confirmed.
           const newZkAccount: ZkAccount = {
             scalar: updatedTradingAccountScalar,
             type: "Coin",
@@ -479,6 +497,45 @@ const OrderMarketForm = () => {
             value: satsValue,
             createdAt: dayjs().unix(),
           };
+
+          // Wait for the UTXO store to reflect the broadcast before releasing
+          // the lock, so the next queued task starts from consistent state.
+          const utxoWait = await waitForUtxoUpdate(
+            senderZkPrivateAccount.get().address,
+            previousTxid
+          );
+          if (!utxoWait.success) {
+            updateZkAccount(currentTradingAccount.address, {
+              ...currentTradingAccount,
+              address: senderZkPrivateAccount.get().address,
+              scalar: senderZkPrivateAccount.get().scalar,
+              value: senderZkPrivateAccount.get().value,
+              isOnChain: senderZkPrivateAccount.get().isOnChain,
+            });
+            addZkAccount(newZkAccount);
+            addTransactionHistory({
+              date: new Date(),
+              from: currentTradingAccount.address,
+              fromTag: "Trading Account",
+              to: updatedTradingAccountAddress,
+              toTag: tag,
+              tx_hash: txId,
+              type: "Transfer",
+              value: satsValue,
+            });
+            setMasterAccountRecovery(
+              createPendingMasterAccountRecovery({
+                address: senderZkPrivateAccount.get().address,
+                scalar: senderZkPrivateAccount.get().scalar,
+                value: senderZkPrivateAccount.get().value,
+                source: "market order funding transfer",
+                txId,
+              })
+            );
+            throw new Error(
+              "Trading account recovery is in progress after a delayed UTXO update. Your funds remain visible locally. Please wait for recovery to finish before retrying."
+            );
+          }
 
           // Add the new order account first so it is tracked even if a later
           // step fails (recovery is possible via manual cleanup).
