@@ -1,6 +1,10 @@
-import type { Asset, AssetList, Chain } from "@chain-registry/types";
 import type { ChainRecord, MainWalletBase } from "@cosmos-kit/core";
 import type { ChainInfo } from "@keplr-wallet/types";
+import {
+  getBech32Config,
+  getCoinDecimals,
+  getEndpointAddress,
+} from "./chain-info";
 
 type MutableWalletWithPatchFlag = MainWalletBase & {
   __twilightKeplrMobilePatched?: boolean;
@@ -12,35 +16,6 @@ type MutableWalletWithPatchFlag = MainWalletBase & {
 
 const KEPLR_MOBILE_SUGGESTED_CHAINS_KEY =
   "cosmos-kit@2:twilight/keplr-mobile-suggested-chains";
-
-function getBech32Config(chain: Chain): ChainInfo["bech32Config"] {
-  if (chain.bech32_config) {
-    return chain.bech32_config as ChainInfo["bech32Config"];
-  }
-
-  const prefix = chain.bech32_prefix;
-
-  if (!prefix) {
-    throw new Error(`Missing bech32 prefix for chain ${chain.chain_name}`);
-  }
-
-  return {
-    bech32PrefixAccAddr: prefix,
-    bech32PrefixAccPub: `${prefix}pub`,
-    bech32PrefixValAddr: `${prefix}valoper`,
-    bech32PrefixValPub: `${prefix}valoperpub`,
-    bech32PrefixConsAddr: `${prefix}valcons`,
-    bech32PrefixConsPub: `${prefix}valconspub`,
-  };
-}
-
-function getCoinDecimals(asset: Asset): number {
-  return (
-    asset.denom_units.find((unit) => unit.denom === asset.display)?.exponent ??
-    asset.denom_units[0]?.exponent ??
-    0
-  );
-}
 
 function buildKeplrChainInfo(chainRecord: ChainRecord): ChainInfo {
   const chain = chainRecord.chain;
@@ -60,20 +35,29 @@ function buildKeplrChainInfo(chainRecord: ChainRecord): ChainInfo {
     (chain.fees?.fee_tokens ?? []).map((token) => [
       token.denom,
       {
-        low: token.low_gas_price ?? 0.01,
-        average: token.average_gas_price ?? 0.025,
-        high: token.high_gas_price ?? 0.04,
+        low: token.low_gas_price ?? 1,
+        average: token.average_gas_price ?? 1,
+        high: token.high_gas_price ?? 1,
       },
     ])
   );
 
-  const currencies = chainAssets.map((asset) => ({
-    coinDenom: asset.symbol,
-    coinMinimalDenom: asset.base,
-    coinDecimals: getCoinDecimals(asset),
-    coinGeckoId: asset.coingecko_id || undefined,
-    coinImageUrl: asset.logo_URIs?.svg ?? asset.logo_URIs?.png,
-  }));
+  const currencies = chainAssets.map((asset) => {
+    const currency: {
+      coinDenom: string;
+      coinMinimalDenom: string;
+      coinDecimals: number;
+      coinGeckoId?: string;
+    } = {
+      coinDenom: asset.symbol,
+      coinMinimalDenom: asset.base,
+      coinDecimals: getCoinDecimals(asset),
+    };
+    if (asset.coingecko_id) {
+      currency.coinGeckoId = asset.coingecko_id;
+    }
+    return currency;
+  });
 
   const stakeCurrency =
     currencies.find(
@@ -86,9 +70,11 @@ function buildKeplrChainInfo(chainRecord: ChainRecord): ChainInfo {
     .filter((currency) => feeDenoms.has(currency.coinMinimalDenom))
     .map((currency) => {
       const gasPriceStep = gasPriceSteps[currency.coinMinimalDenom];
-
       return gasPriceStep ? { ...currency, gasPriceStep } : currency;
     });
+
+  const logoUrl =
+    chainAssets[0]?.logo_URIs?.svg ?? chainAssets[0]?.logo_URIs?.png;
 
   return {
     rpc: getEndpointAddress(
@@ -109,30 +95,13 @@ function buildKeplrChainInfo(chainRecord: ChainRecord): ChainInfo {
     currencies,
     stakeCurrency,
     feeCurrencies: feeCurrencies.length > 0 ? feeCurrencies : [stakeCurrency],
-    features: [],
-  };
-}
-
-function getEndpointAddress(
-  endpoint: string | { address?: string; url?: string } | undefined,
-  type: "rpc" | "rest",
-  chainName: string
-): string {
-  if (typeof endpoint === "string" && endpoint) {
-    return endpoint;
-  }
-
-  if (endpoint && typeof endpoint === "object") {
-    if (endpoint.address) {
-      return endpoint.address;
-    }
-
-    if (endpoint.url) {
-      return endpoint.url;
-    }
-  }
-
-  throw new Error(`Missing ${type} endpoint for chain ${chainName}`);
+    ...(logoUrl && { image: logoUrl }),
+    theme: {
+      primaryColor: "#6C5CE7",
+      gradient:
+        "linear-gradient(180deg, rgba(108,92,231,0.32) 0%, rgba(108,92,231,0) 100%)",
+    },
+  } as ChainInfo;
 }
 
 function readSuggestedChains(): string[] {

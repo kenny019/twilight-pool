@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from "@/components/dialog";
 import { useTwilightStore, useIsStoreHydrated } from "@/lib/providers/store";
+import { useSignStatus } from "@/lib/providers/session";
 import { useWallet } from "@cosmos-kit/react-lite";
 
 const LeaderboardOptInDialog = () => {
@@ -23,7 +24,13 @@ const LeaderboardOptInDialog = () => {
   );
 
   const isHydrated = useIsStoreHydrated();
-  const isOpen = isHydrated && status === "Connected" && !hasShownOptInDialog;
+  const { signStatus } = useSignStatus();
+
+  // Wait until sign request resolves (signed or skipped) before showing,
+  // so the leaderboard dialog doesn't overlap the Keplr sign popup
+  const signDone = signStatus === "signed" || signStatus === "skipped";
+  const isOpen =
+    isHydrated && status === "Connected" && signDone && !hasShownOptInDialog;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
