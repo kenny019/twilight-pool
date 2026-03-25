@@ -5,58 +5,15 @@ import { WalletViewProps } from "./wallet-view-controller.client";
 import WalletProviderButton from "./wallet-provider-button.client";
 import Link from "next/link";
 import Button from "@/components/button";
-import { isMobileBrowser } from "@/lib/utils/is-mobile";
-
-const allWallets = [
-  {
-    id: "keplr-extension",
-    name: "Keplr",
-    src: "/images/keplr-logo.png",
-    desktopOnly: true,
-  },
-  {
-    id: "keplr-mobile",
-    name: "Keplr Mobile",
-    src: "/images/keplr-logo.png",
-    mobileOnly: true,
-  },
-  {
-    id: "cosmostation-extension",
-    name: "Cosmostation",
-    src: "/images/cosmostation-logo.png",
-    desktopOnly: true,
-  },
-  {
-    id: "leap-extension",
-    name: "Leap",
-    src: "/images/leap-logo.png",
-    desktopOnly: true,
-  },
-  {
-    id: "cosmostation-mobile",
-    name: "Cosmostation",
-    src: "/images/cosmostation-logo.png",
-    mobileOnly: true,
-  },
-  {
-    id: "leap-cosmos-mobile",
-    name: "Leap",
-    src: "/images/leap-logo.png",
-    mobileOnly: true,
-  },
-  {
-    id: "leap-metamask-cosmos-snap",
-    name: "Metamask",
-    src: "/images/metamask-logo.png",
-    desktopOnly: true,
-  },
-] as const;
+import {
+  getCurrentWalletClientEnvironment,
+  getSupportedWalletDefinitions,
+} from "@/lib/wallets/catalog";
 
 const WalletProvidersView = ({}: WalletViewProps) => {
-  const isMobile = isMobileBrowser();
-  const availableWallets = allWallets.filter((w) =>
-    isMobile ? !("desktopOnly" in w) : !("mobileOnly" in w)
-  );
+  const clientEnvironment = getCurrentWalletClientEnvironment();
+  const isMobile = clientEnvironment === "mobile";
+  const availableWallets = getSupportedWalletDefinitions(clientEnvironment);
 
   return (
     <>
