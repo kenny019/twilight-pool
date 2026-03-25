@@ -155,7 +155,7 @@ const TradeWrapper = () => {
   }
 
   return (
-    <div ref={gridContainerRef} className="pb-20 lg:pb-0">
+    <div ref={gridContainerRef} className="pb-20 lg:pb-[140px]">
       <ResponsiveGridLayout
         layouts={{ lg: activeDesktopLayout, sm: layoutSmall }}
         cols={{ lg: 12, md: 12, sm: 4, xs: 4, xxs: 4 }}
