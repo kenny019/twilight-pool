@@ -1219,7 +1219,7 @@ const OrderLimitForm = () => {
         <ExchangeResource>
           <div className="flex flex-row gap-2 pt-0.5">
             <Button
-              className="min-w-0 flex-1 border-green-medium py-1 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-green-medium py-1 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium"
               variant="ui"
               type="submit"
               value="buy"
@@ -1232,7 +1232,7 @@ const OrderLimitForm = () => {
               )}
             </Button>
             <Button
-              className="min-w-0 flex-1 border-red py-1 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
+              className="min-w-0 flex-1 border-red py-1 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red"
               variant="ui"
               type="submit"
               value="sell"

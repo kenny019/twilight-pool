@@ -1105,7 +1105,7 @@ const OrderMarketForm = () => {
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"
-              className="w-full border-green-medium py-2 text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40"
+              className="w-full border-green-medium py-2 text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium"
               variant="ui"
               disabled={
                 isSubmitting ||
@@ -1119,7 +1119,7 @@ const OrderMarketForm = () => {
               onClick={() => submitMarket("SELL")}
               id="btn-market-sell"
               variant="ui"
-              className="w-full border-red py-2 text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40"
+              className="w-full border-red py-2 text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||
