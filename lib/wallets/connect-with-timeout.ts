@@ -4,10 +4,16 @@ export async function connectWithTimeout(
   connectFn: () => Promise<void>,
   timeoutMs = CONNECTION_TIMEOUT_MS
 ): Promise<void> {
-  return Promise.race([
-    connectFn(),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("CONNECTION_TIMEOUT")), timeoutMs)
-    ),
-  ]);
+  let timerId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timerId = setTimeout(
+      () => reject(new Error("CONNECTION_TIMEOUT")),
+      timeoutMs
+    );
+  });
+  try {
+    return await Promise.race([connectFn(), timeoutPromise]);
+  } finally {
+    clearTimeout(timerId);
+  }
 }

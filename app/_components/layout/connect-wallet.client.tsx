@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogTrigger } from "@/components/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/popover";
 import Button from "@/components/button";
-import { useWalletConnection } from "@/lib/hooks/useWalletConnection";
+import {
+  useWalletConnection,
+  isActiveView,
+} from "@/lib/hooks/useWalletConnection";
 import { truncateAddress } from "@/lib/utils/address";
 import WalletModal from "./wallet-modal/wallet-modal.client";
 import { Check, Copy, LogOut, Wallet } from "lucide-react";
@@ -18,10 +21,7 @@ export default function ConnectWallet() {
 
   // Auto-close modal only when fully connected (address resolved)
   // Skip if a connection flow is actively in progress (prevents stale state from closing modal)
-  const isActivelyConnecting =
-    state.view === "connecting" ||
-    state.view === "suggesting_chain" ||
-    state.view === "qr";
+  const isActivelyConnecting = isActiveView(state);
 
   useEffect(() => {
     if (isConnected && address && dialogOpen && !isActivelyConnecting) {

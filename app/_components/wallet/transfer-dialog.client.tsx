@@ -34,7 +34,7 @@ import { broadcastTradingTx, queryUtxoForAddress } from "@/lib/api/zkos";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTwilightStore } from "@/lib/providers/store";
 import Link from "next/link";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { twilightproject } from "twilightjs";
 import { ZkPrivateAccount } from "@/lib/zk/account";
@@ -83,6 +83,7 @@ const TransferDialog = ({
   );
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const storeApi = useTwilightStoreApi();
 
   const { twilightSats } = useGetTwilightBTCBalance();
@@ -135,6 +136,11 @@ const TransferDialog = ({
 
   async function submitTransfer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
 
     if (!depositRef.current?.value) return; // todo: validation
 

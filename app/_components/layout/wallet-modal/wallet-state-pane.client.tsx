@@ -158,6 +158,31 @@ function OpenInAppLink({
   );
 }
 
+function WalletLogoIcon({
+  wallet,
+  loading,
+}: {
+  wallet: WalletEntry;
+  loading?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <div className="rounded-2xl bg-primary/[0.06] p-3">
+        <NextImage
+          src={wallet.logo}
+          alt={wallet.name}
+          width={48}
+          height={48}
+          className="rounded-lg"
+        />
+      </div>
+      {loading && (
+        <Loader2 className="absolute -bottom-1 -right-1 h-5 w-5 animate-spin text-theme" />
+      )}
+    </div>
+  );
+}
+
 interface WalletStatePaneProps {
   state: ConnectionState;
   onRetry: () => void;
@@ -200,18 +225,7 @@ export default function WalletStatePane({
   if (state.view === "suggesting_chain") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <div className="relative">
-          <div className="rounded-2xl bg-primary/[0.06] p-3">
-            <NextImage
-              src={state.wallet.logo}
-              alt={state.wallet.name}
-              width={48}
-              height={48}
-              className="rounded-lg"
-            />
-          </div>
-          <Loader2 className="absolute -bottom-1 -right-1 h-5 w-5 animate-spin text-theme" />
-        </div>
+        <WalletLogoIcon wallet={state.wallet} loading />
         <div>
           <p className="text-sm font-medium">
             Add Chain in {state.wallet.name}
@@ -228,18 +242,7 @@ export default function WalletStatePane({
   if (state.view === "connecting") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <div className="relative">
-          <div className="rounded-2xl bg-primary/[0.06] p-3">
-            <NextImage
-              src={state.wallet.logo}
-              alt={state.wallet.name}
-              width={48}
-              height={48}
-              className="rounded-lg"
-            />
-          </div>
-          <Loader2 className="absolute -bottom-1 -right-1 h-5 w-5 animate-spin text-theme" />
-        </div>
+        <WalletLogoIcon wallet={state.wallet} loading />
         <div>
           <p className="text-sm font-medium">Requesting Connection</p>
           <p className="mt-1 text-xs text-primary-accent">
@@ -269,18 +272,7 @@ export default function WalletStatePane({
     if (isMobile) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-          <div className="relative">
-            <div className="rounded-2xl bg-primary/[0.06] p-3">
-              <NextImage
-                src={state.wallet.logo}
-                alt={state.wallet.name}
-                width={48}
-                height={48}
-                className="rounded-lg"
-              />
-            </div>
-            <Loader2 className="absolute -bottom-1 -right-1 h-5 w-5 animate-spin text-theme" />
-          </div>
+          <WalletLogoIcon wallet={state.wallet} loading />
           <div>
             <p className="text-sm font-medium">
               Approve in {state.wallet.name}
@@ -323,15 +315,7 @@ export default function WalletStatePane({
   if (state.view === "not_installed") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <div className="rounded-2xl bg-primary/[0.06] p-3">
-          <NextImage
-            src={state.wallet.logo}
-            alt={state.wallet.name}
-            width={48}
-            height={48}
-            className="rounded-lg"
-          />
-        </div>
+        <WalletLogoIcon wallet={state.wallet} />
         <div>
           <p className="text-sm font-medium">{state.wallet.name} not found</p>
           <p className="mt-1 text-xs text-primary-accent">

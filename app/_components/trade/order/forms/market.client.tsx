@@ -15,7 +15,7 @@ import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useGrid } from "@/lib/providers/grid";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
@@ -58,6 +58,7 @@ const OrderMarketForm = () => {
   const { width } = useGrid();
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
 
   // Raw store API — lets queue tasks read the latest state at execution time
   // instead of relying on a potentially-stale React closure.
@@ -307,6 +308,11 @@ const OrderMarketForm = () => {
   }, [currentPrice, leverage, btcAmount]);
 
   async function submitMarket(type: "SELL" | "BUY") {
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
     const positionType = type === "BUY" ? "LONG" : "SHORT";
 
     const chainWallet = mainWallet?.getChainWallet("nyks");

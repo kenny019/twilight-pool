@@ -1,7 +1,4 @@
-function isAndroid(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android/i.test(navigator.userAgent);
-}
+import { isAndroidBrowser } from "@/lib/utils/is-mobile";
 
 interface DeepLinkBuilder {
   ios: (url: string) => string;
@@ -26,5 +23,7 @@ export function getWalletDeepLink(
 ): string | null {
   const builder = DEEP_LINK_MAP[walletId];
   if (!builder) return null;
-  return isAndroid() ? builder.android(targetUrl) : builder.ios(targetUrl);
+  return isAndroidBrowser()
+    ? builder.android(targetUrl)
+    : builder.ios(targetUrl);
 }

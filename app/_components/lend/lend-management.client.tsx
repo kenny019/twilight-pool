@@ -13,7 +13,7 @@ import { retry, isUserRejection } from '@/lib/helpers';
 import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { createFundingToTradingTransferMsg } from '@/lib/twilight/wallet';
@@ -33,6 +33,7 @@ import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 const LendManagement = () => {
   const { toast } = useToast();
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const { status } = useWallet();
 
   const { twilightSats } = useGetTwilightBTCBalance();
@@ -65,6 +66,11 @@ const LendManagement = () => {
 
   async function submitDepositForm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
 
     if (isRelayerHalted) {
       toast({

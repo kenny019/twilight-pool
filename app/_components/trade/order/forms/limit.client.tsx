@@ -18,7 +18,7 @@ import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import { useToast } from "@/lib/hooks/useToast";
 import { useGrid } from "@/lib/providers/grid";
 import { usePriceFeed } from "@/lib/providers/feed";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { usdNumberFormatter } from "@/lib/utils/format";
@@ -201,6 +201,7 @@ const OrderLimitForm = () => {
 
   const { status, mainWallet } = useWallet();
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const addTrade = useTwilightStore((state) => state.trade.addTrade);
   const addTradeHistory = useTwilightStore(
@@ -365,6 +366,12 @@ const OrderLimitForm = () => {
     e: SyntheticEvent<HTMLFormElement, SubmitEvent>
   ) {
     e.preventDefault();
+
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
     const chainWallet = mainWallet?.getChainWallet("nyks");
 
     if (!chainWallet) {

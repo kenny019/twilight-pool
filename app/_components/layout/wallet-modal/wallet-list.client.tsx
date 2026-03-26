@@ -10,7 +10,10 @@ import {
   isAndroidBrowser,
   isIOSBrowser,
 } from "@/lib/utils/is-mobile";
-import { ConnectionState } from "@/lib/hooks/useWalletConnection";
+import {
+  ConnectionState,
+  isActiveView,
+} from "@/lib/hooks/useWalletConnection";
 import NextImage from "@/components/next-image";
 import Button from "@/components/button";
 import {
@@ -40,11 +43,13 @@ function WalletRow({
   wallet,
   isActive,
   isConnecting,
+  disabled,
   onClick,
 }: {
   wallet: WalletEntry;
   isActive: boolean;
   isConnecting: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -55,10 +60,10 @@ function WalletRow({
         isActive
           ? "bg-primary/[0.06] ring-1 ring-primary/20"
           : "hover:bg-primary/[0.04]",
-        isConnecting && "pointer-events-none opacity-70"
+        (isConnecting || disabled) && "pointer-events-none opacity-70"
       )}
       onClick={onClick}
-      disabled={isConnecting}
+      disabled={isConnecting || disabled}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/[0.06]">
         <NextImage
@@ -182,11 +187,13 @@ function MobileWalletCard({
   wallet,
   isActive,
   isConnecting,
+  disabled,
   onSelect,
 }: {
   wallet: WalletEntry;
   isActive: boolean;
   isConnecting: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   const [showSetup, setShowSetup] = useState(false);
@@ -260,7 +267,7 @@ function MobileWalletCard({
             variant="ui"
             className="w-full gap-2 rounded-lg py-3 text-sm"
             onClick={handleWalletConnect}
-            disabled={isConnecting}
+            disabled={isConnecting || disabled}
           >
             {isActive && isConnecting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -280,10 +287,7 @@ export default function WalletList({ state, onSelect }: WalletListProps) {
   const isMobile = useMemo(() => isMobileBrowser(), []);
 
   const activeWalletId = state.view !== "idle" ? state.wallet.id : null;
-  const isConnecting =
-    state.view === "connecting" ||
-    state.view === "suggesting_chain" ||
-    state.view === "qr";
+  const isConnecting = isActiveView(state);
 
   const hasInstalled = categories.installed.length > 0;
   const hasMobile = categories.mobile.length > 0;
@@ -300,6 +304,7 @@ export default function WalletList({ state, onSelect }: WalletListProps) {
               wallet={w}
               isActive={activeWalletId === w.id}
               isConnecting={isConnecting && activeWalletId === w.id}
+              disabled={isConnecting && activeWalletId !== w.id}
               onClick={() => onSelect(w)}
             />
           ))}
@@ -319,6 +324,7 @@ export default function WalletList({ state, onSelect }: WalletListProps) {
                   wallet={w}
                   isActive={activeWalletId === w.id}
                   isConnecting={isConnecting && activeWalletId === w.id}
+                  disabled={isConnecting && activeWalletId !== w.id}
                   onSelect={() => onSelect(w)}
                 />
               ) : (
@@ -344,6 +350,7 @@ export default function WalletList({ state, onSelect }: WalletListProps) {
               wallet={w}
               isActive={activeWalletId === w.id}
               isConnecting={isConnecting && activeWalletId === w.id}
+              disabled={isConnecting && activeWalletId !== w.id}
               onClick={() => onSelect(w)}
             />
           ))}

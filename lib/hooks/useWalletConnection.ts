@@ -26,6 +26,14 @@ export type ConnectionState =
   | { view: "error"; wallet: WalletEntry; errorType: WalletErrorType }
   | { view: "not_installed"; wallet: WalletEntry };
 
+export function isActiveView(state: ConnectionState): boolean {
+  return (
+    state.view === "connecting" ||
+    state.view === "suggesting_chain" ||
+    state.view === "qr"
+  );
+}
+
 export interface UseWalletConnectionReturn {
   state: ConnectionState;
   connect: (wallet: WalletEntry) => Promise<void>;
