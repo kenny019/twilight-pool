@@ -87,6 +87,7 @@ export const LendOrderSchema = z.object({
   uuid: z.string(),
   orderStatus: z.string(), // LENDED, SETTLED, CANCELLED
   timestamp: z.date(),
+  withdrawPending: z.boolean().optional(),
   npoolshare: z.number().optional(), // locked shares
   pool_share_price_entry: z.number().optional(), // BTC price when lent
   apy: z.number().optional(), // APR at lend time

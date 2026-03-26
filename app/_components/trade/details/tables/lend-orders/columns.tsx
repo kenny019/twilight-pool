@@ -178,6 +178,8 @@ export const lendOrdersColumns: ColumnDef<
       const order = row.row.original;
       const getStatusColor = (status: string) => {
         switch (status) {
+          case "WITHDRAWING":
+            return "bg-primary/10 text-primary";
           case "LENDED":
             return "bg-green-medium/10 text-green-medium";
           case "ERROR":
@@ -187,14 +189,16 @@ export const lendOrdersColumns: ColumnDef<
         }
       };
 
+      const statusLabel = order.withdrawPending ? "WITHDRAWING" : order.orderStatus;
+
       return (
         <span
           className={cn(
             "rounded px-2 py-1 text-xs font-medium",
-            getStatusColor(order.orderStatus)
+            getStatusColor(statusLabel)
           )}
         >
-          {order.orderStatus}
+          {statusLabel}
         </span>
       );
     },
@@ -213,6 +217,7 @@ export const lendOrdersColumns: ColumnDef<
 
       const withdrawDisabled =
         isSettling ||
+        !!order.withdrawPending ||
         meta.settlingOrderId !== null ||
         meta.isRelayerHalted;
 
@@ -236,6 +241,8 @@ export const lendOrdersColumns: ColumnDef<
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   Withdrawing...
                 </>
+              ) : order.withdrawPending ? (
+                "Withdrawing..."
               ) : (
                 "Withdraw"
               )}

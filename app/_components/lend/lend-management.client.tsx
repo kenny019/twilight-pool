@@ -29,6 +29,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { ZkPrivateAccount } from '@/lib/zk/account';
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 const LendManagement = () => {
   const { toast } = useToast();
@@ -143,10 +144,13 @@ const LendManagement = () => {
     console.log("msg", fundingTransferMsg);
 
     try {
-      const res = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [fundingTransferMsg],
-        "auto"
+      const res = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [fundingTransferMsg],
+          "auto"
+        ),
+        "Lend deposit funding transfer"
       );
 
       console.log("sent sats from funding to trading", transferAmount);

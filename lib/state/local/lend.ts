@@ -38,7 +38,7 @@ export const createLendSlice: StateImmerCreator<AccountSlices, LendSlice> = (
   removeLend: (lendOrder) =>
     set((state) => {
       state.lend.lends = state.lend.lends.filter(
-        (lend) => lend.accountAddress !== lendOrder.accountAddress
+        (lend) => lend.uuid !== lendOrder.uuid
       );
     }),
   setPoolInfo: (poolInfo) =>
@@ -52,7 +52,7 @@ export const createLendSlice: StateImmerCreator<AccountSlices, LendSlice> = (
   removeLendHistory: (lendOrder) =>
     set((state) => {
       state.lend.lendHistory = state.lend.lendHistory.filter(
-        (lend) => lend.accountAddress !== lendOrder.accountAddress
+        (lend) => lend.uuid !== lendOrder.uuid
       );
     }),
   resetState: () => {

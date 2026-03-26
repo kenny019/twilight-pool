@@ -24,6 +24,10 @@ import { DialogProvider } from "@/lib/providers/limit-dialogs";
 import LeaderboardOptInDialog from "@/app/_components/layout/leaderboard-opt-in-dialog.client";
 import SignRequestDialog from "@/app/_components/layout/sign-request-dialog.client";
 import { patchKeplrWallets } from "@/lib/wallets/keplr";
+import {
+  filterWalletsByClientEnvironment,
+  getCurrentWalletClientEnvironment,
+} from "@/lib/wallets/catalog";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -35,20 +39,24 @@ const queryClient = new QueryClient({
   },
 });
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const wallets = [
+const _clientEnv = getCurrentWalletClientEnvironment();
+const _wallets = filterWalletsByClientEnvironment(
+  [
     ...patchKeplrWallets(keplr as unknown as MainWalletBase[]),
     ...leap,
     ...leapMetamaskCosmosSnap,
-  ] as unknown as MainWalletBase[];
+  ] as unknown as MainWalletBase[],
+  _clientEnv
+);
 
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" attribute="class">
         <ChainProvider
           chains={[twilightTestnet]}
           assetLists={[twilightTestnetAssets]}
-          wallets={wallets}
+          wallets={_wallets}
           endpointOptions={{
             endpoints: {
               nyks: {

@@ -93,4 +93,5 @@ class MasterAccountQueue {
   }
 }
 
+export { MasterAccountQueue };
 export const masterAccountQueue = new MasterAccountQueue();

@@ -11,16 +11,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { createZkOrder } from "@/lib/twilight/zk";
 import { sendTradeOrder } from "@/lib/api/client";
-import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
 import { queryTradeOrder } from "@/lib/api/relayer";
 import { createQueryTradeOrderMsg } from "@/lib/twilight/zkos";
-import { retry } from "@/lib/helpers";
 import { TradeOrder, PositionTypes } from "@/lib/types";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import dayjs from "dayjs";
 import { formatCurrency } from "@/lib/twilight/ticker";
 import { Loader2 } from "lucide-react";
+import { waitForRequestIdConfirmation } from "@/lib/utils/requestIdConfirmation";
 
 type Props = {
   order: TradeOrder | null;
@@ -176,30 +175,11 @@ function EditOrderDialog({
         return;
       }
 
-      // Step 5: Poll for tx hash — filter out the stale cancel tx and SLTP events
-      const transactionHashCondition = (
-        txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
-      ) => {
-        if (txHashResult.result) {
-          return txHashResult.result.some(
-            (r) =>
-              !isCancelStatus(r.order_status) &&
-              !isErrorStatus(r.order_status) &&
-              r.order_type !== "SLTP"
-          );
+      const transactionHashRes = await waitForRequestIdConfirmation(
+        sendResult.result.id_key as string,
+        {
+          excludedOrderTypes: ["SLTP"],
         }
-        return false;
-      };
-
-      const transactionHashRes = await retry<
-        ReturnType<typeof queryTransactionHashes>,
-        string
-      >(
-        queryTransactionHashes,
-        30,
-        order.accountAddress,
-        1000,
-        transactionHashCondition
       );
 
       if (!transactionHashRes.success) {
@@ -212,22 +192,7 @@ function EditOrderDialog({
         return;
       }
 
-      const orderData = transactionHashRes.data.result.find(
-        (r) =>
-          !isCancelStatus(r.order_status) &&
-          !isErrorStatus(r.order_status) &&
-          r.order_type !== "SLTP"
-      );
-
-      if (!orderData) {
-        toast({
-          title: "Order may have been placed",
-          description:
-            "Could not find new order data. Please check your open orders.",
-          variant: "error",
-        });
-        return;
-      }
+      const orderData = transactionHashRes.event;
 
       // Step 6: Query full order details
       const queryTradeOrderMsg = await createQueryTradeOrderMsg({

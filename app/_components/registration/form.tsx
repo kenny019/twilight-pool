@@ -15,6 +15,7 @@ import Big from "big.js";
 import { btcAddressSchema } from "@/lib/types";
 import { twilightproject } from "twilightjs";
 import Button from '@/components/button';
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
 const WalletRegistrationForm = () => {
   const { toast } = useToast();
@@ -105,7 +106,10 @@ const WalletRegistrationForm = () => {
     });
 
     try {
-      await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], "auto");
+      assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(twilightDepositAddress, [msg], "auto"),
+        "BTC address registration"
+      );
 
       toast({
         title: "Submitting Bitcoin address",

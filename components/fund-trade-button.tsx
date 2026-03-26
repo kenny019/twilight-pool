@@ -18,7 +18,6 @@ import {
   createZkAccountWithBalance,
   createZkBurnTx,
 } from "@/lib/twilight/zk";
-import { ZkAccount } from "@/lib/types";
 import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import Link from "next/link";
@@ -26,7 +25,6 @@ import { broadcastTradingTx, queryUtxoForAddress } from "@/lib/api/zkos";
 import { safeJSONParse, isUserRejection } from "@/lib/helpers";
 import { twilightproject } from "twilightjs";
 import Long from "long";
-import { send } from "process";
 import { masterAccountQueue } from "@/lib/utils/masterAccountQueue";
 import {
   hasUtxoData,
@@ -34,6 +32,12 @@ import {
   waitForUtxoUpdate,
 } from "@/lib/utils/waitForUtxoUpdate";
 import { useTwilightStoreApi } from "@/lib/providers/store";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import {
+  assertMasterAccountActionAllowed,
+  createPendingMasterAccountRecovery,
+  getMasterAccountBlockedMessage,
+} from "@/lib/utils/masterAccountRecovery";
 
 type Props = {
   type?: "icon" | "large";
@@ -70,6 +74,9 @@ function FundingTradeButton({
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
   const removeZkAccount = useTwilightStore((state) => state.zk.removeZkAccount);
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -90,7 +97,21 @@ function FundingTradeButton({
 
   const handleFundingToTradeTransfer = useCallback(
     async (amount: number, chainWallet: ChainWalletBase) => {
-      if (!tradingAccount || !twilightAddress) {
+      const state = storeApi.getState();
+      const currentTradingAccount =
+        state.zk.zkAccounts.find((account) => account.tag === "main") ??
+        tradingAccount;
+
+      if (state.zk.masterAccountBlocked) {
+        return {
+          success: false,
+          message: getMasterAccountBlockedMessage(
+            state.zk.masterAccountBlockReason
+          ),
+        };
+      }
+
+      if (!currentTradingAccount || !twilightAddress) {
         return {
           success: false,
           message: "An unexpected error occurred",
@@ -118,10 +139,13 @@ function FundingTradeButton({
         description: "Please approve the transaction in your wallet.",
       });
 
-      const broadcastResponse = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [transferMsg],
-        "auto"
+      const broadcastResponse = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [transferMsg],
+          "auto"
+        ),
+        "Funding to trading transfer"
       );
 
       const senderZkPrivateAccount = await ZkPrivateAccount.create({
@@ -134,7 +158,7 @@ function FundingTradeButton({
 
       let privateTxSingleResult: any;
 
-      if (!tradingAccount.value || !tradingAccount.isOnChain) {
+      if (!currentTradingAccount.value || !currentTradingAccount.isOnChain) {
         const newTradingAccount = await createZkAccount({
           tag: "main",
           signature: privateKey,
@@ -148,8 +172,8 @@ function FundingTradeButton({
       } else {
         privateTxSingleResult = await senderZkPrivateAccount.privateTxSingle(
           amount,
-          tradingAccount.address,
-          tradingAccount.value
+          currentTradingAccount.address,
+          currentTradingAccount.value
         );
       }
 
@@ -167,12 +191,12 @@ function FundingTradeButton({
         updatedAddress: updatedTradingAccountAddress,
       } = privateTxSingleResult.data;
 
-      updateZkAccount(tradingAccount.address, {
-        ...tradingAccount,
+      updateZkAccount(currentTradingAccount.address, {
+        ...currentTradingAccount,
         address: updatedTradingAccountAddress,
         scalar: updatedTradingAccountScalar,
         value: Big(amount)
-          .add(tradingAccount.value || 0)
+          .add(currentTradingAccount.value || 0)
           .toNumber(),
         isOnChain: true,
       });
@@ -216,6 +240,7 @@ function FundingTradeButton({
       addTransactionHistory,
       updateZkAccount,
       tradingAccount,
+      storeApi,
       twilightAddress,
     ]
   );
@@ -231,6 +256,21 @@ function FundingTradeButton({
 
       return masterAccountQueue.enqueue(async () => {
         const state = storeApi.getState();
+        try {
+          assertMasterAccountActionAllowed({
+            masterAccountBlocked: state.zk.masterAccountBlocked,
+            masterAccountBlockReason: state.zk.masterAccountBlockReason,
+          });
+        } catch (error) {
+          return {
+            success: false,
+            message:
+              error instanceof Error
+                ? error.message
+                : getMasterAccountBlockedMessage(state.zk.masterAccountBlockReason),
+          };
+        }
+
         const currentTradingAccount = state.zk.zkAccounts.find(
           (a) => a.tag === "main"
         );
@@ -285,22 +325,66 @@ function FundingTradeButton({
           };
         }
 
-        const utxoWait = await waitForUtxoUpdate(
-          senderZkPrivateAccount.get().address,
-          previousTxid
-        );
-        if (!utxoWait.success) {
-          console.warn(
-            "fund-trade-button waitForUtxoUpdate timed out:",
-            utxoWait.message
-          );
-        }
-
         const {
           scalar: updatedTransientScalar,
           txId,
           updatedAddress: updatedTransientAddress,
         } = privateTxSingleResult.data;
+
+        const updatedTradingAccount = {
+          address: senderZkPrivateAccount.get().address,
+          scalar: senderZkPrivateAccount.get().scalar,
+          value: senderZkPrivateAccount.get().value,
+        };
+
+        const utxoWait = await waitForUtxoUpdate(
+          updatedTradingAccount.address,
+          previousTxid
+        );
+        if (!utxoWait.success) {
+          updateZkAccount(currentTradingAccount.address, {
+            ...updatedTradingAccount,
+            type: "Coin",
+            isOnChain: true,
+            tag: currentTradingAccount.tag,
+          });
+
+          addZkAccount({
+            address: updatedTransientAddress,
+            scalar: updatedTransientScalar,
+            value: amount,
+            type: "Coin",
+            tag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+            isOnChain: true,
+          });
+
+          addTransactionHistory({
+            date: new Date(),
+            from: currentTradingAccount.address,
+            fromTag: "Trading Account",
+            to: updatedTransientAddress,
+            toTag: `temp ${updatedTransientAddress.slice(0, 6)}`,
+            tx_hash: txId,
+            type: "Transfer",
+            value: amount,
+          });
+
+          setMasterAccountRecovery(
+            createPendingMasterAccountRecovery({
+              address: updatedTradingAccount.address,
+              scalar: updatedTradingAccount.scalar,
+              value: updatedTradingAccount.value,
+              source: "trade to funding transfer",
+              txId,
+            })
+          );
+
+          return {
+            success: false,
+            message:
+              "Trading account recovery is in progress after a delayed UTXO update. Please wait for recovery to finish before trying again.",
+          };
+        }
 
         console.log(
           "txId",
@@ -311,11 +395,7 @@ function FundingTradeButton({
           currentTradingAccount.address
         );
 
-        newTradingAccount = {
-          address: senderZkPrivateAccount.get().address,
-          scalar: senderZkPrivateAccount.get().scalar,
-          value: senderZkPrivateAccount.get().value,
-        };
+        newTradingAccount = updatedTradingAccount;
 
         // update in case burn fails
         updateZkAccount(currentTradingAccount.address, {
@@ -429,10 +509,13 @@ function FundingTradeButton({
           description: "Please approve the transaction in your wallet.",
         });
 
-        const mintBurnRes = await stargateClient.signAndBroadcast(
-          twilightAddress,
-          [mintBurnMsg],
-          "auto"
+        const mintBurnRes = assertCosmosTxSuccess(
+          await stargateClient.signAndBroadcast(
+            twilightAddress,
+            [mintBurnMsg],
+            "auto"
+          ),
+          "Trading to funding burn"
         );
 
         removeZkAccount({
@@ -492,6 +575,7 @@ function FundingTradeButton({
       updateZkAccount,
       addZkAccount,
       removeZkAccount,
+      setMasterAccountRecovery,
       storeApi,
       twilightAddress,
     ]

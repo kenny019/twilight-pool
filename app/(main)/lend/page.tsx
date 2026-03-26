@@ -50,6 +50,11 @@ import Long from "long";
 import BTC from "@/lib/twilight/denoms";
 import Link from "next/link";
 import { ZkPrivateAccount } from "@/lib/zk/account";
+import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import {
+  completeLendWithdrawal,
+  markLendWithdrawalPending,
+} from "@/lib/utils/lendWithdrawalState";
 
 const formatTag = (tag: string) => {
   if (tag === "main") {
@@ -90,6 +95,7 @@ const Page = () => {
   const removeZkAccount = useTwilightStore((state) => state.zk.removeZkAccount);
 
   const removeLend = useTwilightStore((state) => state.lend.removeLend);
+  const updateLend = useTwilightStore((state) => state.lend.updateLend);
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
@@ -256,8 +262,7 @@ const Page = () => {
       const tx_hash = requestIdData?.tx_hash;
 
       console.log("requestIdData", requestIdData);
-
-      removeLend(order);
+      updateLend(order.uuid, markLendWithdrawalPending(order));
 
       const selectedZkAccount = zKAccounts.find(
         (account) => account.address === order.accountAddress
@@ -315,14 +320,14 @@ const Page = () => {
         type: "Withdraw Lend",
       });
 
-      addLendHistory({
-        ...order,
-        orderStatus: "SETTLED",
-        timestamp: new Date(),
-        tx_hash: tx_hash,
-        value: newBalance,
-        payment: Big(lendResult.payment ?? 0).toNumber() || 0,
-      });
+      addLendHistory(
+        completeLendWithdrawal({
+          order,
+          txHash: tx_hash,
+          value: newBalance,
+          payment: Big(lendResult.payment ?? 0).toNumber() || 0,
+        })
+      );
 
       setIsSettleLoading(false);
       setSettlingOrderId(null);
@@ -458,10 +463,13 @@ const Page = () => {
         description: "Please approve the transaction in your wallet.",
       });
 
-      const mintBurnRes = await stargateClient.signAndBroadcast(
-        twilightAddress,
-        [mintBurnMsg],
-        "auto"
+      const mintBurnRes = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [mintBurnMsg],
+          "auto"
+        ),
+        "Lend withdrawal funding burn"
       );
 
       addTransactionHistory({
@@ -509,6 +517,7 @@ const Page = () => {
       setIsSettleLoading(false);
       setSettlingOrderId(null);
       setIsWithdrawDialogOpen(false);
+      updateLend(order.uuid, { ...order, withdrawPending: false });
       if (isUserRejection(err)) {
         toast({
           title: "Transaction rejected",
