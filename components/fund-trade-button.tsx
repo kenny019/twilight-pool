@@ -12,7 +12,7 @@ import { ChainWalletBase, WalletStatus } from "@cosmos-kit/core";
 import { useToast } from "@/lib/hooks/useToast";
 import { getRegisteredBTCAddress } from "@/lib/twilight/rest";
 import { registerBTCAddress } from "@/lib/utils/btc-registration";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import {
   createZkAccount,
   createZkAccountWithBalance,
@@ -92,6 +92,7 @@ function FundingTradeButton({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const storeApi = useTwilightStoreApi();
 
   const handleFundingToTradeTransfer = useCallback(
@@ -308,10 +309,7 @@ function FundingTradeButton({
           existingAccount: currentTradingAccount,
         });
 
-        console.log(
-          "tradingAccount.address",
-          currentTradingAccount.address
-        );
+        console.log("tradingAccount.address", currentTradingAccount.address);
 
         const privateTxSingleResult =
           await senderZkPrivateAccount.privateTxSingle(
@@ -584,10 +582,24 @@ function FundingTradeButton({
   );
 
   async function handleTransfer() {
-    if (!chainWallet || !twilightAddress || !tradingAccount) {
+    if (!chainWallet || !twilightAddress) {
       toast({
         title: "Wallet is not connected",
         description: "Please connect your wallet to transfer.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
+    if (!tradingAccount) {
+      toast({
+        title: "Trading account not found",
+        description: "Please try again after signing.",
         variant: "error",
       });
       return;

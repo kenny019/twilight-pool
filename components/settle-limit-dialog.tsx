@@ -5,7 +5,7 @@ import { NumberInput } from "./input";
 import Button from "./button";
 import { useToast } from "@/lib/hooks/useToast";
 import { settleOrder } from "@/lib/zk/trade";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
 import Link from "next/link";
 import Big from "big.js";
@@ -32,6 +32,7 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
     (state) => state.trade_history.addTrade
   );
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const { getCurrentPrice } = usePriceFeed();
@@ -78,6 +79,11 @@ function SettleLimitDialog({ account, open, onOpenChange }: Props) {
   const isPnlNegative = estimatedPnl < 0;
 
   async function handleSettleLimit() {
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
     if (limitPrice < 0) {
       toast({
         title: "Invalid limit price",

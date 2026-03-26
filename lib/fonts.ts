@@ -5,6 +5,7 @@ export const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   variable: "--font-feature",
   weight: "400",
+  adjustFontFallback: false,
 });
 export const robotoMono = Roboto_Mono({
   subsets: ["latin"],

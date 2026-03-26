@@ -3,11 +3,8 @@
 import { ThemeProvider } from "next-themes";
 import { ChainProvider } from "@cosmos-kit/react-lite";
 import { wallets as keplr } from "@cosmos-kit/keplr";
-import { wallets as cosmos } from "@cosmos-kit/cosmostation-extension";
 import { wallets as leap } from "@cosmos-kit/leap-extension";
 import { wallets as leapMetamaskCosmosSnap } from "@cosmos-kit/leap-metamask-cosmos-snap";
-import { wallets as cosmostationMobile } from "@cosmos-kit/cosmostation-mobile";
-import { wallets as leapMobile } from "@cosmos-kit/leap-mobile";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import React from "react";
@@ -25,6 +22,7 @@ import { TwilightStoreProvider } from "@/lib/providers/store";
 import { SessionStoreProvider } from "@/lib/providers/session";
 import { DialogProvider } from "@/lib/providers/limit-dialogs";
 import LeaderboardOptInDialog from "@/app/_components/layout/leaderboard-opt-in-dialog.client";
+import SignRequestDialog from "@/app/_components/layout/sign-request-dialog.client";
 import { patchKeplrWallets } from "@/lib/wallets/keplr";
 import {
   filterWalletsByClientEnvironment,
@@ -45,11 +43,8 @@ const _clientEnv = getCurrentWalletClientEnvironment();
 const _wallets = filterWalletsByClientEnvironment(
   [
     ...patchKeplrWallets(keplr as unknown as MainWalletBase[]),
-    ...cosmos,
     ...leap,
     ...leapMetamaskCosmosSnap,
-    ...cosmostationMobile,
-    ...leapMobile,
   ] as unknown as MainWalletBase[],
   _clientEnv
 );
@@ -88,6 +83,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 </PriceFeedProvider>
                 <LeaderboardOptInDialog />
               </TwilightStoreProvider>
+              <SignRequestDialog />
             </SessionStoreProvider>
             <Toaster />
           </TwilightProvider>

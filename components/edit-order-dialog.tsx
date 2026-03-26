@@ -5,7 +5,7 @@ import { NumberInput } from "./input";
 import Button from "./button";
 import { useToast } from "@/lib/hooks/useToast";
 import { cancelZkOrder } from "@/lib/zk/trade";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@cosmos-kit/react-lite";
@@ -40,6 +40,7 @@ function EditOrderDialog({
   const queryClient = useQueryClient();
 
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const { getCurrentPrice } = usePriceFeed();
@@ -73,6 +74,11 @@ function EditOrderDialog({
 
   async function handleEditOrder() {
     if (!order) return;
+
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
 
     if (newPrice <= 0) {
       toast({

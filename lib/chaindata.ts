@@ -21,7 +21,7 @@ export const twilightTestnet: Chain = {
   pretty_name: `Twilight ${TWILIGHT_NETWORK_TYPE.charAt(0).toUpperCase() + TWILIGHT_NETWORK_TYPE.slice(1)}`,
   chain_id: "nyks",
   bech32_prefix: "twilight",
-  slip44: TWILIGHT_NETWORK_TYPE === "testnet" ? 1 : 118, // https://github.com/satoshilabs/slips/blob/master/slip-0044.md#registered-coin-types
+  slip44: 118,
   apis: {
     // note: helpful information, /rest and /api are the same endpoint for twilight-explorer
     rest: [
@@ -57,10 +57,10 @@ export const twilightTestnet: Chain = {
     fee_tokens: [
       {
         denom: "nyks",
-        average_gas_price: 0.0001,
-        high_gas_price: 0.0001,
-        low_gas_price: 0.0001,
-        fixed_min_gas_price: 0.0001,
+        average_gas_price: 1,
+        high_gas_price: 1,
+        low_gas_price: 1,
+        fixed_min_gas_price: 1,
       },
     ],
   },
@@ -128,7 +128,7 @@ export const signerOptions: SignerOptions = {
     return {
       registry,
       aminoTypes,
-      gasPrice: GasPrice.fromString("0.0001nyks"),
+      gasPrice: GasPrice.fromString("1nyks"),
     } as unknown as SigningStargateClientOptions;
   }) as SignerOptions["signingStargate"],
   // signingCosmwasm: (chain) => {

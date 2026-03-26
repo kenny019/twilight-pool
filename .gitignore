@@ -39,5 +39,6 @@ next-env.d.ts
 .claude
 CLAUDE.md
 /docs
+/plan
 AGENTS.md
 /memory

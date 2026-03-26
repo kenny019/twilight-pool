@@ -7,7 +7,7 @@ import { NumberInput } from "./input";
 import Button from "./button";
 import { useToast } from "@/lib/hooks/useToast";
 import { settleOrder, settleOrderSltp } from "@/lib/zk/trade";
-import { useSessionStore } from "@/lib/providers/session";
+import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { usePriceFeed } from "@/lib/providers/feed";
 import Link from "next/link";
 import Big from "big.js";
@@ -162,6 +162,7 @@ function ConditionalCloseDialog({
   );
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
 
   const { getCurrentPrice } = usePriceFeed();
@@ -623,6 +624,11 @@ function ConditionalCloseDialog({
 
   // ── submit handlers ──────────────────────────────────────────────────────
   async function handleSettleLimit() {
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
     if (limitPrice <= 0) {
       toast({
         title: "Invalid limit price",
@@ -753,6 +759,11 @@ function ConditionalCloseDialog({
   }
 
   async function handleSettleSltp() {
+    if (!privateKey) {
+      await retrySign();
+      return;
+    }
+
     const errors = getValidationErrors();
     const firstError = errors.sl ?? errors.tp ?? errors.global;
     if (firstError) {
