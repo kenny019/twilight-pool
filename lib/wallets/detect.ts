@@ -110,8 +110,17 @@ export function categorizeWallets(): CategorizedWallets {
   }
 
   if (isMobile) {
+    // Check if any desktop extensions are installed (e.g. Chrome DevTools
+    // mobile emulation on a desktop with extensions, or future hybrid cases)
+    const installedExtensions = WALLET_REGISTRY.filter(
+      (w) =>
+        w.platform === "extension" &&
+        w.windowKey &&
+        isExtensionInstalled(w.windowKey)
+    );
+
     return {
-      installed: [],
+      installed: installedExtensions,
       mobile: WALLET_REGISTRY.filter((w) => w.platform === "mobile"),
       other: [],
     };
