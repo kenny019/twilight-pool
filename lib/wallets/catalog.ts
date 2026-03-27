@@ -12,7 +12,9 @@ export const walletDefinitions: readonly WalletDefinition[] = [
     id: "keplr-extension",
     name: "Keplr",
     src: "/images/keplr-logo.png",
-    supportedEnvironments: ["desktop"],
+    // Includes "mobile" because Keplr's in-app browser injects window.keplr
+    // as a desktop extension, but navigator.userAgent reports as mobile
+    supportedEnvironments: ["desktop", "mobile"],
   },
   {
     id: "keplr-mobile",
@@ -30,7 +32,9 @@ export const walletDefinitions: readonly WalletDefinition[] = [
     id: "leap-extension",
     name: "Leap",
     src: "/images/leap-logo.png",
-    supportedEnvironments: ["desktop"],
+    // Includes "mobile" because Leap's in-app browser injects window.leap
+    // as a desktop extension, but navigator.userAgent reports as mobile
+    supportedEnvironments: ["desktop", "mobile"],
   },
   {
     id: "cosmostation-mobile",
@@ -84,10 +88,9 @@ export function getSupportedWalletIds(
   return getSupportedWalletDefinitions(environment).map((wallet) => wallet.id);
 }
 
-export function filterWalletsByClientEnvironment<T extends { walletName: string }>(
-  wallets: T[],
-  environment: WalletClientEnvironment
-): T[] {
+export function filterWalletsByClientEnvironment<
+  T extends { walletName: string },
+>(wallets: T[], environment: WalletClientEnvironment): T[] {
   const supportedWalletIds = new Set(getSupportedWalletIds(environment));
 
   return wallets.filter((wallet) => supportedWalletIds.has(wallet.walletName));
