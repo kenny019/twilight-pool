@@ -20,7 +20,7 @@ export const walletDefinitions: readonly WalletDefinition[] = [
     id: "keplr-mobile",
     name: "Keplr Mobile",
     src: "/images/keplr-logo.png",
-    supportedEnvironments: ["mobile"],
+    supportedEnvironments: ["mobile", "desktop"],
   },
   {
     id: "cosmostation-extension",
