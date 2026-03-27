@@ -57,10 +57,10 @@ export const twilightTestnet: Chain = {
     fee_tokens: [
       {
         denom: "nyks",
-        average_gas_price: 1,
-        high_gas_price: 1,
-        low_gas_price: 1,
-        fixed_min_gas_price: 1,
+        average_gas_price: 0.0001,
+        high_gas_price: 0.0001,
+        low_gas_price: 0.0001,
+        fixed_min_gas_price: 0.0001,
       },
     ],
   },
@@ -128,7 +128,7 @@ export const signerOptions: SignerOptions = {
     return {
       registry,
       aminoTypes,
-      gasPrice: GasPrice.fromString("1nyks"),
+      gasPrice: GasPrice.fromString("0.0001nyks"),
     } as unknown as SigningStargateClientOptions;
   }) as SignerOptions["signingStargate"],
   // signingCosmwasm: (chain) => {

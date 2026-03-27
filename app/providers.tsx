@@ -39,24 +39,29 @@ const queryClient = new QueryClient({
   },
 });
 
-const _clientEnv = getCurrentWalletClientEnvironment();
-const _wallets = filterWalletsByClientEnvironment(
-  [
-    ...patchKeplrWallets(keplr as unknown as MainWalletBase[]),
-    ...leap,
-    ...leapMetamaskCosmosSnap,
-  ] as unknown as MainWalletBase[],
-  _clientEnv
-);
+// Wallet list without environment filtering — filtering happens inside the
+// component so it runs on the client (navigator is undefined during SSR).
+const _allWallets = [
+  ...patchKeplrWallets(keplr as unknown as MainWalletBase[]),
+  ...leap,
+  ...leapMetamaskCosmosSnap,
+] as unknown as MainWalletBase[];
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Must run client-side so in-app browsers (mobile userAgent + desktop
+  // extension) get the correct environment detection.
+  const wallets = React.useMemo(() => {
+    const env = getCurrentWalletClientEnvironment();
+    return filterWalletsByClientEnvironment(_allWallets, env);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" attribute="class">
         <ChainProvider
           chains={[twilightTestnet]}
           assetLists={[twilightTestnetAssets]}
-          wallets={_wallets}
+          wallets={wallets}
           endpointOptions={{
             endpoints: {
               nyks: {
