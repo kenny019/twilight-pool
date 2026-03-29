@@ -67,7 +67,9 @@ function loadColumnOrder(columns: ColumnDef<any, any>[]): ColumnOrderState {
       // Validate: keep only IDs that exist in columns, append any missing ones
       const validIds = new Set(columns.map(getColumnId).filter(Boolean));
       const ordered = parsed.filter((id) => validIds.has(id));
-      const missing = [...validIds].filter((id) => !ordered.includes(id));
+      const missing = Array.from(validIds).filter(
+        (id) => !ordered.includes(id)
+      );
       return [...ordered, ...missing];
     }
   } catch {
