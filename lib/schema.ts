@@ -79,6 +79,21 @@ export const TradeOrderSchema = z.object({
       })
     )
     .optional(),
+  // Event metadata for Order History (from transaction_hashes)
+  eventSource: z.enum(["trader_order_info", "transaction_hashes"]).optional(),
+  eventStatus: z.string().optional(),
+  request_id: z.string().nullable().optional(),
+  reason: z.string().nullable().optional(),
+  old_price: z.number().nullable().optional(),
+  new_price: z.number().nullable().optional(),
+  priceKind: z
+    .enum(["LIMIT_CLOSE", "STOP_LOSS", "TAKE_PROFIT", "NONE"])
+    .optional(),
+  displayPrice: z.number().nullable().optional(),
+  displayPriceBefore: z.number().nullable().optional(),
+  displayPriceAfter: z.number().nullable().optional(),
+  eventTimestamp: z.date().optional(),
+  idempotency_key: z.string().optional(),
 });
 
 export const LendOrderSchema = z.object({

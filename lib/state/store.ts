@@ -26,7 +26,7 @@ import {
 
 type PersistedAccountState = Partial<AccountSlices> & Record<string, unknown>;
 
-export const ACCOUNT_STATE_VERSION = 0.7;
+export const ACCOUNT_STATE_VERSION = 0.8;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -126,7 +126,7 @@ export function migrateAccountState(
     }));
   }
 
-  if (version < ACCOUNT_STATE_VERSION) {
+  if (version < 0.7) {
     mapPersistedTrades(newState, "trade", (trade) => ({
       ...trade,
       takeProfit: migrateSltpField(trade.takeProfit),
@@ -136,6 +136,25 @@ export function migrateAccountState(
       ...trade,
       takeProfit: migrateSltpField(trade.takeProfit),
       stopLoss: migrateSltpField(trade.stopLoss),
+    }));
+  }
+
+  if (version < ACCOUNT_STATE_VERSION) {
+    mapPersistedTrades(newState, "trade_history", (trade) => ({
+      ...trade,
+      eventSource: trade.eventSource ?? "trader_order_info",
+      eventStatus: trade.eventStatus ?? trade.orderStatus,
+      request_id: trade.request_id ?? null,
+      reason: trade.reason ?? null,
+      old_price: trade.old_price ?? null,
+      new_price: trade.new_price ?? null,
+      priceKind: trade.priceKind ?? "NONE",
+      displayPrice: trade.displayPrice ?? null,
+      displayPriceBefore: trade.displayPriceBefore ?? null,
+      displayPriceAfter: trade.displayPriceAfter ?? null,
+      idempotency_key:
+        trade.idempotency_key ??
+        `${trade.uuid}|${trade.orderStatus}|NO_REQUEST_ID`,
     }));
   }
 
