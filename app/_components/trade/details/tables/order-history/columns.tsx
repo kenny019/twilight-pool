@@ -43,7 +43,12 @@ export const MANDATORY_COLUMNS = new Set([
 ]);
 
 /** Column IDs hidden by default (user can enable them). */
-export const DEFAULT_HIDDEN_COLUMNS = new Set(["request_id", "eventStatus"]);
+export const DEFAULT_HIDDEN_COLUMNS = new Set([
+  "request_id",
+  "eventStatus",
+  "reason",
+  "priceChange",
+]);
 
 function formatEventStatus(status: string): string {
   // Convert camelCase/PascalCase to spaced words: "StopLossAdded" -> "Stop Loss Added"
@@ -351,8 +356,17 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const meta = row.table.options.meta as OrderHistoryTableMeta;
 
+      const status = trade.orderStatus;
+      if (
+        status !== "FILLED" &&
+        status !== "SETTLED" &&
+        status !== "LIQUIDATE"
+      ) {
+        return <span className="text-xs text-gray-500">-</span>;
+      }
+
       const pnl =
-        trade.orderStatus === "LIQUIDATE"
+        status === "LIQUIDATE"
           ? -trade.initialMargin
           : trade.realizedPnl || trade.unrealizedPnl || 0;
       const funding =
@@ -376,8 +390,7 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
           >
             {formatSatsMBtc(funding)}
           </span>
-          {(trade.orderStatus === "SETTLED" ||
-            trade.orderStatus === "LIQUIDATE") && (
+          {(status === "SETTLED" || status === "LIQUIDATE") && (
             <button
               type="button"
               onClick={(e) => {

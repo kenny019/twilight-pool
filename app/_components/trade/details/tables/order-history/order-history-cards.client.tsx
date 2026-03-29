@@ -493,23 +493,27 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                             </span>
                             <span className="font-medium">{posValueLabel}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Funding
-                            </span>
-                            <span
-                              className={cn(
-                                "font-medium",
-                                funding > 0
-                                  ? "text-green-medium"
-                                  : funding < 0
-                                    ? "text-red"
-                                    : ""
-                              )}
-                            >
-                              {formatSatsCompact(funding)}
-                            </span>
-                          </div>
+                          {(trade.orderStatus === "FILLED" ||
+                            trade.orderStatus === "SETTLED" ||
+                            trade.orderStatus === "LIQUIDATE") && (
+                            <div className="flex items-center gap-2">
+                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                                Funding
+                              </span>
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  funding > 0
+                                    ? "text-green-medium"
+                                    : funding < 0
+                                      ? "text-red"
+                                      : ""
+                                )}
+                              >
+                                {formatSatsCompact(funding)}
+                              </span>
+                            </div>
+                          )}
                           {trade.request_id && (
                             <div className="col-span-2 flex items-center gap-2">
                               <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
