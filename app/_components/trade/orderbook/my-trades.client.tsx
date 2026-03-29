@@ -7,6 +7,7 @@ import {
   isCancelStatus,
 } from "@/lib/api/rest";
 import { retry, safeJSONParse, isUserRejection } from "@/lib/helpers";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 import { useSessionStore } from "@/lib/providers/session";
@@ -75,6 +76,7 @@ const OrderMyTrades = () => {
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
   const twilightAddress = chainWallet?.address;
+  const { twilightSats } = useGetTwilightBTCBalance();
 
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
@@ -244,6 +246,7 @@ const OrderMyTrades = () => {
         tx_hash: mintBurnRes.transactionHash,
         type: "Burn",
         value: zkAccount.value,
+        funding_sats_snapshot: twilightSats,
       });
 
       removeZkAccount(zkAccount);
@@ -270,7 +273,14 @@ const OrderMyTrades = () => {
         success: true,
       };
     },
-    [addTransactionHistory, chainWallet, removeZkAccount, toast, twilightAddress]
+    [
+      addTransactionHistory,
+      chainWallet,
+      removeZkAccount,
+      toast,
+      twilightAddress,
+      twilightSats,
+    ]
   );
 
   // Memoize the callback functions to prevent unnecessary re-renders

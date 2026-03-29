@@ -30,6 +30,7 @@ import {
 } from "../utils/waitForUtxoUpdate";
 import { TransactionHash } from "../api/rest";
 import { useEffect, useRef } from "react";
+import { buildTradeLedgerEntryFromRelayerEvent } from "../account-ledger/from-relayer";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -166,6 +167,9 @@ export const useSyncTrades = () => {
   );
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
+  );
+  const addAccountLedgerEntry = useTwilightStore(
+    (state) => state.account_ledger.addEntry
   );
 
   // Raw store API — queue tasks call storeApi.getState() to read the latest
@@ -679,6 +683,13 @@ export const useSyncTrades = () => {
           for (const txHash of tradeTxHashes) {
             const historyRow = buildHistoryRowFromTxHash(newTrade, txHash);
             addTradeHistory(historyRow);
+            addAccountLedgerEntry(
+              buildTradeLedgerEntryFromRelayerEvent(
+                storeApi.getState(),
+                newTrade,
+                txHash
+              )
+            );
           }
         }
 

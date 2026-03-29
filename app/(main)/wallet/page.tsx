@@ -31,6 +31,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { AccountSummaryDataTable } from "./account-summary/data-table";
 import { accountSummaryColumns } from "./account-summary/columns";
+import { AccountLedgerDataTable } from "./account-ledger/data-table";
+import { accountLedgerColumns } from "./account-ledger/columns";
 import { createZkAccount, createZkBurnTx } from "@/lib/twilight/zk";
 import { ZkPrivateAccount } from "@/lib/zk/account";
 import { verifyAccount, verifyQuisQuisTransaction } from "@/lib/twilight/zkos";
@@ -47,7 +49,7 @@ import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { Tooltip } from "@/components/tooltip";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
-type TabType = "account-summary" | "transaction-history";
+type TabType = "account-summary" | "transaction-history" | "account-ledger";
 
 export type ActiveAccount = {
   address: string;
@@ -110,6 +112,9 @@ const Page = () => {
 
   const transactionHistory = useTwilightStore(
     (state) => state.history.transactions
+  );
+  const accountLedgerEntries = useTwilightStore(
+    (state) => state.account_ledger.entries
   );
 
   const { getCurrentPrice, subscribe } = usePriceFeed();
@@ -447,6 +452,7 @@ const Page = () => {
           tx_hash: mintBurnRes.transactionHash,
           type: "Burn",
           value: zkAccount.value,
+          funding_sats_snapshot: twilightSats,
         });
 
         removeZkAccount(zkAccount);
@@ -488,6 +494,7 @@ const Page = () => {
       toast,
       privateKey,
       twilightAddress,
+      twilightSats,
       removeZkAccount,
       addTransactionHistory,
       chainWallet,
@@ -590,6 +597,13 @@ const Page = () => {
           <TransactionHistoryDataTable
             columns={transactionHistoryColumns}
             data={transactionHistory}
+          />
+        );
+      case "account-ledger":
+        return (
+          <AccountLedgerDataTable
+            columns={accountLedgerColumns}
+            data={accountLedgerEntries}
           />
         );
     }
@@ -891,6 +905,13 @@ const Page = () => {
                 variant="underline"
               >
                 Transaction History
+              </TabsTrigger>
+              <TabsTrigger
+                onClick={() => setCurrentTab("account-ledger")}
+                value="account-ledger"
+                variant="underline"
+              >
+                Account Ledger
               </TabsTrigger>
             </TabsList>
           </Tabs>

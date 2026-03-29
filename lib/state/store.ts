@@ -23,10 +23,14 @@ import {
   createWithdrawSlice,
   initialWithdrawSliceState,
 } from "./local/withdraw";
+import {
+  createAccountLedgerSlice,
+  initialAccountLedgerSliceState,
+} from "./local/account-ledger";
 
 type PersistedAccountState = Partial<AccountSlices> & Record<string, unknown>;
 
-export const ACCOUNT_STATE_VERSION = 0.8;
+export const ACCOUNT_STATE_VERSION = 0.9;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -174,6 +178,7 @@ export const createTwilightStore = (storageKey = "twilight-") => {
         history: createHistorySlice(...actions),
         trade_history: createTradeHistorySlice(...actions),
         withdraw: createWithdrawSlice(...actions),
+        account_ledger: createAccountLedgerSlice(...actions),
         optInLeaderboard: false,
         hasShownOptInDialog: false,
         setOptInLeaderboard: (val: boolean) => {
@@ -220,6 +225,10 @@ export const createTwilightStore = (storageKey = "twilight-") => {
             withdraw: {
               ...currentState.withdraw,
               ...initialWithdrawSliceState,
+            },
+            account_ledger: {
+              ...currentState.account_ledger,
+              ...initialAccountLedgerSliceState,
             },
             optInLeaderboard: currentState.optInLeaderboard,
             hasShownOptInDialog: currentState.hasShownOptInDialog,

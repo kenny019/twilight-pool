@@ -28,7 +28,7 @@ import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/lib/providers/session";
-import { useTwilightStore } from "@/lib/providers/store";
+import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import {
   createQueryLendOrderMsg,
   executeTradeLendOrderMsg,
@@ -43,6 +43,7 @@ import type { ApyPeriod } from "@/lib/hooks/useApyChartData";
 import { queryLendOrder } from "@/lib/api/relayer";
 import Big from "big.js";
 import { usePriceFeed } from "@/lib/providers/feed";
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { createZkAccount, createZkBurnTx } from "@/lib/twilight/zk";
 import { broadcastTradingTx } from "@/lib/api/zkos";
 import { twilightproject } from "twilightjs";
@@ -55,6 +56,7 @@ import {
   completeLendWithdrawal,
   markLendWithdrawalPending,
 } from "@/lib/utils/lendWithdrawalState";
+import { buildLendLedgerEntryFromRelayerEvent } from "@/lib/account-ledger/from-relayer";
 
 const formatTag = (tag: string) => {
   if (tag === "main") {
@@ -81,6 +83,7 @@ const Page = () => {
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
 
   const { getCurrentPrice } = usePriceFeed();
+  const { twilightSats } = useGetTwilightBTCBalance();
 
   const privateKey = useSessionStore((state) => state.privateKey);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
@@ -99,6 +102,10 @@ const Page = () => {
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
+  const addAccountLedgerEntry = useTwilightStore(
+    (state) => state.account_ledger.addEntry
+  );
+  const storeApi = useTwilightStoreApi();
 
   const zkAccountTagMap = useMemo(
     () => new Map(zKAccounts.map((a) => [a.address, a.tag])),
@@ -204,7 +211,9 @@ const Page = () => {
       console.log("executeLendRes", executeLendRes);
 
       const requestId = executeLendRes.result.id_key;
-
+      const accountTagForLedger =
+        zKAccounts.find((account) => account.address === order.accountAddress)
+          ?.tag || "Lend Account";
       const requestIdRes = await retry<
         ReturnType<typeof queryTransactionHashByRequestId>,
         string
@@ -234,11 +243,46 @@ const Page = () => {
       );
 
       if (!requestIdRes.success) {
+        const failedStatus = requestIdRes.cancelled
+          ? "CANCELLED"
+          : "NoResponseFromChain";
+        const failedEvent: TransactionHash = {
+          account_id: order.accountAddress,
+          datetime: new Date().toISOString(),
+          id: 0,
+          order_id: order.uuid,
+          order_status: failedStatus,
+          order_type: "LEND",
+          output: null,
+          reason: requestIdRes.cancelled
+            ? "Lend withdraw request denied"
+            : "Lend withdraw request timed out",
+          old_price: null,
+          new_price: null,
+          request_id: requestId,
+          tx_hash: "",
+        };
+        addAccountLedgerEntry(
+          buildLendLedgerEntryFromRelayerEvent(
+            storeApi.getState(),
+            failedEvent,
+            {
+              accountAddress: order.accountAddress,
+              accountTag: accountTagForLedger,
+              amountSats: order.value,
+              fundingAddress: twilightAddress,
+              operation: "withdraw",
+              fallbackOrderId: order.uuid,
+            }
+          )
+        );
+
         if (requestIdRes.cancelled) {
           toast({
             variant: "error",
             title: "Withdraw request denied",
-            description: "The withdraw request was denied. Please try again later.",
+            description:
+              "The withdraw request was denied. Please try again later.",
           });
         } else {
           console.error("lend order settle not successful");
@@ -255,13 +299,28 @@ const Page = () => {
 
       const txResult =
         "result" in requestIdRes.data ? requestIdRes.data.result : [];
-      const requestIdData = Array.isArray(txResult)
+      if (Array.isArray(txResult)) {
+        txResult
+          .filter((tx) => tx.order_status !== "SETTLED")
+          .forEach((tx) => {
+            addAccountLedgerEntry(
+              buildLendLedgerEntryFromRelayerEvent(storeApi.getState(), tx, {
+                accountAddress: order.accountAddress,
+                accountTag: accountTagForLedger,
+                amountSats: order.value,
+                fundingAddress: twilightAddress,
+                operation: "withdraw",
+                fallbackOrderId: order.uuid,
+              })
+            );
+          });
+      }
+      const settledTx = Array.isArray(txResult)
         ? txResult.find((tx: TransactionHash) => tx.order_status === "SETTLED")
         : undefined;
+      const tx_hash = settledTx?.tx_hash;
 
-      const tx_hash = requestIdData?.tx_hash;
-
-      console.log("requestIdData", requestIdData);
+      console.log("requestIdData", settledTx);
       updateLend(order.uuid, markLendWithdrawalPending(order));
 
       const selectedZkAccount = zKAccounts.find(
@@ -290,6 +349,18 @@ const Page = () => {
       );
 
       if (!queryLendOrderRes.success || !queryLendOrderRes.data?.result) {
+        if (settledTx) {
+          addAccountLedgerEntry(
+            buildLendLedgerEntryFromRelayerEvent(storeApi.getState(), settledTx, {
+              accountAddress: order.accountAddress,
+              accountTag: accountTagForLedger,
+              amountSats: order.value,
+              fundingAddress: twilightAddress,
+              operation: "withdraw",
+              fallbackOrderId: order.uuid,
+            })
+          );
+        }
         console.error("queryLendOrder", queryLendOrderRes);
         toast({
           variant: "error",
@@ -307,18 +378,27 @@ const Page = () => {
         Big(lendResult.new_lend_state_amount ?? 0).toNumber()
       );
 
-      console.log("newBalance", newBalance);
+      if (settledTx) {
+        addAccountLedgerEntry(
+          buildLendLedgerEntryFromRelayerEvent(
+            storeApi.getState(),
+            {
+              ...settledTx,
+              request_id: settledTx.request_id ?? requestId,
+            },
+            {
+              accountAddress: order.accountAddress,
+              accountTag: accountTagForLedger,
+              amountSats: newBalance,
+              fundingAddress: twilightAddress,
+              operation: "withdraw",
+              fallbackOrderId: order.uuid,
+            }
+          )
+        );
+      }
 
-      addTransactionHistory({
-        date: new Date(),
-        from: selectedZkAccount?.address || "",
-        fromTag: selectedZkAccount?.tag || "",
-        to: order.accountAddress,
-        toTag: selectedZkAccount?.tag || "",
-        tx_hash: tx_hash || "",
-        value: newBalance,
-        type: "Withdraw Lend",
-      });
+      console.log("newBalance", newBalance);
 
       addLendHistory(
         completeLendWithdrawal({
@@ -371,6 +451,20 @@ const Page = () => {
         txId,
         updatedAddress: updatedTransientAddress,
       } = privateTxSingleResult.data;
+
+      // Internal transfer before burn: CoinSettled -> transient Coin account.
+      // This preserves the middle tx_hash in wallet/account-ledger history.
+      addTransactionHistory({
+        date: new Date(),
+        from: selectedZkAccount.address,
+        fromTag: selectedZkAccount.tag,
+        to: updatedTransientAddress,
+        toTag: selectedZkAccount.tag,
+        tx_hash: txId,
+        type: "Transfer",
+        value: newBalance,
+        funding_sats_snapshot: twilightSats,
+      });
 
       // update the account in case burn fails
       updateZkAccount(updatedSelectedZkAccount.address, {
@@ -474,13 +568,14 @@ const Page = () => {
 
       addTransactionHistory({
         date: new Date(),
-        from: selectedZkAccount.address,
-        fromTag: selectedZkAccount.tag,
+        from: updatedTransientAddress,
+        fromTag: updatedSelectedZkAccount.tag,
         to: twilightAddress,
         toTag: "Funding",
         tx_hash: mintBurnRes.transactionHash,
         type: "Burn",
         value: newBalance,
+        funding_sats_snapshot: twilightSats,
       });
 
       toast({
