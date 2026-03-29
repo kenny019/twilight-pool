@@ -54,13 +54,6 @@ function derivePriceKind(eventStatus: string): PriceKind {
   }
 }
 
-/** Statuses that are allowed to be ingested even without a request_id. */
-const ALLOW_WITHOUT_REQUEST_ID = new Set([
-  "LIQUIDATE",
-  "CancelledLimitClose",
-  "CancelledStopLoss",
-]);
-
 /** Lifecycle statuses whose history rows should be enriched with fundingApplied. */
 const FUNDING_ENRICHABLE_STATUSES = new Set(["FILLED", "SETTLED", "LIQUIDATE"]);
 
@@ -286,7 +279,9 @@ export const useSyncTrades = () => {
         }
 
         const foundTxHashData = txHashData.filter(
-          (data) => data.order_status === traderOrderInfo.order_status
+          (data) =>
+            data.order_status === traderOrderInfo.order_status &&
+            data.order_id === traderOrderInfo.uuid
         );
 
         const updatedTradeData: Record<string, unknown> = {
@@ -676,17 +671,12 @@ export const useSyncTrades = () => {
 
         // Ingest transaction_hashes as primary event source for Order History.
         // Each tx_hash entry becomes a separate history row keyed by idempotency_key.
-        // Skip entries without request_id unless their status is explicitly allowed.
+        // Missing request_id is allowed; buildIdempotencyKey falls back to
+        // `NO_REQUEST_ID` so insertion remains idempotent.
         const tradeTxHashes = txHashDataByUuid.get(trade.uuid);
         if (tradeTxHashes) {
           if (!isRunActive(runAddress, runPrivateKey)) return true;
           for (const txHash of tradeTxHashes) {
-            if (
-              !txHash.request_id &&
-              !ALLOW_WITHOUT_REQUEST_ID.has(txHash.order_status)
-            ) {
-              continue;
-            }
             const historyRow = buildHistoryRowFromTxHash(newTrade, txHash);
             addTradeHistory(historyRow);
           }
