@@ -7,6 +7,7 @@ import { HistorySlice } from "./local/history";
 import { PriceSlice } from "./session/price";
 import { TradeHistorySlice } from "./local/trade-history";
 import { WithdrawSlice } from "./local/withdraw";
+import { AccountLedgerSlice } from "./local/account-ledger";
 
 export interface AccountSlices {
   zk: ZkAccountSlice;
@@ -15,6 +16,7 @@ export interface AccountSlices {
   history: HistorySlice;
   trade_history: TradeHistorySlice;
   withdraw: WithdrawSlice;
+  account_ledger: AccountLedgerSlice;
   optInLeaderboard: boolean;
   hasShownOptInDialog: boolean;
   setOptInLeaderboard: (val: boolean) => void;

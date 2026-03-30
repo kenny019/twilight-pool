@@ -13,6 +13,7 @@ import Long from 'long';
 import { useRouter } from 'next/navigation';
 import { useTwilightStore } from '@/lib/providers/store';
 import useVerifyStatus from '@/lib/hooks/useVerifyStatus';
+import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import Link from 'next/link';
 import { getRegisteredBTCAddress } from '@/lib/twilight/rest';
 
@@ -74,6 +75,7 @@ const Page = () => {
   );
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
+  const { twilightSats } = useGetTwilightBTCBalance();
 
   const router = useRouter()
 
@@ -153,6 +155,7 @@ const Page = () => {
         tx_hash: txHash,
         type: "Transfer",
         value: 50_000,
+        funding_sats_snapshot: twilightSats,
       })
 
       return { success: true, message: "Successfully received 50,000 sats", data: { txHash } };

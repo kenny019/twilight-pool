@@ -6,7 +6,11 @@ import { Input } from "@/components/input";
 import { Slider } from "@/components/slider";
 import { sendTradeOrder } from "@/lib/api/client";
 import { queryTradeOrder } from "@/lib/api/relayer";
-import { queryTransactionHashes, isErrorStatus, isCancelStatus } from "@/lib/api/rest";
+import {
+  queryTransactionHashes,
+  isErrorStatus,
+  isCancelStatus,
+} from "@/lib/api/rest";
 import { queryUtxoForAddress } from "@/lib/api/zkos";
 import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
@@ -150,7 +154,12 @@ const OrderMarketForm = () => {
         updatePercent((newBtc / maxBtc) * 100);
       }
     },
-    [btcAmount, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+    [
+      btcAmount,
+      tradingAccountBalance,
+      tradingAccountBalanceString,
+      updatePercent,
+    ]
   );
 
   const adjustCollateralUsd = useCallback(
@@ -165,7 +174,13 @@ const OrderMarketForm = () => {
         updatePercent((newBtc / maxBtc) * 100);
       }
     },
-    [btcAmount, currentPrice, tradingAccountBalance, tradingAccountBalanceString, updatePercent]
+    [
+      btcAmount,
+      currentPrice,
+      tradingAccountBalance,
+      tradingAccountBalanceString,
+      updatePercent,
+    ]
   );
 
   const adjustCollateral = useCallback(
@@ -242,12 +257,16 @@ const OrderMarketForm = () => {
   }, [usdAmount, leverage]);
 
   const positionSizeBtc = useMemo(() => {
-    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0) return "0.000000";
+    if (!usdAmount || !leverage || !currentPrice || currentPrice <= 0)
+      return "0.000000";
     try {
       const leverageBig = Big(leverage || "1");
       const usdBig = Big(usdAmount);
       if (usdBig.lte(0) || leverageBig.lte(0)) return "0.000000";
-      const btcValue = usdBig.div(Big(currentPrice)).mul(leverageBig).toNumber();
+      const btcValue = usdBig
+        .div(Big(currentPrice))
+        .mul(leverageBig)
+        .toNumber();
       return Number(btcValue.toFixed(6)).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 6,
@@ -310,7 +329,9 @@ const OrderMarketForm = () => {
 
       return {
         long:
-          liqLongNum <= 0 || liqLongNum >= entryPriceNum || !Number.isFinite(liqLongNum)
+          liqLongNum <= 0 ||
+          liqLongNum >= entryPriceNum ||
+          !Number.isFinite(liqLongNum)
             ? "0.00"
             : usdFormatter.format(liqLongNum),
         short: shortDisplay,
@@ -626,8 +647,7 @@ const OrderMarketForm = () => {
         if (txHashResult.result) {
           const found = txHashResult.result.find(
             (r) =>
-              !isErrorStatus(r.order_status) &&
-              !isCancelStatus(r.order_status)
+              !isErrorStatus(r.order_status) && !isCancelStatus(r.order_status)
           );
           return !!found;
         }
@@ -637,9 +657,12 @@ const OrderMarketForm = () => {
       const transactionHashFailCondition = (
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
-        return txHashResult.result?.some(
-          (r) => isCancelStatus(r.order_status) || isErrorStatus(r.order_status)
-        ) ?? false;
+        return (
+          txHashResult.result?.some(
+            (r) =>
+              isCancelStatus(r.order_status) || isErrorStatus(r.order_status)
+          ) ?? false
+        );
       };
 
       const transactionHashRes = await retry<
@@ -673,9 +696,7 @@ const OrderMarketForm = () => {
       }
 
       const orderData = transactionHashRes.data.result.find(
-        (r) =>
-          !isErrorStatus(r.order_status) &&
-          !isCancelStatus(r.order_status)
+        (r) => !isErrorStatus(r.order_status) && !isCancelStatus(r.order_status)
       );
 
       if (!orderData) {
@@ -759,6 +780,20 @@ const OrderMarketForm = () => {
         feeSettled: new Big(traderOrderInfo.fee_settled).toNumber(),
         settleLimit: traderOrderInfo.settle_limit,
         fundingApplied: traderOrderInfo.funding_applied,
+        eventSource: "transaction_hashes" as const,
+        eventStatus: orderData.order_status,
+        request_id: orderData.request_id,
+        reason: orderData.reason,
+        old_price: orderData.old_price,
+        new_price: orderData.new_price,
+        priceKind: "NONE" as const,
+        displayPrice: null,
+        displayPriceBefore: null,
+        displayPriceAfter: null,
+        eventTimestamp: orderData.datetime
+          ? new Date(orderData.datetime)
+          : undefined,
+        idempotency_key: `${orderData.order_id}|${orderData.order_status}|${orderData.request_id || "NO_REQUEST_ID"}`,
       };
 
       addTrade(newTradeData);
@@ -808,7 +843,8 @@ const OrderMarketForm = () => {
         ? `≈ ${btcAmount} BTC`
         : null;
 
-  const step = collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
+  const step =
+    collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
   collateralStepRef.current = step;
 
   const marginStepDisabled =
@@ -844,12 +880,21 @@ const OrderMarketForm = () => {
       )}
       {/* 1. Header / Account Context */}
       <div className="flex items-baseline justify-between gap-2">
-        <span className={cn("text-sm text-primary/60", width < 350 && "text-xs")}>Available:</span>
-        <span className="tabular-nums text-sm font-medium">
+        <span
+          className={cn("text-sm text-primary/60", width < 350 && "text-xs")}
+        >
+          Available:
+        </span>
+        <span className="text-sm font-medium tabular-nums">
           {tradingAccountBalanceString} BTC
           {currentPrice > 0 && (
             <span className="text-primary/70">
-              {" "}(${usdNumberFormatter.format(parseFloat(tradingAccountBalanceString || "0") * currentPrice)})
+              {" "}
+              ($
+              {usdNumberFormatter.format(
+                parseFloat(tradingAccountBalanceString || "0") * currentPrice
+              )}
+              )
             </span>
           )}
         </span>
@@ -857,7 +902,14 @@ const OrderMarketForm = () => {
 
       {/* 2. Margin Amount — single master input */}
       <div className="-mt-1 space-y-1">
-        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Margin Amount</label>
+        <label
+          className={cn(
+            "block text-sm font-medium text-primary/90",
+            width < 350 && "text-xs"
+          )}
+        >
+          Margin Amount
+        </label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1.5">
             <div className="flex items-center gap-1">
@@ -867,35 +919,39 @@ const OrderMarketForm = () => {
                 placeholder="0"
                 value={primaryValue}
                 onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                if (!v) {
-                  setBtcAmount("");
-                  setPercent(0);
-                  return;
-                }
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) {
-                  if (collateralUnit === "btc") {
-                    setBtcAmount(v);
-                    if (tradingAccountBalance > 0) {
-                      const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                      updatePercent((n / maxBtc) * 100);
-                    }
-                  } else {
-                    if (currentPrice > 0) {
-                      const btc = n / currentPrice;
-                      setBtcAmount(btc.toFixed(8));
+                  const v = e.target.value.replace(/[^\d.]/g, "");
+                  if (!v) {
+                    setBtcAmount("");
+                    setPercent(0);
+                    return;
+                  }
+                  const n = parseFloat(v);
+                  if (!Number.isNaN(n) && n >= 0) {
+                    if (collateralUnit === "btc") {
+                      setBtcAmount(v);
                       if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                        updatePercent((btc / maxBtc) * 100);
+                        const maxBtc = parseFloat(
+                          tradingAccountBalanceString || "0"
+                        );
+                        updatePercent((n / maxBtc) * 100);
+                      }
+                    } else {
+                      if (currentPrice > 0) {
+                        const btc = n / currentPrice;
+                        setBtcAmount(btc.toFixed(8));
+                        if (tradingAccountBalance > 0) {
+                          const maxBtc = parseFloat(
+                            tradingAccountBalanceString || "0"
+                          );
+                          updatePercent((btc / maxBtc) * 100);
+                        }
                       }
                     }
                   }
-                }
-              }}
-              className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
-              disabled={!tradingAccountBalance}
-            />
+                }}
+                className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+                disabled={!tradingAccountBalance}
+              />
               <button
                 type="button"
                 onClick={setMaxCollateral}
@@ -1013,7 +1069,14 @@ const OrderMarketForm = () => {
 
       {/* 3. Leverage — input first, then slider, then presets */}
       <div className="space-y-1">
-        <label className={cn("block text-sm font-medium text-primary/90", width < 350 && "text-xs")}>Leverage</label>
+        <label
+          className={cn(
+            "block text-sm font-medium text-primary/90",
+            width < 350 && "text-xs"
+          )}
+        >
+          Leverage
+        </label>
         <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
           <Input
             ref={leverageRef}
@@ -1036,16 +1099,28 @@ const OrderMarketForm = () => {
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
-              onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
-              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
+              onClick={() =>
+                setLeverage(
+                  String(Math.min(50, (parseInt(leverage, 10) || 1) + 1))
+                )
+              }
+              disabled={
+                !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
+              }
               className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               type="button"
-              onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
-              disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
+              onClick={() =>
+                setLeverage(
+                  String(Math.max(1, (parseInt(leverage, 10) || 1) - 1))
+                )
+              }
+              disabled={
+                !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
+              }
               className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
@@ -1088,19 +1163,27 @@ const OrderMarketForm = () => {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
-          <span className="tabular-nums text-sm font-medium">${positionSize}</span>
+          <span className="text-sm font-medium tabular-nums">
+            ${positionSize}
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Exposure</span>
-          <span className="tabular-nums text-sm font-medium">{positionSizeBtc} BTC</span>
+          <span className="text-sm font-medium tabular-nums">
+            {positionSizeBtc} BTC
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-green-medium/70">Liq Buy</span>
-          <span className="tabular-nums text-sm font-medium text-green-medium/90">${liquidationPrices.long}</span>
+          <span className="text-sm font-medium tabular-nums text-green-medium/90">
+            ${liquidationPrices.long}
+          </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-red/70">Liq Sell</span>
-          <span className="tabular-nums text-sm font-medium text-red/90">${liquidationPrices.short}</span>
+          <span className="text-sm font-medium tabular-nums text-red/90">
+            ${liquidationPrices.short}
+          </span>
         </div>
       </div>
 
@@ -1119,7 +1202,11 @@ const OrderMarketForm = () => {
                 Big(tradingAccountBalance).lte(0)
               }
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Buy"}
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                "Buy"
+              )}
             </Button>
             <Button
               onClick={() => submitMarket("SELL")}
@@ -1132,7 +1219,11 @@ const OrderMarketForm = () => {
                 Big(tradingAccountBalance).lte(0)
               }
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sell"}
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                "Sell"
+              )}
             </Button>
           </div>
         </ExchangeResource>

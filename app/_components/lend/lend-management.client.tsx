@@ -4,32 +4,36 @@ import { PopoverInput } from "@/components/input";
 import Resource from "@/components/resource";
 import { Text } from "@/components/typography";
 import { sendLendOrder } from "@/lib/api/client";
-import { queryLendOrder } from '@/lib/api/relayer';
+import { queryLendOrder } from "@/lib/api/relayer";
 import {
   queryTransactionHashByRequestId,
   type TransactionHash,
 } from "@/lib/api/rest";
-import { retry, isUserRejection } from '@/lib/helpers';
+import { retry, isUserRejection } from "@/lib/helpers";
 import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore, useSignStatus } from "@/lib/providers/session";
-import { useTwilightStore } from "@/lib/providers/store";
+import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
-import { createFundingToTradingTransferMsg } from '@/lib/twilight/wallet';
-import { createZkAccountWithBalance, createZkLendOrder } from "@/lib/twilight/zk";
-import { createQueryLendOrderMsg } from '@/lib/twilight/zkos';
-import { ZkAccount } from '@/lib/types';
-import { WalletStatus } from '@cosmos-kit/core';
-import { useWallet } from '@cosmos-kit/react-lite';
+import { createFundingToTradingTransferMsg } from "@/lib/twilight/wallet";
+import {
+  createZkAccountWithBalance,
+  createZkLendOrder,
+} from "@/lib/twilight/zk";
+import { createQueryLendOrderMsg } from "@/lib/twilight/zkos";
+import { ZkAccount } from "@/lib/types";
+import { WalletStatus } from "@cosmos-kit/core";
+import { useWallet } from "@cosmos-kit/react-lite";
 import Big from "big.js";
 import { Loader2 } from "lucide-react";
-import Link from 'next/link';
+import Link from "next/link";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
-import { ZkPrivateAccount } from '@/lib/zk/account';
+import { ZkPrivateAccount } from "@/lib/zk/account";
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import { buildLendLedgerEntryFromRelayerEvent } from "@/lib/account-ledger/from-relayer";
 
 const LendManagement = () => {
   const { toast } = useToast();
@@ -54,9 +58,13 @@ const LendManagement = () => {
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
   );
+  const addAccountLedgerEntry = useTwilightStore(
+    (state) => state.account_ledger.addEntry
+  );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
+  const storeApi = useTwilightStoreApi();
 
   const [depositDenom, setDepositDenom] = useState<string>("BTC");
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
@@ -91,7 +99,7 @@ const LendManagement = () => {
       toast({
         title: "Wallet is not connected",
         description: "Please connect your wallet to deposit.",
-      })
+      });
       return;
     }
 
@@ -99,7 +107,7 @@ const LendManagement = () => {
       toast({
         title: "Invalid amount",
         description: "Please enter an amount to deposit.",
-      })
+      });
       return;
     }
 
@@ -114,8 +122,9 @@ const LendManagement = () => {
 
     toast({
       title: "Submitting deposit",
-      description: "Please do not close this page while your deposit is being submitted...",
-    })
+      description:
+        "Please do not close this page while your deposit is being submitted...",
+    });
 
     const transferAmount = new BTC(
       depositDenom as BTCDenoms,
@@ -164,9 +173,21 @@ const LendManagement = () => {
         isOnChain: true,
         value: transferAmount,
         createdAt: dayjs().unix(),
-      }
+      };
 
       addZkAccount(zkAccountToUse);
+
+      addTransactionHistory({
+        date: new Date(),
+        from: twilightAddress,
+        fromTag: "Funding",
+        to: zkAccountToUse.address,
+        toTag: zkAccountToUse.tag,
+        tx_hash: res.transactionHash,
+        type: "Transfer",
+        value: transferAmount,
+        funding_sats_snapshot: twilightSats,
+      });
 
       // hack to make sure utxo exists on chain before creating the lend order
       await ZkPrivateAccount.create({
@@ -191,7 +212,10 @@ const LendManagement = () => {
         return;
       }
 
-      const data = await sendLendOrder(msg, optInLeaderboard ? twilightAddress : undefined);
+      const data = await sendLendOrder(
+        msg,
+        optInLeaderboard ? twilightAddress : undefined
+      );
 
       if (data.result && data.result.id_key) {
         const lendOrderRes = await retry<
@@ -205,7 +229,9 @@ const LendManagement = () => {
           (txHash) => {
             const result = "result" in txHash ? txHash.result : undefined;
             const found = Array.isArray(result)
-              ? result.find((tx: TransactionHash) => tx.order_status === "FILLED")
+              ? result.find(
+                  (tx: TransactionHash) => tx.order_status === "FILLED"
+                )
               : undefined;
             return !!found;
           },
@@ -221,6 +247,40 @@ const LendManagement = () => {
         );
 
         if (!lendOrderRes.success) {
+          const failedStatus = lendOrderRes.cancelled
+            ? "CANCELLED"
+            : "NoResponseFromChain";
+          const failedEvent: TransactionHash = {
+            account_id: zkAccountToUse.address,
+            datetime: new Date().toISOString(),
+            id: 0,
+            order_id: "",
+            order_status: failedStatus,
+            order_type: "LEND",
+            output: null,
+            reason: lendOrderRes.cancelled
+              ? "Lend deposit request denied"
+              : "Lend deposit request timed out",
+            old_price: null,
+            new_price: null,
+            request_id: String(data.result.id_key),
+            tx_hash: "",
+          };
+          addAccountLedgerEntry(
+            buildLendLedgerEntryFromRelayerEvent(
+              storeApi.getState(),
+              failedEvent,
+              {
+                accountAddress: zkAccountToUse.address,
+                accountTag: zkAccountToUse.tag,
+                amountSats: transferAmount,
+                fundingAddress: twilightAddress,
+                operation: "deposit",
+                fallbackOrderId: String(data.result.id_key),
+              }
+            )
+          );
+
           if (lendOrderRes.cancelled) {
             toast({
               variant: "error",
@@ -242,17 +302,33 @@ const LendManagement = () => {
 
         const txResult =
           "result" in lendOrderRes.data ? lendOrderRes.data.result : [];
+        if (Array.isArray(txResult)) {
+          txResult.forEach((tx) => {
+            addAccountLedgerEntry(
+              buildLendLedgerEntryFromRelayerEvent(storeApi.getState(), tx, {
+                accountAddress: zkAccountToUse.address,
+                accountTag: zkAccountToUse.tag,
+                amountSats: transferAmount,
+                fundingAddress: twilightAddress,
+                operation: "deposit",
+                fallbackOrderId: String(data.result.id_key),
+              })
+            );
+          });
+        }
         const lendOrderData = Array.isArray(txResult)
           ? txResult.find((tx: TransactionHash) => tx.order_status === "FILLED")
           : undefined;
 
         const tx_hash = lendOrderData?.tx_hash;
+        const orderId = lendOrderData?.order_id;
+        const requestId = String(data.result.id_key);
 
-        if (!tx_hash) {
+        if (!tx_hash || !orderId) {
           toast({
             variant: "error",
             title: "Unable to submit lend order",
-            description: "An error has occurred, try again later.",
+            description: "Order confirmation is incomplete. Please try again.",
           });
           setIsSubmitLoading(false);
           return;
@@ -260,18 +336,23 @@ const LendManagement = () => {
 
         toast({
           title: "Success",
-          description: <div className="opacity-90">
-            {`Successfully submitted lend order for ${new BTC("sats", Big(transferAmount))
-              .convert("BTC")
-              .toString()} BTC. `}
-            <Link
-              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${tx_hash}`}
-              target={"_blank"}
-              className="text-sm underline hover:opacity-100"
-            >
-              Explorer link
-            </Link>
-          </div>
+          description: (
+            <div className="opacity-90">
+              {`Successfully submitted lend order for ${new BTC(
+                "sats",
+                Big(transferAmount)
+              )
+                .convert("BTC")
+                .toString()} BTC. `}
+              <Link
+                href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${tx_hash}`}
+                target={"_blank"}
+                className="text-sm underline hover:opacity-100"
+              >
+                Explorer link
+              </Link>
+            </div>
+          ),
         });
 
         const queryLendOrderMsg = await createQueryLendOrderMsg({
@@ -305,12 +386,17 @@ const LendManagement = () => {
         );
         const fallbackNpoolshare =
           poolInfo?.pool_share && npoolshare === 0
-            ? Math.round((transferAmount / poolInfo.pool_share) * POOL_SHARE_DECIMALS_SCALE)
+            ? Math.round(
+                (transferAmount / poolInfo.pool_share) *
+                  POOL_SHARE_DECIMALS_SCALE
+              )
             : npoolshare;
 
         const newLendOrder = {
           accountAddress: zkAccountToUse.address,
-          uuid: data.result.id_key as string,
+          uuid: orderId,
+          order_id: orderId,
+          request_id: requestId,
           orderStatus: "LENDED",
           value: transferAmount,
           timestamp: new Date(),
@@ -318,21 +404,10 @@ const LendManagement = () => {
           tx_hash: tx_hash,
           npoolshare: fallbackNpoolshare,
           pool_share_price_entry: btcPrice,
-        }
+        };
 
         addLendOrder(newLendOrder);
         addLendHistory(newLendOrder);
-
-        addTransactionHistory({
-          date: new Date(),
-          from: zkAccountToUse.address,
-          fromTag: zkAccountToUse.tag,
-          to: zkAccountToUse.address,
-          toTag: zkAccountToUse.tag,
-          tx_hash: tx_hash,
-          type: "Deposit Lend",
-          value: transferAmount,
-        });
 
         updateZkAccount(zkAccountToUse.address, {
           ...zkAccountToUse,
@@ -344,7 +419,6 @@ const LendManagement = () => {
           depositRef.current.value = "";
         }
         setApproxPoolShare("0.00");
-
       } else {
         toast({
           variant: "error",
@@ -371,26 +445,31 @@ const LendManagement = () => {
     setIsSubmitLoading(false);
   }
 
-  const availableBalance = BTC.format(new BTC("sats", Big(twilightSats))
-    .convert("BTC"), "BTC")
+  const availableBalance = BTC.format(
+    new BTC("sats", Big(twilightSats)).convert("BTC"),
+    "BTC"
+  );
 
-  const calculateApproxPoolShare = useCallback((value: string) => {
-    const amount = Big(value || 0).toNumber();
-    const sats = new BTC(depositDenom as BTCDenoms, Big(amount))
-      .convert("sats")
-      .toNumber();
+  const calculateApproxPoolShare = useCallback(
+    (value: string) => {
+      const amount = Big(value || 0).toNumber();
+      const sats = new BTC(depositDenom as BTCDenoms, Big(amount))
+        .convert("sats")
+        .toNumber();
 
-    const sharePrice = poolInfo?.pool_share;
-    if (!sharePrice || sharePrice <= 0) {
-      setApproxPoolShare("0.00");
-      return;
-    }
+      const sharePrice = poolInfo?.pool_share;
+      if (!sharePrice || sharePrice <= 0) {
+        setApproxPoolShare("0.00");
+        return;
+      }
 
-    const poolShare = sats / sharePrice;
-    setApproxPoolShare(
-      Number.isFinite(poolShare) ? poolShare.toFixed(2) : "0.00"
-    );
-  }, [depositDenom, poolInfo?.pool_share]);
+      const poolShare = sats / sharePrice;
+      setApproxPoolShare(
+        Number.isFinite(poolShare) ? poolShare.toFixed(2) : "0.00"
+      );
+    },
+    [depositDenom, poolInfo?.pool_share]
+  );
 
   function renderDepositForm() {
     return (
@@ -472,11 +551,7 @@ const LendManagement = () => {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {renderDepositForm()}
-    </div>
-  );
+  return <div className="space-y-4">{renderDepositForm()}</div>;
 };
 
-export default LendManagement; 
+export default LendManagement;

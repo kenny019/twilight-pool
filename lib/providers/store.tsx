@@ -17,6 +17,7 @@ import { ZK_ACCOUNT_INDEX } from "../constants";
 import { useSessionStore } from "./session";
 import { getBlockHeight } from "../twilight/chain";
 import dayjs from "dayjs";
+import useGetTwilightBTCBalance from "../hooks/useGetTwilightBtcBalance";
 
 export const twilightStoreContext =
   createContext<StoreApi<AccountSlices> | null>(null);
@@ -51,6 +52,8 @@ export const TwilightStoreProvider = ({
 
   const { status, mainWallet } = useWallet();
   const privateKey = useSessionStore((state) => state.privateKey);
+  const { twilightSats, isLoading: isTwilightSatsLoading } =
+    useGetTwilightBTCBalance();
 
   const chainWallet = mainWallet?.getChainWallet("nyks");
 
@@ -188,8 +191,92 @@ export const TwilightStoreProvider = ({
     }, [isHydrated, chainWallet?.address, privateKey]);
   }
 
+  function useInitAccountLedgerBaseline() {
+    useEffect(() => {
+      if (!storeRef.current || !isHydrated || !privateKey) return;
+      if (status !== "Connected") return;
+      if (!chainWallet?.address) return;
+      if (isTwilightSatsLoading) return;
+
+      const currentState = storeRef.current.getState();
+      const existingEntries = currentState.account_ledger.entries;
+      if (existingEntries.length > 0) return;
+
+      const fundAfter = Math.max(0, Math.round(twilightSats || 0));
+
+      const tradeAfter = currentState.zk.zkAccounts
+        .filter((account) => account.type === "Coin" || account.type === "CoinSettled")
+        .reduce((sum, account) => sum + Math.round(account.value || 0), 0);
+
+      const openTradeAddresses = new Set(
+        currentState.trade.trades
+          .filter((trade) => trade.isOpen)
+          .map((trade) => trade.accountAddress)
+      );
+
+      const positionsAfter = currentState.zk.zkAccounts
+        .filter(
+          (account) => account.type === "Memo" && openTradeAddresses.has(account.address)
+        )
+        .reduce((sum, account) => sum + Math.round(account.value || 0), 0);
+
+      const activeLendAddresses = new Set(
+        currentState.lend.lends
+          .filter((lend) => lend.orderStatus === "LENDED")
+          .map((lend) => lend.accountAddress)
+      );
+
+      const lendsAfter = currentState.zk.zkAccounts
+        .filter(
+          (account) =>
+            account.type === "Memo" && activeLendAddresses.has(account.address)
+        )
+        .reduce((sum, account) => sum + Math.round(account.value || 0), 0);
+
+      const now = new Date();
+      const addEntry = currentState.account_ledger.addEntry;
+
+      addEntry({
+        id: crypto.randomUUID(),
+        type: "credit",
+        from_acc: "bootstrap-System",
+        to_acc: `${chainWallet.address}-Funding`,
+        amount_sats: fundAfter,
+        fund_bal: fundAfter,
+        trade_bal: tradeAfter,
+        t_positions_bal: positionsAfter,
+        l_deposits_bal: lendsAfter,
+        order_id: null,
+        tx_hash: null,
+        timestamp: now,
+        remarks: "Initial funding baseline on first wallet session load",
+        fund_bal_before: 0,
+        fund_bal_after: fundAfter,
+        trade_bal_before: tradeAfter,
+        trade_bal_after: tradeAfter,
+        t_positions_bal_before: positionsAfter,
+        t_positions_bal_after: positionsAfter,
+        l_deposits_bal_before: lendsAfter,
+        l_deposits_bal_after: lendsAfter,
+        idempotency_key: `bootstrap|${chainWallet.address}`,
+        created_at: now,
+        updated_at: now,
+        status: "confirmed",
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      isHydrated,
+      privateKey,
+      status,
+      chainWallet?.address,
+      twilightSats,
+      isTwilightSatsLoading,
+    ]);
+  }
+
   useSyncZkAccounts();
   useInitZkAccount();
+  useInitAccountLedgerBaseline();
   useRehydrateLocalStore();
   useResetSelectedZkAccount();
 

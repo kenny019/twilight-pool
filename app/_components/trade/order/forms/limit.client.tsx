@@ -743,6 +743,20 @@ const OrderLimitForm = () => {
         feeSettled: new Big(traderOrderInfo.fee_settled).toNumber(),
         settleLimit: traderOrderInfo.settle_limit,
         fundingApplied: traderOrderInfo.funding_applied,
+        eventSource: "transaction_hashes" as const,
+        eventStatus: orderData.order_status,
+        request_id: orderData.request_id,
+        reason: orderData.reason,
+        old_price: orderData.old_price,
+        new_price: orderData.new_price,
+        priceKind: "NONE" as const,
+        displayPrice: null,
+        displayPriceBefore: null,
+        displayPriceAfter: null,
+        eventTimestamp: orderData.datetime
+          ? new Date(orderData.datetime)
+          : undefined,
+        idempotency_key: `${orderData.order_id}|${orderData.order_status}|${orderData.request_id || "NO_REQUEST_ID"}`,
       };
 
       addTrade(newTradeData);
