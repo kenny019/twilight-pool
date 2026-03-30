@@ -179,6 +179,7 @@ export function AccountLedgerDataTable<TData, TValue>({
     columns,
     meta: { toast, displayUnit } satisfies AccountLedgerTableMeta,
     state: { sorting, pagination, columnVisibility, columnOrder },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onColumnVisibilityChange: setColumnVisibility,
