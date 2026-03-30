@@ -30,7 +30,10 @@ import {
 } from "../utils/waitForUtxoUpdate";
 import { TransactionHash } from "../api/rest";
 import { useEffect, useRef } from "react";
-import { buildTradeLedgerEntryFromRelayerEvent } from "../account-ledger/from-relayer";
+import {
+  buildTradeLedgerEntryFromRelayerEvent,
+  shouldInsertTradeLedgerEvent,
+} from "../account-ledger/from-relayer";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -683,13 +686,15 @@ export const useSyncTrades = () => {
           for (const txHash of tradeTxHashes) {
             const historyRow = buildHistoryRowFromTxHash(newTrade, txHash);
             addTradeHistory(historyRow);
-            addAccountLedgerEntry(
-              buildTradeLedgerEntryFromRelayerEvent(
-                storeApi.getState(),
-                newTrade,
-                txHash
-              )
-            );
+            if (shouldInsertTradeLedgerEvent(txHash.order_status)) {
+              addAccountLedgerEntry(
+                buildTradeLedgerEntryFromRelayerEvent(
+                  storeApi.getState(),
+                  newTrade,
+                  txHash
+                )
+              );
+            }
           }
         }
 

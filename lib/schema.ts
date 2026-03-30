@@ -179,5 +179,5 @@ export const AccountLedgerEntrySchema = z.object({
   idempotency_key: z.string(),
   created_at: z.date(),
   updated_at: z.date(),
-  status: z.enum(["pending", "confirmed", "failed"]),
+  status: z.enum(["pending", "confirmed", "failed", "cancelled"]),
 });

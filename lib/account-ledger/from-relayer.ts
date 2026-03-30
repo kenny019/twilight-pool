@@ -45,6 +45,18 @@ const FAILED_STATUSES = new Set([
   "Error",
 ]);
 
+const TRADE_LEDGER_ALLOWED_STATUSES = new Set([
+  "PENDING",
+  "FILLED",
+  "SETTLED",
+  "LIQUIDATE",
+  "CANCELLED",
+]);
+
+export function shouldInsertTradeLedgerEvent(orderStatus: string): boolean {
+  return TRADE_LEDGER_ALLOWED_STATUSES.has((orderStatus || "").toUpperCase());
+}
+
 function toDate(value: Date | string | null | undefined): Date {
   if (!value) return new Date();
   return value instanceof Date ? value : new Date(value);
@@ -52,6 +64,7 @@ function toDate(value: Date | string | null | undefined): Date {
 
 function mapLedgerStatus(orderStatus: string): AccountLedgerEntry["status"] {
   if (orderStatus === "PENDING") return "pending";
+  if (orderStatus === "CANCELLED") return "cancelled";
   if (isErrorStatus(orderStatus) || FAILED_STATUSES.has(orderStatus)) {
     return "failed";
   }
@@ -294,7 +307,8 @@ export function buildLendLedgerEntryFromRelayerEvent(
   const orderId = txHash.order_id || null;
   // Idempotency may fallback to request-id scoped key when order_id is absent
   // (failed/no-response request paths).
-  const idempotencyOrderId = txHash.order_id || ctx.fallbackOrderId || "NO_ORDER_ID";
+  const idempotencyOrderId =
+    txHash.order_id || ctx.fallbackOrderId || "NO_ORDER_ID";
   const requestId = txHash.request_id || "NO_REQUEST_ID";
 
   return {
