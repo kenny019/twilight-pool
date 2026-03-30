@@ -291,7 +291,10 @@ export function buildLendLedgerEntryFromRelayerEvent(
       ? `${ctx.accountAddress}-Memo`
       : `${ctx.accountAddress}-CoinSettled`;
 
-  const orderId = txHash.order_id || ctx.fallbackOrderId || null;
+  const orderId = txHash.order_id || null;
+  // Idempotency may fallback to request-id scoped key when order_id is absent
+  // (failed/no-response request paths).
+  const idempotencyOrderId = txHash.order_id || ctx.fallbackOrderId || "NO_ORDER_ID";
   const requestId = txHash.request_id || "NO_REQUEST_ID";
 
   return {
@@ -318,7 +321,7 @@ export function buildLendLedgerEntryFromRelayerEvent(
     t_positions_bal_after: positionsAfter,
     l_deposits_bal_before: lendsBefore,
     l_deposits_bal_after: lendsAfter,
-    idempotency_key: `relayer|lend|${orderId || "NO_ORDER_ID"}|${orderStatus}|${requestId}|${ctx.operation}`,
+    idempotency_key: `relayer|lend|${idempotencyOrderId}|${orderStatus}|${requestId}|${ctx.operation}`,
     created_at: now,
     updated_at: now,
     status: ledgerStatus,

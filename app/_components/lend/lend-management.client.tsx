@@ -254,7 +254,7 @@ const LendManagement = () => {
             account_id: zkAccountToUse.address,
             datetime: new Date().toISOString(),
             id: 0,
-            order_id: String(data.result.id_key),
+            order_id: "",
             order_status: failedStatus,
             order_type: "LEND",
             output: null,
@@ -321,12 +321,14 @@ const LendManagement = () => {
           : undefined;
 
         const tx_hash = lendOrderData?.tx_hash;
+        const orderId = lendOrderData?.order_id;
+        const requestId = String(data.result.id_key);
 
-        if (!tx_hash) {
+        if (!tx_hash || !orderId) {
           toast({
             variant: "error",
             title: "Unable to submit lend order",
-            description: "An error has occurred, try again later.",
+            description: "Order confirmation is incomplete. Please try again.",
           });
           setIsSubmitLoading(false);
           return;
@@ -392,7 +394,9 @@ const LendManagement = () => {
 
         const newLendOrder = {
           accountAddress: zkAccountToUse.address,
-          uuid: data.result.id_key as string,
+          uuid: orderId,
+          order_id: orderId,
+          request_id: requestId,
           orderStatus: "LENDED",
           value: transferAmount,
           timestamp: new Date(),

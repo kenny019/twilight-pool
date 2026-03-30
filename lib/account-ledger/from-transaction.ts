@@ -109,6 +109,16 @@ function computeLendDepositsAfter(state: LedgerLikeState): number {
     .reduce((sum, a) => sum + Math.round(a.value || 0), 0);
 }
 
+function getAccountTypeForTxSide(
+  state: LedgerLikeState,
+  address: string,
+  fallbackType?: string
+): string | undefined {
+  return (
+    state.zk.zkAccounts.find((a) => a.address === address)?.type || fallbackType
+  );
+}
+
 function deriveDeltas(
   state: LedgerLikeState,
   transaction: TransactionHistory,
@@ -122,16 +132,41 @@ function deriveDeltas(
   const amount = Math.round(transaction.value || 0);
   const fromTag = normalizeTag(transaction.fromTag);
   const toTag = normalizeTag(transaction.toTag);
+  const fromType = getAccountTypeForTxSide(
+    state,
+    transaction.from,
+    transaction.fromType
+  );
+  const toType = getAccountTypeForTxSide(state, transaction.to, transaction.toType);
 
   let fund = 0;
   let trade = 0;
   let positions = 0;
   let lends = 0;
 
+  const applyTagBasedTradeDelta = () => {
+    if (fromTag === "trading account" || fromTag === "main") trade -= amount;
+    if (toTag === "trading account" || toTag === "main") trade += amount;
+  };
+
   if (fromTag === "funding") fund -= amount;
   if (toTag === "funding") fund += amount;
-  if (fromTag === "trading account" || fromTag === "main") trade -= amount;
-  if (toTag === "trading account" || toTag === "main") trade += amount;
+
+  // Transfer rows often represent internal movement within the same trade pool.
+  // When both account types are known, derive delta from type transition.
+  if (ledgerType === "transfer") {
+    if (isTradeBalanceType(fromType) && isTradeBalanceType(toType)) {
+      trade += 0;
+    } else if (fromType === "Memo" && isTradeBalanceType(toType)) {
+      trade += amount;
+    } else if (isTradeBalanceType(fromType) && toType === "Memo") {
+      trade -= amount;
+    } else {
+      applyTagBasedTradeDelta();
+    }
+  } else {
+    applyTagBasedTradeDelta();
+  }
 
   // Mint increases the wallet-tracked trade balance (Coin/CoinSettled pool).
   if (ledgerType === "mint" && trade === 0) {
@@ -141,10 +176,7 @@ function deriveDeltas(
   // For burn (ZK account → funding): the Coin/CoinSettled account may still be
   // in state or already removed. Record the delta for correct "before".
   if (ledgerType === "burn" && trade === 0) {
-    const fromZk = state.zk.zkAccounts.find(
-      (a) => a.address === transaction.from
-    );
-    if (!fromZk || fromZk.type === "Coin" || fromZk.type === "CoinSettled") {
+    if (!fromType || isTradeBalanceType(fromType)) {
       trade -= amount;
     }
   }
@@ -255,22 +287,28 @@ export function buildLedgerEntryFromTransaction(
     tradeAfter = Math.max(0, previousTradeAfter + deltas.trade);
   }
 
-  const tradeBefore = tradeAfter - deltas.trade;
+  let tradeBefore = tradeAfter - deltas.trade;
+  if (ledgerType === "transfer" && previousTradeAfter != null) {
+    // Transfer rows are snapshots of internal movement after state is already
+    // updated. Using inferred deltas can double-apply a Memo->Coin move (for
+    // example: trade-close followed by cleanup transfer), which makes
+    // trade_bal_before incorrect. Anchor transfer rows to previous/live totals.
+    tradeBefore = previousTradeAfter;
+    tradeAfter = liveTradeAfter;
+  }
   const positionsBefore = positionsAfter - deltas.positions;
   const lendsBefore = lendsAfter - deltas.lends;
   const fundBefore =
     fundAfterWithSnapshot == null ? null : fundAfterWithSnapshot - deltas.fund;
 
-  const fromZk = state.zk.zkAccounts.find(
-    (a) => a.address === transaction.from
+  const fromType = getAccountTypeForTxSide(
+    state,
+    transaction.from,
+    transaction.fromType
   );
-  const toZk = state.zk.zkAccounts.find((a) => a.address === transaction.to);
-  const fromAcc = fromZk
-    ? `${transaction.from}-${fromZk.type}`
-    : `${transaction.from}-${transaction.fromTag}`;
-  const toAcc = toZk
-    ? `${transaction.to}-${toZk.type}`
-    : `${transaction.to}-${transaction.toTag}`;
+  const toType = getAccountTypeForTxSide(state, transaction.to, transaction.toType);
+  const fromAcc = `${transaction.from}-${fromType || transaction.fromTag}`;
+  const toAcc = `${transaction.to}-${toType || transaction.toTag}`;
 
   const timestamp = toDate(transaction.date);
   const keyTime = timestamp.toISOString();

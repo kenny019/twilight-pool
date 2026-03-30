@@ -99,7 +99,8 @@ export const TradeOrderSchema = z.object({
 export const LendOrderSchema = z.object({
   accountAddress: z.string(),
   value: z.number(), // balance in sats
-  uuid: z.string(),
+  uuid: z.string(), // relayer order_id
+  request_id: z.string().optional(), // RPC request id (REQID...)
   orderStatus: z.string(), // LENDED, SETTLED, CANCELLED
   timestamp: z.date(),
   withdrawPending: z.boolean().optional(),
@@ -132,6 +133,8 @@ export const TransactionHistorySchema = z.object({
   to: z.string(),
   fromTag: z.string(),
   toTag: z.string(),
+  fromType: z.string().optional(),
+  toType: z.string().optional(),
   tx_hash: z.string(),
   value: z.number(),
   date: z.date(),

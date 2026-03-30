@@ -1,6 +1,13 @@
 "use client";
 
 import cn from "@/lib/cn";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
 import { useToast } from "@/lib/hooks/useToast";
 import {
   ColumnDef,
@@ -26,6 +33,7 @@ import {
   DEFAULT_HIDDEN_COLUMNS,
   MANDATORY_COLUMNS,
   type AccountLedgerTableMeta,
+  type LedgerDisplayUnit,
 } from "./columns";
 import {
   Dialog,
@@ -36,6 +44,7 @@ import {
 
 const VISIBILITY_KEY = "account-ledger-columns";
 const ORDER_KEY = "account-ledger-column-order";
+const UNIT_KEY = "account-ledger-display-unit";
 
 function getColumnId(col: ColumnDef<any, any>): string {
   return (
@@ -110,6 +119,23 @@ function saveToStorage(key: string, value: unknown) {
   }
 }
 
+function loadDisplayUnit(): LedgerDisplayUnit {
+  try {
+    const stored = localStorage.getItem(UNIT_KEY);
+    if (
+      stored === "auto" ||
+      stored === "SATS" ||
+      stored === "mBTC" ||
+      stored === "BTC"
+    ) {
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return "auto";
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -133,6 +159,9 @@ export function AccountLedgerDataTable<TData, TValue>({
     loadColumnOrder(columns)
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [displayUnit, setDisplayUnit] = useState<LedgerDisplayUnit>(() =>
+    loadDisplayUnit()
+  );
   const { toast } = useToast();
 
   useEffect(() => {
@@ -141,11 +170,14 @@ export function AccountLedgerDataTable<TData, TValue>({
   useEffect(() => {
     saveToStorage(ORDER_KEY, columnOrder);
   }, [columnOrder]);
+  useEffect(() => {
+    saveToStorage(UNIT_KEY, displayUnit);
+  }, [displayUnit]);
 
   const table = useReactTable({
     data,
     columns,
-    meta: { toast } satisfies AccountLedgerTableMeta,
+    meta: { toast, displayUnit } satisfies AccountLedgerTableMeta,
     state: { sorting, pagination, columnVisibility, columnOrder },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
@@ -181,7 +213,24 @@ export function AccountLedgerDataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-end pb-2">
+      <div className="flex items-center justify-between pb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium text-primary-accent">Units</span>
+          <Select
+            value={displayUnit}
+            onValueChange={(value) => setDisplayUnit(value as LedgerDisplayUnit)}
+          >
+            <SelectTrigger className="h-7 w-[140px] rounded px-2 py-1 text-[11px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto (default)</SelectItem>
+              <SelectItem value="SATS">SATS</SelectItem>
+              <SelectItem value="mBTC">mBTC</SelectItem>
+              <SelectItem value="BTC">BTC</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <button
           type="button"
           onClick={() => setDialogOpen(true)}

@@ -36,7 +36,7 @@ import {
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { Loader2 } from "lucide-react";
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { LendOrder, ZkAccount } from "@/lib/types";
 import { useGetLendPoolInfo } from "@/lib/hooks/useGetLendPoolInfo";
 import type { ApyPeriod } from "@/lib/hooks/useApyChartData";
@@ -135,6 +135,33 @@ const Page = () => {
       accountTag: getAccountTag(order.accountAddress),
     }));
   }, [lendHistoryData, getAccountTag]);
+
+  // Self-heal stale persisted UI state from older versions:
+  // if an order is already settled/cancelled in history, remove it from active lends.
+  useEffect(() => {
+    const closedIds = new Set(
+      lendHistoryData
+        .filter(
+          (order) =>
+            order.orderStatus === "SETTLED" || order.orderStatus === "CANCELLED"
+        )
+        .flatMap((order) =>
+          [order.uuid, order.request_id].filter(
+            (id): id is string => typeof id === "string" && !!id
+          )
+        )
+    );
+
+    lendOrders
+      .filter(
+        (order) =>
+          order.withdrawPending &&
+          (closedIds.has(order.uuid) ||
+            (typeof order.request_id === "string" &&
+              closedIds.has(order.request_id)))
+      )
+      .forEach((order) => removeLend(order));
+  }, [lendOrders, lendHistoryData, removeLend]);
 
   const getPoolSharePrice = () => poolInfo?.pool_share || 0;
 
@@ -319,9 +346,17 @@ const Page = () => {
         ? txResult.find((tx: TransactionHash) => tx.order_status === "SETTLED")
         : undefined;
       const tx_hash = settledTx?.tx_hash;
+      const normalizedOrder: LendOrder = {
+        ...order,
+        uuid: settledTx?.order_id || order.uuid,
+        request_id: order.request_id || settledTx?.request_id || requestId,
+      };
 
       console.log("requestIdData", settledTx);
-      updateLend(order.uuid, markLendWithdrawalPending(order));
+      updateLend(order.uuid, {
+        ...markLendWithdrawalPending(order),
+        request_id: normalizedOrder.request_id,
+      });
 
       const selectedZkAccount = zKAccounts.find(
         (account) => account.address === order.accountAddress
@@ -329,6 +364,7 @@ const Page = () => {
 
       if (!selectedZkAccount) {
         console.error("selectedZkAccount not found");
+        updateLend(order.uuid, { withdrawPending: false });
         setIsSettleLoading(false);
         setSettlingOrderId(null);
         return;
@@ -360,6 +396,18 @@ const Page = () => {
               fallbackOrderId: order.uuid,
             })
           );
+
+          addLendHistory(
+            completeLendWithdrawal({
+              order: normalizedOrder,
+              txHash: settledTx.tx_hash,
+              value: order.value,
+              payment: 0,
+            })
+          );
+          removeLend(order);
+        } else {
+          updateLend(order.uuid, { withdrawPending: false });
         }
         console.error("queryLendOrder", queryLendOrderRes);
         toast({
@@ -400,14 +448,14 @@ const Page = () => {
 
       console.log("newBalance", newBalance);
 
-      addLendHistory(
-        completeLendWithdrawal({
-          order,
-          txHash: tx_hash,
-          value: newBalance,
-          payment: Big(lendResult.payment ?? 0).toNumber() || 0,
-        })
-      );
+      const completedWithdrawal = completeLendWithdrawal({
+        order: normalizedOrder,
+        txHash: tx_hash,
+        value: newBalance,
+        payment: Big(lendResult.payment ?? 0).toNumber() || 0,
+      });
+      addLendHistory(completedWithdrawal);
+      removeLend(order);
 
       setIsSettleLoading(false);
       setSettlingOrderId(null);
@@ -458,8 +506,10 @@ const Page = () => {
         date: new Date(),
         from: selectedZkAccount.address,
         fromTag: selectedZkAccount.tag,
+        fromType: "CoinSettled",
         to: updatedTransientAddress,
         toTag: selectedZkAccount.tag,
+        toType: "Coin",
         tx_hash: txId,
         type: "Transfer",
         value: newBalance,

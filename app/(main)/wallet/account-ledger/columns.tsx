@@ -3,8 +3,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import Button from "@/components/button";
 import cn from "@/lib/cn";
-import { truncateHash } from "@/lib/helpers";
-import BTC from "@/lib/twilight/denoms";
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { AccountLedgerEntry } from "@/lib/types";
 import { ColumnDef } from "@tanstack/react-table";
 import Big from "big.js";
@@ -17,9 +16,29 @@ function formatDate(value: Date | string) {
   return date.toLocaleString();
 }
 
-function formatSatsToBtc(value: number | null) {
+export type LedgerDisplayUnit = "auto" | "SATS" | "mBTC" | "BTC";
+
+function formatWithPrecision(value: Big, decimals: number): string {
+  const out = value.toFixed(decimals).replace(/\.?0+$/, "");
+  if (out === "" || out === "-0") return "0";
+  return out;
+}
+
+function formatBalance(
+  value: number | null,
+  unit: LedgerDisplayUnit = "auto"
+) {
   if (value == null) return "—";
-  return new BTC("sats", Big(value)).convert("BTC").toString();
+  if (unit === "auto") return formatSatsCompact(value);
+
+  const sats = Big(value);
+  if (unit === "SATS") {
+    return `${formatWithPrecision(sats, 0)} sats`;
+  }
+  if (unit === "mBTC") {
+    return `${formatWithPrecision(sats.div(100_000), 3)} mBTC`;
+  }
+  return `${formatWithPrecision(sats.div(100_000_000), 6)} BTC`;
 }
 
 function formatType(type: string) {
@@ -47,6 +66,7 @@ function formatAccountWithType(value: string) {
 
 export interface AccountLedgerTableMeta {
   toast: (options: { title: string; description?: string }) => void;
+  displayUnit: LedgerDisplayUnit;
 }
 
 function CopyableCell({
@@ -117,13 +137,15 @@ export const DEFAULT_HIDDEN_COLUMNS = new Set([
 function SnapshotCell({
   after,
   before,
+  unit,
 }: {
   after: number | null;
   before: number | null;
+  unit: LedgerDisplayUnit;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const afterLabel = formatSatsToBtc(after);
-  const beforeLabel = formatSatsToBtc(before);
+  const afterLabel = formatBalance(after, unit);
+  const beforeLabel = formatBalance(before, unit);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -144,8 +166,8 @@ function SnapshotCell({
         onMouseLeave={() => setIsOpen(false)}
       >
         <div className="space-y-1">
-          <div>Before: {beforeLabel} BTC</div>
-          <div>After: {afterLabel} BTC</div>
+          <div>Before: {beforeLabel}</div>
+          <div>After: {afterLabel}</div>
         </div>
       </PopoverContent>
     </Popover>
@@ -203,13 +225,15 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "amount_sats",
-    header: "Amount (BTC)",
-    accessorFn: (row) =>
-      new BTC("sats", Big(row.amount_sats)).convert("BTC").toString(),
+    header: "Amount",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.amount_sats, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "from_acc",
-    header: "From Account",
+    header: "From Account-Type",
     cell: (row) => {
       const rawValue = row.getValue() as string;
       const meta = row.table.options.meta as AccountLedgerTableMeta;
@@ -230,7 +254,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "to_acc",
-    header: "To Account",
+    header: "To Account-Type",
     cell: (row) => {
       const rawValue = row.getValue() as string;
       const meta = row.table.options.meta as AccountLedgerTableMeta;
@@ -251,83 +275,129 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "fund_bal",
-    header: "Fund Bal (BTC)",
-    cell: (row) => (
-      <SnapshotCell
-        after={row.row.original.fund_bal_after}
-        before={row.row.original.fund_bal_before}
-      />
-    ),
+    header: "Fund Bal",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return (
+        <SnapshotCell
+          after={row.row.original.fund_bal_after}
+          before={row.row.original.fund_bal_before}
+          unit={meta?.displayUnit || "auto"}
+        />
+      );
+    },
   },
   {
     accessorKey: "fund_bal_before",
-    header: "Fund Bal Before (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.fund_bal_before),
+    header: "Fund Bal Before",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.fund_bal_before, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "fund_bal_after",
-    header: "Fund Bal After (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.fund_bal_after),
+    header: "Fund Bal After",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.fund_bal_after, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "trade_bal",
-    header: "Trade Bal (BTC)",
-    cell: (row) => (
-      <SnapshotCell
-        after={row.row.original.trade_bal_after}
-        before={row.row.original.trade_bal_before}
-      />
-    ),
+    header: "Trade Bal",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return (
+        <SnapshotCell
+          after={row.row.original.trade_bal_after}
+          before={row.row.original.trade_bal_before}
+          unit={meta?.displayUnit || "auto"}
+        />
+      );
+    },
   },
   {
     accessorKey: "trade_bal_before",
-    header: "Trade Bal Before (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.trade_bal_before),
+    header: "Trade Bal Before",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.trade_bal_before, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "trade_bal_after",
-    header: "Trade Bal After (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.trade_bal_after),
+    header: "Trade Bal After",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.trade_bal_after, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "t_positions_bal",
-    header: "T.Pos Bal (BTC)",
-    cell: (row) => (
-      <SnapshotCell
-        after={row.row.original.t_positions_bal_after}
-        before={row.row.original.t_positions_bal_before}
-      />
-    ),
+    header: "T.Pos Bal",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return (
+        <SnapshotCell
+          after={row.row.original.t_positions_bal_after}
+          before={row.row.original.t_positions_bal_before}
+          unit={meta?.displayUnit || "auto"}
+        />
+      );
+    },
   },
   {
     accessorKey: "t_positions_bal_before",
-    header: "T.Pos Bal Before (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.t_positions_bal_before),
+    header: "T.Pos Bal Before",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(
+        row.row.original.t_positions_bal_before,
+        meta?.displayUnit
+      );
+    },
   },
   {
     accessorKey: "t_positions_bal_after",
-    header: "T.Pos Bal After (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.t_positions_bal_after),
+    header: "T.Pos Bal After",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.t_positions_bal_after, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "l_deposits_bal",
-    header: "L.Dep Bal (BTC)",
-    cell: (row) => (
-      <SnapshotCell
-        after={row.row.original.l_deposits_bal_after}
-        before={row.row.original.l_deposits_bal_before}
-      />
-    ),
+    header: "L.Dep Bal",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return (
+        <SnapshotCell
+          after={row.row.original.l_deposits_bal_after}
+          before={row.row.original.l_deposits_bal_before}
+          unit={meta?.displayUnit || "auto"}
+        />
+      );
+    },
   },
   {
     accessorKey: "l_deposits_bal_before",
-    header: "L.Dep Bal Before (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.l_deposits_bal_before),
+    header: "L.Dep Bal Before",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(
+        row.row.original.l_deposits_bal_before,
+        meta?.displayUnit
+      );
+    },
   },
   {
     accessorKey: "l_deposits_bal_after",
-    header: "L.Dep Bal After (BTC)",
-    accessorFn: (row) => formatSatsToBtc(row.l_deposits_bal_after),
+    header: "L.Dep Bal After",
+    cell: (row) => {
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
+      return formatBalance(row.row.original.l_deposits_bal_after, meta?.displayUnit);
+    },
   },
   {
     accessorKey: "status",
