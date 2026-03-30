@@ -13,6 +13,12 @@ type RetryErrorResponse = {
 
 const sleep = (delay: number) => new Promise((res) => setTimeout(res, delay));
 
+/** Calculate progressive delay: starts at `base`, grows by 1.2x per attempt, caps at `base * 10` */
+function progressiveDelay(base: number, attempt: number): number {
+  const scaled = base * Math.pow(1.2, attempt);
+  return Math.min(scaled, base * 10);
+}
+
 export async function retry<QueryReturn, QueryArgs = void>(
   query: (args: QueryArgs, ...rest: any[]) => QueryReturn,
   retries: number,
@@ -29,12 +35,10 @@ export async function retry<QueryReturn, QueryArgs = void>(
     try {
       tryCount += 1;
 
-      console.log(`retrying ${tryCount} / ${retries}`);
-
       const response = await query(args);
 
       if (!response) {
-        await sleep(delay);
+        await sleep(progressiveDelay(delay, tryCount));
         continue;
       }
 
@@ -58,7 +62,7 @@ export async function retry<QueryReturn, QueryArgs = void>(
         break;
       }
 
-      await sleep(delay);
+      await sleep(progressiveDelay(delay, tryCount));
       continue;
     } catch (err) {
       console.error("retry >> error", err);
