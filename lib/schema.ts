@@ -79,12 +79,28 @@ export const TradeOrderSchema = z.object({
       })
     )
     .optional(),
+  // Event metadata for Order History (from transaction_hashes)
+  eventSource: z.enum(["trader_order_info", "transaction_hashes"]).optional(),
+  eventStatus: z.string().optional(),
+  request_id: z.string().nullable().optional(),
+  reason: z.string().nullable().optional(),
+  old_price: z.number().nullable().optional(),
+  new_price: z.number().nullable().optional(),
+  priceKind: z
+    .enum(["LIMIT_CLOSE", "STOP_LOSS", "TAKE_PROFIT", "NONE"])
+    .optional(),
+  displayPrice: z.number().nullable().optional(),
+  displayPriceBefore: z.number().nullable().optional(),
+  displayPriceAfter: z.number().nullable().optional(),
+  eventTimestamp: z.date().optional(),
+  idempotency_key: z.string().optional(),
 });
 
 export const LendOrderSchema = z.object({
   accountAddress: z.string(),
   value: z.number(), // balance in sats
-  uuid: z.string(),
+  uuid: z.string(), // relayer order_id
+  request_id: z.string().optional(), // RPC request id (REQID...)
   orderStatus: z.string(), // LENDED, SETTLED, CANCELLED
   timestamp: z.date(),
   withdrawPending: z.boolean().optional(),
@@ -117,8 +133,51 @@ export const TransactionHistorySchema = z.object({
   to: z.string(),
   fromTag: z.string(),
   toTag: z.string(),
+  fromType: z.string().optional(),
+  toType: z.string().optional(),
   tx_hash: z.string(),
   value: z.number(),
   date: z.date(),
   type: z.string(),
+  funding_sats_snapshot: z.number().nullable().optional(),
+});
+
+export const AccountLedgerEntrySchema = z.object({
+  id: z.string(),
+  type: z.enum([
+    "credit",
+    "debit",
+    "mint",
+    "burn",
+    "transfer",
+    "trade-open",
+    "trade-close",
+    "lend-deposit",
+    "lend-withdraw",
+    "settlement",
+    "liquidation",
+  ]),
+  from_acc: z.string(),
+  to_acc: z.string(),
+  amount_sats: z.number(),
+  fund_bal: z.number().nullable(),
+  trade_bal: z.number().nullable(),
+  t_positions_bal: z.number().nullable(),
+  l_deposits_bal: z.number().nullable(),
+  order_id: z.string().nullable().optional(),
+  tx_hash: z.string().nullable().optional(),
+  timestamp: z.date(),
+  remarks: z.string().nullable().optional(),
+  fund_bal_before: z.number().nullable(),
+  fund_bal_after: z.number().nullable(),
+  trade_bal_before: z.number().nullable(),
+  trade_bal_after: z.number().nullable(),
+  t_positions_bal_before: z.number().nullable(),
+  t_positions_bal_after: z.number().nullable(),
+  l_deposits_bal_before: z.number().nullable(),
+  l_deposits_bal_after: z.number().nullable(),
+  idempotency_key: z.string(),
+  created_at: z.date(),
+  updated_at: z.date(),
+  status: z.enum(["pending", "confirmed", "failed", "cancelled"]),
 });

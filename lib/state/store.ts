@@ -23,10 +23,14 @@ import {
   createWithdrawSlice,
   initialWithdrawSliceState,
 } from "./local/withdraw";
+import {
+  createAccountLedgerSlice,
+  initialAccountLedgerSliceState,
+} from "./local/account-ledger";
 
 type PersistedAccountState = Partial<AccountSlices> & Record<string, unknown>;
 
-export const ACCOUNT_STATE_VERSION = 0.7;
+export const ACCOUNT_STATE_VERSION = 1.0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -53,6 +57,52 @@ function mapPersistedTrades(
   slice.trades = slice.trades.map((trade) =>
     isRecord(trade) ? mapper(trade) : trade
   );
+}
+
+function mapPersistedLends(
+  state: PersistedAccountState,
+  key: "lends" | "lendHistory",
+  mapper: (lend: Record<string, unknown>) => Record<string, unknown>
+) {
+  const lendValue = state.lend;
+  if (!isRecord(lendValue)) return;
+
+  const lendSlice = lendValue as { lends?: unknown[]; lendHistory?: unknown[] };
+  const collection = lendSlice[key];
+  if (!Array.isArray(collection)) return;
+
+  lendSlice[key] = collection.map((lend) =>
+    isRecord(lend) ? mapper(lend) : lend
+  );
+}
+
+function buildLendOrderIdByTxHash(
+  state: PersistedAccountState
+): Map<string, string> {
+  const map = new Map<string, string>();
+  const ledgerValue = state.account_ledger;
+  if (!isRecord(ledgerValue)) return map;
+
+  const ledger = ledgerValue as { entries?: unknown[] };
+  if (!Array.isArray(ledger.entries)) return map;
+
+  ledger.entries.forEach((entry) => {
+    if (!isRecord(entry)) return;
+    const type = entry.type;
+    const txHash = entry.tx_hash;
+    const orderId = entry.order_id;
+    if (
+      (type === "lend-deposit" || type === "lend-withdraw") &&
+      typeof txHash === "string" &&
+      txHash &&
+      typeof orderId === "string" &&
+      orderId
+    ) {
+      map.set(txHash, orderId);
+    }
+  });
+
+  return map;
 }
 
 function migrateSltpField(field: unknown) {
@@ -126,7 +176,7 @@ export function migrateAccountState(
     }));
   }
 
-  if (version < ACCOUNT_STATE_VERSION) {
+  if (version < 0.7) {
     mapPersistedTrades(newState, "trade", (trade) => ({
       ...trade,
       takeProfit: migrateSltpField(trade.takeProfit),
@@ -137,6 +187,55 @@ export function migrateAccountState(
       takeProfit: migrateSltpField(trade.takeProfit),
       stopLoss: migrateSltpField(trade.stopLoss),
     }));
+  }
+
+  if (version < 0.9) {
+    mapPersistedTrades(newState, "trade_history", (trade) => ({
+      ...trade,
+      eventSource: trade.eventSource ?? "trader_order_info",
+      eventStatus: trade.eventStatus ?? trade.orderStatus,
+      request_id: trade.request_id ?? null,
+      reason: trade.reason ?? null,
+      old_price: trade.old_price ?? null,
+      new_price: trade.new_price ?? null,
+      priceKind: trade.priceKind ?? "NONE",
+      displayPrice: trade.displayPrice ?? null,
+      displayPriceBefore: trade.displayPriceBefore ?? null,
+      displayPriceAfter: trade.displayPriceAfter ?? null,
+      idempotency_key:
+        trade.idempotency_key ??
+        `${trade.uuid}|${trade.orderStatus}|NO_REQUEST_ID`,
+    }));
+  }
+
+  if (version < ACCOUNT_STATE_VERSION) {
+    const orderIdByTxHash = buildLendOrderIdByTxHash(newState);
+    const normalizeLend = (lend: Record<string, unknown>) => {
+      const rawUuid = typeof lend.uuid === "string" ? lend.uuid : "";
+      const txHash = typeof lend.tx_hash === "string" ? lend.tx_hash : "";
+      const inferredOrderId = txHash ? orderIdByTxHash.get(txHash) : undefined;
+      const uuidLooksLikeRequestId = rawUuid.startsWith("REQID");
+      const requestId =
+        typeof lend.request_id === "string"
+          ? lend.request_id
+          : uuidLooksLikeRequestId
+            ? rawUuid
+            : undefined;
+      const canonicalUuid = inferredOrderId || rawUuid;
+
+      return {
+        ...lend,
+        uuid: canonicalUuid,
+        order_id:
+          typeof lend.order_id === "string" && lend.order_id
+            ? lend.order_id
+            : canonicalUuid,
+        request_id: requestId,
+      };
+    };
+
+    mapPersistedLends(newState, "lends", normalizeLend);
+    mapPersistedLends(newState, "lendHistory", normalizeLend);
   }
 
   return newState as AccountSlices;
@@ -155,6 +254,7 @@ export const createTwilightStore = (storageKey = "twilight-") => {
         history: createHistorySlice(...actions),
         trade_history: createTradeHistorySlice(...actions),
         withdraw: createWithdrawSlice(...actions),
+        account_ledger: createAccountLedgerSlice(...actions),
         optInLeaderboard: false,
         hasShownOptInDialog: false,
         setOptInLeaderboard: (val: boolean) => {
@@ -201,6 +301,10 @@ export const createTwilightStore = (storageKey = "twilight-") => {
             withdraw: {
               ...currentState.withdraw,
               ...initialWithdrawSliceState,
+            },
+            account_ledger: {
+              ...currentState.account_ledger,
+              ...initialAccountLedgerSliceState,
             },
             optInLeaderboard: currentState.optInLeaderboard,
             hasShownOptInDialog: currentState.hasShownOptInDialog,

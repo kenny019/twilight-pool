@@ -210,6 +210,7 @@ function FundingTradeButton({
         tx_hash: txId,
         type: "Transfer",
         value: amount,
+        funding_sats_snapshot: twilightSats,
       });
 
       toast({
@@ -367,6 +368,7 @@ function FundingTradeButton({
             tx_hash: txId,
             type: "Transfer",
             value: amount,
+            funding_sats_snapshot: twilightSats,
           });
 
           setMasterAccountRecovery(
@@ -543,6 +545,7 @@ function FundingTradeButton({
           tx_hash: mintBurnRes.transactionHash,
           type: "Burn",
           value: amount,
+          funding_sats_snapshot: twilightSats,
         });
 
         toast({

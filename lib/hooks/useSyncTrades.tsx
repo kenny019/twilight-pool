@@ -28,9 +28,79 @@ import {
   serializeTxid,
   waitForUtxoUpdate,
 } from "../utils/waitForUtxoUpdate";
+import { TransactionHash } from "../api/rest";
 import { useEffect, useRef } from "react";
+import {
+  buildTradeLedgerEntryFromRelayerEvent,
+  shouldInsertTradeLedgerEvent,
+} from "../account-ledger/from-relayer";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
+
+type PriceKind = "LIMIT_CLOSE" | "STOP_LOSS" | "TAKE_PROFIT" | "NONE";
+
+function derivePriceKind(eventStatus: string): PriceKind {
+  switch (eventStatus) {
+    case "LimitPriceAdded":
+    case "LimitPriceUpdated":
+    case "CancelledLimitClose":
+      return "LIMIT_CLOSE";
+    case "StopLossAdded":
+    case "StopLossUpdated":
+    case "CancelledStopLoss":
+      return "STOP_LOSS";
+    case "TakeProfitAdded":
+    case "TakeProfitUpdated":
+    case "CancelledTakeProfit":
+      return "TAKE_PROFIT";
+    default:
+      return "NONE";
+  }
+}
+
+/** Lifecycle statuses whose history rows should be enriched with fundingApplied. */
+const FUNDING_ENRICHABLE_STATUSES = new Set(["FILLED", "SETTLED", "LIQUIDATE"]);
+
+function buildIdempotencyKey(
+  uuid: string,
+  orderStatus: string,
+  requestId: string | null
+): string {
+  return `${uuid}|${orderStatus}|${requestId || "NO_REQUEST_ID"}`;
+}
+
+function buildHistoryRowFromTxHash(
+  trade: TradeOrder,
+  txHash: TransactionHash
+): TradeOrder {
+  const priceKind = derivePriceKind(txHash.order_status);
+  const displayPrice = txHash.new_price ?? txHash.old_price ?? null;
+  const displayPriceBefore = txHash.old_price ?? null;
+  const displayPriceAfter = txHash.new_price ?? null;
+
+  return {
+    ...trade,
+    eventSource: "transaction_hashes",
+    eventStatus: txHash.order_status,
+    orderStatus: txHash.order_status,
+    request_id: txHash.request_id,
+    reason: txHash.reason,
+    old_price: txHash.old_price,
+    new_price: txHash.new_price,
+    priceKind,
+    displayPrice,
+    displayPriceBefore,
+    displayPriceAfter,
+    tx_hash: txHash.tx_hash || trade.tx_hash,
+    eventTimestamp: txHash.datetime ? new Date(txHash.datetime) : trade.date,
+    date: txHash.datetime ? new Date(txHash.datetime) : trade.date,
+    idempotency_key: buildIdempotencyKey(
+      trade.uuid,
+      txHash.order_status,
+      txHash.request_id
+    ),
+  };
+}
 
 const keysToUpdateNumber = [
   "bankruptcyPrice",
@@ -89,6 +159,9 @@ export const useSyncTrades = () => {
   const addTradeHistory = useTwilightStore(
     (state) => state.trade_history.addTrade
   );
+  const updateHistorySnapshot = useTwilightStore(
+    (state) => state.trade_history.updateHistorySnapshot
+  );
   const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
   const removeZkAccount = useTwilightStore((state) => state.zk.removeZkAccount);
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
@@ -97,6 +170,9 @@ export const useSyncTrades = () => {
   );
   const addTransactionHistory = useTwilightStore(
     (state) => state.history.addTransaction
+  );
+  const addAccountLedgerEntry = useTwilightStore(
+    (state) => state.account_ledger.addEntry
   );
 
   // Raw store API — queue tasks call storeApi.getState() to read the latest
@@ -154,6 +230,11 @@ export const useSyncTrades = () => {
       if (tradeOrders.length === 0) return true;
 
       const updated = new Map<string, Partial<TradeOrder>>();
+      const txHashDataByUuid = new Map<string, TransactionHash[]>();
+      const traderOrderInfoByUuid = new Map<
+        string,
+        { order_status: string; funding_applied: string }
+      >();
 
       for (const trade of tradeOrders) {
         if (!isRunActive(runAddress, runPrivateKey)) return true;
@@ -177,12 +258,43 @@ export const useSyncTrades = () => {
         const traderOrderInfo = queryTradeOrderRes.result;
         const txHashData = queryTxHashRes.result;
 
+        // Store traderOrderInfo for funding enrichment in the second loop
+        traderOrderInfoByUuid.set(trade.uuid, {
+          order_status: traderOrderInfo.order_status,
+          funding_applied: traderOrderInfo.funding_applied,
+        });
+
+        // Store all tx hash entries for this trade's uuid for history ingestion,
+        // deduplicated by idempotency key to avoid duplicate rows when the API
+        // returns multiple entries for the same logical event.
+        const tradeMatchedTxHashes = txHashData.filter(
+          (data) => data.order_id === trade.uuid
+        );
+        if (tradeMatchedTxHashes.length > 0) {
+          const seen = new Set<string>();
+          const deduped = tradeMatchedTxHashes.filter((tx) => {
+            const key = buildIdempotencyKey(
+              trade.uuid,
+              tx.order_status,
+              tx.request_id
+            );
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          txHashDataByUuid.set(trade.uuid, deduped);
+        }
+
         const foundTxHashData = txHashData.filter(
-          (data) => data.order_status === traderOrderInfo.order_status
+          (data) =>
+            data.order_status === traderOrderInfo.order_status &&
+            data.order_id === traderOrderInfo.uuid
         );
 
         const updatedTradeData: Record<string, unknown> = {
-          tx_hash: foundTxHashData[0] ? (foundTxHashData[0].tx_hash || undefined) : undefined,
+          tx_hash: foundTxHashData[0]
+            ? foundTxHashData[0].tx_hash || undefined
+            : undefined,
         };
 
         for (const [key, value] of Object.entries(traderOrderInfo)) {
@@ -261,7 +373,7 @@ export const useSyncTrades = () => {
         }
       }
 
-      if (updated.size < 1) return true;
+      if (updated.size < 1 && txHashDataByUuid.size < 1) return true;
 
       const mergedTrades: TradeOrder[] = [];
       const cleanupPromises: Promise<void>[] = [];
@@ -353,8 +465,9 @@ export const useSyncTrades = () => {
                   let privateTxSingleResult: Awaited<
                     ReturnType<typeof senderZkPrivateAccount.privateTxSingle>
                   >;
-                  let utxoWait: Awaited<ReturnType<typeof waitForUtxoUpdate>> | null =
-                    null;
+                  let utxoWait: Awaited<
+                    ReturnType<typeof waitForUtxoUpdate>
+                  > | null = null;
                   let pendingTradingAccount: ZkAccount;
 
                   if (
@@ -447,7 +560,10 @@ export const useSyncTrades = () => {
                       .zk.zkAccounts.find((a) => a.tag === "main");
 
                     if (latestTradingAccount) {
-                      updateZkAccount(latestTradingAccount.address, pendingTradingAccount);
+                      updateZkAccount(
+                        latestTradingAccount.address,
+                        pendingTradingAccount
+                      );
                     } else {
                       addZkAccount(pendingTradingAccount);
                     }
@@ -560,15 +676,39 @@ export const useSyncTrades = () => {
           }
         }
 
-        // Record every status transition to trade history.
-        if (updatedTrade && updatedTrade.orderStatus) {
+        // Ingest transaction_hashes as primary event source for Order History.
+        // Each tx_hash entry becomes a separate history row keyed by idempotency_key.
+        // Missing request_id is allowed; buildIdempotencyKey falls back to
+        // `NO_REQUEST_ID` so insertion remains idempotent.
+        const tradeTxHashes = txHashDataByUuid.get(trade.uuid);
+        if (tradeTxHashes) {
           if (!isRunActive(runAddress, runPrivateKey)) return true;
-          console.log(
-            "adding to history",
-            trade.orderStatus,
-            updatedTrade.orderStatus
-          );
-          addTradeHistory(newTrade);
+          for (const txHash of tradeTxHashes) {
+            const historyRow = buildHistoryRowFromTxHash(newTrade, txHash);
+            addTradeHistory(historyRow);
+            if (shouldInsertTradeLedgerEvent(txHash.order_status)) {
+              addAccountLedgerEntry(
+                buildTradeLedgerEntryFromRelayerEvent(
+                  storeApi.getState(),
+                  newTrade,
+                  txHash
+                )
+              );
+            }
+          }
+        }
+
+        // Enrich existing FILLED/SETTLED/LIQUIDATE history rows with
+        // fundingApplied from traderOrderInfo when available.
+        const orderInfo = traderOrderInfoByUuid.get(trade.uuid);
+        if (
+          orderInfo &&
+          orderInfo.funding_applied != null &&
+          FUNDING_ENRICHABLE_STATUSES.has(orderInfo.order_status)
+        ) {
+          updateHistorySnapshot(trade.uuid, orderInfo.order_status, {
+            fundingApplied: String(orderInfo.funding_applied),
+          });
         }
       }
 

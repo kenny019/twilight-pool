@@ -324,6 +324,7 @@ const TransferDialog = ({
           tx_hash: res.transactionHash,
           type: "Transfer",
           value: transferAmount,
+          funding_sats_snapshot: twilightSats,
         });
 
         toast({
@@ -503,6 +504,7 @@ const TransferDialog = ({
             tx_hash: txId,
             type: "Transfer",
             value: transferAmount,
+            funding_sats_snapshot: twilightSats,
           });
 
           updateZkAccount(senderZkAccount.address, {
@@ -643,6 +645,7 @@ const TransferDialog = ({
                   tx_hash: txId,
                   type: "Transfer",
                   value: transferAmount,
+                  funding_sats_snapshot: twilightSats,
                 });
 
                 setMasterAccountRecovery(
@@ -786,22 +789,24 @@ const TransferDialog = ({
               "Trading to funding burn"
             );
 
+            const updatedSenderAccount = senderZkPrivateAccount.get();
             updateZkAccount(senderZkAccount.address, {
               ...senderZkAccount,
-              address: senderZkPrivateAccount.get().address,
-              scalar: senderZkPrivateAccount.get().scalar,
-              value: senderZkPrivateAccount.get().value,
+              address: updatedSenderAccount.address,
+              scalar: updatedSenderAccount.scalar,
+              value: updatedSenderAccount.value,
             });
 
             addTransactionHistory({
               date: new Date(),
-              from: senderZkAccount.address,
+              from: updatedSenderAccount.address,
               fromTag: senderZkAccount.tag,
               to: twilightAddress,
               toTag: "Funding",
               tx_hash: mintBurnRes.transactionHash,
               type: "Burn",
               value: transferAmount,
+              funding_sats_snapshot: twilightSats,
             });
 
             console.log(

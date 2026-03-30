@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   LendOrderSchema,
+  AccountLedgerEntrySchema,
   PoolInfoSchema,
   TradeOrderSchema,
   TransactionHistorySchema,
@@ -77,6 +78,7 @@ export type FundingHistoryEntry = {
 export type LendOrder = z.infer<typeof LendOrderSchema>;
 export type PoolInfo = z.infer<typeof PoolInfoSchema>;
 export type TransactionHistory = z.infer<typeof TransactionHistorySchema>;
+export type AccountLedgerEntry = z.infer<typeof AccountLedgerEntrySchema>;
 export type WithdrawOrder = z.infer<typeof WithdrawOrderSchema>;
 export type PendingMasterAccountRecovery = {
   address: string;

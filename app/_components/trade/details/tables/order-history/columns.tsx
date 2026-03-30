@@ -1,8 +1,11 @@
-import Button from "@/components/button";
 import { Text } from "@/components/typography";
 import { Info } from "lucide-react";
 import cn from "@/lib/cn";
-import { capitaliseFirstLetter, formatSatsMBtc, truncateHash } from "@/lib/helpers";
+import {
+  capitaliseFirstLetter,
+  formatSatsMBtc,
+  truncateHash,
+} from "@/lib/helpers";
 import { toast } from "@/lib/hooks/useToast";
 import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
@@ -22,6 +25,34 @@ interface OrderHistoryTableMeta {
 // Update the interface to remove currentPrice and privateKey from row data
 interface MyTradeOrder extends TradeOrder {
   // Remove currentPrice and privateKey from here since they'll be in TableMeta
+}
+
+const EVENT_BADGE_STYLES: Record<string, string> = {
+  LIMIT_CLOSE: "bg-blue-500/10 text-blue-500",
+  STOP_LOSS: "bg-orange-500/10 text-orange-500",
+  TAKE_PROFIT: "bg-purple-500/10 text-purple-500",
+  NONE: "bg-gray-500/10 text-gray-500",
+};
+
+/** Column IDs that cannot be hidden via the column filter. */
+export const MANDATORY_COLUMNS = new Set([
+  "date",
+  "uuid",
+  "orderType",
+  "orderStatus",
+]);
+
+/** Column IDs hidden by default (user can enable them). */
+export const DEFAULT_HIDDEN_COLUMNS = new Set([
+  "request_id",
+  "eventStatus",
+  "reason",
+  "priceChange",
+]);
+
+function formatEventStatus(status: string): string {
+  // Convert camelCase/PascalCase to spaced words: "StopLossAdded" -> "Stop Loss Added"
+  return status.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
@@ -59,11 +90,13 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
     cell: (row) => {
       const order = row.row.original;
 
-      if (
-        !order.tx_hash ||
-        order.orderStatus === "CANCELLED" ||
-        order.orderStatus === "PENDING"
-      ) {
+      const showTxHash =
+        order.tx_hash &&
+        (order.orderStatus === "FILLED" ||
+          order.orderStatus === "SETTLED" ||
+          order.orderStatus === "LIQUIDATE");
+
+      if (!showTxHash) {
         return <Text className="text-primary-accent">-</Text>;
       }
 
@@ -101,6 +134,108 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
           )}
         >
           {capitaliseFirstLetter(status)}
+        </span>
+      );
+    },
+  },
+  {
+    id: "eventStatus",
+    accessorKey: "eventStatus",
+    header: "Event",
+    cell: (row) => {
+      const trade = row.row.original;
+      const eventStatus = trade.eventStatus;
+
+      if (!eventStatus || eventStatus === trade.orderStatus) {
+        return <span className="text-xs text-gray-500">—</span>;
+      }
+
+      const priceKind = trade.priceKind ?? "NONE";
+      const badgeStyle =
+        EVENT_BADGE_STYLES[priceKind] ?? EVENT_BADGE_STYLES.NONE;
+
+      return (
+        <span
+          className={cn("rounded px-2 py-1 text-xs font-medium", badgeStyle)}
+          title={trade.reason ?? undefined}
+        >
+          {formatEventStatus(eventStatus)}
+        </span>
+      );
+    },
+  },
+  {
+    id: "triggerPrice",
+    accessorKey: "displayPrice",
+    header: "Trigger Price",
+    cell: (row) => {
+      const trade = row.row.original;
+
+      if (!trade.displayPrice || trade.priceKind === "NONE") {
+        return <span className="text-xs text-gray-500">—</span>;
+      }
+
+      const priceKind = trade.priceKind ?? "NONE";
+      const kindLabel =
+        priceKind === "STOP_LOSS"
+          ? "SL"
+          : priceKind === "TAKE_PROFIT"
+            ? "TP"
+            : "Limit";
+
+      return (
+        <span
+          className="font-medium"
+          title={`${kindLabel}: $${trade.displayPrice.toFixed(2)}${
+            trade.displayPriceBefore != null
+              ? ` (was $${trade.displayPriceBefore.toFixed(2)})`
+              : ""
+          }`}
+        >
+          ${trade.displayPrice.toFixed(2)}
+        </span>
+      );
+    },
+  },
+  {
+    id: "priceChange",
+    header: "Price Change",
+    cell: (row) => {
+      const trade = row.row.original;
+
+      if (trade.old_price == null && trade.new_price == null) {
+        return <span className="text-xs text-gray-500">—</span>;
+      }
+
+      const oldLabel =
+        trade.old_price != null ? `$${trade.old_price.toFixed(2)}` : "—";
+      const newLabel =
+        trade.new_price != null ? `$${trade.new_price.toFixed(2)}` : "—";
+
+      return (
+        <span className="text-xs font-medium tabular-nums">
+          {oldLabel} → {newLabel}
+        </span>
+      );
+    },
+  },
+  {
+    id: "reason",
+    accessorKey: "reason",
+    header: "Reason",
+    cell: (row) => {
+      const trade = row.row.original;
+
+      if (!trade.reason) {
+        return <span className="text-xs text-gray-500">—</span>;
+      }
+
+      return (
+        <span
+          className="max-w-[120px] truncate text-xs text-primary-accent"
+          title={trade.reason}
+        >
+          {trade.reason}
         </span>
       );
     },
@@ -205,24 +340,6 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       );
     },
   },
-  // {
-  //   accessorKey: "liquidationPrice",
-  //   header: "Liq Price (USD)",
-  //   cell: (row) => {
-  //     const trade = row.row.original;
-  //     const liquidationPrice = trade.liquidationPrice;
-
-  //     if (trade.orderStatus !== "LIQUIDATED") {
-  //       return <span className="text-xs text-gray-500">—</span>;
-  //     }
-
-  //     return (
-  //       <span className="font-medium">
-  //         ${liquidationPrice.toFixed(2)}
-  //       </span>
-  //     );
-  //   }
-  // },
   {
     accessorKey: "availableMargin",
     header: "Avail. Margin (BTC)",
@@ -239,8 +356,17 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
       const trade = row.row.original;
       const meta = row.table.options.meta as OrderHistoryTableMeta;
 
+      const status = trade.orderStatus;
+      if (
+        status !== "FILLED" &&
+        status !== "SETTLED" &&
+        status !== "LIQUIDATE"
+      ) {
+        return <span className="text-xs text-gray-500">-</span>;
+      }
+
       const pnl =
-        trade.orderStatus === "LIQUIDATE"
+        status === "LIQUIDATE"
           ? -trade.initialMargin
           : trade.realizedPnl || trade.unrealizedPnl || 0;
       const funding =
@@ -264,14 +390,14 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
           >
             {formatSatsMBtc(funding)}
           </span>
-          {(trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE") && (
+          {(status === "SETTLED" || status === "LIQUIDATE") && (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 meta.openFundingDialog(trade);
               }}
-              className="text-primary-accent/40 hover:text-primary-accent p-0.5 rounded hover:bg-theme/20 transition-colors"
+              className="rounded p-0.5 text-primary-accent/40 transition-colors hover:bg-theme/20 hover:text-primary-accent"
               aria-label="View funding history"
             >
               <Info className="h-3.5 w-3.5" />
@@ -298,9 +424,32 @@ export const orderHistoryColumns: ColumnDef<MyTradeOrder, any>[] = [
         return <span className="text-xs text-gray-500">-</span>;
       }
 
+      return <span className="font-medium">{formatSatsMBtc(fee)}</span>;
+    },
+  },
+  {
+    id: "request_id",
+    accessorKey: "request_id",
+    header: "Request ID",
+    cell: (row) => {
+      const trade = row.row.original;
+
+      if (!trade.request_id) {
+        return <span className="text-xs text-gray-500">—</span>;
+      }
+
       return (
-        <span className="font-medium">
-          {formatSatsMBtc(fee)}
+        <span
+          onClick={() => {
+            navigator.clipboard.writeText(trade.request_id!);
+            toast({
+              title: "Copied to clipboard",
+              description: "Request ID copied to clipboard",
+            });
+          }}
+          className="cursor-pointer text-xs font-medium hover:underline"
+        >
+          {truncateHash(trade.request_id, 4, 4)}
         </span>
       );
     },

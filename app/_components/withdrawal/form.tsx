@@ -32,6 +32,9 @@ const BtcWithdrawalForm = () => {
   const addWithdrawal = useTwilightStore(
     (state) => state.withdraw.addWithdrawal
   );
+  const addTransactionHistory = useTwilightStore(
+    (state) => state.history.addTransaction
+  );
 
   const depositRef = useRef<HTMLInputElement>(null);
 
@@ -150,6 +153,18 @@ const BtcWithdrawalForm = () => {
         amount: withdrawSats,
         withdrawAddress,
         reserveId: selectedReserveId,
+      });
+
+      addTransactionHistory({
+        date: new Date(),
+        from: twilightAddress,
+        fromTag: "Funding",
+        to: withdrawAddress,
+        toTag: "BTC Withdrawal",
+        tx_hash: res.transactionHash,
+        type: "Withdraw",
+        value: withdrawSats,
+        funding_sats_snapshot: twilightSats,
       });
 
       toast({
