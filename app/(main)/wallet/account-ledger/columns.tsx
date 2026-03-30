@@ -24,10 +24,7 @@ function formatWithPrecision(value: Big, decimals: number): string {
   return out;
 }
 
-function formatBalance(
-  value: number | null,
-  unit: LedgerDisplayUnit = "auto"
-) {
+function formatBalance(value: number | null, unit: LedgerDisplayUnit = "auto") {
   if (value == null) return "—";
   if (unit === "auto") return formatSatsCompact(value);
 
@@ -322,7 +319,10 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     header: "Trade Bal Before",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
-      return formatBalance(row.row.original.trade_bal_before, meta?.displayUnit);
+      return formatBalance(
+        row.row.original.trade_bal_before,
+        meta?.displayUnit
+      );
     },
   },
   {
@@ -363,7 +363,10 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     header: "T.Pos Bal After",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
-      return formatBalance(row.row.original.t_positions_bal_after, meta?.displayUnit);
+      return formatBalance(
+        row.row.original.t_positions_bal_after,
+        meta?.displayUnit
+      );
     },
   },
   {
@@ -396,7 +399,10 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     header: "L.Dep Bal After",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
-      return formatBalance(row.row.original.l_deposits_bal_after, meta?.displayUnit);
+      return formatBalance(
+        row.row.original.l_deposits_bal_after,
+        meta?.displayUnit
+      );
     },
   },
   {
@@ -410,9 +416,11 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
             "rounded px-2 py-1 text-[11px] font-medium",
             status === "confirmed"
               ? "bg-green-medium/10 text-green-medium"
-              : status === "failed"
-                ? "bg-red/10 text-red"
-                : "bg-theme/10 text-theme"
+              : status === "cancelled"
+                ? "bg-theme/10 text-theme"
+                : status === "failed"
+                  ? "bg-red/10 text-red"
+                  : "bg-orange/10 text-orange"
           )}
         >
           {status}

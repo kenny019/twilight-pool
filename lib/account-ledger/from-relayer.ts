@@ -50,7 +50,6 @@ const TRADE_LEDGER_ALLOWED_STATUSES = new Set([
   "FILLED",
   "SETTLED",
   "LIQUIDATE",
-  "CANCELLED",
 ]);
 
 export function shouldInsertTradeLedgerEvent(orderStatus: string): boolean {
