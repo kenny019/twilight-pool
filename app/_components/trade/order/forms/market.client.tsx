@@ -672,7 +672,7 @@ const OrderMarketForm = () => {
         queryTransactionHashes,
         30,
         newZkAccount.address,
-        1000,
+        100,
         transactionHashCondition,
         transactionHashFailCondition
       );
