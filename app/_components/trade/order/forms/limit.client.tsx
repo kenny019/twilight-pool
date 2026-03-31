@@ -477,8 +477,8 @@ const OrderLimitForm = () => {
 
       setIsSubmitting(true);
       toast({
-        title: "Placing order",
-        description: "Order is being placed, please do not close this page.",
+        title: "Step 1/3: Preparing account",
+        description: "Transferring funds to a new trading account...",
       });
 
       const { account: newTradingAccount } = await createZkAccountWithBalance({
@@ -539,6 +539,11 @@ const OrderLimitForm = () => {
             scalar: updatedTradingAccountScalar,
             updatedAddress: updatedTradingAccountAddress,
           } = privateTxSingleResult.data;
+
+          toast({
+            title: "Step 1/3: Transfer broadcast",
+            description: "Waiting for on-chain confirmation...",
+          });
 
           const newZkAccount: ZkAccount = {
             scalar: updatedTradingAccountScalar,
@@ -626,6 +631,11 @@ const OrderLimitForm = () => {
       const { newZkAccount } = queueResult;
       const leverageNum = parseInt(leverage || "1", 10);
 
+      toast({
+        title: "Step 2/3: Submitting order",
+        description: "Sending limit order to the relayer...",
+      });
+
       const { success, msg } = await createZkOrder({
         leverage: leverageNum,
         orderType: "LIMIT",
@@ -645,6 +655,11 @@ const OrderLimitForm = () => {
       );
       if (!data.result || !data.result.id_key)
         throw "Error with creating limit order";
+
+      toast({
+        title: "Step 3/3: Confirming order",
+        description: "Waiting for order confirmation...",
+      });
 
       const transactionHashCondition = (
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
