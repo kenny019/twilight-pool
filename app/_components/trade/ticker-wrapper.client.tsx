@@ -45,6 +45,11 @@ const TickerWrapper = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasResetRef = useRef(false);
 
+  const formattedTurnover =
+    turnover >= 1_000_000
+      ? formatCurrency(turnover, "short")
+      : formatCurrency(turnover);
+
   useEffect(() => {
     if (!fundingTimestamp) return;
     hasResetRef.current = false;
@@ -156,7 +161,8 @@ const TickerWrapper = () => {
             >
               {fundingRate}%
             </span>
-            <span>/ {countdownString}</span>
+            <span className="text-primary-accent/70">·</span>
+            <span className="text-primary-accent/75">{countdownString}</span>
           </div>
         </Resource>
         <Resource
@@ -199,7 +205,7 @@ const TickerWrapper = () => {
               placeholder={<Skeleton className="h-3 w-[100px]" />}
             >
               <div className="flex items-center gap-1.5">
-                <span className="text-primary-accent">Skew:</span>
+                <span className="text-primary-accent">OI Skew:</span>
                 <div className="flex h-1.5 w-[60px] overflow-hidden rounded-sm">
                   <div className="bg-green-medium" style={{ width: `${longPercent}%` }} />
                   <div className="bg-red" style={{ width: `${shortPercent}%` }} />
@@ -231,10 +237,10 @@ const TickerWrapper = () => {
                 const divisor = useMBTC ? 1e5 : 1e8;
                 return (
                   <span className="text-primary-accent">
-                    Max L/S:{" "}
-                    <span className="text-green-medium">{(longSats / divisor).toFixed(2)}</span>
-                    <span className="text-primary-accent"> / </span>
-                    <span className="text-red">{(shortSats / divisor).toFixed(2)}</span>
+                    Max Order Size:{" "}
+                    <span className="text-green-medium">L {(longSats / divisor).toFixed(2)}</span>
+                    <span className="text-primary-accent/70"> · </span>
+                    <span className="text-red">S {(shortSats / divisor).toFixed(2)}</span>
                     <span className="text-primary-accent"> {denom}</span>
                   </span>
                 );
@@ -246,51 +252,71 @@ const TickerWrapper = () => {
     </div>
 
     {/* Desktop ticker */}
-    <div className="hidden space-x-2 px-4 py-2 lg:flex">
+    <div className="hidden items-stretch px-3 py-3 xl:px-4 lg:flex">
       {/* bitcoin ticker */}
-      <div className="flex items-center">
-        <div className="flex items-center space-x-2 pr-4">
+      <div className="flex shrink-0 items-center">
+        <div className="flex min-w-0 items-center gap-2 pr-3 xl:pr-4">
           <Image
-            width={32}
-            height={32}
+            width={26}
+            height={26}
+            className="opacity-80"
             src={"/images/btc-icon.png"}
             alt={"bitcoin-icon"}
           />
-          <div className="flex flex-col justify-between">
-            <p>Bitcoin</p>
-            <p className="text-sm dark:text-gray-500">
+          <div className="min-w-0 max-w-[88px] xl:max-w-[116px]">
+            <p className="truncate text-[16px] font-semibold leading-tight text-primary/96">
+              Bitcoin
+            </p>
+            <p className="mt-1 text-[11px] font-medium leading-none text-primary/50">
               <small>BTC</small>
             </p>
           </div>
         </div>
-        <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
+        <Separator
+          className="h-[85%] self-center bg-outline opacity-70"
+          orientation="vertical"
+        />
       </div>
-      <div className="flex items-center">
+      <div className="flex shrink-0 items-center">
         {!hasInit ? (
-          <Skeleton className="mr-2 h-[32px] w-[120px]" />
+          <Skeleton className="mx-3 h-[34px] w-[212px] xl:w-[228px]" />
         ) : (
-          <p
-            className={cn(
-              priceDelta > 0 ? "text-green-medium" : "text-red",
-              priceDelta === 0 && "text-primary",
-              "w-[140px] pr-2 text-center text-2xl font-semibold tracking-tighter transition-colors"
-            )}
-          >
-            {currentPrice
-              ? formatCurrency(currentPrice)
-              : formatCurrency(btcPrice)}
-          </p>
+          <div className="w-[212px] px-3 xl:w-[228px] xl:px-4">
+            <div className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.06em] text-primary/44">
+              <span className="relative inline-flex h-[5px] w-[5px] shrink-0">
+                <span className="absolute inset-0 rounded-full bg-green-medium/25 animate-pulse" />
+                <span className="relative h-[5px] w-[5px] rounded-full bg-green-medium/65" />
+              </span>
+              <span>Mark Price</span>
+            </div>
+            <p
+              className={cn(
+                priceDelta > 0 ? "text-green-medium" : "text-red",
+                priceDelta === 0 && "text-primary",
+                "whitespace-nowrap text-left text-[2rem] font-semibold leading-none tracking-tight tabular-nums transition-colors xl:text-[2.125rem]"
+              )}
+            >
+              {currentPrice
+                ? formatCurrency(currentPrice)
+                : formatCurrency(btcPrice)}
+            </p>
+          </div>
         )}
 
-        <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
+        <Separator
+          className="h-[85%] self-center bg-outline opacity-70"
+          orientation="vertical"
+        />
       </div>
 
       <TickerItem
-        title="24H Change %"
+        title="24H Change"
         className={cn(
+          "font-semibold",
           change === 0 && "text-primary",
           change > 0 ? "text-green-medium" : "text-red"
         )}
+        itemClassName="shrink-0"
       >
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
@@ -305,7 +331,11 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
 
-      <TickerItem className="min-w-[90px]" title="24H High">
+      <TickerItem
+        className="min-w-[86px]"
+        itemClassName="min-w-0"
+        title="24H High"
+      >
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
@@ -313,7 +343,11 @@ const TickerWrapper = () => {
           {formatCurrency(high)}
         </Resource>
       </TickerItem>
-      <TickerItem className="min-w-[90px]" title="24H Low">
+      <TickerItem
+        className="min-w-[86px]"
+        itemClassName="min-w-0"
+        title="24H Low"
+      >
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
@@ -321,58 +355,91 @@ const TickerWrapper = () => {
           {formatCurrency(low)}
         </Resource>
       </TickerItem>
-      <TickerItem title="24H Turnover">
+      <TickerItem
+        className="min-w-[68px]"
+        itemClassName="min-w-0"
+        title="24H Turnover"
+      >
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
-          {formatCurrency(turnover)}
+          <span className={cn(turnover === 0 && "text-primary/32")}>
+            {formattedTurnover}
+          </span>
         </Resource>
       </TickerItem>
-      <TickerItem title={oiShowBtc ? "Open Interest (BTC)" : "Open Interest (USD)"}>
+      <TickerItem
+        className="min-w-[11ch]"
+        itemClassName="min-w-0"
+        title="Open Interest"
+      >
         <Resource
           isLoaded={finalPrice !== 0 && hasInit}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           <span
-            className="inline-grid cursor-pointer"
+            className="inline-grid w-[11ch] cursor-pointer justify-items-start rounded px-1 tabular-nums transition-colors hover:bg-primary/5 hover:text-primary"
             onClick={() => setOiShowBtc((prev) => !prev)}
+            title={oiShowBtc ? "Show open interest in USD" : "Show open interest in BTC"}
           >
-            <span className={cn("col-start-1 row-start-1", oiShowBtc && "invisible")}>
+            <span
+              className={cn(
+                "col-start-1 row-start-1",
+                oiShowBtc && "invisible"
+              )}
+            >
               {formatCurrency(openInterest, "short")}
             </span>
-            <span className={cn("col-start-1 row-start-1", !oiShowBtc && "invisible")}>
+            <span
+              className={cn(
+                "col-start-1 row-start-1",
+                !oiShowBtc && "invisible"
+              )}
+            >
               {openInterestBtc.toFixed(4)} BTC
             </span>
           </span>
         </Resource>
       </TickerItem>
-      <TickerItem title="Skew">
+      <TickerItem
+        itemClassName="shrink-0 pl-1"
+        title="OI Skew"
+      >
         <Resource
           isLoaded={hasInit}
-          placeholder={<Skeleton className="h-6 w-[108px]" />}
+          placeholder={<Skeleton className="h-6 w-[96px] xl:w-[108px]" />}
         >
-          <div className="flex flex-col gap-0.5">
-            <div className="flex h-2 w-[108px] overflow-hidden rounded-sm">
+          <div className="flex min-w-[104px] flex-col gap-0.5 xl:min-w-[116px]">
+            <div className="relative flex h-[5px] w-[104px] overflow-hidden rounded-[1px] xl:w-[116px]">
               <div
                 className="bg-green-medium"
                 style={{ width: `${longPercent}%` }}
               />
               <div className="bg-red" style={{ width: `${shortPercent}%` }} />
+              <div className="pointer-events-none absolute inset-y-[-1px] left-1/2 w-px -translate-x-1/2 bg-background/90" />
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-green-medium">
-                {longPercent.toFixed(0)}% L
+            <div className="flex justify-between text-[10px] leading-none tabular-nums">
+              <span className="flex items-baseline gap-0.5">
+                <span className="text-green-medium/90">{longPercent.toFixed(0)}%</span>
+                <span className="text-primary/45">L</span>
               </span>
-              <span className="text-red">{shortPercent.toFixed(0)}% S</span>
+              <span className="flex items-baseline gap-0.5">
+                <span className="text-red/90">{shortPercent.toFixed(0)}%</span>
+                <span className="text-primary/45">S</span>
+              </span>
             </div>
           </div>
         </Resource>
       </TickerItem>
-      <TickerItem title="Max Long / Short">
+      <TickerItem
+        className="min-w-[132px]"
+        itemClassName="min-w-0 pl-1"
+        title="Max Order Size"
+      >
         <Resource
           isLoaded={!!marketStats.data}
-          placeholder={<Skeleton className="h-6 w-[80px]" />}
+          placeholder={<Skeleton className="h-6 w-[112px]" />}
         >
           {(() => {
             const longSats = marketStats.data?.max_long_btc ?? 0;
@@ -386,15 +453,13 @@ const TickerWrapper = () => {
             const divisor = useMBTC ? 1e5 : 1e8;
 
             return (
-              <span>
-                <span className="text-green-medium">
-                  {(longSats / divisor).toFixed(2)}
-                </span>
-                <span className="text-xs text-gray-500">{" / "}</span>
-                <span className="text-red">
-                  {(shortSats / divisor).toFixed(2)}
-                </span>
-                <span className="text-xs text-gray-500">{` ${denom}`}</span>
+              <span className="tabular-nums">
+                <span className="text-green-medium">{(longSats / divisor).toFixed(2)}</span>
+                <span className="text-[11px] text-primary/45">L</span>
+                <span className="text-[11px] text-primary/32">{" · "}</span>
+                <span className="text-red">{(shortSats / divisor).toFixed(2)}</span>
+                <span className="text-[11px] text-primary/45">S</span>
+                <span className="text-[11px] text-primary/45">{` ${denom}`}</span>
               </span>
             );
           })()}
@@ -402,19 +467,19 @@ const TickerWrapper = () => {
       </TickerItem>
       <TickerItem
         className="flex flex-row items-center"
+        itemClassName="shrink-0 pl-1"
         border={false}
-        title="Funding Rate / Countdown"
+        title="Funding Rate"
       >
         <Resource
           isLoaded={hasInit && fundingRate !== "00:00:00"}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
-          <div className="mr-2 inline-flex items-center space-x-2 whitespace-nowrap text-theme">
-            <Zap className="w-4" />
-
+          <div className="inline-flex min-w-[172px] items-center gap-1 whitespace-nowrap">
             {fundingRate ? (
               <span
                 className={cn(
+                  "text-[15px] font-semibold leading-none tabular-nums",
                   parseFloat(fundingRate) === 0
                     ? "text-primary"
                     : parseFloat(fundingRate) > 0
@@ -425,10 +490,15 @@ const TickerWrapper = () => {
                 {`${fundingRate}`}%
               </span>
             ) : (
-              <span>{fundingRate}%</span>
+              <span className="text-[15px] font-semibold leading-none tabular-nums text-primary/70">
+                {fundingRate}%
+              </span>
             )}
 
-            <span>{`/ ${countdownString}`}</span>
+            <span className="text-primary/14">·</span>
+            <span className="text-[12px] font-normal leading-none tabular-nums text-primary/60">
+              {countdownString}
+            </span>
           </div>
         </Resource>
       </TickerItem>
