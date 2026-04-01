@@ -121,17 +121,28 @@ function MetadataItem({
   label,
   value,
   className,
+  labelClassName,
+  valueClassName,
 }: {
   label: string;
   value: ReactNode;
   className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
-      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+      <span
+        className={cn(
+          "text-[10px] uppercase tracking-wide text-gray-500",
+          labelClassName
+        )}
+      >
         {label}
       </span>
-      <div className="text-[11px] text-primary/85">{value}</div>
+      <div className={cn("text-[11px] text-primary/85", valueClassName)}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -177,9 +188,9 @@ function TimelineRow({
       )}
       <div className="bg-border/70 absolute left-0 top-2 h-2 w-2 rounded-full" />
 
-      <div className="border-border/50 rounded-lg border bg-background/70 p-3">
+      <div className="border-border/50 rounded-lg border bg-background/70 px-3 py-2.5">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-[10px] font-medium",
@@ -198,30 +209,18 @@ function TimelineRow({
           </span>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-3 xl:grid-cols-6">
           <MetadataItem
             label="Side"
             value={<span className="font-medium">{trade.positionType}</span>}
-          />
-          {showDistinctStatus && (
-            <MetadataItem
-              label="Status"
-              value={<span className="font-medium">{rawStatusLabel}</span>}
-            />
-          )}
-          <MetadataItem
-            label="Notional"
-            value={<span className="font-medium">{getOrderHistoryNotionalLabel(trade)}</span>}
+            valueClassName="font-medium"
           />
           <MetadataItem
             label="Entry"
             value={
               <span className="font-medium">${trade.entryPrice.toFixed(2)}</span>
             }
-          />
-          <MetadataItem
-            label="Leverage"
-            value={<span className="font-medium">{trade.leverage.toFixed(2)}x</span>}
+            valueClassName="font-medium"
           />
 
           {showClose && (
@@ -232,6 +231,7 @@ function TimelineRow({
                   ${trade.settlementPrice.toFixed(2)}
                 </span>
               }
+              valueClassName="font-medium"
             />
           )}
 
@@ -239,18 +239,48 @@ function TimelineRow({
             <MetadataItem
               label={triggerPrice.label}
               value={<span className="font-medium">{triggerPrice.value}</span>}
+              valueClassName="font-medium"
             />
           )}
 
           <MetadataItem
+            label="Notional"
+            value={
+              <span className="font-medium">
+                {getOrderHistoryNotionalLabel(trade)}
+              </span>
+            }
+            valueClassName="font-medium"
+          />
+          <MetadataItem
+            label="Leverage"
+            value={<span className="font-medium">{trade.leverage.toFixed(2)}x</span>}
+            valueClassName="font-medium"
+          />
+          <MetadataItem
             label="PnL"
             value={<PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="inline" />}
           />
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-3 xl:grid-cols-5">
+          {showDistinctStatus && (
+            <MetadataItem
+              label="Status"
+              value={<span className="font-medium">{rawStatusLabel}</span>}
+              valueClassName="font-medium"
+            />
+          )}
 
           {posValueSats != null && (
             <MetadataItem
               label="Pos. Value"
-              value={<span className="font-medium">{formatSatsCompact(posValueSats)}</span>}
+              value={
+                <span className="font-medium">
+                  {formatSatsCompact(posValueSats)}
+                </span>
+              }
+              valueClassName="font-medium"
             />
           )}
 
@@ -273,6 +303,7 @@ function TimelineRow({
                   )}
                 </span>
               }
+              valueClassName="font-medium"
             />
           )}
 
@@ -280,6 +311,7 @@ function TimelineRow({
             <MetadataItem
               label="Fee"
               value={<span className="font-medium">{formatSatsMBtc(fee)}</span>}
+              valueClassName="font-medium"
             />
           )}
 
@@ -290,12 +322,13 @@ function TimelineRow({
                 {formatSatsCompact(trade.availableMargin)}
               </span>
             }
+            valueClassName="font-medium"
           />
 
           {priceChange && (
             <MetadataItem
               label="Price Change"
-              className="col-span-2"
+              className="col-span-2 xl:col-span-2"
               value={
                 <span className="font-medium tabular-nums">
                   {priceChange.before != null
@@ -307,6 +340,7 @@ function TimelineRow({
                     : "—"}
                 </span>
               }
+              valueClassName="font-medium"
             />
           )}
 
@@ -322,6 +356,7 @@ function TimelineRow({
                   {truncateHash(trade.request_id, 4, 4)}
                 </button>
               }
+              valueClassName="font-medium"
             />
           )}
 
@@ -338,13 +373,14 @@ function TimelineRow({
                   {truncateHash(trade.tx_hash)}
                 </Link>
               }
+              valueClassName="font-medium"
             />
           )}
 
           {trade.reason && (
             <MetadataItem
               label="Reason"
-              className="col-span-2"
+              className="col-span-2 xl:col-span-5"
               value={<span className="text-primary/70">{trade.reason}</span>}
             />
           )}
@@ -572,7 +608,7 @@ export function OrderHistoryDataTable<TValue>({
                           colSpan={visibleCellCount}
                           className="px-2 pb-3 pt-0"
                         >
-                          <div className="border-border/50 rounded-b-xl border border-t-0 bg-primary/[0.02] px-4 py-3">
+                          <div className="border-border/50 rounded-b-xl border border-t-0 bg-primary/[0.02] px-3.5 py-2.5">
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] uppercase tracking-wide text-gray-500">
@@ -592,7 +628,7 @@ export function OrderHistoryDataTable<TValue>({
                               </span>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-2.5">
                               {group.rows.map((trade, index) => (
                                 <TimelineRow
                                   key={

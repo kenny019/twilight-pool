@@ -70,17 +70,28 @@ function MetadataItem({
   label,
   value,
   className,
+  labelClassName,
+  valueClassName,
 }: {
   label: string;
   value: React.ReactNode;
   className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
-      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+      <span
+        className={cn(
+          "text-[10px] uppercase tracking-wide text-gray-500",
+          labelClassName
+        )}
+      >
         {label}
       </span>
-      <div className="text-[11px] text-primary/85">{value}</div>
+      <div className={cn("text-[11px] text-primary/85", valueClassName)}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -128,9 +139,9 @@ function TimelineItem({
       )}
       <div className="bg-border/70 absolute left-0 top-2 h-2 w-2 rounded-full" />
 
-      <div className="border-border/50 rounded-lg border bg-background/70 p-3">
+      <div className="border-border/50 rounded-lg border bg-background/70 px-2.5 py-2.5">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-[10px] font-medium",
@@ -148,7 +159,7 @@ function TimelineItem({
           </span>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="mt-1.5 grid grid-cols-2 gap-x-3.5 gap-y-1.5">
           <MetadataItem
             label="Side"
             value={<span className="font-medium">{trade.positionType}</span>}
@@ -217,8 +228,8 @@ function TimelineItem({
                       aria-label="View funding history"
                     >
                       <Info className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                      </button>
+                    )}
                 </span>
               }
             />
@@ -455,7 +466,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 space-y-3">
+                        <div className="mt-1.5 space-y-2.5">
                           <div className="flex items-center gap-2 text-[11px]">
                             <span className="text-[10px] uppercase tracking-wide text-gray-500">
                               Order ID
@@ -469,7 +480,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                             </button>
                           </div>
 
-                          <div className="space-y-3">
+                          <div className="space-y-2.5">
                             {group.rows.map((trade, index) => (
                               <TimelineItem
                                 key={
