@@ -10,7 +10,14 @@ import { AccountSummaryTableMeta } from "./data-table";
 import { ActiveAccount } from "../page";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import cn from "@/lib/cn";
 import { Tooltip } from "@/components/tooltip";
+import {
+  ACTION_REQUIRED_MESSAGE,
+  canTransferActiveAccount,
+  getActiveAccountStatus,
+  getActiveAccountStatusClass,
+} from "./status";
 
 export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   {
@@ -20,10 +27,6 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
       row.createdAt
         ? dayjs.unix(row.createdAt).format("DD/MM/YYYY HH:mm:ss")
         : "",
-  },
-  {
-    accessorKey: "tag",
-    header: "Account Tag",
   },
   {
     accessorKey: "address",
@@ -44,6 +47,50 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
         {truncateHash(row.getValue() as string)}
       </Button>
     ),
+  },
+  {
+    accessorKey: "value",
+    header: "Balance (BTC)",
+    accessorFn: (row) =>
+      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8),
+    cell: (row) => (
+      <span className="tabular-nums font-medium">{row.getValue() as string}</span>
+    ),
+  },
+  {
+    accessorKey: "type",
+    header: "Type",
+    cell: (ctx) => {
+      const raw = ctx.row.original.type;
+      return <span>{raw === "Account" ? "Recovery" : raw}</span>;
+    },
+  },
+  {
+    id: "status",
+    header: "Status",
+    cell: (ctx) => {
+      const status = getActiveAccountStatus(ctx.row.original);
+      const cls = getActiveAccountStatusClass(status);
+      const pill = (
+        <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-medium", cls)}>
+          {status}
+        </span>
+      );
+
+      if (status === "Action Required" && canTransferActiveAccount(ctx.row.original)) {
+        return (
+          <Tooltip title={status} body={ACTION_REQUIRED_MESSAGE}>
+            {pill}
+          </Tooltip>
+        );
+      }
+
+      return pill;
+    },
+  },
+  {
+    accessorKey: "tag",
+    header: "Label",
   },
   {
     accessorKey: "txHash",
@@ -71,36 +118,13 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
       );
     },
   },
-
-  {
-    accessorKey: "value",
-    header: "Balance (BTC)",
-    accessorFn: (row) =>
-      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8),
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-  },
-  {
-    accessorKey: "utilized",
-    header: () => (
-      <Tooltip
-        title="Allocated"
-        body="Funds currently used in trades and lending"
-      >
-        <span>Allocated</span>
-      </Tooltip>
-    ),
-    accessorFn: (row) => (row.utilized ? "Yes" : "No"),
-  },
   {
     header: "Actions",
     cell: (ctx) => {
       const row = ctx.row;
       if (
         row.original.utilized ||
-        row.original.tag === "Trading Account" ||
+        row.original.tag === "Primary Trading Account" ||
         row.original.value === 0
       )
         return null;

@@ -256,7 +256,7 @@ export function OrderHistoryDataTable<TData, TValue>({
               >
                 {headerGroup.headers.map((header) => (
                   <th
-                    className="sticky top-0 z-10 bg-background font-medium"
+                    className="sticky top-0 z-10 border-b border-outline/10 bg-background px-2 py-2 text-start font-medium"
                     key={header.id}
                   >
                     <div className="block text-start">
@@ -272,7 +272,7 @@ export function OrderHistoryDataTable<TData, TValue>({
               </tr>
             ))}
           </thead>
-          <tbody className="w-full table-auto overflow-auto">
+          <tbody className="w-full overflow-auto table-auto">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <tr
@@ -281,7 +281,7 @@ export function OrderHistoryDataTable<TData, TValue>({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
-                      className={cn("whitespace-nowrap px-1 py-2")}
+                      className={cn("whitespace-nowrap px-2 py-2")}
                       key={cell.id}
                     >
                       {flexRender(
@@ -294,7 +294,10 @@ export function OrderHistoryDataTable<TData, TValue>({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="h-24 text-center">
+                <td
+                  colSpan={columns.length}
+                  className="h-24 px-2 text-center text-xs text-primary-accent"
+                >
                   No results.
                 </td>
               </tr>

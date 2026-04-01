@@ -1,0 +1,225 @@
+
+
+# Cursor Rules — Twilight UI System Enforcement
+
+## 1. Source of Truth
+
+- AGENTS.md is the PRIMARY contract for all UI behavior and system rules
+- CLAUDE.md defines execution behavior (NOT system rules)
+- The following documents MUST be followed:
+  - docs/ui-pattern-extraction-and-modernization-audit.md
+  - docs/ui-modernization-principles.md
+  - docs/responsive-pattern-matrix.md
+  - docs/implementation-guardrails.md
+
+If any rule conflicts:
+→ AGENTS.md ALWAYS wins
+
+---
+
+## 2. Non-Negotiable Constraints
+
+The following MUST NEVER be violated:
+
+- No functional behavior changes
+- No product flow changes
+- No changes to trading logic, wallet logic, or onboarding flows
+- No modification of data contracts
+- No silent removal of data on mobile
+- No redesign of desktop UI
+- No semantic drift (status, PnL, trading language)
+
+UI adaptation ONLY — NOT product redesign
+
+---
+
+## 3. Pattern System Enforcement
+
+Before ANY UI change:
+
+1. Identify the pattern
+2. Locate it in docs/responsive-pattern-matrix.md
+3. Apply its defined behavior
+
+DO NOT:
+- invent new patterns
+- reinterpret patterns
+- mix patterns across contexts
+
+If pattern is not found → STOP
+
+If the pattern exists in the matrix:
+→ DO NOT reinterpret it
+→ DO NOT partially apply it
+→ Follow the row completely (structure, behavior, overlay, hierarchy)
+---
+
+## 4. Responsive System Rules
+
+### Breakpoints (STRICT)
+
+- sm: → typography ONLY (never layout)
+- md: → PRIMARY layout breakpoint
+- lg: → restricted usage (do NOT introduce new usage)
+- xl: → card grids only
+- max-md: → APPROVED mobile override prefix
+
+DO NOT:
+- introduce new breakpoints
+- use sm: for layout
+
+---
+
+### Behavioral Threshold (CRITICAL)
+
+- 996px is a JS behavioral constant (trade layout)
+
+DO NOT:
+- change the value
+- move it to CSS
+- recreate it differently
+
+---
+
+## 5. Component Rules
+
+### PnL Rendering
+
+- PnlCell is the ONLY allowed PnL renderer
+
+DO NOT:
+- create custom PnL components
+- inline PnL formatting logic
+
+---
+
+### Dual Layout
+
+- Only allowed for: PositionsCards
+
+All other components:
+- MUST be single responsive implementation
+
+DO NOT create separate mobile/desktop trees unless explicitly approved
+
+---
+
+### Shared Components First
+
+- Reuse existing primitives
+- Extend existing components
+
+DO NOT:
+- create route-specific hacks
+- duplicate logic
+
+---
+
+## 6. Data Presentation Rules
+
+### Mobile Mapping
+
+- Trading data → CARDS
+  (positions, open orders, order history)
+
+- Transactional data → LIST ROWS
+  (wallet history, transfers)
+
+DO NOT mix these
+
+---
+
+### Data Integrity
+
+- All desktop data MUST remain accessible on mobile
+
+Use:
+- expand
+- detail views
+
+DO NOT:
+- drop fields
+- hide critical data
+
+---
+
+## 7. Interaction & Overlay Rules
+
+### Overlay Hierarchy
+
+- High risk → Modal
+- Medium → Sheet / Drawer
+- Low → Popover / Inline
+
+DO NOT change overlay type arbitrarily
+
+---
+
+### Safe Area (MOBILE REQUIRED)
+
+All mobile overlays and toast MUST include:
+
+- pb-[env(safe-area-inset-bottom)]
+
+---
+
+## 8. Behavioral Boundaries (CRITICAL)
+
+The following components MUST NOT be structurally altered:
+
+- ExchangeResource → MUST remain OUTERMOST wrapper
+- Trade wrappers → DO NOT modify thresholds or gating
+- Dialog / confirmation flows → DO NOT alter logic
+
+If unsure → STOP
+
+---
+
+## 9. Desktop Authority Rule
+
+- Desktop UI is the SOURCE OF TRUTH
+- Mobile ADAPTS from desktop
+
+DO NOT:
+- redesign desktop
+- degrade desktop experience
+
+---
+
+## 10. Scope Control
+
+Only change what is required
+
+DO NOT:
+- refactor unrelated files
+- rename broadly
+- restructure components unnecessarily
+
+---
+
+## 11. Stop Conditions
+
+STOP immediately if:
+
+- pattern not found in matrix
+- change requires new component
+- overlay decision unclear
+- behavior may be impacted
+- multiple routes affected
+- breakpoint logic unclear
+
+Ask for human approval
+
+---
+
+## 12. Final Rule
+
+When uncertain:
+
+- Follow AGENTS.md
+- Follow the matrix
+- Preserve behavior
+- Preserve semantics
+- Preserve desktop
+
+DO NOT improvise

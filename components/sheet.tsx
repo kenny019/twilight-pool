@@ -9,18 +9,18 @@ import {
   Content,
   Title,
   Description,
-  DialogPortalProps,
   Close,
+  type DialogPortalProps,
 } from "@radix-ui/react-dialog";
 import cn from "@/lib/cn";
 import { X } from "lucide-react";
 
-const Dialog = Root;
-const DialogTrigger = Trigger;
+const Sheet = Root;
+const SheetTrigger = Trigger;
 
-const DialogPortal = ({ ...props }: DialogPortalProps) => <Portal {...props} />;
+const SheetPortal = ({ ...props }: DialogPortalProps) => <Portal {...props} />;
 
-const DialogOverlay = React.forwardRef<
+const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof Overlay>,
   React.ComponentPropsWithoutRef<typeof Overlay>
 >(({ className, ...props }, ref) => (
@@ -33,19 +33,23 @@ const DialogOverlay = React.forwardRef<
     {...props}
   />
 ));
+SheetOverlay.displayName = Overlay.displayName;
 
-DialogOverlay.displayName = Overlay.displayName;
-
-const DialogContent = React.forwardRef<
+const SheetContent = React.forwardRef<
   React.ElementRef<typeof Content>,
   React.ComponentPropsWithoutRef<typeof Content>
 >(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
+  <SheetPortal>
+    <SheetOverlay />
     <Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 flex w-full max-w-sm translate-x-[-50%] translate-y-[-50%] flex-col gap-4 rounded-md border bg-background px-6 py-4 max-h-[calc(100dvh-2rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] md:w-full md:max-w-lg",
+        "fixed bottom-0 left-0 right-0 z-50 flex w-full flex-col gap-4 rounded-t-xl border-t bg-background px-6 py-4",
+        "max-h-[85dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "duration-300",
         className
       )}
       {...props}
@@ -56,34 +60,32 @@ const DialogContent = React.forwardRef<
         <span className="sr-only">Close</span>
       </Close>
     </Content>
-  </DialogPortal>
+  </SheetPortal>
 ));
+SheetContent.displayName = Content.displayName;
 
-const DialogTitle = React.forwardRef<
+const SheetTitle = React.forwardRef<
   React.ElementRef<typeof Title>,
   React.ComponentPropsWithoutRef<typeof Title>
 >(({ className, ...props }, ref) => (
   <Title
     ref={ref}
-    className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
-      className
-    )}
+    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
     {...props}
   />
 ));
-DialogTitle.displayName = Title.displayName;
+SheetTitle.displayName = Title.displayName;
 
-const DialogDescription = React.forwardRef<
+const SheetDescription = React.forwardRef<
   React.ElementRef<typeof Description>,
   React.ComponentPropsWithoutRef<typeof Description>
 >(({ className, ...props }, ref) => (
   <Description
     ref={ref}
-    className={cn("text-muted-foreground text-sm", className)}
+    className={cn("text-sm text-primary/60", className)}
     {...props}
   />
 ));
-DialogDescription.displayName = Description.displayName;
+SheetDescription.displayName = Description.displayName;
 
-export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription };
+export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription };

@@ -27,7 +27,7 @@ const MobileNav = () => {
         <Link passHref href={href}>
           <button
             className={cn(
-              "focus-visible:ring-ring inline-flex h-10 w-full items-center justify-normal rounded-md border px-2 py-0 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 md:animate-in",
+              "focus-visible:ring-ring inline-flex h-11 w-full items-center justify-normal rounded-md border px-2 py-0 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 md:animate-in",
               path === href ? "border-theme" : "border-outline"
             )}
             onClick={() => setOpen(false)}
@@ -42,18 +42,18 @@ const MobileNav = () => {
   return (
     <Root open={open} onOpenChange={setOpen}>
       <Trigger asChild>
-        <button>
-          <Menu />
+        <button className="flex min-h-[44px] min-w-[44px] items-center justify-center -mr-2 touch-manipulation">
+          <Menu className="h-5 w-5" />
         </button>
       </Trigger>
 
       <Portal>
         <Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Content
-          className="fixed right-0 top-0 z-50 min-h-screen w-full max-w-xs border-l bg-background px-6 py-4 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+          className="fixed right-0 top-0 z-50 min-h-dvh w-full max-w-xs border-l bg-background px-6 py-4 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
         >
-          <Close className="absolute right-4 top-4 rounded-md border-0 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-primary disabled:pointer-events-none">
-            <X className="h-4 w-4" />
+          <Close className="absolute right-2 top-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border-0 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-primary disabled:pointer-events-none touch-manipulation">
+            <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </Close>
           <div className="space-y-4 pt-8">

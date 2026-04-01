@@ -2,7 +2,8 @@
 
 import { useTwilightStore } from "@/lib/providers/store";
 import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { Dialog, DialogTitle } from "./dialog";
+import { Sheet, SheetContent } from "./sheet";
 import { NumberInput } from "./input";
 import Button from "./button";
 import { useToast } from "@/lib/hooks/useToast";
@@ -893,8 +894,8 @@ function ConditionalCloseDialog({
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-h-[540px] overflow-y-auto">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="min-h-[540px] max-h-[90dvh] md:bottom-auto md:left-[50%] md:right-auto md:top-[50%] md:w-full md:max-w-lg md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-md">
         <DialogTitle>Close Position</DialogTitle>
         <Tabs
           value={activeTab}
@@ -1821,8 +1822,8 @@ function ConditionalCloseDialog({
             </div>
           </TabsPrimitive.Content>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

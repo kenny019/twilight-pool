@@ -566,7 +566,7 @@ const OrderLimitForm = () => {
             addTransactionHistory({
               date: new Date(),
               from: currentTradingAccount.address,
-              fromTag: "Trading Account",
+              fromTag: "Primary Trading Account",
               to: updatedTradingAccountAddress,
               toTag: newZkAccount.tag,
               tx_hash: txId,
@@ -600,7 +600,7 @@ const OrderLimitForm = () => {
           addTransactionHistory({
             date: new Date(),
             from: currentTradingAccount.address,
-            fromTag: "Trading Account",
+            fromTag: "Primary Trading Account",
             to: updatedTradingAccountAddress,
             toTag: newZkAccount.tag,
             tx_hash: txId,
@@ -895,7 +895,69 @@ const OrderLimitForm = () => {
             </button>
           ))}
         </div>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input + Mark] [+] */}
+        <div className="flex items-stretch gap-2 md:hidden">
+          <button
+            type="button"
+            disabled={!tradingAccountBalance}
+            onPointerDown={(e) => {
+              if (!tradingAccountBalance || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startPriceRepeat(-PRICE_STEP);
+            }}
+            onPointerUp={clearPriceRepeat}
+            onPointerCancel={clearPriceRepeat}
+            onLostPointerCapture={clearPriceRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-md border border-outline bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <Input
+              id="input-order-price-mobile"
+              type="text"
+              value={orderPrice > 0 ? orderPrice.toFixed(2) : ""}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d.]/g, "");
+                const n = parseFloat(v);
+                if (!Number.isNaN(n) && n >= 0) setOrderPrice(n);
+                else if (v === "") setOrderPrice(0);
+              }}
+              className="h-12 min-w-0 flex-1 border-0 bg-transparent text-center text-base tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+            <button
+              type="button"
+              onClick={() =>
+                markPrice > 0 &&
+                setOrderPrice(Math.round(markPrice * 100) / 100)
+              }
+              disabled={!tradingAccountBalance || markPrice <= 0}
+              className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+            >
+              Mark
+            </button>
+          </div>
+          <button
+            type="button"
+            disabled={!tradingAccountBalance}
+            onPointerDown={(e) => {
+              if (!tradingAccountBalance || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startPriceRepeat(PRICE_STEP);
+            }}
+            onPointerUp={clearPriceRepeat}
+            onPointerCancel={clearPriceRepeat}
+            onLostPointerCapture={clearPriceRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <div className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1">
             <Input
               id="input-order-price"
@@ -969,7 +1031,111 @@ const OrderLimitForm = () => {
         >
           Margin Amount
         </label>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input + toggle] [+] */}
+        <div className="flex items-stretch gap-2 md:hidden">
+          <button
+            type="button"
+            disabled={marginStepDisabled}
+            onPointerDown={(e) => {
+              if (marginStepDisabled || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startCollateralRepeat(-1);
+            }}
+            onPointerUp={clearCollateralRepeat}
+            onPointerCancel={clearCollateralRepeat}
+            onLostPointerCapture={clearCollateralRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2">
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={primaryValue}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, "");
+                  if (!v) {
+                    setBtcAmount("");
+                    setPercent(0);
+                    return;
+                  }
+                  const n = parseFloat(v);
+                  if (!Number.isNaN(n) && n >= 0) {
+                    if (collateralUnit === "btc") {
+                      setBtcAmount(v);
+                      if (tradingAccountBalance > 0) {
+                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                        updatePercent((n / maxBtc) * 100);
+                      }
+                    } else {
+                      if (markPrice > 0) {
+                        const btc = n / markPrice;
+                        setBtcAmount(btc.toFixed(8));
+                        if (tradingAccountBalance > 0) {
+                          const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                          updatePercent((btc / maxBtc) * 100);
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="h-auto min-h-0 w-full border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+                disabled={!tradingAccountBalance}
+              />
+              {secondaryRef && (
+                <span className="text-xs text-primary/50">{secondaryRef}</span>
+              )}
+            </div>
+            <div className="flex flex-col border-l border-outline">
+              <button
+                type="button"
+                onClick={() => setCollateralUnit("btc")}
+                className={cn(
+                  "flex-1 px-2 text-[10px] font-medium transition-colors",
+                  collateralUnit === "btc"
+                    ? "bg-theme/20 text-theme"
+                    : "text-primary/50 hover:text-primary/80"
+                )}
+              >
+                BTC
+              </button>
+              <button
+                type="button"
+                onClick={() => setCollateralUnit("usd")}
+                className={cn(
+                  "flex-1 px-2 text-[10px] font-medium transition-colors",
+                  collateralUnit === "usd"
+                    ? "bg-theme/20 text-theme"
+                    : "text-primary/50 hover:text-primary/80"
+                )}
+              >
+                USD
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={marginStepDisabled}
+            onPointerDown={(e) => {
+              if (marginStepDisabled || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startCollateralRepeat(1);
+            }}
+            onPointerUp={clearCollateralRepeat}
+            onPointerCancel={clearCollateralRepeat}
+            onLostPointerCapture={clearCollateralRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1">
             <Input
               type="text"
@@ -1092,7 +1258,7 @@ const OrderLimitForm = () => {
                 "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
                 percent === v
                   ? "border-theme/50 bg-theme/20 text-theme"
-                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
               )}
             >
               {v}%
@@ -1117,7 +1283,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 4. Leverage — own row */}
-      <div className="space-y-0.5">
+      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-3">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1126,7 +1292,58 @@ const OrderLimitForm = () => {
         >
           Leverage
         </label>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input] [+] */}
+        <div className="flex items-stretch gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() =>
+              setLeverage(
+                String(Math.max(1, (parseInt(leverage, 10) || 1) - 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
+            }
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="5"
+              value={leverage}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "");
+                const n = parseInt(v || "5", 10);
+                if (n >= 1 && n <= 50) {
+                  setLeverage(String(n));
+                } else if (v === "") {
+                  setLeverage("");
+                }
+              }}
+              className="h-12 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setLeverage(
+                String(Math.min(50, (parseInt(leverage, 10) || 1) + 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
+            }
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <Input
             type="text"
             inputMode="numeric"
@@ -1198,7 +1415,7 @@ const OrderLimitForm = () => {
                 "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
                 parseInt(leverage, 10) === v
                   ? "border-theme/50 bg-theme/20 text-theme"
-                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
               )}
             >
               {v}x
@@ -1208,7 +1425,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 5. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-md:border-t max-md:border-border/30 max-md:pt-3">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="text-sm font-medium tabular-nums">
@@ -1222,13 +1439,13 @@ const OrderLimitForm = () => {
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-green-medium/70">Liq Buy</span>
+          <span className="text-xs text-green-medium/70 max-md:text-primary/50">Liq Buy</span>
           <span className="text-sm font-medium tabular-nums text-green-medium/90">
             ${liquidationPrices.long}
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-red/70">Liq Sell</span>
+          <span className="text-xs text-red/70 max-md:text-primary/50">Liq Sell</span>
           <span className="text-sm font-medium tabular-nums text-red/90">
             ${liquidationPrices.short}
           </span>
@@ -1238,9 +1455,9 @@ const OrderLimitForm = () => {
       {/* 6. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-row gap-2 pt-0.5">
+          <div className="flex flex-row gap-2 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-3">
             <Button
-              className="min-w-0 flex-1 border-green-medium py-1 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium"
+              className="min-w-0 flex-1 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
               variant="ui"
               type="submit"
               value="buy"
@@ -1253,7 +1470,7 @@ const OrderLimitForm = () => {
               )}
             </Button>
             <Button
-              className="min-w-0 flex-1 border-red py-1 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red"
+              className="min-w-0 flex-1 border-red py-2 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
               variant="ui"
               type="submit"
               value="sell"

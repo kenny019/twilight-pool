@@ -11,6 +11,21 @@ import {
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { LendHistoryTableMeta } from "./columns";
+import { LendOrder } from "@/lib/types";
+import BTC from "@/lib/twilight/denoms";
+import Big from "big.js";
+import dayjs from "dayjs";
+import Link from "next/link";
+import { truncateHash } from "@/lib/helpers";
+import { PoolSharesCell } from "@/components/pool-shares-cell";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
+
+type LendOrderWithAccountTag = LendOrder & { accountTag: string };
+
+const orderStatusLabel: Record<string, string> = {
+  LENDED: "Deposit",
+  SETTLED: "Withdraw",
+};
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -27,7 +42,6 @@ export function LendHistoryDataTable<TData, TValue>({
     { id: "timestamp", desc: true },
   ]);
 
-  // Define the table meta data
   const tableMeta: LendHistoryTableMeta = {
     getCurrentPrice,
   };
@@ -48,61 +62,199 @@ export function LendHistoryDataTable<TData, TValue>({
   });
 
   return (
-    <div className="w-full overflow-x-auto">
-      <table
-        cellSpacing={0}
-        className="relative min-w-[720px] w-full"
-      >
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              className="text-xs font-normal text-primary-accent"
-              key={headerGroup.id}
-            >
-              {headerGroup.headers.map((header, index) => {
-                return (
-                  <th
-                    className={cn("px-2 py-2 text-start font-medium")}
-                    key={header.id}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
+    <div className="w-full">
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden md:block overflow-x-auto">
+        <table
+          cellSpacing={0}
+          className="relative min-w-[720px] w-full"
+        >
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr
-                className="text-xs transition-colors hover:bg-theme/20"
-                key={row.id}
+                className="text-xs font-normal text-primary-accent border-b border-outline/10"
+                key={headerGroup.id}
               >
-                {row.getVisibleCells().map((cell, index) => (
-                  <td
-                    className={cn("px-2 py-2 text-start whitespace-nowrap")}
-                    key={cell.id}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <th
+                      className={cn("px-2 py-2 text-start font-medium")}
+                      key={header.id}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  );
+                })}
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={columns.length} className="h-24 px-2 text-center">
-                No lend history.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <tr
+                  className="text-xs transition-colors hover:bg-theme/20"
+                  key={row.id}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      className={cn("px-2 py-2 text-start whitespace-nowrap")}
+                      key={cell.id}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="h-24 px-2 text-center">
+                  No lend history.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile list rows — hidden on desktop */}
+      <div className="md:hidden divide-y divide-border/40">
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => {
+            const order = row.original as LendOrderWithAccountTag;
+            const rowId = `${order.accountAddress}-${order.timestamp}`;
+            const typeLabel =
+              orderStatusLabel[order.orderStatus] ?? order.orderStatus;
+            const isDeposit = order.orderStatus === "LENDED";
+            const isSettle = order.orderStatus === "SETTLED";
+
+            const amountBTC = new BTC("sats", Big(order.value)).convert("BTC");
+            const amountLabel = `${BTC.format(amountBTC, "BTC")} BTC`;
+
+            const dateStr = dayjs(order.timestamp).format("DD/MM/YY HH:mm");
+
+            const paymentBTC =
+              order.payment && order.payment !== 0
+                ? new BTC("sats", Big(order.payment)).convert("BTC")
+                : null;
+            const paymentLabel = paymentBTC
+              ? `${BTC.format(paymentBTC, "BTC")} BTC`
+              : null;
+
+            const typeCls = isDeposit
+              ? "text-green-medium"
+              : isSettle
+                ? "text-primary"
+                : "text-red/70";
+
+            const rewardCls =
+              order.payment && order.payment > 0
+                ? "text-green-medium"
+                : order.payment && order.payment < 0
+                  ? "text-red"
+                  : "text-primary/40";
+
+            // NAV: implied share price at deposit
+            let navLabel: string | null = null;
+            if (order.value && order.npoolshare) {
+              const navSats = Math.round(
+                Big(order.value)
+                  .mul(POOL_SHARE_DECIMALS_SCALE)
+                  .div(order.npoolshare)
+                  .toNumber()
+              );
+              navLabel = `${navSats.toLocaleString()} sats`;
+            }
+
+            return (
+              <div key={rowId} className="px-1 py-3 text-xs space-y-2">
+                {/* Header: Type + Date */}
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-[11px] font-semibold", typeCls)}>
+                    {typeLabel}
+                  </span>
+                  <span className="text-[10px] text-primary/40">{dateStr}</span>
+                </div>
+
+                {/* Body: all fields as label → value pairs */}
+                <div className="space-y-1.5 pt-0.5">
+                  {/* Amount label differs by type */}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-[10px] text-primary/40">
+                      {isSettle ? "Total Received" : "Amount"}
+                    </span>
+                    <span className="text-[11px] font-medium tabular-nums">
+                      {amountLabel}
+                    </span>
+                  </div>
+
+                  {/* Reward — only for SETTLED with payment */}
+                  {paymentLabel !== null && (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] text-primary/40">Reward</span>
+                      <span className={cn("text-[11px] font-medium tabular-nums", rewardCls)}>
+                        {paymentLabel}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Shares */}
+                  {order.npoolshare ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] text-primary/40">Shares</span>
+                      <span className="text-[11px] font-medium">
+                        <PoolSharesCell npoolshare={order.npoolshare} />
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {/* NAV */}
+                  {navLabel !== null && (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] text-primary/40">NAV</span>
+                      <span className="text-[11px] font-medium tabular-nums">
+                        {navLabel}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Account */}
+                  {order.accountTag && (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] text-primary/40">Account</span>
+                      <span className="max-w-[60%] truncate text-right text-[11px] text-primary/60">
+                        {order.accountTag}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Tx hash */}
+                  {order.tx_hash && (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] text-primary/40">Tx</span>
+                      <Link
+                        href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${order.tx_hash}`}
+                        target="_blank"
+                        className="text-[10px] text-primary/40 underline-offset-2 hover:text-primary/60 hover:underline"
+                      >
+                        {truncateHash(order.tx_hash)}
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-10 text-center text-sm text-primary-accent">
+            No lend history.
+          </div>
+        )}
+      </div>
     </div>
   );
-} 
+}

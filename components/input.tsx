@@ -14,7 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-primary-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base md:text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-primary-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}
@@ -158,11 +158,22 @@ interface PopoverInputProps
   onClickPopover: React.MouseEventHandler<HTMLButtonElement>;
   selected: string;
   setSelected: React.Dispatch<React.SetStateAction<string>>;
+  selectorClassName?: string;
+  selectorWrapperClassName?: string;
 }
 
 const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
   (
-    { className, options, selected, setSelected, onClickPopover, ...props },
+    {
+      className,
+      options,
+      selected,
+      setSelected,
+      onClickPopover,
+      selectorClassName,
+      selectorWrapperClassName,
+      ...props
+    },
     ref
   ) => {
     const [popoverOpen, setPopoverOpen] = useState(false);
@@ -178,7 +189,12 @@ const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
       <div className="relative">
         <Input autoComplete="off" ref={ref} {...props} className={className} />
 
-        <div className="absolute inset-y-0 right-0 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center border-l">
+        <div
+          className={cn(
+            "absolute inset-y-0 right-0 mt-[1px] flex h-[calc(100%-2px)] flex-col items-center justify-center border-l",
+            selectorWrapperClassName
+          )}
+        >
           <Popover
             defaultOpen={false}
             open={popoverOpen}
@@ -187,7 +203,10 @@ const PopoverInput = React.forwardRef<HTMLInputElement, PopoverInputProps>(
             <PopoverTrigger asChild>
               <button
                 ref={popoverRefCallback}
-                className="z-10 flex h-full items-center justify-center px-1.5 font-ui text-xs text-primary opacity-60 data-[state=open]:opacity-90"
+                className={cn(
+                  "z-10 flex h-full items-center justify-center px-1.5 font-ui text-xs text-primary opacity-60 data-[state=open]:opacity-90",
+                  selectorClassName
+                )}
               >
                 <p>{selected}</p>{" "}
                 <ChevronDown

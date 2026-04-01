@@ -98,7 +98,7 @@ const Page = () => {
 
       acc.push({
         address: account.address,
-        tag: account.tag === "main" ? "Trading Account" : account.tag,
+        tag: account.tag === "main" ? "Primary Trading Account" : account.tag,
         createdAt: account.createdAt || dayjs().unix(),
         value: account.value || 0,
         type,
@@ -762,7 +762,7 @@ const Page = () => {
             My Accounts
           </Text>
           <div className="mt-4 space-y-4">
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <div className="min-w-0">
                 <Tooltip
                   title="Funding"
@@ -798,7 +798,7 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Trading
               </Text>
@@ -827,7 +827,7 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Lending
               </Text>
@@ -854,7 +854,7 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <div className="min-w-0">
                 <Tooltip
                   title="Allocated"
@@ -889,7 +889,7 @@ const Page = () => {
         </div>
       </div>
       <div className="bg-card space-y-1 rounded-lg border border-outline p-4 md:space-y-2 md:p-6">
-        <div className="flex w-full justify-between border-b border-outline">
+        <div className="flex w-full flex-col gap-2 border-b border-outline pb-2 md:flex-row md:items-center md:justify-between md:pb-0">
           <Tabs defaultValue={currentTab}>
             <TabsList className="flex w-full border-b-0" variant="underline">
               <TabsTrigger
@@ -916,11 +916,11 @@ const Page = () => {
             </TabsList>
           </Tabs>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex w-full items-center justify-end gap-1 md:w-auto md:shrink-0">
             <Button
               type="button"
               variant="link"
-              className="min-h-0 px-2 py-1.5 text-xs"
+              className="px-1.5 py-1 text-xs md:min-h-0 md:px-2 md:py-1.5"
               onClick={importData}
             >
               Import
@@ -928,7 +928,7 @@ const Page = () => {
             <Button
               type="button"
               variant="link"
-              className="min-h-0 px-2 py-1.5 text-xs"
+              className="px-1.5 py-1 text-xs md:min-h-0 md:px-2 md:py-1.5"
               onClick={exportData}
             >
               Export

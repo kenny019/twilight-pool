@@ -47,9 +47,11 @@ const Settings = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <SettingsIcon className="h-4 w-4 cursor-pointer transition-colors hover:text-theme" />
+        <button className="flex min-h-[44px] min-w-[44px] items-center justify-center touch-manipulation" aria-label="Settings">
+          <SettingsIcon className="h-4 w-4 transition-colors hover:text-theme" />
+        </button>
       </DialogTrigger>
-      <DialogContent className="left-auto right-0 min-h-screen max-w-xs translate-x-0 rounded-none border-r-0">
+      <DialogContent className="left-auto right-0 min-h-dvh max-w-xs translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <DialogTitle>Settings</DialogTitle>
         <div className="space-y-4">
           <Text className="select-none font-ui text-xs uppercase text-primary-accent">

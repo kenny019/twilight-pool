@@ -24,22 +24,26 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
     header: "Amount (BTC)",
     accessorFn: (row) =>
       new BTC("sats", Big(row.value)).convert("BTC").toString(),
+    cell: (row) => (
+      <span className="tabular-nums font-medium">{row.getValue() as string}</span>
+    ),
     enableSorting: true,
   },
   {
     accessorKey: "type",
     header: "Type",
+    cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
   },
   {
     accessorKey: "fromTag",
     header: "From Account",
     accessorFn: (row) =>
-      row.fromTag === "main" ? "Trading Account" : row.fromTag,
+      row.fromTag === "main" ? "Primary Trading Account" : row.fromTag,
   },
   {
     accessorKey: "toTag",
     header: "To Account",
-    accessorFn: (row) => (row.toTag === "main" ? "Trading Account" : row.toTag),
+    accessorFn: (row) => (row.toTag === "main" ? "Primary Trading Account" : row.toTag),
   },
   {
     accessorKey: "tx_hash",

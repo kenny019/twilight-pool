@@ -11,8 +11,15 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  trackClassName,
+  rangeClassName,
+  thumbClassName,
   ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) {
+}: React.ComponentProps<typeof SliderPrimitive.Root> & {
+  trackClassName?: string;
+  rangeClassName?: string;
+  thumbClassName?: string;
+}) {
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -39,13 +46,15 @@ function Slider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          "bg-outline relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-2.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+          "bg-outline relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-2.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5",
+          trackClassName
         )}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
-            "bg-theme opacity-80 absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+            "bg-theme opacity-80 absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+            rangeClassName
           )}
         />
       </SliderPrimitive.Track>
@@ -53,7 +62,10 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="border-primary block h-3.5 w-3.5 shrink-0 rounded-full bg-primary shadow-sm transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50"
+          className={cn(
+            "border-primary block h-3.5 w-3.5 shrink-0 rounded-full bg-primary shadow-sm transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50",
+            thumbClassName
+          )}
         />
       ))}
     </SliderPrimitive.Root>

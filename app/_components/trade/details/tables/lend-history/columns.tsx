@@ -48,9 +48,12 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
     cell: (row) => {
       const order = row.row.original;
       const status = orderStatus[order.orderStatus as keyof typeof orderStatus];
+      const isDeposit = order.orderStatus === "LENDED";
 
       return (
-        <Text className="font-medium">{status}</Text>
+        <Text className={cn("font-medium", isDeposit ? "text-green-medium" : "text-primary")}>
+          {status}
+        </Text>
       );
     },
   },
@@ -150,31 +153,5 @@ export const lendHistoryColumns: ColumnDef<LendOrder & { accountTag: string }, a
         </Link>
       </Button>
     ),
-  },
-  {
-    accessorKey: "orderStatus",
-    header: "Status",
-    cell: (row) => {
-      const order = row.row.original;
-      const getStatusColor = (status: string) => {
-        switch (status) {
-          case "ERROR":
-            return "bg-red/10 text-red";
-          default:
-            return "bg-green-medium/10 text-green-medium";
-        }
-      };
-
-      return (
-        <span
-          className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
-            getStatusColor(order.orderStatus)
-          )}
-        >
-          {order.orderStatus}
-        </span>
-      );
-    },
   },
 ]; 

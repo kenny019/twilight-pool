@@ -90,28 +90,35 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                   trade.orderStatus === "FILLED") &&
                 pnl !== 0;
 
-              // Zone 1: accent bar + badges
-              const accentBar = trade.orderStatus === "LIQUIDATE"
-                ? "bg-red/70"
-                : trade.orderStatus === "SETTLED"
+              // Outcome-driven color signal (not side, not status)
+              const outcomeTone =
+                trade.orderStatus === "LIQUIDATE" || (hasPnl && pnl < 0)
+                  ? "negative"
+                  : hasPnl && pnl > 0
+                    ? "positive"
+                    : "neutral";
+
+              const accentBar =
+                outcomeTone === "positive"
                   ? "bg-green-medium/70"
-                  : "bg-theme/60";
+                  : outcomeTone === "negative"
+                    ? "bg-red/70"
+                    : "bg-theme/60";
 
-              const statusDot = trade.orderStatus === "LIQUIDATE"
-                ? "bg-red"
-                : trade.orderStatus === "SETTLED"
+              const statusDot =
+                outcomeTone === "positive"
                   ? "bg-green-medium"
-                  : "bg-theme";
+                  : outcomeTone === "negative"
+                    ? "bg-red"
+                    : "bg-theme";
 
-              const sideClass =
-                trade.positionType === "LONG"
-                  ? "bg-green-medium/10 text-green-medium"
-                  : "bg-red/10 text-red";
+              // Side is identity, not direction-colored
+              const sideClass = "bg-primary/10 text-primary/70";
 
               const statusClass =
-                trade.orderStatus === "SETTLED"
+                outcomeTone === "positive"
                   ? "bg-green-medium/10 text-green-medium/80"
-                  : trade.orderStatus === "LIQUIDATE"
+                  : outcomeTone === "negative"
                     ? "bg-red/10 text-red/80"
                     : "bg-gray-500/10 text-gray-400";
 
@@ -176,122 +183,45 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       </div>
                     </div>
 
-                    {/* Zone 2 — Price Story: mobile grid; desktop inline */}
-                    <div className="mb-3 hidden md:flex md:items-center md:justify-between md:gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                            Entry
+                    {/* ── Dominant: outcome amount ── */}
+                    <div className="mb-2">
+                      {hasPnl ? (
+                        <PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="hero" />
+                      ) : (
+                        <div className="rounded-lg border-l-2 border-primary/20 bg-primary/[0.02] px-3 py-2.5">
+                          <span className="block text-lg font-semibold leading-tight tabular-nums text-primary">
+                            {notionalLabel}
                           </span>
-                          <span className="text-sm font-semibold text-primary">{entryLabel}</span>
-                        </div>
-                        {closeLabel && (
-                          <>
-                            <span className="shrink-0 text-[11px] text-primary/30">→</span>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                                Close
-                              </span>
-                              <span className="text-sm font-semibold text-primary">
-                                {closeLabel}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      {hasPnl && (
-                        <div className="flex shrink-0 items-center gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                            PnL
-                          </span>
-                          <PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="mb-3 grid grid-cols-3 gap-y-1 md:hidden">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Entry
-                        </span>
-                        <span className="text-sm font-semibold tabular-nums text-primary">
-                          {entryLabel}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          {closeLabel ? "Close" : "Mark"}
-                        </span>
-                        <span className="text-sm font-semibold tabular-nums text-primary">
-                          {closeLabel ?? "—"}
-                        </span>
-                      </div>
-                      {hasPnl && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                            PnL
-                          </span>
-                          <PnlCell
-                            pnlSats={pnl}
-                            btcPriceUsd={btcPriceUsd}
-                            className="text-sm font-semibold"
-                            layout="stacked"
-                          />
+                          <span className="mt-0.5 block text-sm tabular-nums opacity-70 text-primary">Notional</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Zone 3 — Cost: mobile grid; desktop inline */}
-                    <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-2 md:hidden">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Notional
-                        </span>
-                        <span className="text-sm font-medium text-primary">{notionalLabel}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Leverage
-                        </span>
-                        <span className="text-sm font-medium text-primary">{levLabel}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Fee
-                        </span>
-                        <span className="text-sm font-medium text-primary">{feeLabel}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Avail
-                        </span>
-                        <span className="text-sm font-medium text-primary">{availLabel}</span>
-                      </div>
-                    </div>
-                    <div className="hidden items-center gap-2 overflow-hidden text-[11px] md:flex">
-                      <span className="shrink-0 text-gray-500">Notional</span>
-                      <span className="shrink-0 font-medium text-primary/80">{notionalLabel}</span>
-                      <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-gray-500">Lev</span>
-                      <span className="shrink-0 font-medium text-primary/80">{levLabel}</span>
-                      <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-gray-500">Fee</span>
-                      <span className="shrink-0 font-medium text-primary/80">{feeLabel}</span>
-                      <span className="shrink-0 text-primary/25">•</span>
-                      <span className="shrink-0 text-gray-500">Avail</span>
-                      <span className="shrink-0 font-medium text-primary/80">{availLabel}</span>
-                      {isClosed && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openFundingDialog(trade);
-                          }}
-                          className="ml-auto shrink-0 rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
-                          aria-label="View funding history"
-                        >
-                          <Info className="h-3 w-3" />
-                        </button>
+                    {/* ── Trade context: entry/close, notional, lev ── */}
+                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-gray-500">Entry</span>
+                        <span className="font-medium text-primary/80">{entryLabel}</span>
+                      </span>
+                      {closeLabel && (
+                        <>
+                          <span className="text-primary/30">→</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <span className="text-gray-500">Close</span>
+                            <span className="font-medium text-primary/80">{closeLabel}</span>
+                          </span>
+                        </>
                       )}
+                      <span className="text-primary/25">•</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-gray-500">Notional</span>
+                        <span className="font-medium text-primary/80">{notionalLabel}</span>
+                      </span>
+                      <span className="text-primary/25">•</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-gray-500">Lev</span>
+                        <span className="font-medium text-primary/80">{levLabel}</span>
+                      </span>
                     </div>
 
                     {/* Expand toggle + secondary details */}
@@ -312,39 +242,36 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       {isExpanded && (
                         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Order ID
-                            </span>
-                            <button
-                              type="button"
-                              className="rounded font-medium transition-colors duration-150 hover:text-primary hover:underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(trade.uuid);
-                                toast({
-                                  title: "Copied to clipboard",
-                                  description: `Order ID ${truncatedUuid} copied`,
-                                });
-                              }}
-                            >
-                              {truncatedUuid}
-                            </button>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Fee</span>
+                            <span className="font-medium">{feeLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Liq
-                            </span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Avail</span>
+                            <span className="font-medium">{availLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Liq</span>
                             <span className="font-medium">{liqLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Pos. Value
-                            </span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Pos. Value</span>
                             <span className="font-medium">{posValueLabel}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Funding
-                            </span>
+                          <div className="col-span-2 flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Order ID</span>
+                            <button
+                              type="button"
+                              className="min-w-0 truncate font-medium transition-colors duration-150 hover:text-primary hover:underline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(trade.uuid);
+                                toast({ title: "Copied to clipboard", description: `Order ID ${truncatedUuid} copied` });
+                              }}
+                            >
+                              {trade.uuid}
+                            </button>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Funding</span>
                             <span
                               className={cn(
                                 "font-medium",
@@ -357,6 +284,16 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                             >
                               {formatSatsCompact(funding)}
                             </span>
+                            {isClosed && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); openFundingDialog(trade); }}
+                                className="ml-1 shrink-0 rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
+                                aria-label="View funding history"
+                              >
+                                <Info className="h-3 w-3" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}

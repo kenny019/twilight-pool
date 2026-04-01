@@ -435,7 +435,7 @@ const DetailsPanel = () => {
     <div className="flex h-full w-full flex-col">
       <div className="sticky top-0 z-10 flex w-full flex-col gap-2 border-b bg-background px-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <Tabs defaultValue={currentTab}>
-          <TabsList className="flex w-full border-b-0" variant="underline">
+          <TabsList className="flex w-full overflow-x-auto scrollbar-none border-b-0" variant="underline">
             <TabsTrigger
               onClick={() => setCurrentTab("positions")}
               value={"positions"}
@@ -555,21 +555,22 @@ const DetailsPanel = () => {
           if (!open) setSltpCancelPending(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-lg">
           <DialogTitle>
             Cancel{" "}
             {sltpCancelPending?.cancelLeg === "sl" ? "Stop Loss" : "Take Profit"}
           </DialogTitle>
-          <p className="text-sm text-primary-accent">
+          <p className="min-w-0 break-words text-sm text-primary-accent">
             You also have a{" "}
             <span className="font-medium text-primary">
               {sltpConfirmOtherLabel}
             </span>{" "}
             active. Do you want to cancel it as well?
           </p>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2 md:flex-row">
             <Button
               variant="ui"
+              className="w-full min-h-[44px] md:w-auto md:min-h-0"
               onClick={async () => {
                 if (!sltpCancelPending) return;
                 const { trade, cancelLeg } = sltpCancelPending;
@@ -585,6 +586,7 @@ const DetailsPanel = () => {
             </Button>
             <Button
               variant="ui"
+              className="w-full min-h-[44px] md:w-auto md:min-h-0"
               onClick={async () => {
                 if (!sltpCancelPending) return;
                 const { trade, cancelLeg } = sltpCancelPending;

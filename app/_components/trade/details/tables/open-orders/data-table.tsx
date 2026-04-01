@@ -73,10 +73,10 @@ export function OpenOrdersDataTable<TData, TValue>({
               {headerGroup.headers.map((header, index) => {
                 return (
                   <th
-                    className={"font-medium sticky z-10 top-0 bg-background"}
+                    className={"px-2 py-2 font-medium text-start sticky z-10 top-0 bg-background border-b border-outline/10"}
                     key={header.id}
                   >
-                    <div className="block text-start">
+                    <div className="block">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -99,7 +99,7 @@ export function OpenOrdersDataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell, index) => (
                   <td
-                    className={cn("px-1 py-2 whitespace-nowrap")}
+                    className={cn("px-2 py-2 whitespace-nowrap")}
                     key={cell.id}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -109,7 +109,7 @@ export function OpenOrdersDataTable<TData, TValue>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center">
+              <td colSpan={columns.length} className="h-24 px-2 text-center text-xs text-primary-accent">
                 No results.
               </td>
             </tr>

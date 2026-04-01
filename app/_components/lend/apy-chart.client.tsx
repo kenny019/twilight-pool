@@ -2,7 +2,7 @@
 
 import Button from "@/components/button";
 import cn from '@/lib/cn';
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useApyChartData, APY_PERIOD_PARAMS } from "@/lib/hooks/useApyChartData";
 
@@ -14,7 +14,7 @@ function formatApy(value: number): string {
   if (abs >= 1e9) return `${(value / 1e9).toFixed(1)}B%`;
   if (abs >= 1e6) return `${(value / 1e6).toFixed(1)}M%`;
   if (abs >= 1e3) return `${(value / 1e3).toFixed(1)}K%`;
-  if (abs < 1) return `${value.toFixed(4)}%`;
+  if (abs < 1) return `${value.toFixed(2)}%`;
   return `${value.toFixed(2)}%`;
 }
 
@@ -49,16 +49,16 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
   }, [selectedPeriod]);
 
   return (
-    <div className="flex h-full flex-col space-y-4">
-      <div className="flex justify-end items-center">
-        <div className="flex space-x-2">
+    <div className="flex flex-col space-y-3">
+      <div className="flex items-center justify-end">
+        <div className="flex space-x-1.5">
           {timePeriods.map((period) => (
             <Button
               key={period}
               variant={"ui"}
               size="small"
               onClick={() => onPeriodChange(period)}
-              className={cn("px-4 py-2 hover:border-theme transition-colors", selectedPeriod === period && "border-theme")}
+              className={cn("px-3 py-1.5 transition-colors hover:border-theme", selectedPeriod === period && "border-theme")}
             >
               {period}
             </Button>
@@ -66,7 +66,7 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
         </div>
       </div>
 
-      <div className="min-h-[300px] w-full flex-1 rounded-lg border border-primary/20 p-4">
+      <div className="h-[220px] w-full md:h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData ?? []}>
             <defs>

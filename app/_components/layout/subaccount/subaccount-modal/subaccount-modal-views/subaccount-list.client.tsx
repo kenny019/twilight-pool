@@ -45,7 +45,7 @@ const SubaccountListView = () => {
         <div className="flex w-full flex-row items-center justify-between">
           <div className="space-y-1">
             <Text>
-              {account.tag === "main" ? "Trading Account" : account.tag}
+              {account.tag === "main" ? "Primary Trading Account" : account.tag}
             </Text>
             <Text className="text-xs text-primary-accent">
               {subAccountBTCValue} BTC

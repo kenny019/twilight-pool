@@ -14,19 +14,15 @@ import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import cn from "@/lib/cn";
 
 const UTIL_STYLES = {
-  LOW: "text-emerald-700 bg-emerald-100/70 ring-1 ring-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/30 dark:ring-emerald-800",
-  MEDIUM:
-    "text-amber-700 bg-amber-100/70 ring-1 ring-amber-200 dark:text-amber-300 dark:bg-amber-900/30 dark:ring-amber-800",
-  HIGH:
-    "text-rose-700 bg-rose-100/70 ring-1 ring-rose-200 dark:text-rose-300 dark:bg-rose-900/30 dark:ring-rose-800",
+  LOW: "bg-green-medium/10 text-green-medium",
+  MEDIUM: "bg-yellow-500/10 text-yellow-500",
+  HIGH: "bg-red/10 text-red",
 } as const;
 
 const DIR_STYLES = {
-  LONG: "text-sky-700 bg-sky-100/70 ring-sky-200 dark:text-sky-300 dark:bg-sky-900/30 dark:ring-sky-800",
-  SHORT:
-    "text-purple-700 bg-purple-100/70 ring-purple-200 dark:text-purple-300 dark:bg-purple-900/30 dark:ring-purple-800",
-  NEUTRAL:
-    "text-zinc-700 bg-zinc-100/70 ring-zinc-200 dark:text-zinc-300 dark:bg-zinc-900/30 dark:ring-zinc-800",
+  LONG: "text-green-medium",
+  SHORT: "text-red",
+  NEUTRAL: "text-primary/50",
 } as const;
 
 function UtilizationBadge({ utilPct }: { utilPct: number }) {
@@ -35,7 +31,7 @@ function UtilizationBadge({ utilPct }: { utilPct: number }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tracking-wide",
+        "inline-flex items-center rounded px-2 py-0.5 text-[11px] font-medium",
         UTIL_STYLES[severity]
       )}
     >
@@ -44,28 +40,16 @@ function UtilizationBadge({ utilPct }: { utilPct: number }) {
   );
 }
 
-function NetExposureBadge({ netBtc }: { netBtc: number }) {
+function NetExposureDirection({ netBtc }: { netBtc: number }) {
   const dir = getNetDirection(netBtc);
   const Icon =
     dir === "LONG" ? ArrowUp : dir === "SHORT" ? ArrowDown : Minus;
   const label =
-    dir === "LONG" ? "NET LONG" : dir === "SHORT" ? "NET SHORT" : "NEUTRAL";
+    dir === "LONG" ? "Net Long" : dir === "SHORT" ? "Net Short" : "Neutral";
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tracking-wide ring-1",
-        DIR_STYLES[dir]
-      )}
-    >
-      <Icon
-        className={cn(
-          "h-3.5 w-3.5 shrink-0",
-          dir === "LONG" && "text-sky-600 dark:text-sky-400",
-          dir === "SHORT" && "text-purple-600 dark:text-purple-400",
-          dir === "NEUTRAL" && "text-zinc-500 dark:text-zinc-400"
-        )}
-      />
+    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium", DIR_STYLES[dir])}>
+      <Icon className="h-3 w-3 shrink-0" />
       {label}
     </span>
   );
@@ -91,13 +75,13 @@ export default function PoolHealth() {
   const netBtc = data != null ? data.net_exposure_btc / 1e8 : 0;
 
   return (
-    <div className="flex flex-row flex-wrap gap-6 md:gap-12">
-      <div className="flex flex-col gap-1">
+    <div className="grid grid-cols-2 gap-3 md:gap-x-8">
+      <div className="min-w-0 flex flex-col gap-1">
         <Tooltip
           title="Exposure Utilization"
           body="How loaded the pool is: Open Interest ÷ Pool Equity. Higher utilization means the pool is carrying more leveraged exposure and becomes more sensitive to volatility. Low / Medium / High is a simple load indicator — not a guarantee."
         >
-          <Text className="text-sm text-primary-accent">
+          <Text className="text-xs text-primary-accent md:text-sm">
             Exposure Utilization
           </Text>
         </Tooltip>
@@ -106,7 +90,7 @@ export default function PoolHealth() {
           placeholder={<Skeleton className="h-5 w-16" />}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Text className="text-base font-semibold">
+            <Text className="text-sm font-medium md:text-base">
               {utilization !== undefined
                 ? formatUtilizationPct(utilization)
                 : "—"}
@@ -116,7 +100,7 @@ export default function PoolHealth() {
             )}
           </div>
           {utilization !== undefined && !Number.isNaN(utilPct) && (
-            <div className="mt-1 h-1 w-24 overflow-hidden rounded-full bg-primary/10">
+            <div className="mt-1 h-1 w-20 overflow-hidden rounded-full bg-primary/10 md:w-24">
               <div
                 className="h-full rounded-full bg-primary/30"
                 style={{ width: `${Math.min(utilPct, 100)}%` }}
@@ -125,29 +109,27 @@ export default function PoolHealth() {
           )}
         </Resource>
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="min-w-0 flex flex-col gap-1">
         <Tooltip
           title="Net Exposure"
           body="Directional imbalance: Total Long exposure − Total Short exposure. Positive means net-long; negative means net-short."
         >
-          <Text className="text-sm text-primary-accent">Net Exposure</Text>
+          <Text className="text-xs text-primary-accent md:text-sm">Net Exposure</Text>
         </Tooltip>
         <Resource
           isLoaded={!isLoading && data != null}
           placeholder={<Skeleton className="h-5 w-32" />}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            {data != null ? (
-              <>
-                <NetExposureBadge netBtc={netBtc} />
-                <Text className="text-base font-semibold">
-                  {formatNetExposureBtc(data.net_exposure_btc)}
-                </Text>
-              </>
-            ) : (
-              "—"
-            )}
-          </div>
+          {data != null ? (
+            <div className="flex flex-col gap-0.5">
+              <Text className="text-sm font-medium md:text-base">
+                {formatNetExposureBtc(data.net_exposure_btc)}
+              </Text>
+              <NetExposureDirection netBtc={netBtc} />
+            </div>
+          ) : (
+            <Text>—</Text>
+          )}
         </Resource>
       </div>
     </div>

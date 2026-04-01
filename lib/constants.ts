@@ -15,3 +15,5 @@ export enum ZK_ACCOUNT_INDEX {
 
 export const TWILIGHT_NETWORK_TYPE = process.env
   .NEXT_PUBLIC_TWILIGHT_NETWORK_TYPE as "testnet" | "mainnet";
+
+export const INSTRUMENT_LABEL = "BTCUSD";

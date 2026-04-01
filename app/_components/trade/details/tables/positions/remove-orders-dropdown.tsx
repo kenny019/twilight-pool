@@ -1,11 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import {
   DropdownContent,
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
 } from "@/components/dropdown";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/dialog";
 import Button from "@/components/button";
 import { TradeOrder } from "@/lib/types";
 import { ChevronDown } from "lucide-react";
@@ -33,6 +39,17 @@ export function RemoveOrdersDropdown({
   const hasTp = !!trade.takeProfit;
   const hasSltp = hasSl || hasTp;
   const hasAny = hasLimit || hasSltp;
+
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  const withConfirm = (fn: () => void) => {
+    setPendingAction(() => fn);
+  };
+
+  const handleConfirm = () => {
+    pendingAction?.();
+    setPendingAction(null);
+  };
 
   const handleRemoveAll = async () => {
     try {
@@ -89,37 +106,66 @@ export function RemoveOrdersDropdown({
     );
 
   return (
-    <DropdownMenu>
-      <DropdownTrigger asChild>
-        {trigger}
-      </DropdownTrigger>
-      <DropdownContent align="end" className="min-w-[10rem]">
-        {hasAny && (
-          <DropdownItem onSelect={handleRemoveAll} disabled={isCancelling}>
-            Remove All
-          </DropdownItem>
-        )}
-        {hasLimit && (
-          <DropdownItem onSelect={handleRemoveLimit} disabled={isCancelling}>
-            Remove Close Limit Only
-          </DropdownItem>
-        )}
-        {hasSl && (
-          <DropdownItem onSelect={handleRemoveSl} disabled={isCancelling}>
-            Remove Stop Loss Only
-          </DropdownItem>
-        )}
-        {hasTp && (
-          <DropdownItem onSelect={handleRemoveTp} disabled={isCancelling}>
-            Remove Take Profit Only
-          </DropdownItem>
-        )}
-        {hasSl && hasTp && (
-          <DropdownItem onSelect={handleRemoveTpAndSl} disabled={isCancelling}>
-            Remove Take Profit and Stop Loss
-          </DropdownItem>
-        )}
-      </DropdownContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownTrigger asChild>
+          {trigger}
+        </DropdownTrigger>
+        <DropdownContent align="end" className="min-w-[10rem]">
+          {hasAny && (
+            <DropdownItem onSelect={() => withConfirm(handleRemoveAll)} disabled={isCancelling}>
+              Remove All
+            </DropdownItem>
+          )}
+          {hasLimit && (
+            <DropdownItem onSelect={() => withConfirm(handleRemoveLimit)} disabled={isCancelling}>
+              Remove Close Limit Only
+            </DropdownItem>
+          )}
+          {hasSl && (
+            <DropdownItem onSelect={() => withConfirm(handleRemoveSl)} disabled={isCancelling}>
+              Remove Stop Loss Only
+            </DropdownItem>
+          )}
+          {hasTp && (
+            <DropdownItem onSelect={() => withConfirm(handleRemoveTp)} disabled={isCancelling}>
+              Remove Take Profit Only
+            </DropdownItem>
+          )}
+          {hasSl && hasTp && (
+            <DropdownItem onSelect={() => withConfirm(handleRemoveTpAndSl)} disabled={isCancelling}>
+              Remove Take Profit and Stop Loss
+            </DropdownItem>
+          )}
+        </DropdownContent>
+      </DropdownMenu>
+
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => { if (!open) setPendingAction(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle className="text-sm font-semibold">Remove order?</DialogTitle>
+          <p className="text-sm text-primary/60">
+            This will immediately cancel the selected conditional order(s). This cannot be undone.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="secondary"
+              size="small"
+              className="flex-1"
+              onClick={() => setPendingAction(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="ui"
+              size="small"
+              className="flex-1 border-red/40 text-red hover:border-red/70"
+              onClick={handleConfirm}
+            >
+              Remove
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

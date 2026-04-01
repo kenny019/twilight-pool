@@ -124,7 +124,8 @@ const TickerWrapper = () => {
         </div>
         <button
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="p-1"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center p-2.5 touch-manipulation"
+          aria-label={isExpanded ? "Collapse ticker" : "Expand ticker"}
         >
           <ChevronDown
             className={cn(
