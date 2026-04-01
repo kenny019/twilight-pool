@@ -357,7 +357,10 @@ export function createLendWithdrawalController(
       ...order,
       uuid: settlement.settledTx?.order_id || order.uuid,
       request_id:
-        order.request_id || settlement.settledTx?.request_id || settlement.requestId,
+        order.request_id ||
+        settlement.settledTx?.request_id ||
+        settlement.requestId ||
+        null,
     };
 
     params.updateLend(order.uuid, {
@@ -387,7 +390,9 @@ export function createLendWithdrawalController(
             {
               ...settlement.settledTx,
               request_id:
-                settlement.settledTx.request_id ?? normalizedOrder.request_id,
+                settlement.settledTx.request_id ??
+                normalizedOrder.request_id ??
+                null,
             },
             order.value,
             normalizedOrder.uuid
@@ -431,7 +436,10 @@ export function createLendWithdrawalController(
           order,
           {
             ...settlement.settledTx,
-            request_id: settlement.settledTx.request_id ?? normalizedOrder.request_id,
+            request_id:
+              settlement.settledTx.request_id ??
+              normalizedOrder.request_id ??
+              null,
           },
           newBalance,
           normalizedOrder.uuid
