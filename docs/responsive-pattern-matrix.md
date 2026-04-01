@@ -55,7 +55,7 @@ These are the non-negotiable decisions that apply across all patterns. They are 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **Positions** | Active open leveraged positions | TanStack table: side, entry, mark, notional, leverage, liq, PnL, funding, actions | `PositionsCards`: `grid-cols-1 xl:grid-cols-2`; approved dual desktop/mobile DOM per card | PnL (`PnlCell hero` on mobile, always visible including zero state) | Side pill, leverage pill, entry, mark, notional USD, BTC exposure | Avail margin, maint margin, fee, funding | PnL → `text-green-medium` / `text-red`; accent bar → `bg-green-medium/70` (LONG) / `bg-red/70` (SHORT) | Desktop: inline actions; mobile: visible `Close Market` + `Manage` entry; `Manage` opens action-hub sheet; data stays inline/expand; configuration flows use sheet steps; destructive remove actions require explicit confirmation | Modal (market close, destructive remove confirmations); Sheet (Manage hub, SL/TP, limit close management/editing) | **Yes** — PositionsCards only; `hidden md:block` / `block md:hidden` per card | `useTwilightStore` trade state; same prop passed to both layout blocks; instrument label must come from a shared canonical source (constant/config) rather than a local literal | **Refine** — extract shared card scaffold; resolve dual-layout per Section 9 guidance | `details/tables/positions/positions-cards.client.tsx`, `details.client.tsx`, `lib/components/pnl-display.tsx` |
 | **Open Orders** | Pending conditional orders (SL, TP, Limit close, opening limit) with materially different operational states | TanStack table: type, status, side, price, notional, leverage, created time, cancel action | `OpenOrdersCards`: single responsive layout, `grid-cols-1 xl:grid-cols-2`; no dual desktop/mobile DOM split | Side + Price | Type, Status, Notional (USD), leverage, created time | BTC size, full hash (truncated inline), secondary metadata | Side → buy/sell color emphasis; Type and Status remain supporting semantics only | Cancel is a direct inline action with no pre-confirmation for unambiguous cancels. If cancel scope is ambiguous (for example, SL/TP dual-leg resolution), a scope-selection dialog may still be used. Edit is secondary and opens a sheet-based contextual editor. No Manage hub. | Sheet (edit/configure); no overlay for direct unambiguous cancel; scope-selection dialog allowed only when cancel target is ambiguous | **No** — single responsive implementation only | Same `useTwilightStore` orders prop; no parallel mobile data mapping | **Refine** — align card scaffold with shared structure, preserve direct-action model, and surface order state without diluting hierarchy | `details/tables/open-orders/open-orders-cards.client.tsx`, `details/tables/open-orders/columns.tsx`, `details.client.tsx`, `components/edit-order-dialog.tsx` |
-| **Order History** | Settled or cancelled orders | TanStack table: type, side, entry, close price, PnL, fee, date, actions | `OrderHistoryCards`: single layout, `grid-cols-1 xl:grid-cols-2`; outcome-driven dominant | If PnL exists → PnL (`PnlCell`); else → Status pill + close price | Side pill, entry price, date | Fee, funding, full hash | PnL → `text-green-medium` / `text-red`; status → FILLED `bg-green-medium/10`, CANCELLED `bg-red/10` | Funding History dialog trigger; no actions (history is read-only) | Popover (funding history context); Modal (FundingHistoryDialog) | **No** — single layout cards | Same `useTwilightStore` trade history prop | **Refine** | `details/tables/order-history/order-history-cards.client.tsx`, `details.client.tsx`, `components/funding-history-dialog.tsx` |
+| **Order History** | Grouped order-event timeline for each logical order UUID | Grouped/collapsible TanStack table: one parent row per `uuid`, expandable inline to reveal chronological child event rows | Grouped order cards (not flat cards, not list rows): one card per `uuid`, expandable to reveal full event timeline | Side + Lifecycle | Type, Latest Event, latest timestamp, Entry, Close / Trigger, PnL when terminal | Full timeline events, Order ID, request ID, tx hash, reason, price/trigger change, funding, fee, avail. margin, pos. value | Neutral shell; side color only on side pill, lifecycle color only on lifecycle pill, PnL color only via `PnlCell`; no row/card shell driven by raw `orderStatus` | Collapse/expand per order group; one interaction depth only; child rows/cards are read-only | None (inline grouped expand only) | **No** — desktop table and mobile grouped cards are different expressions of the same grouped source | Same `trade_history.trades`, grouped by `uuid`, same parent-summary derivation rules across desktop/mobile | **Refine** — treat as grouped order timeline, separate lifecycle from event semantics, preserve full raw event fidelity in expand | `details/tables/order-history/columns.tsx`, `details/tables/order-history/order-history-cards.client.tsx`, `details.client.tsx` |
 | **Trader History** | Account-level **trade outcome** history (filled, settled, liquidated events) | TanStack table: side, status, entry, close/settlement, PnL, liq, margin/avail, funding, fee, date, hash (audit-level detail) | `TraderHistoryCards`: single layout, `grid-cols-1 xl:grid-cols-2`; outcome-driven dominant; lighter than Positions | Outcome amount (PnL if present; otherwise settlement/notional) with outcome context | Entry → Close, Notional, Leverage, Date/Time (render as grouped units; 2-column on narrow mobile widths if needed for readability) | Full hash (copy), funding detail, fee, liq, pos. value, avail/margin | Outcome semantics: positive → `text-green-medium`, negative → `text-red`, neutral → `text-primary/40` | Read-only surface; expand/collapse; copy hash; funding detail dialog | Popover or Modal (funding history) | **No** — single layout cards | Same `useTwilightStore` trade history prop (filtered: SETTLED/LIQUIDATE/FILLED) | **Refine** — outcome-centric hierarchy; lighter than Positions; preserve full data via expand | `details/tables/trader-history/trader-history-cards.client.tsx`, `details/tables/trader-history/columns.tsx`, `details.client.tsx` |
 | **Order Form — Market** | Market order entry (BUY / SELL) | Dense form: collateral input (BTC/USD toggle), preset buttons (25/50/75/100%), leverage input + presets, liquidation prices, Buy/Sell buttons | Same component; `max-md:` overrides: h-12 soft-fill Buy/Sell with bg tint, section separators, stepper +/− controls for collateral | Buy / Sell action buttons | Collateral amount, leverage value, available balance | Liq Buy / Liq Sell prices (displayed below form) | Buy → `border-green-medium` / `bg-green-medium/10`; Sell → `border-red` / `bg-red/10` | Inline form submit; ExchangeResource gate intercepts if BTC not registered/verified | Modal (ExchangeResource redirect to registration/verification) | **No** — single component with `max-md:` variants | `useTwilightStore` zk accounts; `usePriceFeed` for live price | **Adapt** — extend soft-fill pattern consistently; ensure all `max-md:` overrides are present | `order/forms/market.client.tsx`, `components/exchange-resource.tsx`, `components/input.tsx`, `components/slider.tsx` |
 | **Order Form — Limit** | Limit order entry at specified price | Dense form: price input (NumberInput with Mark button), collateral + leverage same as market | Same component; `max-md:` overrides match market form pattern | Buy / Sell action buttons | Price input, collateral amount, leverage | Liq prices | Same as market form | Inline form submit; ExchangeResource gate | Modal (ExchangeResource redirect) | **No** — single component with `max-md:` variants | Same as market form | **Adapt** — align with market form `max-md:` pattern | `order/forms/limit.client.tsx`, `components/exchange-resource.tsx`, `components/input.tsx` |
@@ -116,7 +116,7 @@ grid-cols-1 xl:grid-cols-2              ← outer grid
 |------|--------------------|---------------------------|--------|--------------|
 | Positions | PnL (`PnlCell hero` mobile; always visible including zero state) | Side pill, leverage, entry, mark, notional, BTC exposure | Avail margin, maint margin, fee, funding | PnL tone + side accent bar |
 | Open Orders | Side + Price | Type, Status, notional, leverage, created time | BTC size, hash, secondary metadata | Side color (buy/sell) |
-| Order History | PnL if exists; else Status pill + close price | Side pill, entry price, date | Fee, hash | PnL tone or status color |
+| Order History | Side + Lifecycle | Type, Latest Event, Entry, Close / Trigger, latest timestamp, PnL when terminal | Full grouped timeline, Order ID, request ID, tx hash, reason, trigger/price change, funding, fee, avail. margin, pos. value | Side pill + lifecycle pill + PnL only |
 | Trader History | Outcome amount (PnL if exists; else settlement/notional) + outcome context | Entry → Close, Notional, Leverage, Date/Time (grouped readable units) | Full hash, funding, fee, liq, pos. value, avail/margin | Outcome semantics (green/red/neutral) |
 
 **Table/card toggle (`details.client.tsx`):**
@@ -135,7 +135,46 @@ grid-cols-1 xl:grid-cols-2              ← outer grid
 - Instrument / market labels shown in card headers must come from a **shared canonical source** (constant/config or shared metadata), not a local component literal
 
 
-**OpenOrdersCards single-layout rule:**
+-**OpenOrdersCards single-layout rule:**
+**OrderHistory grouped-timeline rule:**
+- Order History is a **grouped order timeline**, not a flat event dump and not a position/outcome card family.
+- Grouping key is `uuid`.
+- One parent entity represents one logical order; child rows/events preserve the raw history items in chronological order.
+- Desktop remains a **table** and must render one collapsible parent row per `uuid`, with inline expanded child event rows.
+- Mobile uses **grouped cards**, one card per `uuid`, with expand to reveal the full timeline.
+- Parent / collapsed state must separate:
+  - **Lifecycle** (order-level state)
+  - **Latest Event** (most recent raw event label)
+- The UI must not treat raw event labels such as `StopLossAdded`, `TakeProfitUpdated`, or `LimitPriceAdded` as lifecycle states.
+- Lifecycle display model:
+  - `SETTLED` → `Settled`
+  - `LIQUIDATE` → `Liquidated`
+  - `CANCELLED` → `Cancelled`
+  - `FILLED` → `Filled` (active/intermediate, not terminal close)
+  - `PENDING` → `Open`
+  - if no normalized lifecycle can be derived cleanly, fallback to the latest lifecycle-like raw value without collapsing event labels into lifecycle
+- Parent derivation rules:
+  - `groupKey = uuid`
+  - `latestRow = max(date)`
+  - `parentLifecycle = latest row in group whose orderStatus is one of lifecycle-like values`
+  - `parentLatestEvent = latest non-error raw event label when possible; if unavailable, fallback to latest raw status/event value`
+  - `parentType = oldest non-SLTP row if available, else oldest row`
+  - `parentSide = oldest row.positionType`
+  - `parentEntryPrice = oldest row.entryPrice`
+  - `parentLeverage = oldest row.leverage`
+  - `parentTerminalRow = latest row whose orderStatus is SETTLED or LIQUIDATE`
+- Parent desktop columns should prioritize: Last Time, Order ID, Side, Lifecycle, Type, Latest Event, Entry, Close / Trigger, PnL, Expand.
+- `Leverage`, `request_id`, `reason`, `priceChange`, `funding`, `fee`, `availableMargin`, and `tx_hash` are supporting details and should live in expand / child timeline, not in the parent primary view.
+- Mobile grouped card hierarchy:
+  - Header: Side pill, Type, Lifecycle pill, latest timestamp
+  - Primary content: Entry, Close / Trigger, PnL when terminal
+  - Secondary content: Latest Event, Leverage (optional only if space allows)
+  - Expand: full grouped event timeline + all supporting metadata
+- Timeline density rule:
+  - show a short preview of the most recent 2–3 events in collapsed mobile state only if it helps scanning
+  - full chronological timeline belongs in expanded state
+- Error-like values such as `RejectedByRiskEngine`, `RejectedByExchange`, `RejectedByRelayer`, and `Error` must not become the primary visible lifecycle state unless no better lifecycle state exists; treat them as raw event/error labels in the timeline first.
+- Shells remain neutral. Side semantics belong to the side pill, lifecycle semantics belong to the lifecycle pill, and PnL semantics belong only to `PnlCell`.
 - Open Orders does **not** use the Positions-style dual-layout exception
 - The component should remain a single responsive implementation with shared structure across breakpoints
 - Mobile hierarchy is: `Side + Price` dominant; `Type`, `Status`, `Notional (USD)`, `Leverage`, and `Created time` always visible; `BTC size`, `Hash`, and lower-priority metadata may expand

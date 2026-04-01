@@ -1,20 +1,23 @@
 "use client";
 
-import React, { useCallback, useState, useSyncExternalStore } from 'react';
-import { OrderHistoryDataTable } from './data-table';
-import { orderHistoryColumns } from './columns';
-import { TradeOrder } from '@/lib/types';
-import { usePriceFeed } from '@/lib/providers/feed';
-import { useSessionStore } from '@/lib/providers/session';
-import FundingHistoryDialog from '@/components/funding-history-dialog';
+import React, { useCallback, useState, useSyncExternalStore } from "react";
+import { OrderHistoryDataTable } from "./data-table";
+import { orderHistoryColumns } from "./columns";
+import { TradeOrder } from "@/lib/types";
+import { usePriceFeed } from "@/lib/providers/feed";
+import { useSessionStore } from "@/lib/providers/session";
+import FundingHistoryDialog from "@/components/funding-history-dialog";
+import { OrderHistoryGroup } from "./grouped-order-history";
 
 interface OrderHistoryTableProps {
-  data: TradeOrder[];
+  data: OrderHistoryGroup[];
 }
 
-const OrderHistoryTable = React.memo(function OrderHistoryTable({ data }: OrderHistoryTableProps) {
+const OrderHistoryTable = React.memo(function OrderHistoryTable({
+  data,
+}: OrderHistoryTableProps) {
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
-  const { getCurrentPrice, subscribe } = usePriceFeed()
+  const { getCurrentPrice, subscribe } = usePriceFeed();
   const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
   const getBtcPriceUsd = () => currentPrice || storedBtcPrice;
 
@@ -31,7 +34,6 @@ const OrderHistoryTable = React.memo(function OrderHistoryTable({ data }: OrderH
       <OrderHistoryDataTable
         columns={orderHistoryColumns}
         data={data}
-        getCurrentPrice={getCurrentPrice}
         getBtcPriceUsd={getBtcPriceUsd}
         openFundingDialog={openFundingDialog}
       />

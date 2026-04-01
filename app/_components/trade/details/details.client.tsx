@@ -17,6 +17,7 @@ import OpenOrdersCards from "./tables/open-orders/open-orders-cards.client";
 import PositionsCards from "./tables/positions/positions-cards.client";
 import TraderHistoryCards from "./tables/trader-history/trader-history-cards.client";
 import OrderHistoryCards from "./tables/order-history/order-history-cards.client";
+import { buildOrderHistoryGroups } from "./tables/order-history/grouped-order-history";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
 import EditOrderDialog from "@/components/edit-order-dialog";
@@ -129,6 +130,10 @@ const DetailsPanel = () => {
         trade.orderStatus === "LIQUIDATE" ||
         trade.orderStatus === "FILLED"
     );
+  }, [orderHistoryData]);
+
+  const orderHistoryGroups = useMemo(() => {
+    return buildOrderHistoryGroups(orderHistoryData);
   }, [orderHistoryData]);
 
   const { toast } = useToast();
@@ -533,9 +538,9 @@ const DetailsPanel = () => {
         )}
         {currentTab === "history" && (
           currentView === "table" ? (
-            <OrderHistoryTable data={orderHistoryData} />
+            <OrderHistoryTable data={orderHistoryGroups} />
           ) : (
-            <OrderHistoryCards data={orderHistoryData} />
+            <OrderHistoryCards data={orderHistoryGroups} />
           )
         )}
       </div>

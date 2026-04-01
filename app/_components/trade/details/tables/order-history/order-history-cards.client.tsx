@@ -2,43 +2,304 @@
 
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatSatsCompact, truncateHash } from "@/lib/helpers";
-import { usdNumberFormatter } from "@/lib/utils/format";
+import { formatSatsCompact, formatSatsMBtc, truncateHash } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
+import { PnlCell } from "@/lib/components/pnl-display";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
-import BTC from "@/lib/twilight/denoms";
 import { TradeOrder } from "@/lib/types";
-import { PnlCell } from "@/lib/components/pnl-display";
-import Big from "big.js";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import Link from "next/link";
 import React, {
   useCallback,
-  useMemo,
   useState,
   useSyncExternalStore,
 } from "react";
+import {
+  formatOrderHistoryRawLabel,
+  getOrderHistoryFee,
+  getOrderHistoryFunding,
+  getOrderHistoryNotionalLabel,
+  getOrderHistoryPrimaryEventValue,
+  getOrderHistoryPnl,
+  getOrderHistoryPositionValueSats,
+  getOrderHistoryPriceChange,
+  getOrderHistoryRawEventValue,
+  OrderHistoryGroup,
+  PRICE_KIND_LABELS,
+} from "./grouped-order-history";
 
 interface OrderHistoryCardsProps {
-  data: TradeOrder[];
+  data: OrderHistoryGroup[];
 }
 
-const EVENT_BADGE_STYLES: Record<string, string> = {
-  LIMIT_CLOSE: "bg-blue-500/10 text-blue-500",
-  STOP_LOSS: "bg-orange-500/10 text-orange-500",
-  TAKE_PROFIT: "bg-purple-500/10 text-purple-500",
-};
+function getSideClasses(side: string): string {
+  return side === "LONG"
+    ? "bg-green-medium/10 text-green-medium"
+    : "bg-red/10 text-red";
+}
 
-const PRICE_KIND_LABELS: Record<string, string> = {
-  LIMIT_CLOSE: "Limit Price",
-  STOP_LOSS: "Stop Loss",
-  TAKE_PROFIT: "Take Profit",
-};
+function getLifecycleClasses(lifecycle: string): string {
+  switch (lifecycle) {
+    case "SETTLED":
+      return "bg-green-medium/10 text-green-medium";
+    case "LIQUIDATE":
+      return "bg-red/10 text-red";
+    case "CANCELLED":
+      return "bg-gray-500/10 text-gray-400";
+    case "FILLED":
+      return "bg-theme/10 text-theme";
+    case "PENDING":
+      return "bg-primary/10 text-primary/70";
+    default:
+      return "bg-gray-500/10 text-gray-400";
+  }
+}
 
-function formatEventStatus(status: string): string {
-  return status.replace(/([a-z])([A-Z])/g, "$1 $2");
+function getTimelineBadgeClasses(): string {
+  return "border border-border/50 bg-background text-primary/60";
+}
+
+function copyValue(value: string, label: string) {
+  navigator.clipboard.writeText(value);
+  return `${label} copied to clipboard`;
+}
+
+function MetadataItem({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col gap-0.5", className)}>
+      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+        {label}
+      </span>
+      <div className="text-[11px] text-primary/85">{value}</div>
+    </div>
+  );
+}
+
+function TimelineItem({
+  trade,
+  btcPriceUsd,
+  openFundingDialog,
+  toastMessage,
+  isLast,
+}: {
+  trade: TradeOrder;
+  btcPriceUsd: number;
+  openFundingDialog: (trade: TradeOrder) => void;
+  toastMessage: (label: string, value: string) => void;
+  isLast: boolean;
+}) {
+  const triggerPrice =
+    trade.displayPrice != null &&
+    trade.priceKind &&
+    trade.priceKind !== "NONE"
+      ? {
+          label: PRICE_KIND_LABELS[trade.priceKind] ?? "Trigger",
+          value: `$${trade.displayPrice.toFixed(2)}`,
+        }
+      : null;
+  const priceChange = getOrderHistoryPriceChange(trade);
+  const fee = getOrderHistoryFee(trade);
+  const funding = getOrderHistoryFunding(trade);
+  const pnl = getOrderHistoryPnl(trade);
+  const posValueSats = getOrderHistoryPositionValueSats(trade);
+  const rawEventValue = getOrderHistoryPrimaryEventValue(trade);
+  const rawEventLabel = formatOrderHistoryRawLabel(rawEventValue);
+  const rawStatusLabel = formatOrderHistoryRawLabel(trade.orderStatus);
+  const showDistinctStatus =
+    !!getOrderHistoryRawEventValue(trade) &&
+    getOrderHistoryRawEventValue(trade) !== trade.orderStatus;
+  const showClose =
+    trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
+
+  return (
+    <div className="relative pl-4">
+      {!isLast && (
+        <div className="bg-border/50 absolute bottom-0 left-[4px] top-2.5 w-px" />
+      )}
+      <div className="bg-border/70 absolute left-0 top-2 h-2 w-2 rounded-full" />
+
+      <div className="border-border/50 rounded-lg border bg-background/70 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                getTimelineBadgeClasses()
+              )}
+            >
+              {rawEventLabel}
+            </span>
+            <span className="text-[11px] font-medium text-primary/70">
+              {trade.orderType}
+            </span>
+          </div>
+          <span className="text-[11px] text-primary/55 tabular-nums">
+            {dayjs(trade.date).format("DD MMM HH:mm:ss")}
+          </span>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+          <MetadataItem
+            label="Side"
+            value={<span className="font-medium">{trade.positionType}</span>}
+          />
+          {showDistinctStatus && (
+            <MetadataItem
+              label="Status"
+              value={<span className="font-medium">{rawStatusLabel}</span>}
+            />
+          )}
+          <MetadataItem
+            label="Notional"
+            value={<span className="font-medium">{getOrderHistoryNotionalLabel(trade)}</span>}
+          />
+          <MetadataItem
+            label="Entry"
+            value={<span className="font-medium">${trade.entryPrice.toFixed(2)}</span>}
+          />
+          <MetadataItem
+            label="Leverage"
+            value={<span className="font-medium">{trade.leverage.toFixed(2)}x</span>}
+          />
+
+          {showClose && (
+            <MetadataItem
+              label="Close"
+              value={
+                <span className="font-medium">
+                  ${trade.settlementPrice.toFixed(2)}
+                </span>
+              }
+            />
+          )}
+
+          {triggerPrice && (
+            <MetadataItem
+              label={triggerPrice.label}
+              value={<span className="font-medium">{triggerPrice.value}</span>}
+            />
+          )}
+
+          <MetadataItem
+            label="PnL"
+            value={<PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="inline" />}
+          />
+
+          {posValueSats != null && (
+            <MetadataItem
+              label="Pos. Value"
+              value={<span className="font-medium">{formatSatsCompact(posValueSats)}</span>}
+            />
+          )}
+
+          {funding != null && (
+            <MetadataItem
+              label="Funding"
+              value={
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span>{formatSatsMBtc(funding)}</span>
+                  {(trade.orderStatus === "SETTLED" ||
+                    trade.orderStatus === "LIQUIDATE") && (
+                    <button
+                      type="button"
+                      onClick={() => openFundingDialog(trade)}
+                      className="rounded p-0.5 text-primary/40 transition-colors hover:bg-primary/5 hover:text-primary/60"
+                      aria-label="View funding history"
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </span>
+              }
+            />
+          )}
+
+          {fee != null && (
+            <MetadataItem
+              label="Fee"
+              value={<span className="font-medium">{formatSatsMBtc(fee)}</span>}
+            />
+          )}
+
+          <MetadataItem
+            label="Avail. Margin"
+            value={
+              <span className="font-medium">
+                {formatSatsCompact(trade.availableMargin)}
+              </span>
+            }
+          />
+
+          {priceChange && (
+            <MetadataItem
+              label="Price Change"
+              className="col-span-2"
+              value={
+                <span className="font-medium tabular-nums">
+                  {priceChange.before != null
+                    ? `$${priceChange.before.toFixed(2)}`
+                    : "—"}{" "}
+                  →{" "}
+                  {priceChange.after != null
+                    ? `$${priceChange.after.toFixed(2)}`
+                    : "—"}
+                </span>
+              }
+            />
+          )}
+
+          {trade.request_id && (
+            <MetadataItem
+              label="Request ID"
+              value={
+                <button
+                  type="button"
+                  onClick={() => toastMessage("Request ID", trade.request_id!)}
+                  className="font-medium hover:underline"
+                >
+                  {truncateHash(trade.request_id, 4, 4)}
+                </button>
+              }
+            />
+          )}
+
+          {trade.tx_hash && (
+            <MetadataItem
+              label="Tx Hash"
+              value={
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${trade.tx_hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium hover:underline"
+                >
+                  {truncateHash(trade.tx_hash)}
+                </Link>
+              }
+            />
+          )}
+
+          {trade.reason && (
+            <MetadataItem
+              label="Reason"
+              className="col-span-2"
+              value={<span className="text-primary/70">{trade.reason}</span>}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const OrderHistoryCards = React.memo(function OrderHistoryCards({
@@ -73,383 +334,117 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
     });
   }, []);
 
-  const sorted = useMemo(
-    () =>
-      [...data].sort(
-        (a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
-      ),
-    [data]
+  const showCopyToast = useCallback(
+    (label: string, value: string) => {
+      toast({
+        title: "Copied to clipboard",
+        description: copyValue(value, label),
+      });
+    },
+    [toast]
   );
 
   return (
     <>
       <div className="relative w-full overscroll-none px-3 py-2">
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
-          {sorted.length === 0 ? (
+          {data.length === 0 ? (
             <div className="py-10 text-center text-sm text-primary-accent">
               No results.
             </div>
           ) : (
-            sorted.map((trade) => {
-              const cardId =
-                trade.idempotency_key ??
-                `${trade.uuid}_${trade.date.toString()}`;
-              const isExpanded = expandedIds.has(cardId);
-              const truncatedUuid = truncateHash(trade.uuid, 4, 4);
-
-              const pnl =
-                trade.orderStatus === "LIQUIDATE"
-                  ? -trade.initialMargin
-                  : trade.realizedPnl || trade.unrealizedPnl || 0;
-
-              const funding =
-                trade.fundingApplied != null
-                  ? Number(trade.fundingApplied)
-                  : Math.round(
-                      trade.initialMargin -
-                        trade.availableMargin -
-                        trade.feeFilled -
-                        trade.feeSettled +
-                        pnl
-                    );
-
-              const feeRaw =
-                trade.orderStatus === "FILLED"
-                  ? trade.feeFilled
-                  : trade.feeSettled;
-              const isClosed =
-                trade.orderStatus === "SETTLED" ||
-                trade.orderStatus === "LIQUIDATE";
-              const hasPnl =
-                (trade.orderStatus === "SETTLED" ||
-                  trade.orderStatus === "LIQUIDATE" ||
-                  trade.orderStatus === "FILLED") &&
-                pnl !== 0;
-              const canShowFundingInfo = isClosed;
-              const showFee =
-                trade.orderStatus !== "CANCELLED" &&
-                trade.orderStatus !== "LIQUIDATE" &&
-                trade.orderStatus !== "PENDING";
-
-              // Event metadata
-              const hasEventBadge =
-                trade.eventStatus && trade.eventStatus !== trade.orderStatus;
-              const priceKind = trade.priceKind ?? "NONE";
-              const isActionEvent = priceKind !== "NONE";
-
-              // Zone 1: accent bar + badges
-              const accentBar =
-                trade.orderStatus === "LIQUIDATE"
-                  ? "bg-red/70"
-                  : trade.orderStatus === "SETTLED"
-                    ? "bg-green-medium/70"
-                    : trade.orderStatus === "CANCELLED"
-                      ? "bg-gray-500/50"
-                      : isActionEvent
-                        ? priceKind === "STOP_LOSS"
-                          ? "bg-orange-500/70"
-                          : priceKind === "TAKE_PROFIT"
-                            ? "bg-purple-500/70"
-                            : "bg-blue-500/70"
-                        : "bg-theme/60";
-
-              const statusDot =
-                trade.orderStatus === "LIQUIDATE"
-                  ? "bg-red"
-                  : trade.orderStatus === "SETTLED"
-                    ? "bg-green-medium"
-                    : trade.orderStatus === "CANCELLED"
-                      ? "bg-gray-500"
-                      : "bg-theme";
-
-              const sideClass =
-                trade.positionType === "LONG"
-                  ? "bg-green-medium/10 text-green-medium"
-                  : "bg-red/10 text-red";
-
-              const statusClass =
-                trade.orderStatus === "SETTLED"
-                  ? "bg-green-medium/10 text-green-medium/80"
-                  : trade.orderStatus === "LIQUIDATE"
-                    ? "bg-red/10 text-red/80"
-                    : trade.orderStatus === "CANCELLED"
-                      ? "bg-gray-500/10 text-gray-500/80"
-                      : "bg-gray-500/10 text-gray-400";
-
-              // Zone 2: price story
-              const entryLabel = `$${usdNumberFormatter.format(trade.entryPrice)}`;
-              const closeLabel = isClosed
-                ? `$${usdNumberFormatter.format(trade.settlementPrice)}`
-                : null;
-
-              // Zone 3: cost row (never wraps)
-              const notionalLabel = `$${usdNumberFormatter.format(
-                Number(
-                  new BTC("sats", Big(trade.positionSize))
-                    .convert("BTC")
-                    .toFixed(2)
-                ) || 0
-              )}`;
-              const levLabel = `${trade.leverage.toFixed(1)}x`;
-              const feeLabel = showFee ? formatSatsCompact(feeRaw) : "—";
-              const availLabel = formatSatsCompact(trade.availableMargin);
-
-              // Expanded: secondary details
-              const posValueSats = Math.round(
-                Math.abs(
-                  trade.positionSize /
-                    (trade.settlementPrice || trade.entryPrice || 1)
-                )
-              );
-              const posValueLabel = formatSatsCompact(posValueSats);
-              const truncatedTxHash = trade.tx_hash
-                ? truncateHash(trade.tx_hash)
-                : null;
+            data.map((group) => {
+              const isExpanded = expandedIds.has(group.uuid);
 
               return (
                 <div
-                  key={cardId}
-                  className="border-border/70 hover:border-theme/35 group relative overflow-hidden rounded-xl border bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md"
+                  key={group.uuid}
+                  className="border-border/70 rounded-xl border bg-background/90 shadow-sm"
                 >
-                  {/* Left accent bar */}
-                  <div
-                    className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)}
-                  />
-
-                  <div className="px-3 py-2.5 pl-[14px] max-md:px-3 max-md:py-3">
-                    {/* Zone 1 — Identity */}
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "rounded px-1.5 py-0.5 text-[11px] font-semibold",
-                            sideClass
-                          )}
-                        >
-                          {trade.positionType}
-                        </span>
-                        <span
-                          className={cn(
-                            "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                            statusClass
-                          )}
-                        >
-                          {trade.orderStatus}
-                        </span>
-                        {hasEventBadge && (
+                  <div className="px-3 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           <span
                             className={cn(
-                              "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                              EVENT_BADGE_STYLES[priceKind] ??
-                                "bg-gray-500/10 text-gray-400"
+                              "rounded px-1.5 py-0.5 text-[11px] font-semibold",
+                              getSideClasses(group.parentSide)
                             )}
                           >
-                            {formatEventStatus(trade.eventStatus!)}
+                            {group.parentSide}
                           </span>
+                          <span className="truncate text-[11px] font-medium text-primary/75">
+                            {group.parentType}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[11px] text-primary/55 tabular-nums">
+                          {dayjs(group.latestDate).format("DD MMM YYYY HH:mm:ss")}
+                        </div>
+                      </div>
+
+                      <span
+                        className={cn(
+                          "rounded px-2 py-1 text-[11px] font-medium",
+                          getLifecycleClasses(group.lifecycleValue)
                         )}
-                      </div>
-                      <div className="text-primary/55 flex items-center gap-1.5 text-[11px]">
-                        <span className="tabular-nums">
-                          {dayjs(trade.date).format("DD MMM HH:mm:ss")}
-                        </span>
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 shrink-0 rounded-full",
-                            statusDot
-                          )}
-                        />
-                      </div>
+                      >
+                        {group.lifecycleLabel}
+                      </span>
                     </div>
 
-                    {/* Trigger price section for action events */}
-                    {isActionEvent && trade.displayPrice != null && (
-                      <div className="mb-2 rounded-lg bg-theme/10 px-2.5 py-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                            {PRICE_KIND_LABELS[priceKind] ?? "Price"}
+                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                      <MetadataItem
+                        label="Entry"
+                        value={
+                          <span className="text-sm font-semibold">
+                            ${group.parentEntryPrice.toFixed(2)}
                           </span>
-                          <span className="text-sm font-semibold tabular-nums text-primary">
-                            ${trade.displayPrice.toFixed(2)}
-                          </span>
-                        </div>
-                        {trade.old_price != null && trade.new_price != null && (
-                          <div className="mt-0.5 text-[10px] text-gray-500">
-                            ${trade.old_price.toFixed(2)} → $
-                            {trade.new_price.toFixed(2)}
-                          </div>
-                        )}
-                        {trade.reason && (
-                          <div className="mt-0.5 text-[10px] text-primary-accent/70">
-                            {trade.reason}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        }
+                      />
+                      <MetadataItem
+                        label={group.closeOrTriggerLabel ?? "Close / Trigger"}
+                        value={
+                          group.closeOrTriggerValue != null ? (
+                            <span className="text-sm font-semibold">
+                              ${group.closeOrTriggerValue.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500">—</span>
+                          )
+                        }
+                      />
+                      {group.terminalRow && (
+                        <MetadataItem
+                          label="PnL"
+                          className="col-span-2"
+                          value={
+                            <PnlCell
+                              pnlSats={getOrderHistoryPnl(group.terminalRow)}
+                              btcPriceUsd={btcPriceUsd}
+                              layout="inline"
+                            />
+                          }
+                        />
+                      )}
+                    </div>
 
-                    {/* Reason line for non-trigger events that have a reason */}
-                    {!isActionEvent && trade.reason && (
-                      <div className="mb-2 text-[10px] text-primary-accent/70">
-                        {trade.reason}
-                      </div>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                      <span className="text-gray-500">Latest Event</span>
+                      <span className="font-medium text-primary/75">
+                        {group.latestEventLabel}
+                      </span>
+                      <span className="text-primary/25">•</span>
+                      <span className="text-gray-500">Lev</span>
+                      <span className="font-medium text-primary/75">
+                        {group.parentLeverage.toFixed(2)}x
+                      </span>
+                    </div>
 
-                    {/* Zone 2 — Price Story: mobile grid; desktop inline */}
-                    {!isActionEvent && (
-                      <>
-                        <div className="mb-3 hidden md:flex md:items-center md:justify-between md:gap-3">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                                Entry
-                              </span>
-                              <span className="text-sm font-semibold text-primary">
-                                {entryLabel}
-                              </span>
-                            </div>
-                            {closeLabel && (
-                              <>
-                                <span className="shrink-0 text-[11px] text-primary/30">
-                                  →
-                                </span>
-                                <div className="flex items-baseline gap-1">
-                                  <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                                    Close
-                                  </span>
-                                  <span className="text-sm font-semibold text-primary">
-                                    {closeLabel}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          {hasPnl && (
-                            <div className="flex shrink-0 items-center gap-1">
-                              <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                                PnL
-                              </span>
-                              <PnlCell
-                                pnlSats={pnl}
-                                btcPriceUsd={btcPriceUsd}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="mb-3 grid grid-cols-3 gap-y-1 md:hidden">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              Entry
-                            </span>
-                            <span className="text-sm font-semibold tabular-nums text-primary">
-                              {entryLabel}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              {closeLabel ? "Close" : "Mark"}
-                            </span>
-                            <span className="text-sm font-semibold tabular-nums text-primary">
-                              {closeLabel ?? "—"}
-                            </span>
-                          </div>
-                          {hasPnl && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                                PnL
-                              </span>
-                              <PnlCell
-                                pnlSats={pnl}
-                                btcPriceUsd={btcPriceUsd}
-                                className="text-sm font-semibold"
-                                layout="stacked"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Zone 3 — Cost: mobile grid; desktop inline */}
-                    {!isActionEvent && (
-                      <>
-                        <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-2 md:hidden">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              Notional
-                            </span>
-                            <span className="text-sm font-medium text-primary">
-                              {notionalLabel}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              Leverage
-                            </span>
-                            <span className="text-sm font-medium text-primary">
-                              {levLabel}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              Fee
-                            </span>
-                            <span className="text-sm font-medium text-primary">
-                              {feeLabel}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              Avail
-                            </span>
-                            <span className="text-sm font-medium text-primary">
-                              {availLabel}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="hidden items-center gap-2 overflow-hidden text-[11px] md:flex">
-                          <span className="shrink-0 text-gray-500">
-                            Notional
-                          </span>
-                          <span className="shrink-0 font-medium text-primary/80">
-                            {notionalLabel}
-                          </span>
-                          <span className="shrink-0 text-primary/25">•</span>
-                          <span className="shrink-0 text-gray-500">Lev</span>
-                          <span className="shrink-0 font-medium text-primary/80">
-                            {levLabel}
-                          </span>
-                          <span className="shrink-0 text-primary/25">•</span>
-                          <span className="shrink-0 text-gray-500">Fee</span>
-                          <span className="shrink-0 font-medium text-primary/80">
-                            {feeLabel}
-                          </span>
-                          <span className="shrink-0 text-primary/25">•</span>
-                          <span className="shrink-0 text-gray-500">Avail</span>
-                          <span className="shrink-0 font-medium text-primary/80">
-                            {availLabel}
-                          </span>
-                          {canShowFundingInfo && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openFundingDialog(trade);
-                              }}
-                              className="ml-auto shrink-0 rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
-                              aria-label="View funding history"
-                            >
-                              <Info className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Expand toggle + secondary details */}
-                    <div className="border-border/30 mt-1.5 border-t pt-1 max-md:pt-2">
+                    <div className="border-border/30 mt-2.5 border-t pt-1.5">
                       <button
                         type="button"
-                        onClick={() => toggleExpand(cardId)}
-                        className="flex w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[44px] md:py-0.5"
+                        onClick={() => toggleExpand(group.uuid)}
+                        className="flex min-h-[44px] w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60"
                       >
                         <span>Details</span>
                         {isExpanded ? (
@@ -460,100 +455,35 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                        <div className="mt-2 space-y-3">
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
                               Order ID
                             </span>
                             <button
                               type="button"
-                              className="rounded font-medium transition-colors duration-150 hover:text-primary hover:underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(trade.uuid);
-                                toast({
-                                  title: "Copied to clipboard",
-                                  description: `Order ID ${truncatedUuid} copied`,
-                                });
-                              }}
+                              onClick={() => showCopyToast("Order ID", group.uuid)}
+                              className="font-medium hover:underline"
                             >
-                              {truncatedUuid}
+                              {truncateHash(group.uuid, 4, 4)}
                             </button>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Type
-                            </span>
-                            <span className="font-medium">
-                              {trade.orderType}
-                            </span>
+
+                          <div className="space-y-3">
+                            {group.rows.map((trade, index) => (
+                              <TimelineItem
+                                key={
+                                  trade.idempotency_key ??
+                                  `${trade.uuid}_${trade.orderStatus}_${trade.date.toString()}`
+                                }
+                                trade={trade}
+                                btcPriceUsd={btcPriceUsd}
+                                openFundingDialog={openFundingDialog}
+                                toastMessage={showCopyToast}
+                                isLast={index === group.rows.length - 1}
+                              />
+                            ))}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                              Pos. Value
-                            </span>
-                            <span className="font-medium">{posValueLabel}</span>
-                          </div>
-                          {(trade.orderStatus === "FILLED" ||
-                            trade.orderStatus === "SETTLED" ||
-                            trade.orderStatus === "LIQUIDATE") && (
-                            <div className="flex items-center gap-2">
-                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                                Funding
-                              </span>
-                              <span
-                                className={cn(
-                                  "font-medium",
-                                  funding > 0
-                                    ? "text-green-medium"
-                                    : funding < 0
-                                      ? "text-red"
-                                      : ""
-                                )}
-                              >
-                                {formatSatsCompact(funding)}
-                              </span>
-                            </div>
-                          )}
-                          {trade.request_id && (
-                            <div className="col-span-2 flex items-center gap-2">
-                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                                Request ID
-                              </span>
-                              <button
-                                type="button"
-                                className="rounded font-medium transition-colors duration-150 hover:text-primary hover:underline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(
-                                    trade.request_id!
-                                  );
-                                  toast({
-                                    title: "Copied to clipboard",
-                                    description: "Request ID copied",
-                                  });
-                                }}
-                              >
-                                {truncateHash(trade.request_id, 4, 4)}
-                              </button>
-                            </div>
-                          )}
-                          {truncatedTxHash &&
-                            (trade.orderStatus === "FILLED" ||
-                              trade.orderStatus === "SETTLED" ||
-                              trade.orderStatus === "LIQUIDATE") && (
-                              <div className="col-span-2 flex items-center gap-2">
-                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                                  Tx Hash
-                                </span>
-                                <Link
-                                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${trade.tx_hash}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-medium transition-colors hover:text-primary hover:underline"
-                                >
-                                  {truncatedTxHash}
-                                </Link>
-                              </div>
-                            )}
                         </div>
                       )}
                     </div>
