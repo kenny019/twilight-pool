@@ -359,8 +359,7 @@ export function createLendWithdrawalController(
       request_id:
         order.request_id ||
         settlement.settledTx?.request_id ||
-        settlement.requestId ||
-        null,
+        settlement.requestId,
     };
 
     params.updateLend(order.uuid, {
