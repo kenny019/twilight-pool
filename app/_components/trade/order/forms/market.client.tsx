@@ -860,7 +860,7 @@ const OrderMarketForm = () => {
   return (
     <form
       onSubmit={(e) => e.preventDefault()}
-      className="flex flex-col gap-3 px-3 py-4"
+      className="flex flex-col gap-2 px-3 py-3"
     >
       {status === "Connected" && !tradingAccountBalance && (
         <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
@@ -901,7 +901,7 @@ const OrderMarketForm = () => {
       </div>
 
       {/* 2. Margin Amount — single master input */}
-      <div className="-mt-1 space-y-1">
+      <div className="-mt-0.5 space-y-0.5">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1182,7 +1182,7 @@ const OrderMarketForm = () => {
       </div>
 
       {/* 3. Leverage — input first, then slider, then presets */}
-      <div className="space-y-1 max-md:border-t max-md:border-border/30 max-md:pt-3">
+      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1197,7 +1197,7 @@ const OrderMarketForm = () => {
             type="button"
             onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
             disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -1217,7 +1217,7 @@ const OrderMarketForm = () => {
                   setLeverage("");
                 }
               }}
-              className="h-12 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
           </div>
@@ -1225,7 +1225,7 @@ const OrderMarketForm = () => {
             type="button"
             onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
             disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -1291,7 +1291,7 @@ const OrderMarketForm = () => {
           max={50}
           step={1}
           disabled={!tradingAccountBalance}
-          className="w-full"
+          className="mt-1 w-full md:mt-0"
         />
         <div className="flex flex-wrap gap-1">
           {LEVERAGE_PRESETS.map((v) => (
@@ -1314,7 +1314,7 @@ const OrderMarketForm = () => {
       </div>
 
       {/* 4. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-md:border-t max-md:border-border/30 max-md:pt-3">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="text-sm font-medium tabular-nums">
@@ -1328,17 +1328,13 @@ const OrderMarketForm = () => {
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-green-medium/70 max-md:text-primary/50">
-            Liq Buy
-          </span>
+          <span className="text-xs text-primary/50">Liq Buy</span>
           <span className="tabular-nums text-sm font-medium text-green-medium/90">
             ${liquidationPrices.long}
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-red/70 max-md:text-primary/50">
-            Liq Sell
-          </span>
+          <span className="text-xs text-primary/50">Liq Sell</span>
           <span className="tabular-nums text-sm font-medium text-red/90">
             ${liquidationPrices.short}
           </span>
@@ -1348,7 +1344,7 @@ const OrderMarketForm = () => {
       {/* 5. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-col gap-2 max-md:border-t max-md:border-border/30 max-md:pt-3">
+          <div className="flex flex-col gap-1.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"

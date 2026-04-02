@@ -62,6 +62,8 @@ const COLLATERAL_STEP_BTC = 0.000001;
 const COLLATERAL_STEP_USD = 10;
 const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
 const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
+const formatOrderPriceValue = (price: number) =>
+  price > 0 ? (Math.round(price * 100) / 100).toFixed(2) : "";
 
 const OrderLimitForm = () => {
   const { width } = useGrid();
@@ -92,11 +94,42 @@ const OrderLimitForm = () => {
   const [orderPrice, setOrderPrice] = useState(
     markPrice ? Math.round(markPrice * 100) / 100 : 0
   );
+  const [orderPriceInput, setOrderPriceInput] = useState(() =>
+    formatOrderPriceValue(markPrice ? Math.round(markPrice * 100) / 100 : 0)
+  );
+  const hasInitializedOrderPrice = useRef(markPrice > 0);
+
+  const syncOrderPrice = useCallback((nextPrice: number) => {
+    setOrderPrice(nextPrice);
+    setOrderPriceInput(formatOrderPriceValue(nextPrice));
+  }, []);
+
+  const handleOrderPriceChange = useCallback((rawValue: string) => {
+    const nextValue = rawValue.replace(/[^\d.]/g, "");
+    setOrderPriceInput(nextValue);
+
+    if (!nextValue || nextValue === ".") {
+      setOrderPrice(0);
+      return;
+    }
+
+    const parsedValue = parseFloat(nextValue);
+    if (!Number.isNaN(parsedValue) && parsedValue >= 0) {
+      setOrderPrice(parsedValue);
+    }
+  }, []);
+
+  const handleOrderPriceBlur = useCallback(() => {
+    setOrderPriceInput(formatOrderPriceValue(orderPrice));
+  }, [orderPrice]);
 
   useEffect(() => {
-    if (markPrice > 0 && orderPrice === 0)
-      setOrderPrice(Math.round(markPrice * 100) / 100);
-  }, [markPrice]);
+    if (!hasInitializedOrderPrice.current && markPrice > 0) {
+      const initialPrice = Math.round(markPrice * 100) / 100;
+      syncOrderPrice(initialPrice);
+      hasInitializedOrderPrice.current = true;
+    }
+  }, [markPrice, syncOrderPrice]);
 
   const orderSats = useMemo(() => {
     if (!btcAmount) return 0;
@@ -249,14 +282,24 @@ const OrderLimitForm = () => {
     (pct: number) => {
       if (markPrice <= 0) return;
       const newPrice = markPrice * (1 + pct / 100);
-      setOrderPrice(Math.max(0.01, Math.round(newPrice * 100) / 100));
+      syncOrderPrice(Math.max(0.01, Math.round(newPrice * 100) / 100));
     },
-    [markPrice]
+    [markPrice, syncOrderPrice]
   );
 
-  const adjustPrice = useCallback((delta: number) => {
-    setOrderPrice((p) => Math.max(0.01, Math.round((p + delta) * 100) / 100));
-  }, []);
+  const adjustPrice = useCallback(
+    (delta: number) => {
+      setOrderPrice((currentPrice) => {
+        const nextPrice = Math.max(
+          0.01,
+          Math.round((currentPrice + delta) * 100) / 100
+        );
+        setOrderPriceInput(formatOrderPriceValue(nextPrice));
+        return nextPrice;
+      });
+    },
+    []
+  );
 
   const priceRepeatRef = useRef<{
     timeoutId: ReturnType<typeof setTimeout> | null;
@@ -785,7 +828,7 @@ const OrderLimitForm = () => {
       setLeverage("5");
       setPercent(0);
       setBtcAmount("");
-      setOrderPrice(markPrice ? Math.round(markPrice * 100) / 100 : 0);
+      syncOrderPrice(markPrice ? Math.round(markPrice * 100) / 100 : 0);
     } catch (err) {
       if (typeof err === "string") {
         toast({
@@ -819,7 +862,7 @@ const OrderLimitForm = () => {
   return (
     <form
       onSubmit={submitLimitOrder}
-      className="flex flex-col gap-2 px-3 py-2.5"
+      className="flex flex-col gap-1 px-3 py-2"
     >
       {status === "Connected" && !tradingAccountBalance && (
         <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
@@ -880,7 +923,7 @@ const OrderLimitForm = () => {
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
           <span className="text-xs text-primary/50">From Mark</span>
           {PRICE_PRESETS.map((pct) => (
             <button
@@ -896,7 +939,7 @@ const OrderLimitForm = () => {
           ))}
         </div>
         {/* Mobile: [−] [input + Mark] [+] */}
-        <div className="flex items-stretch gap-2 md:hidden">
+        <div className="flex items-stretch gap-1.5 md:hidden">
           <button
             type="button"
             disabled={!tradingAccountBalance}
@@ -909,7 +952,7 @@ const OrderLimitForm = () => {
             onPointerUp={clearPriceRepeat}
             onPointerCancel={clearPriceRepeat}
             onLostPointerCapture={clearPriceRepeat}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -917,21 +960,17 @@ const OrderLimitForm = () => {
             <Input
               id="input-order-price-mobile"
               type="text"
-              value={orderPrice > 0 ? orderPrice.toFixed(2) : ""}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) setOrderPrice(n);
-                else if (v === "") setOrderPrice(0);
-              }}
-              className="h-12 min-w-0 flex-1 border-0 bg-transparent text-center text-base tabular-nums shadow-none focus-visible:ring-0"
+              value={orderPriceInput}
+              onChange={(e) => handleOrderPriceChange(e.target.value)}
+              onBlur={handleOrderPriceBlur}
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent text-center text-base tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
             <button
               type="button"
               onClick={() =>
                 markPrice > 0 &&
-                setOrderPrice(Math.round(markPrice * 100) / 100)
+                syncOrderPrice(Math.round(markPrice * 100) / 100)
               }
               disabled={!tradingAccountBalance || markPrice <= 0}
               className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
@@ -951,7 +990,7 @@ const OrderLimitForm = () => {
             onPointerUp={clearPriceRepeat}
             onPointerCancel={clearPriceRepeat}
             onLostPointerCapture={clearPriceRepeat}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -962,13 +1001,9 @@ const OrderLimitForm = () => {
             <Input
               id="input-order-price"
               type="text"
-              value={orderPrice > 0 ? orderPrice.toFixed(2) : ""}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) setOrderPrice(n);
-                else if (v === "") setOrderPrice(0);
-              }}
+              value={orderPriceInput}
+              onChange={(e) => handleOrderPriceChange(e.target.value)}
+              onBlur={handleOrderPriceBlur}
               className="h-6 min-w-0 flex-1 border-0 bg-transparent text-base tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
@@ -976,7 +1011,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() =>
                 markPrice > 0 &&
-                setOrderPrice(Math.round(markPrice * 100) / 100)
+                syncOrderPrice(Math.round(markPrice * 100) / 100)
               }
               disabled={!tradingAccountBalance || markPrice <= 0}
               className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
@@ -1241,7 +1276,7 @@ const OrderLimitForm = () => {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {COLLATERAL_PRESETS.map((v) => (
             <button
               key={v}
@@ -1283,7 +1318,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 4. Leverage — own row */}
-      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-3">
+      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1293,7 +1328,7 @@ const OrderLimitForm = () => {
           Leverage
         </label>
         {/* Mobile: [−] [input] [+] */}
-        <div className="flex items-stretch gap-2 md:hidden">
+        <div className="flex items-stretch gap-1.5 md:hidden">
           <button
             type="button"
             onClick={() =>
@@ -1304,7 +1339,7 @@ const OrderLimitForm = () => {
             disabled={
               !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
             }
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -1323,7 +1358,7 @@ const OrderLimitForm = () => {
                   setLeverage("");
                 }
               }}
-              className="h-12 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
           </div>
@@ -1337,7 +1372,7 @@ const OrderLimitForm = () => {
             disabled={
               !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
             }
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -1404,7 +1439,7 @@ const OrderLimitForm = () => {
           disabled={!tradingAccountBalance}
           className="w-full"
         />
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {LEVERAGE_PRESETS.map((v) => (
             <button
               key={v}
@@ -1425,7 +1460,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 5. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-md:border-t max-md:border-border/30 max-md:pt-3">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="text-sm font-medium tabular-nums">
@@ -1439,13 +1474,13 @@ const OrderLimitForm = () => {
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-green-medium/70 max-md:text-primary/50">Liq Buy</span>
+          <span className="text-xs text-primary/50">Liq Buy</span>
           <span className="text-sm font-medium tabular-nums text-green-medium/90">
             ${liquidationPrices.long}
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-red/70 max-md:text-primary/50">Liq Sell</span>
+          <span className="text-xs text-primary/50">Liq Sell</span>
           <span className="text-sm font-medium tabular-nums text-red/90">
             ${liquidationPrices.short}
           </span>
@@ -1455,7 +1490,7 @@ const OrderLimitForm = () => {
       {/* 6. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-row gap-2 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-3">
+          <div className="flex flex-row gap-1.5 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
             <Button
               className="min-w-0 flex-1 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
               variant="ui"
