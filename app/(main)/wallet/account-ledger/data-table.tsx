@@ -625,45 +625,6 @@ export function AccountLedgerDataTable<TData, TValue>({
                         Audit
                       </span>
 
-                      <div>
-                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/50">
-                          Ledger ID
-                        </span>
-                        <button
-                          type="button"
-                          className="mt-0.5 break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(entry.id);
-                            toast({
-                              title: "Copied to clipboard",
-                              description: "Ledger ID copied to clipboard",
-                            });
-                          }}
-                        >
-                          {entry.id}
-                        </button>
-                      </div>
-
-                      <div>
-                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/50">
-                          Idempotency Key
-                        </span>
-                        <button
-                          type="button"
-                          className="mt-0.5 break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(entry.idempotency_key);
-                            toast({
-                              title: "Copied to clipboard",
-                              description:
-                                "Idempotency key copied to clipboard",
-                            });
-                          }}
-                        >
-                          {entry.idempotency_key}
-                        </button>
-                      </div>
-
                       <div className="space-y-1 text-primary/80">
                         <div>
                           <span className="text-primary-accent/60">Created:</span>{" "}

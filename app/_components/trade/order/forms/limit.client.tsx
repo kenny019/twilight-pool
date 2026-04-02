@@ -62,6 +62,50 @@ const COLLATERAL_STEP_BTC = 0.000001;
 const COLLATERAL_STEP_USD = 10;
 const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
 const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
+const MAX_PRICE_INTEGER_DIGITS = 8;
+const MAX_COLLATERAL_INTEGER_DIGITS = 8;
+const MAX_LEVERAGE_DIGITS = 2;
+
+function sanitizeDecimalInput(
+  rawValue: string,
+  maxIntegerDigits: number,
+  maxDecimals: number
+): string {
+  const cleaned = rawValue.replace(/[^\d.]/g, "");
+
+  if (!cleaned) return "";
+
+  const startsWithDot = cleaned.startsWith(".");
+  const [integerRaw = "", ...decimalRawParts] = cleaned.split(".");
+  const integerPart = integerRaw.slice(0, maxIntegerDigits);
+  const decimalPart = decimalRawParts.join("").slice(0, maxDecimals);
+
+  if (startsWithDot) {
+    return decimalPart ? `.${decimalPart}` : ".";
+  }
+
+  if (cleaned.includes(".")) {
+    return `${integerPart}.${decimalPart}`;
+  }
+
+  return integerPart;
+}
+
+function trimTrailingZeros(value: string): string {
+  return value.replace(/(\.\d*?[1-9])0+$|\.0*$/, "$1");
+}
+
+function formatAmountInputValue(
+  value: number,
+  unit: "btc" | "usd"
+): string {
+  if (!Number.isFinite(value) || value <= 0) return "";
+
+  return unit === "btc"
+    ? trimTrailingZeros(value.toFixed(8))
+    : value.toFixed(2);
+}
+
 const formatOrderPriceValue = (price: number) =>
   price > 0 ? (Math.round(price * 100) / 100).toFixed(2) : "";
 
@@ -76,6 +120,10 @@ const OrderLimitForm = () => {
   const [percent, setPercent] = useState<number>(0);
   const [btcAmount, setBtcAmount] = useState<string>("");
   const [collateralUnit, setCollateralUnit] = useState<"btc" | "usd">("btc");
+  const [amountInput, setAmountInput] = useState<string>("");
+  const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
+  const [leverageInput, setLeverageInput] = useState("5");
+  const [isLeverageInputFocused, setIsLeverageInputFocused] = useState(false);
 
   const updatePercent = useCallback((value: number) => {
     const finalValue = Math.max(0, Math.min(value, 100));
@@ -90,6 +138,46 @@ const OrderLimitForm = () => {
   );
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
   const markPrice = liveBtcPrice || storedBtcPrice;
+  const { status, mainWallet } = useWallet();
+  const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const masterAccountBlocked = useTwilightStore(
+    (state) => state.zk.masterAccountBlocked
+  );
+  const masterAccountBlockReason = useTwilightStore(
+    (state) => state.zk.masterAccountBlockReason
+  );
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
+  const addTrade = useTwilightStore((state) => state.trade.addTrade);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const tradingAccount = zkAccounts.find((account) => account.tag === "main");
+  const tradingAccountBalance = tradingAccount?.value || 0;
+  const tradingAccountBalanceString = new BTC(
+    "sats",
+    Big(tradingAccountBalance)
+  )
+    .convert("BTC")
+    .toFixed(8);
+  const maxCollateralBtc = useMemo(
+    () => parseFloat(tradingAccountBalanceString || "0") || 0,
+    [tradingAccountBalanceString]
+  );
+  const maxCollateralUsd = useMemo(() => {
+    if (!markPrice || markPrice <= 0 || maxCollateralBtc <= 0) return 0;
+    return Number(Big(maxCollateralBtc).mul(markPrice).toFixed(2));
+  }, [markPrice, maxCollateralBtc]);
+  const usdAmount = useMemo(() => {
+    if (!btcAmount || !markPrice || markPrice <= 0) return "";
+    const btc = parseFloat(btcAmount);
+    if (!Number.isFinite(btc) || btc <= 0) return "";
+    return Big(btc).mul(markPrice).toFixed(2);
+  }, [btcAmount, markPrice]);
 
   const [orderPrice, setOrderPrice] = useState(
     markPrice ? Math.round(markPrice * 100) / 100 : 0
@@ -105,7 +193,7 @@ const OrderLimitForm = () => {
   }, []);
 
   const handleOrderPriceChange = useCallback((rawValue: string) => {
-    const nextValue = rawValue.replace(/[^\d.]/g, "");
+    const nextValue = sanitizeDecimalInput(rawValue, MAX_PRICE_INTEGER_DIGITS, 2);
     setOrderPriceInput(nextValue);
 
     if (!nextValue || nextValue === ".") {
@@ -122,6 +210,113 @@ const OrderLimitForm = () => {
   const handleOrderPriceBlur = useCallback(() => {
     setOrderPriceInput(formatOrderPriceValue(orderPrice));
   }, [orderPrice]);
+
+  const updateCollateralFromInput = useCallback(
+    (rawValue: string) => {
+      const nextValue = sanitizeDecimalInput(
+        rawValue,
+        MAX_COLLATERAL_INTEGER_DIGITS,
+        collateralUnit === "btc" ? 8 : 2
+      );
+
+      if (!nextValue) {
+        setAmountInput("");
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      if (nextValue === ".") {
+        setAmountInput(nextValue);
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      let parsedValue = parseFloat(nextValue);
+      if (!Number.isFinite(parsedValue) || parsedValue < 0) return;
+
+      const maxValue =
+        collateralUnit === "btc" ? maxCollateralBtc : maxCollateralUsd;
+      if (maxValue > 0) {
+        parsedValue = Math.min(parsedValue, maxValue);
+      }
+
+      const normalizedInput =
+        parsedValue === parseFloat(nextValue)
+          ? nextValue
+          : formatAmountInputValue(parsedValue, collateralUnit);
+
+      setAmountInput(normalizedInput);
+
+      const nextBtcAmount =
+        collateralUnit === "btc"
+          ? parsedValue
+          : markPrice > 0
+            ? Number(Big(parsedValue).div(markPrice).toFixed(8))
+            : 0;
+
+      setBtcAmount(
+        nextBtcAmount > 0 ? trimTrailingZeros(nextBtcAmount.toFixed(8)) : ""
+      );
+
+      if (maxCollateralBtc > 0) {
+        updatePercent((nextBtcAmount / maxCollateralBtc) * 100);
+      } else {
+        setPercent(0);
+      }
+    },
+    [collateralUnit, markPrice, maxCollateralBtc, maxCollateralUsd, updatePercent]
+  );
+
+  const normalizeAmountInput = useCallback(() => {
+    if (!amountInput || amountInput === ".") {
+      setAmountInput("");
+      setBtcAmount("");
+      setPercent(0);
+      return;
+    }
+
+    const normalizedValue =
+      collateralUnit === "btc"
+        ? formatAmountInputValue(parseFloat(btcAmount || "0"), "btc")
+        : usdAmount;
+
+    setAmountInput(normalizedValue);
+  }, [amountInput, btcAmount, collateralUnit, usdAmount]);
+
+  const handleLeverageInputChange = useCallback((rawValue: string) => {
+    const nextValue = rawValue.replace(/\D/g, "").slice(0, MAX_LEVERAGE_DIGITS);
+    setLeverageInput(nextValue);
+
+    if (!nextValue) {
+      setLeverage("");
+      return;
+    }
+
+    const parsedValue = parseInt(nextValue, 10);
+    if (!Number.isFinite(parsedValue)) return;
+
+    if (parsedValue > 50) {
+      setLeverage("50");
+      setLeverageInput("50");
+      return;
+    }
+
+    if (parsedValue >= 1) {
+      setLeverage(String(parsedValue));
+    }
+  }, []);
+
+  const handleLeverageInputBlur = useCallback(() => {
+    const parsedValue = parseInt(leverageInput || leverage || "5", 10);
+    const normalizedValue = Number.isFinite(parsedValue)
+      ? Math.max(1, Math.min(parsedValue, 50))
+      : 5;
+
+    setLeverage(String(normalizedValue));
+    setLeverageInput(String(normalizedValue));
+  }, [leverage, leverageInput]);
 
   useEffect(() => {
     if (!hasInitializedOrderPrice.current && markPrice > 0) {
@@ -141,13 +336,6 @@ const OrderLimitForm = () => {
       return 0;
     }
   }, [btcAmount]);
-
-  const usdAmount = useMemo(() => {
-    if (!btcAmount || !markPrice || markPrice <= 0) return "";
-    const btc = parseFloat(btcAmount);
-    if (!Number.isFinite(btc) || btc <= 0) return "";
-    return Big(btc).mul(markPrice).toFixed(2);
-  }, [btcAmount, markPrice]);
 
   const positionSize = useMemo(() => {
     if (!orderPrice || !leverage || !orderSats) return "0.00";
@@ -236,33 +424,6 @@ const OrderLimitForm = () => {
       return { long: "0.00", short: "0.00" };
     }
   }, [orderPrice, leverage, orderSats]);
-
-  const { status, mainWallet } = useWallet();
-  const privateKey = useSessionStore((state) => state.privateKey);
-  const { retrySign } = useSignStatus();
-  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
-  const masterAccountBlocked = useTwilightStore(
-    (state) => state.zk.masterAccountBlocked
-  );
-  const masterAccountBlockReason = useTwilightStore(
-    (state) => state.zk.masterAccountBlockReason
-  );
-  const setMasterAccountRecovery = useTwilightStore(
-    (state) => state.zk.setMasterAccountRecovery
-  );
-  const addTrade = useTwilightStore((state) => state.trade.addTrade);
-  const addTradeHistory = useTwilightStore(
-    (state) => state.trade_history.addTrade
-  );
-  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
-  const tradingAccount = zkAccounts.find((account) => account.tag === "main");
-  const tradingAccountBalance = tradingAccount?.value || 0;
-  const tradingAccountBalanceString = new BTC(
-    "sats",
-    Big(tradingAccountBalance)
-  )
-    .convert("BTC")
-    .toFixed(8);
 
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
@@ -856,6 +1017,18 @@ const OrderLimitForm = () => {
     collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
   collateralStepRef.current = collateralStep;
 
+  useEffect(() => {
+    if (!isAmountInputFocused) {
+      setAmountInput(primaryValue);
+    }
+  }, [isAmountInputFocused, primaryValue]);
+
+  useEffect(() => {
+    if (!isLeverageInputFocused) {
+      setLeverageInput(leverage || "");
+    }
+  }, [isLeverageInputFocused, leverage]);
+
   const marginStepDisabled =
     !tradingAccountBalance || (collateralUnit === "usd" && !markPrice);
 
@@ -1090,33 +1263,12 @@ const OrderLimitForm = () => {
                 type="text"
                 inputMode="decimal"
                 placeholder="0"
-                value={primaryValue}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, "");
-                  if (!v) {
-                    setBtcAmount("");
-                    setPercent(0);
-                    return;
-                  }
-                  const n = parseFloat(v);
-                  if (!Number.isNaN(n) && n >= 0) {
-                    if (collateralUnit === "btc") {
-                      setBtcAmount(v);
-                      if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                        updatePercent((n / maxBtc) * 100);
-                      }
-                    } else {
-                      if (markPrice > 0) {
-                        const btc = n / markPrice;
-                        setBtcAmount(btc.toFixed(8));
-                        if (tradingAccountBalance > 0) {
-                          const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                          updatePercent((btc / maxBtc) * 100);
-                        }
-                      }
-                    }
-                  }
+                value={amountInput}
+                onChange={(e) => updateCollateralFromInput(e.target.value)}
+                onFocus={() => setIsAmountInputFocused(true)}
+                onBlur={() => {
+                  setIsAmountInputFocused(false);
+                  normalizeAmountInput();
                 }}
                 className="h-auto min-h-0 w-full border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
                 disabled={!tradingAccountBalance}
@@ -1176,37 +1328,12 @@ const OrderLimitForm = () => {
               type="text"
               inputMode="decimal"
               placeholder="0"
-              value={primaryValue}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                if (!v) {
-                  setBtcAmount("");
-                  setPercent(0);
-                  return;
-                }
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) {
-                  if (collateralUnit === "btc") {
-                    setBtcAmount(v);
-                    if (tradingAccountBalance > 0) {
-                      const maxBtc = parseFloat(
-                        tradingAccountBalanceString || "0"
-                      );
-                      updatePercent((n / maxBtc) * 100);
-                    }
-                  } else {
-                    if (markPrice > 0) {
-                      const btc = n / markPrice;
-                      setBtcAmount(btc.toFixed(8));
-                      if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(
-                          tradingAccountBalanceString || "0"
-                        );
-                        updatePercent((btc / maxBtc) * 100);
-                      }
-                    }
-                  }
-                }
+              value={amountInput}
+              onChange={(e) => updateCollateralFromInput(e.target.value)}
+              onFocus={() => setIsAmountInputFocused(true)}
+              onBlur={() => {
+                setIsAmountInputFocused(false);
+                normalizeAmountInput();
               }}
               className="h-auto min-h-0 w-full border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
@@ -1348,15 +1475,12 @@ const OrderLimitForm = () => {
               type="text"
               inputMode="numeric"
               placeholder="5"
-              value={leverage}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "");
-                const n = parseInt(v || "5", 10);
-                if (n >= 1 && n <= 50) {
-                  setLeverage(String(n));
-                } else if (v === "") {
-                  setLeverage("");
-                }
+              value={leverageInput}
+              onChange={(e) => handleLeverageInputChange(e.target.value)}
+              onFocus={() => setIsLeverageInputFocused(true)}
+              onBlur={() => {
+                setIsLeverageInputFocused(false);
+                handleLeverageInputBlur();
               }}
               className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
@@ -1383,15 +1507,12 @@ const OrderLimitForm = () => {
             type="text"
             inputMode="numeric"
             placeholder="5"
-            value={leverage}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "");
-              const n = parseInt(v || "5", 10);
-              if (n >= 1 && n <= 50) {
-                setLeverage(String(n));
-              } else if (v === "") {
-                setLeverage("");
-              }
+            value={leverageInput}
+            onChange={(e) => handleLeverageInputChange(e.target.value)}
+            onFocus={() => setIsLeverageInputFocused(true)}
+            onBlur={() => {
+              setIsLeverageInputFocused(false);
+              handleLeverageInputBlur();
             }}
             className="h-6 min-w-0 flex-1 border-0 bg-transparent px-2 py-1 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
             disabled={!tradingAccountBalance}

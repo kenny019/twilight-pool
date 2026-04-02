@@ -283,8 +283,8 @@ function MobileWalletCard({
 }
 
 export default function WalletList({ state, onSelect }: WalletListProps) {
-  const categories = useMemo(() => categorizeWallets(), []);
-  const isMobile = useMemo(() => isMobileBrowser(), []);
+  const categories = categorizeWallets();
+  const isMobile = isMobileBrowser();
 
   const activeWalletId = state.view !== "idle" ? state.wallet.id : null;
   const isConnecting = isActiveView(state);

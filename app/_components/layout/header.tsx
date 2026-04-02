@@ -118,7 +118,7 @@ const Header = () => {
           </Link>
           <div className="flex items-center space-x-2">
             {/* <KycStatus /> */}
-            <RelayerStatus dotOnly />
+            <RelayerStatus />
             <ConnectWallet />
             <Settings />
             <MobileNav />

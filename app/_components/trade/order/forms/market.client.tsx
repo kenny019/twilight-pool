@@ -62,6 +62,48 @@ const COLLATERAL_REPEAT_INITIAL_DELAY_MS = 450;
 const COLLATERAL_REPEAT_INTERVAL_MS = 55;
 const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
 const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
+const MAX_COLLATERAL_INTEGER_DIGITS = 8;
+const MAX_LEVERAGE_DIGITS = 2;
+
+function sanitizeDecimalInput(
+  rawValue: string,
+  maxIntegerDigits: number,
+  maxDecimals: number
+): string {
+  const cleaned = rawValue.replace(/[^\d.]/g, "");
+
+  if (!cleaned) return "";
+
+  const startsWithDot = cleaned.startsWith(".");
+  const [integerRaw = "", ...decimalRawParts] = cleaned.split(".");
+  const integerPart = integerRaw.slice(0, maxIntegerDigits);
+  const decimalPart = decimalRawParts.join("").slice(0, maxDecimals);
+
+  if (startsWithDot) {
+    return decimalPart ? `.${decimalPart}` : ".";
+  }
+
+  if (cleaned.includes(".")) {
+    return `${integerPart}.${decimalPart}`;
+  }
+
+  return integerPart;
+}
+
+function trimTrailingZeros(value: string): string {
+  return value.replace(/(\.\d*?[1-9])0+$|\.0*$/, "$1");
+}
+
+function formatAmountInputValue(
+  value: number,
+  unit: "btc" | "usd"
+): string {
+  if (!Number.isFinite(value) || value <= 0) return "";
+
+  return unit === "btc"
+    ? trimTrailingZeros(value.toFixed(8))
+    : value.toFixed(2);
+}
 
 const OrderMarketForm = () => {
   const { width } = useGrid();
@@ -131,6 +173,10 @@ const OrderMarketForm = () => {
   const [leverage, setLeverage] = useState<string>("5");
   const [percent, setPercent] = useState<number>(0);
   const [collateralUnit, setCollateralUnit] = useState<"btc" | "usd">("btc");
+  const [amountInput, setAmountInput] = useState<string>("");
+  const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
+  const [leverageInput, setLeverageInput] = useState("5");
+  const [isLeverageInputFocused, setIsLeverageInputFocused] = useState(false);
 
   const usdAmount = useMemo(() => {
     if (!btcAmount || !currentPrice || currentPrice <= 0) return "";
@@ -139,10 +185,126 @@ const OrderMarketForm = () => {
     return Big(btc).mul(currentPrice).toFixed(2);
   }, [btcAmount, currentPrice]);
 
+  const maxCollateralBtc = useMemo(
+    () => parseFloat(tradingAccountBalanceString || "0") || 0,
+    [tradingAccountBalanceString]
+  );
+  const maxCollateralUsd = useMemo(() => {
+    if (!currentPrice || currentPrice <= 0 || maxCollateralBtc <= 0) return 0;
+    return Number(Big(maxCollateralBtc).mul(currentPrice).toFixed(2));
+  }, [currentPrice, maxCollateralBtc]);
+
   const updatePercent = useCallback((value: number) => {
     const finalValue = Math.max(0, Math.min(value, 100));
     setPercent(finalValue);
   }, []);
+
+  const updateCollateralFromInput = useCallback(
+    (rawValue: string) => {
+      const nextValue = sanitizeDecimalInput(
+        rawValue,
+        MAX_COLLATERAL_INTEGER_DIGITS,
+        collateralUnit === "btc" ? 8 : 2
+      );
+
+      if (!nextValue) {
+        setAmountInput("");
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      if (nextValue === ".") {
+        setAmountInput(nextValue);
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      let parsedValue = parseFloat(nextValue);
+      if (!Number.isFinite(parsedValue) || parsedValue < 0) return;
+
+      const maxValue =
+        collateralUnit === "btc" ? maxCollateralBtc : maxCollateralUsd;
+      if (maxValue > 0) {
+        parsedValue = Math.min(parsedValue, maxValue);
+      }
+
+      const normalizedInput =
+        parsedValue === parseFloat(nextValue)
+          ? nextValue
+          : formatAmountInputValue(parsedValue, collateralUnit);
+
+      setAmountInput(normalizedInput);
+
+      const nextBtcAmount =
+        collateralUnit === "btc"
+          ? parsedValue
+          : currentPrice > 0
+            ? Number(Big(parsedValue).div(currentPrice).toFixed(8))
+            : 0;
+
+      setBtcAmount(
+        nextBtcAmount > 0 ? trimTrailingZeros(nextBtcAmount.toFixed(8)) : ""
+      );
+
+      if (maxCollateralBtc > 0) {
+        updatePercent((nextBtcAmount / maxCollateralBtc) * 100);
+      } else {
+        setPercent(0);
+      }
+    },
+    [collateralUnit, currentPrice, maxCollateralBtc, maxCollateralUsd, updatePercent]
+  );
+
+  const normalizeAmountInput = useCallback(() => {
+    if (!amountInput || amountInput === ".") {
+      setAmountInput("");
+      setBtcAmount("");
+      setPercent(0);
+      return;
+    }
+
+    const normalizedValue =
+      collateralUnit === "btc"
+        ? formatAmountInputValue(parseFloat(btcAmount || "0"), "btc")
+        : usdAmount;
+
+    setAmountInput(normalizedValue);
+  }, [amountInput, btcAmount, collateralUnit, usdAmount]);
+
+  const handleLeverageInputChange = useCallback((rawValue: string) => {
+    const nextValue = rawValue.replace(/\D/g, "").slice(0, MAX_LEVERAGE_DIGITS);
+    setLeverageInput(nextValue);
+
+    if (!nextValue) {
+      setLeverage("");
+      return;
+    }
+
+    const parsedValue = parseInt(nextValue, 10);
+    if (!Number.isFinite(parsedValue)) return;
+
+    if (parsedValue > 50) {
+      setLeverage("50");
+      setLeverageInput("50");
+      return;
+    }
+
+    if (parsedValue >= 1) {
+      setLeverage(String(parsedValue));
+    }
+  }, []);
+
+  const handleLeverageInputBlur = useCallback(() => {
+    const parsedValue = parseInt(leverageInput || leverage || "5", 10);
+    const normalizedValue = Number.isFinite(parsedValue)
+      ? Math.max(1, Math.min(parsedValue, 50))
+      : 5;
+
+    setLeverage(String(normalizedValue));
+    setLeverageInput(String(normalizedValue));
+  }, [leverage, leverageInput]);
 
   const adjustCollateralBtc = useCallback(
     (delta: number) => {
@@ -847,15 +1009,26 @@ const OrderMarketForm = () => {
     collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
   collateralStepRef.current = step;
 
+  useEffect(() => {
+    if (!isAmountInputFocused) {
+      setAmountInput(primaryValue);
+    }
+  }, [isAmountInputFocused, primaryValue]);
+
+  useEffect(() => {
+    if (!isLeverageInputFocused) {
+      setLeverageInput(leverage || "");
+    }
+  }, [isLeverageInputFocused, leverage]);
+
   const marginStepDisabled =
     !tradingAccountBalance || (collateralUnit === "usd" && !currentPrice);
 
   const setMaxCollateral = useCallback(() => {
     if (!tradingAccountBalance) return;
-    const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-    setBtcAmount(maxBtc > 0 ? maxBtc.toFixed(8) : "");
+    setBtcAmount(maxCollateralBtc > 0 ? trimTrailingZeros(maxCollateralBtc.toFixed(8)) : "");
     setPercent(100);
-  }, [tradingAccountBalance, tradingAccountBalanceString]);
+  }, [maxCollateralBtc, tradingAccountBalance]);
 
   return (
     <form
@@ -935,34 +1108,13 @@ const OrderMarketForm = () => {
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
-                  value={primaryValue}
-                  onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, "");
-                  if (!v) {
-                    setBtcAmount("");
-                    setPercent(0);
-                    return;
-                  }
-                  const n = parseFloat(v);
-                  if (!Number.isNaN(n) && n >= 0) {
-                    if (collateralUnit === "btc") {
-                      setBtcAmount(v);
-                      if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                        updatePercent((n / maxBtc) * 100);
-                      }
-                    } else {
-                      if (currentPrice > 0) {
-                        const btc = n / currentPrice;
-                        setBtcAmount(btc.toFixed(8));
-                        if (tradingAccountBalance > 0) {
-                          const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                          updatePercent((btc / maxBtc) * 100);
-                        }
-                      }
-                    }
-                  }
-                }}
+                  value={amountInput}
+                  onChange={(e) => updateCollateralFromInput(e.target.value)}
+                  onFocus={() => setIsAmountInputFocused(true)}
+                  onBlur={() => {
+                    setIsAmountInputFocused(false);
+                    normalizeAmountInput();
+                  }}
                   className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
                   disabled={!tradingAccountBalance}
                 />
@@ -1031,37 +1183,12 @@ const OrderMarketForm = () => {
                 type="text"
                 inputMode="decimal"
                 placeholder="0"
-                value={primaryValue}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, "");
-                  if (!v) {
-                    setBtcAmount("");
-                    setPercent(0);
-                    return;
-                  }
-                  const n = parseFloat(v);
-                  if (!Number.isNaN(n) && n >= 0) {
-                    if (collateralUnit === "btc") {
-                      setBtcAmount(v);
-                      if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(
-                          tradingAccountBalanceString || "0"
-                        );
-                        updatePercent((n / maxBtc) * 100);
-                      }
-                    } else {
-                      if (currentPrice > 0) {
-                        const btc = n / currentPrice;
-                        setBtcAmount(btc.toFixed(8));
-                        if (tradingAccountBalance > 0) {
-                          const maxBtc = parseFloat(
-                            tradingAccountBalanceString || "0"
-                          );
-                          updatePercent((btc / maxBtc) * 100);
-                        }
-                      }
-                    }
-                  }
+                value={amountInput}
+                onChange={(e) => updateCollateralFromInput(e.target.value)}
+                onFocus={() => setIsAmountInputFocused(true)}
+                onBlur={() => {
+                  setIsAmountInputFocused(false);
+                  normalizeAmountInput();
                 }}
                 className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
                 disabled={!tradingAccountBalance}
@@ -1207,15 +1334,12 @@ const OrderMarketForm = () => {
               type="text"
               inputMode="numeric"
               placeholder="5"
-              value={leverage}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "");
-                const n = parseInt(v || "5", 10);
-                if (n >= 1 && n <= 50) {
-                  setLeverage(String(n));
-                } else if (v === "") {
-                  setLeverage("");
-                }
+              value={leverageInput}
+              onChange={(e) => handleLeverageInputChange(e.target.value)}
+              onFocus={() => setIsLeverageInputFocused(true)}
+              onBlur={() => {
+                setIsLeverageInputFocused(false);
+                handleLeverageInputBlur();
               }}
               className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
@@ -1237,15 +1361,12 @@ const OrderMarketForm = () => {
             type="text"
             inputMode="numeric"
             placeholder="5"
-            value={leverage}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "");
-              const n = parseInt(v || "5", 10);
-              if (n >= 1 && n <= 50) {
-                setLeverage(String(n));
-              } else if (v === "") {
-                setLeverage("");
-              }
+            value={leverageInput}
+            onChange={(e) => handleLeverageInputChange(e.target.value)}
+            onFocus={() => setIsLeverageInputFocused(true)}
+            onBlur={() => {
+              setIsLeverageInputFocused(false);
+              handleLeverageInputBlur();
             }}
             className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
             disabled={!tradingAccountBalance}
@@ -1344,11 +1465,11 @@ const OrderMarketForm = () => {
       {/* 5. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-col gap-1.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
+          <div className="flex flex-row gap-1.5 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"
-              className="w-full border-green-medium py-2 text-sm text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
+              className="min-w-0 flex-1 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
               variant="ui"
               disabled={
                 isSubmitting ||
@@ -1366,7 +1487,7 @@ const OrderMarketForm = () => {
               onClick={() => submitMarket("SELL")}
               id="btn-market-sell"
               variant="ui"
-              className="w-full border-red py-2 text-sm text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
+              className="min-w-0 flex-1 border-red py-2 text-sm text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||

@@ -531,7 +531,7 @@ const Page = () => {
   return (
     <div className="mx-4 mt-4 space-y-4 md:mx-8 md:space-y-8">
       <div className="flex flex-col space-y-4 md:grid md:grid-cols-12 md:gap-4 md:space-y-0">
-        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-4 md:p-6">
+        <div className="bg-card flex flex-col gap-6 rounded-xl border border-border/70 p-4 md:col-span-4 md:p-6">
           <div className="space-y-3">
             <Text
               heading="h2"
@@ -602,7 +602,7 @@ const Page = () => {
             </Resource>
           </div>
         </div>
-        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-3 md:p-6">
+        <div className="bg-card flex flex-col gap-6 rounded-xl border border-border/70 p-4 md:col-span-3 md:p-6">
           <div className="space-y-4">
             <Text
               heading="h2"
@@ -673,7 +673,7 @@ const Page = () => {
             </div>
           </div>
         </div>
-        <div className="bg-card flex flex-col rounded-lg border border-outline p-4 md:col-span-5 md:p-6">
+        <div className="bg-card flex flex-col rounded-xl border border-border/70 p-4 md:col-span-5 md:p-6">
           <Text
             heading="h2"
             className="text-sm font-medium text-primary-accent"
@@ -692,7 +692,7 @@ const Page = () => {
                   </span>
                 </Tooltip>
               </div>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -721,7 +721,7 @@ const Page = () => {
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Trading
               </Text>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -750,7 +750,7 @@ const Page = () => {
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Lending
               </Text>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -784,7 +784,7 @@ const Page = () => {
                   </span>
                 </Tooltip>
               </div>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -807,7 +807,7 @@ const Page = () => {
           </div>
         </div>
       </div>
-      <div className="bg-card space-y-1 rounded-lg border border-outline p-4 md:space-y-2 md:p-6">
+      <div className="bg-card space-y-1 rounded-xl border border-border/70 p-4 md:space-y-2 md:p-6">
         <div className="flex w-full flex-col gap-2 border-b border-outline pb-2 md:flex-row md:items-center md:justify-between md:pb-0">
           <Tabs defaultValue={currentTab} className="min-w-0 w-full">
             <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-none touch-pan-x">
@@ -816,7 +816,7 @@ const Page = () => {
                 variant="underline"
               >
               <TabsTrigger
-                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-summary")}
                 value="account-summary"
                 variant="underline"
@@ -825,7 +825,7 @@ const Page = () => {
                 <span className="hidden md:inline">Active Accounts</span>
               </TabsTrigger>
               <TabsTrigger
-                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("transaction-history")}
                 value="transaction-history"
                 variant="underline"
@@ -834,7 +834,7 @@ const Page = () => {
                 <span className="hidden md:inline">Transaction History</span>
               </TabsTrigger>
               <TabsTrigger
-                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-ledger")}
                 value="account-ledger"
                 variant="underline"
