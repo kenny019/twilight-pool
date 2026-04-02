@@ -48,6 +48,7 @@ import { calculateUpnl } from "@/app/_components/trade/orderbook/my-trades/colum
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { Tooltip } from "@/components/tooltip";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import { buildManualRecoveryTransferAccount } from "@/lib/utils/tradeRecovery";
 
 type TabType = "account-summary" | "transaction-history" | "account-ledger";
 
@@ -230,7 +231,8 @@ const Page = () => {
     if (!poolSharePrice) return 0;
     return activeLends.reduce((acc, lend) => {
       const shares = lend.npoolshare || 0;
-      const rewards = poolSharePrice * (shares / POOL_SHARE_DECIMALS_SCALE) - lend.value;
+      const rewards =
+        poolSharePrice * (shares / POOL_SHARE_DECIMALS_SCALE) - lend.value;
       return acc + Math.max(0, rewards);
     }, 0);
   }, [activeLends, poolSharePrice]);
@@ -283,12 +285,19 @@ const Page = () => {
         toast({ variant: "error", title: "Please connect your wallet" });
         return;
       }
-      if (!zkAccount.value) {
-        toast({ variant: "error", title: "Account has zero balance" });
-        return;
-      }
       if (!privateKey) {
         toast({ variant: "error", title: "Session key missing" });
+        return;
+      }
+
+      const trade = trades.find((item) => item.accountAddress === address);
+      const transferAccount = buildManualRecoveryTransferAccount({
+        zkAccount,
+        trade,
+      });
+
+      if (!transferAccount.value) {
+        toast({ variant: "error", title: "Account has zero balance" });
         return;
       }
 
@@ -296,7 +305,7 @@ const Page = () => {
       let cosmosAccountHex = "";
 
       try {
-        if (zkAccount.isOnChain) {
+        if (transferAccount.isOnChain) {
           const transientZkAccount = await createZkAccount({
             tag: Math.random().toString(36).substring(2, 15),
             signature: privateKey,
@@ -304,20 +313,27 @@ const Page = () => {
 
           const senderZkPrivateAccount = await ZkPrivateAccount.create({
             signature: privateKey,
-            existingAccount: zkAccount,
+            existingAccount: transferAccount,
           });
 
-          console.log("account from", zkAccount);
+          console.log("account from", transferAccount);
 
           const privateTxSingleResult =
             await senderZkPrivateAccount.privateTxSingle(
-              zkAccount.value,
+              transferAccount.value,
               transientZkAccount.address
             );
 
           console.log("privateTxSingleResult", privateTxSingleResult);
           if (!privateTxSingleResult.success) {
             console.error(privateTxSingleResult.message);
+            toast({
+              variant: "error",
+              title: "Transfer failed",
+              description:
+                privateTxSingleResult.message ||
+                "Could not complete the private transfer. Please try again later.",
+            });
             return {
               success: false,
               message: privateTxSingleResult.message,
@@ -332,7 +348,7 @@ const Page = () => {
 
           console.log("txId", txId, "updatedAddess", updatedTransientAddress);
 
-          console.log("transient zkAccount balance =", zkAccount.value);
+          console.log("transient zkAccount balance =", transferAccount.value);
 
           const {
             success,
@@ -341,17 +357,23 @@ const Page = () => {
           } = await createZkBurnTx({
             signature: privateKey,
             zkAccount: {
-              tag: zkAccount.tag,
+              tag: transferAccount.tag,
               address: updatedTransientAddress,
               scalar: updatedTransientScalar,
               isOnChain: true,
-              value: zkAccount.value,
+              value: transferAccount.value,
               type: "Coin",
             },
             initZkAccountAddress: transientZkAccount.address,
           });
 
           if (!success || !zkBurnMsg || !zkAccountHex) {
+            toast({
+              variant: "error",
+              title: "Transfer failed",
+              description:
+                "Could not create the burn transaction. Please try again later.",
+            });
             return {
               success: false,
               message: "Error creating zkBurnTx msg",
@@ -360,7 +382,7 @@ const Page = () => {
 
           console.log({
             zkAccountHex: zkAccountHex,
-            balance: zkAccount.value,
+            balance: transferAccount.value,
             signature: privateKey,
             initZkAccountAddress: transientZkAccount.address,
           });
@@ -417,7 +439,7 @@ const Page = () => {
         const stargateClient = await chainWallet.getSigningStargateClient();
 
         console.log({
-          btcValue: Long.fromNumber(zkAccount.value),
+          btcValue: Long.fromNumber(transferAccount.value),
           encryptScalar: cosmosScalar,
           mintOrBurn: false,
           qqAccount: cosmosAccountHex,
@@ -425,7 +447,7 @@ const Page = () => {
         });
 
         const mintBurnMsg = mintBurnTradingBtc({
-          btcValue: Long.fromNumber(zkAccount.value),
+          btcValue: Long.fromNumber(transferAccount.value),
           encryptScalar: cosmosScalar,
           mintOrBurn: false,
           qqAccount: cosmosAccountHex,
@@ -445,13 +467,13 @@ const Page = () => {
 
         addTransactionHistory({
           date: new Date(),
-          from: zkAccount.address,
-          fromTag: zkAccount.tag,
+          from: transferAccount.address,
+          fromTag: transferAccount.tag,
           to: twilightAddress,
           toTag: "Funding",
           tx_hash: mintBurnRes.transactionHash,
           type: "Burn",
-          value: zkAccount.value,
+          value: transferAccount.value,
           funding_sats_snapshot: twilightSats,
         });
 
@@ -461,7 +483,7 @@ const Page = () => {
           title: "Success",
           description: (
             <div className="opacity-90">
-              {`Successfully sent ${new BTC("sats", Big(zkAccount.value))
+              {`Successfully sent ${new BTC("sats", Big(transferAccount.value))
                 .convert("BTC")
                 .toString()} BTC to Funding Account. `}
               <Link
@@ -499,6 +521,7 @@ const Page = () => {
       addTransactionHistory,
       chainWallet,
       zkAccounts,
+      trades,
     ]
   );
 
