@@ -559,18 +559,67 @@ export const lightThemeStyles = {
 
 export function getThemeStyles(
   theme: string | undefined,
-  mobile = false
+  compact = false,
+  phone = false
 ): Record<string, any> {
   const base = theme === "light" ? lightThemeStyles : darkThemeStyles;
-  if (!mobile) return base;
+  if (!compact) return base;
   return {
     ...base,
     candle: {
       ...base.candle,
+      priceMark: {
+        ...base.candle.priceMark,
+        high: {
+          ...base.candle.priceMark.high,
+          show: false,
+        },
+        low: {
+          ...base.candle.priceMark.low,
+          show: false,
+        },
+        last: {
+          ...base.candle.priceMark.last,
+          text: {
+            ...base.candle.priceMark.last.text,
+            size: phone ? 10 : 11,
+            paddingLeft: phone ? 2 : 3,
+            paddingRight: phone ? 2 : 3,
+            paddingTop: 2,
+            paddingBottom: 2,
+          },
+        },
+      },
       tooltip: {
         ...base.candle.tooltip,
         showRule: "none" as const,
         legend: { template: [] },
+      },
+    },
+    indicator: {
+      ...base.indicator,
+      tooltip: {
+        ...base.indicator.tooltip,
+        showRule: "none" as const,
+      },
+    },
+    xAxis: {
+      ...base.xAxis,
+      size: phone ? 22 : 24,
+      tickText: {
+        ...base.xAxis.tickText,
+        size: phone ? 9 : 10,
+        marginStart: 1,
+        marginEnd: 1,
+      },
+    },
+    yAxis: {
+      ...base.yAxis,
+      tickText: {
+        ...base.yAxis.tickText,
+        size: phone ? 9 : 10,
+        marginStart: phone ? 1 : 2,
+        marginEnd: phone ? 1 : 2,
       },
     },
   };

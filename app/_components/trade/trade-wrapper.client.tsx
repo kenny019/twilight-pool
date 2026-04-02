@@ -46,6 +46,12 @@ const layoutSmall = [
   { i: "details", x: 0, y: 26, w: 4, h: 20, minW: 4, minH: 4 },
 ];
 
+const layoutMedium = [
+  { i: "chart", x: 0, y: 0, w: 12, h: 11, minW: 4, minH: 8 },
+  { i: "order", x: 0, y: 11, w: 12, h: 15, minW: 4, minH: 12 },
+  { i: "details", x: 0, y: 26, w: 12, h: 20, minW: 4, minH: 4 },
+];
+
 const TRADES_PANEL_STORAGE_KEY = "twilight-trades-panel-visible";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -53,10 +59,11 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 function calculateGridDimensions(
   gridWidth: number,
   gridHeight: number,
-  windowWidth: number
+  availableWidth: number,
+  totalCols: number
 ) {
   return {
-    width: gridWidth * Math.floor(windowWidth / 12) - GRID_WIDTH_OFFSET,
+    width: gridWidth * Math.floor(availableWidth / totalCols) - GRID_WIDTH_OFFSET,
     height: gridHeight * GRID_ROW_HEIGHT + GRID_HEIGHT_OFFSET,
   };
 }
@@ -101,7 +108,10 @@ const TradeWrapper = () => {
     showOrderbook && isTradesPanelVisible
       ? makeDesktopLayoutWithTrades(detailsH)
       : makeDesktopLayoutWithoutTrades(detailsH);
-  const activeGridLayout = showOrderbook ? activeDesktopLayout : layoutSmall;
+  const activeCompactLayout = windowWidth >= 768 ? layoutMedium : layoutSmall;
+  const activeGridLayout = showOrderbook ? activeDesktopLayout : activeCompactLayout;
+  const activeGridCols = showOrderbook ? 12 : windowWidth >= 768 ? 12 : 4;
+  const availableGridWidth = gridContainerRef.current?.clientWidth || windowWidth;
 
   const setPrice = useSessionStore((state) => state.price.setPrice);
   const { data: candleData } = useCandleData(CandleInterval.ONE_MINUTE);
@@ -121,7 +131,8 @@ const TradeWrapper = () => {
     const calculatedDimensions = calculateGridDimensions(
       layoutVal.w,
       layoutVal.h,
-      1366
+      availableGridWidth,
+      activeGridCols
     );
     const override = dimensionOverrides[layoutVal.i];
 
@@ -157,7 +168,13 @@ const TradeWrapper = () => {
   return (
     <div ref={gridContainerRef} className="pb-20 lg:pb-[140px]">
       <ResponsiveGridLayout
-        layouts={{ lg: activeDesktopLayout, sm: layoutSmall }}
+        layouts={{
+          lg: activeDesktopLayout,
+          md: layoutMedium,
+          sm: layoutSmall,
+          xs: layoutSmall,
+          xxs: layoutSmall,
+        }}
         cols={{ lg: 12, md: 12, sm: 4, xs: 4, xxs: 4 }}
         rowHeight={GRID_ROW_HEIGHT}
         draggableHandle=".draggable"
@@ -172,7 +189,8 @@ const TradeWrapper = () => {
           const gridDimensions = calculateGridDimensions(
             newItem.w,
             newItem.h,
-            1366
+            availableGridWidth,
+            activeGridCols
           );
 
           setDimensionOverrides((prev) => ({

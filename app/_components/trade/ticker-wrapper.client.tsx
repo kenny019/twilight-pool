@@ -3,7 +3,7 @@ import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Separator } from "@/components/seperator";
 import TickerItem from "./ticker/ticker-item.client";
-import { ChevronDown, Zap } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { usePriceFeed } from "@/lib/providers/feed";
 import cn from "@/lib/cn";
 import { formatCurrency } from "@/lib/twilight/ticker";
@@ -102,7 +102,7 @@ const TickerWrapper = () => {
             isLoaded={finalPrice !== 0 && hasInit}
             placeholder={<Skeleton className="h-5 w-[80px]" />}
           >
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-semibold tabular-nums">
               {currentPrice
                 ? formatCurrency(currentPrice)
                 : formatCurrency(btcPrice)}
@@ -142,85 +142,110 @@ const TickerWrapper = () => {
       </div>
 
       {/* Row 2: funding rate + countdown, open interest */}
-      <div className="mt-1 flex items-center justify-between text-xs text-primary-accent">
-        <Resource
-          isLoaded={hasInit && fundingRate !== "00:00:00"}
-          placeholder={<Skeleton className="h-3 w-[120px]" />}
-        >
-          <div className="flex items-center gap-1">
-            <Zap className="h-3 w-3" />
-            <span>FR:</span>
-            <span
-              className={cn(
-                parseFloat(fundingRate) === 0
-                  ? "text-primary"
-                  : parseFloat(fundingRate) > 0
-                    ? "text-green-medium"
-                    : "text-red"
-              )}
-            >
-              {fundingRate}%
+      <div className="mt-1 flex items-center justify-between gap-3 text-xs md:grid md:grid-cols-2 md:gap-x-6">
+        <div className="min-w-0">
+          <Resource
+            isLoaded={hasInit && fundingRate !== "00:00:00"}
+            placeholder={<Skeleton className="h-3 w-[120px]" />}
+          >
+            <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+              <span
+                className={cn(
+                  "font-semibold tabular-nums",
+                  parseFloat(fundingRate) === 0
+                    ? "text-primary"
+                    : parseFloat(fundingRate) > 0
+                      ? "text-green-medium"
+                      : "text-red"
+                )}
+              >
+                {fundingRate}%
+              </span>
+              <span className="text-primary-accent/55">·</span>
+              <span className="font-normal tabular-nums text-primary-accent/60">
+                {countdownString}
+              </span>
+            </div>
+          </Resource>
+        </div>
+        <div className="min-w-0 md:justify-self-start">
+          <Resource
+            isLoaded={finalPrice !== 0 && hasInit}
+            placeholder={<Skeleton className="h-3 w-[80px]" />}
+          >
+            <span className="whitespace-nowrap text-primary-accent">
+              OI{" "}
+              <span className="tabular-nums text-primary">
+                {formatCurrency(openInterest, "short")}
+              </span>
             </span>
-            <span className="text-primary-accent/70">·</span>
-            <span className="text-primary-accent/75">{countdownString}</span>
-          </div>
-        </Resource>
-        <Resource
-          isLoaded={finalPrice !== 0 && hasInit}
-          placeholder={<Skeleton className="h-3 w-[80px]" />}
-        >
-          <span>OI: {formatCurrency(openInterest, "short")}</span>
-        </Resource>
+          </Resource>
+        </div>
       </div>
 
       {/* Collapsible rows */}
       {isExpanded && (
-        <div className="mt-2 space-y-1.5 border-t pt-2 text-xs">
-          {/* Row 3: 24H High / Low */}
-          <div className="flex justify-between">
+        <div className="mt-2 space-y-1.5 border-t border-outline/70 pt-2 text-xs md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-3 md:space-y-0">
+          <div className="flex items-center justify-between gap-3">
             <Resource
               isLoaded={finalPrice !== 0 && hasInit}
               placeholder={<Skeleton className="h-3 w-[100px]" />}
             >
-              <span className="text-primary-accent">24H High: <span className="text-primary">{formatCurrency(high)}</span></span>
-            </Resource>
-            <Resource
-              isLoaded={finalPrice !== 0 && hasInit}
-              placeholder={<Skeleton className="h-3 w-[100px]" />}
-            >
-              <span className="text-primary-accent">24H Low: <span className="text-primary">{formatCurrency(low)}</span></span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-primary-accent">24H High</span>
+                <span className="tabular-nums text-primary">{formatCurrency(high)}</span>
+              </div>
             </Resource>
           </div>
-
-          {/* Row 4: Turnover / Skew */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <Resource
               isLoaded={finalPrice !== 0 && hasInit}
               placeholder={<Skeleton className="h-3 w-[100px]" />}
             >
-              <span className="text-primary-accent">Turnover: <span className="text-primary">{formatCurrency(turnover)}</span></span>
-            </Resource>
-            <Resource
-              isLoaded={hasInit}
-              placeholder={<Skeleton className="h-3 w-[100px]" />}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="text-primary-accent">OI Skew:</span>
-                <div className="flex h-1.5 w-[60px] overflow-hidden rounded-sm">
-                  <div className="bg-green-medium" style={{ width: `${longPercent}%` }} />
-                  <div className="bg-red" style={{ width: `${shortPercent}%` }} />
-                </div>
-                <span>
-                  <span className="text-green-medium">{longPercent.toFixed(0)}%L</span>
-                  <span className="text-primary-accent">/</span>
-                  <span className="text-red">{shortPercent.toFixed(0)}%S</span>
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-primary-accent">24H Low</span>
+                <span className="tabular-nums text-primary">{formatCurrency(low)}</span>
               </div>
             </Resource>
           </div>
 
-          {/* Row 5: Max Long / Short */}
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between gap-3">
+            <Resource
+              isLoaded={finalPrice !== 0 && hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-primary-accent">Turnover</span>
+                <span className="tabular-nums text-primary">{formattedTurnover}</span>
+              </div>
+            </Resource>
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <Resource
+              isLoaded={hasInit}
+              placeholder={<Skeleton className="h-3 w-[100px]" />}
+            >
+              <div className="flex w-full flex-col gap-1 md:grid md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-3">
+                <span className="shrink-0 text-primary-accent md:pt-0.5">OI Skew</span>
+                  <div className="flex min-w-0 flex-col items-start gap-0.5 md:w-full md:max-w-[176px] md:flex-row md:items-center md:justify-between md:justify-self-start md:gap-2">
+                  <div className="relative flex h-[5px] w-[92px] overflow-hidden rounded-[1px] md:w-[88px]">
+                    <div className="bg-green-medium" style={{ width: `${longPercent}%` }} />
+                    <div className="bg-red" style={{ width: `${shortPercent}%` }} />
+                    <div className="pointer-events-none absolute inset-y-[-1px] left-1/2 w-px -translate-x-1/2 bg-background/90" />
+                  </div>
+                  <div className="flex items-baseline gap-1 tabular-nums">
+                    <span className="text-green-medium">{longPercent.toFixed(0)}%</span>
+                    <span className="text-primary-accent/75">L</span>
+                    <span className="text-primary-accent/50">·</span>
+                    <span className="text-red">{shortPercent.toFixed(0)}%</span>
+                    <span className="text-primary-accent/75">S</span>
+                  </div>
+                </div>
+              </div>
+            </Resource>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 md:col-span-2 md:border-t md:border-outline/40 md:pt-2">
             <Resource
               isLoaded={!!marketStats.data}
               placeholder={<Skeleton className="h-3 w-[160px]" />}
@@ -236,13 +261,17 @@ const TickerWrapper = () => {
                 const denom = useMBTC ? "mBTC" : "BTC";
                 const divisor = useMBTC ? 1e5 : 1e8;
                 return (
-                  <span className="text-primary-accent">
-                    Max Order Size:{" "}
-                    <span className="text-green-medium">L {(longSats / divisor).toFixed(2)}</span>
-                    <span className="text-primary-accent/70"> · </span>
-                    <span className="text-red">S {(shortSats / divisor).toFixed(2)}</span>
-                    <span className="text-primary-accent"> {denom}</span>
-                  </span>
+                  <div className="flex w-full flex-col gap-0.5 md:grid md:grid-cols-2 md:items-center md:gap-x-6">
+                    <span className="text-primary-accent">Max Order Size</span>
+                    <span className="inline-flex items-baseline gap-0.5 tabular-nums text-primary md:justify-self-start">
+                      <span className="text-green-medium">{(longSats / divisor).toFixed(2)}</span>
+                      <span className="text-primary-accent/75">L</span>
+                      <span className="text-primary-accent/50">·</span>
+                      <span className="text-red">{(shortSats / divisor).toFixed(2)}</span>
+                      <span className="text-primary-accent/75">S</span>
+                      <span className="text-primary-accent">{` ${denom}`}</span>
+                    </span>
+                  </div>
                 );
               })()}
             </Resource>
@@ -252,19 +281,19 @@ const TickerWrapper = () => {
     </div>
 
     {/* Desktop ticker */}
-    <div className="hidden items-stretch px-3 py-3 xl:px-4 lg:flex">
+    <div className="hidden items-stretch px-2.5 py-2.5 xl:px-4 xl:py-3 lg:flex">
       {/* bitcoin ticker */}
       <div className="flex shrink-0 items-center">
-        <div className="flex min-w-0 items-center gap-2 pr-3 xl:pr-4">
+        <div className="flex min-w-0 items-center gap-1.5 pr-2.5 xl:gap-2 xl:pr-4">
           <Image
-            width={26}
-            height={26}
+            width={24}
+            height={24}
             className="opacity-80"
             src={"/images/btc-icon.png"}
             alt={"bitcoin-icon"}
           />
-          <div className="min-w-0 max-w-[88px] xl:max-w-[116px]">
-            <p className="truncate text-[16px] font-semibold leading-tight text-primary/96">
+          <div className="min-w-0 max-w-[74px] xl:max-w-[116px]">
+            <p className="truncate text-[15px] font-semibold leading-tight text-primary/96 xl:text-[16px]">
               Bitcoin
             </p>
             <p className="mt-1 text-[11px] font-medium leading-none text-primary/50">
@@ -273,16 +302,16 @@ const TickerWrapper = () => {
           </div>
         </div>
         <Separator
-          className="h-[85%] self-center bg-outline opacity-70"
+          className="h-[82%] self-center bg-outline opacity-70 xl:h-[85%]"
           orientation="vertical"
         />
       </div>
       <div className="flex shrink-0 items-center">
         {!hasInit ? (
-          <Skeleton className="mx-3 h-[34px] w-[212px] xl:w-[228px]" />
+          <Skeleton className="mx-2.5 h-[30px] w-[176px] xl:mx-3 xl:h-[34px] xl:w-[228px]" />
         ) : (
-          <div className="w-[212px] px-3 xl:w-[228px] xl:px-4">
-            <div className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.06em] text-primary/44">
+          <div className="w-[176px] px-2.5 xl:w-[228px] xl:px-4">
+            <div className="mb-1 flex items-center gap-1 text-[9px] font-medium uppercase tracking-[0.04em] text-primary/44 xl:text-[10px] xl:tracking-[0.06em]">
               <span className="relative inline-flex h-[5px] w-[5px] shrink-0">
                 <span className="absolute inset-0 rounded-full bg-green-medium/25 animate-pulse" />
                 <span className="relative h-[5px] w-[5px] rounded-full bg-green-medium/65" />
@@ -293,7 +322,7 @@ const TickerWrapper = () => {
               className={cn(
                 priceDelta > 0 ? "text-green-medium" : "text-red",
                 priceDelta === 0 && "text-primary",
-                "whitespace-nowrap text-left text-[2rem] font-semibold leading-none tracking-tight tabular-nums transition-colors xl:text-[2.125rem]"
+                "whitespace-nowrap text-left text-[1.625rem] font-semibold leading-none tracking-tight tabular-nums transition-colors xl:text-[2.125rem]"
               )}
             >
               {currentPrice
@@ -304,7 +333,7 @@ const TickerWrapper = () => {
         )}
 
         <Separator
-          className="h-[85%] self-center bg-outline opacity-70"
+          className="h-[82%] self-center bg-outline opacity-70 xl:h-[85%]"
           orientation="vertical"
         />
       </div>
@@ -332,7 +361,7 @@ const TickerWrapper = () => {
       </TickerItem>
 
       <TickerItem
-        className="min-w-[86px]"
+        className="min-w-[74px] xl:min-w-[86px]"
         itemClassName="min-w-0"
         title="24H High"
       >
@@ -344,7 +373,7 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
       <TickerItem
-        className="min-w-[86px]"
+        className="min-w-[74px] xl:min-w-[86px]"
         itemClassName="min-w-0"
         title="24H Low"
       >
@@ -356,7 +385,7 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
       <TickerItem
-        className="min-w-[68px]"
+        className="min-w-[58px] xl:min-w-[68px]"
         itemClassName="min-w-0"
         title="24H Turnover"
       >
@@ -370,7 +399,7 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
       <TickerItem
-        className="min-w-[11ch]"
+        className="min-w-[9ch] xl:min-w-[11ch]"
         itemClassName="min-w-0"
         title="Open Interest"
       >
@@ -379,7 +408,7 @@ const TickerWrapper = () => {
           placeholder={<Skeleton className="h-6 w-full" />}
         >
           <span
-            className="inline-grid w-[11ch] cursor-pointer justify-items-start rounded px-1 tabular-nums transition-colors hover:bg-primary/5 hover:text-primary"
+            className="inline-grid w-[9ch] cursor-pointer justify-items-start rounded px-1 tabular-nums transition-colors hover:bg-primary/5 hover:text-primary xl:w-[11ch]"
             onClick={() => setOiShowBtc((prev) => !prev)}
             title={oiShowBtc ? "Show open interest in USD" : "Show open interest in BTC"}
           >
@@ -408,10 +437,10 @@ const TickerWrapper = () => {
       >
         <Resource
           isLoaded={hasInit}
-          placeholder={<Skeleton className="h-6 w-[96px] xl:w-[108px]" />}
+          placeholder={<Skeleton className="h-6 w-[84px] xl:w-[108px]" />}
         >
-          <div className="flex min-w-[104px] flex-col gap-0.5 xl:min-w-[116px]">
-            <div className="relative flex h-[5px] w-[104px] overflow-hidden rounded-[1px] xl:w-[116px]">
+          <div className="flex min-w-[84px] flex-col gap-0.5 xl:min-w-[116px]">
+            <div className="relative flex h-[5px] w-[84px] overflow-hidden rounded-[1px] xl:w-[116px]">
               <div
                 className="bg-green-medium"
                 style={{ width: `${longPercent}%` }}
@@ -419,7 +448,7 @@ const TickerWrapper = () => {
               <div className="bg-red" style={{ width: `${shortPercent}%` }} />
               <div className="pointer-events-none absolute inset-y-[-1px] left-1/2 w-px -translate-x-1/2 bg-background/90" />
             </div>
-            <div className="flex justify-between text-[10px] leading-none tabular-nums">
+            <div className="flex justify-between text-[9px] leading-none tabular-nums xl:text-[10px]">
               <span className="flex items-baseline gap-0.5">
                 <span className="text-green-medium/90">{longPercent.toFixed(0)}%</span>
                 <span className="text-primary/45">L</span>
@@ -433,7 +462,7 @@ const TickerWrapper = () => {
         </Resource>
       </TickerItem>
       <TickerItem
-        className="min-w-[132px]"
+        className="min-w-[118px] xl:min-w-[132px]"
         itemClassName="min-w-0 pl-1"
         title="Max Order Size"
       >
@@ -475,11 +504,11 @@ const TickerWrapper = () => {
           isLoaded={hasInit && fundingRate !== "00:00:00"}
           placeholder={<Skeleton className="h-6 w-full" />}
         >
-          <div className="inline-flex min-w-[172px] items-center gap-1 whitespace-nowrap">
+          <div className="inline-flex min-w-[132px] items-center gap-1 whitespace-nowrap xl:min-w-[172px]">
             {fundingRate ? (
               <span
                 className={cn(
-                  "text-[15px] font-semibold leading-none tabular-nums",
+                  "text-[14px] font-semibold leading-none tabular-nums xl:text-[15px]",
                   parseFloat(fundingRate) === 0
                     ? "text-primary"
                     : parseFloat(fundingRate) > 0
@@ -490,13 +519,13 @@ const TickerWrapper = () => {
                 {`${fundingRate}`}%
               </span>
             ) : (
-              <span className="text-[15px] font-semibold leading-none tabular-nums text-primary/70">
+              <span className="text-[14px] font-semibold leading-none tabular-nums text-primary/70 xl:text-[15px]">
                 {fundingRate}%
               </span>
             )}
 
             <span className="text-primary/14">·</span>
-            <span className="text-[12px] font-normal leading-none tabular-nums text-primary/60">
+            <span className="text-[11px] font-normal leading-none tabular-nums text-primary/60 xl:text-[12px]">
               {countdownString}
             </span>
           </div>

@@ -16,11 +16,14 @@ import {
 } from "@/lib/chart/transforms";
 import cn from "@/lib/cn";
 import dayjs, { type ManipulateType } from "dayjs";
+import useWindow from "@/lib/hooks/useWindow";
 
 // klinecharts ships ESM named exports but Next.js 13 may resolve to CJS default
 const { init, dispose } = (klinecharts as any) ?? klinecharts;
 
 type IntervalOption = { name: string; id: CandleInterval };
+
+const DEFAULT_TIME_INTERVAL = CandleInterval.FIFTEEN_MINUTE;
 
 const TIME_INTERVALS: IntervalOption[] = [
   { id: CandleInterval.ONE_MINUTE, name: "1m" },
@@ -47,6 +50,24 @@ const MOBILE_VISIBLE_INTERVALS = TIME_INTERVALS.filter((i) =>
 const MOBILE_OVERFLOW_INTERVALS = TIME_INTERVALS.filter(
   (i) => !MOBILE_VISIBLE.has(i.id)
 );
+
+const COMPACT_VISIBLE: Set<CandleInterval> = new Set([
+  CandleInterval.ONE_MINUTE,
+  CandleInterval.FIVE_MINUTE,
+  CandleInterval.FIFTEEN_MINUTE,
+  CandleInterval.ONE_HOUR,
+  CandleInterval.FOUR_HOUR,
+  CandleInterval.ONE_DAY,
+]);
+
+const COMPACT_VISIBLE_INTERVALS = TIME_INTERVALS.filter((i) =>
+  COMPACT_VISIBLE.has(i.id)
+);
+const COMPACT_OVERFLOW_INTERVALS = TIME_INTERVALS.filter(
+  (i) => !COMPACT_VISIBLE.has(i.id)
+);
+
+const COMPACT_CHART_THRESHOLD = 996;
 
 const INTERVAL_OFFSETS: Record<
   string,
@@ -79,12 +100,16 @@ const KLineChart = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const { width, height } = useGrid();
+  const { width: windowWidth } = useWindow();
   const { theme } = useTheme();
   const { addPrice } = usePriceFeed();
   const addPriceRef = useRef(addPrice);
   const [timeInterval, setTimeInterval] = useState<CandleInterval>(
-    CandleInterval.FIFTEEN_MINUTE
+    DEFAULT_TIME_INTERVAL
   );
+  const isCompactChart = windowWidth > 0 && windowWidth < COMPACT_CHART_THRESHOLD;
+  const isPhoneChart = windowWidth > 0 && windowWidth < 768;
+  const compactToolbarHeightClass = isCompactChart ? "h-[36px]" : "h-[40px]";
 
   // Keep addPrice ref in sync to avoid stale closure in subscribeBar
   useEffect(() => {
@@ -94,15 +119,13 @@ const KLineChart = () => {
   // Init chart
   useEffect(() => {
     if (!containerRef.current) return;
-
-    const isMobile = window.innerWidth < 768;
     const chart = init(containerRef.current, {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      styles: getThemeStyles(theme, isMobile),
+      styles: getThemeStyles(theme, isCompactChart, isPhoneChart),
       formatter: {
         formatDate: ({ timestamp }: { timestamp: number }) => {
           const d = dayjs(timestamp);
-          return d.format("YYYY-MM-DD HH:mm");
+          return d.format(isPhoneChart ? "MM-DD HH:mm" : "YYYY-MM-DD HH:mm");
         },
       },
     });
@@ -239,16 +262,18 @@ const KLineChart = () => {
       pricePrecision: 2,
       volumePrecision: 4,
     });
-    chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[timeInterval]);
+    chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[DEFAULT_TIME_INTERVAL]);
 
-    // Render Y-axis labels inside the chart area so candles use the full width.
-    // On mobile, also disable Y-axis scroll/zoom and clamp range to ±10% of
-    // visible data to prevent swipe gestures pulling the axis to volume values.
+    // Keep a dedicated right-side price scale on wider widths so the Y-axis
+    // remains legible. On phones, move labels inside the plot to preserve
+    // candle area. In compact widths, also disable Y-axis scroll/zoom and clamp
+    // range to ±10% of visible data to prevent swipe gestures pulling the axis
+    // to volume values.
     chart.setPaneOptions({
       id: "candle_pane",
       axis: {
-        inside: true,
-        ...(isMobile && {
+        inside: isPhoneChart,
+        ...(isCompactChart && {
           scrollZoomEnabled: false,
           createRange: ({ chart: c, defaultRange }: AxisCreateRangeParams) => {
             const dataList = c.getDataList();
@@ -293,10 +318,15 @@ const KLineChart = () => {
 
     // Volume sub-pane — inside axis + disable Y-axis drag on mobile
     chart.createIndicator("VOL", false, {
-      height: 80,
+      height: isPhoneChart ? 40 : isCompactChart ? 52 : 80,
       axis: {
-        inside: true,
-        ...(isMobile && { scrollZoomEnabled: false }),
+        inside: isPhoneChart,
+        ...(isCompactChart && { scrollZoomEnabled: false }),
+        ...(isPhoneChart && {
+          axisLine: { show: false },
+          tickLine: { show: false },
+          tickText: { show: false },
+        }),
       },
     });
     chart.overrideIndicator({
@@ -310,9 +340,7 @@ const KLineChart = () => {
       if (container) dispose(container);
       chartRef.current = null;
     };
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isCompactChart, isPhoneChart, theme]);
 
   // Resize chart when container dimensions change
   useEffect(() => {
@@ -322,9 +350,8 @@ const KLineChart = () => {
   // Theme changes
   useEffect(() => {
     if (!chartRef.current) return;
-    const isMobile = window.innerWidth < 768;
-    chartRef.current.setStyles(getThemeStyles(theme, isMobile));
-  }, [theme]);
+    chartRef.current.setStyles(getThemeStyles(theme, isCompactChart, isPhoneChart));
+  }, [isCompactChart, isPhoneChart, theme]);
 
   const handleIntervalChange = useCallback(
     (item: (typeof TIME_INTERVALS)[number]) => {
@@ -335,7 +362,14 @@ const KLineChart = () => {
     [timeInterval]
   );
 
-  const overflowItem = MOBILE_OVERFLOW_INTERVALS.find(
+  const overflowIntervals = isPhoneChart
+    ? MOBILE_OVERFLOW_INTERVALS
+    : COMPACT_OVERFLOW_INTERVALS;
+  const visibleIntervals = isPhoneChart
+    ? MOBILE_VISIBLE_INTERVALS
+    : COMPACT_VISIBLE_INTERVALS;
+
+  const overflowItem = overflowIntervals.find(
     (i) => i.id === timeInterval
   );
   const overflowActive = !!overflowItem;
@@ -344,6 +378,7 @@ const KLineChart = () => {
   return (
     <div className="flex h-full w-full touch-none flex-col overflow-hidden">
       {/* Desktop: show all intervals inline */}
+      {!isCompactChart && (
       <div className="hidden h-[40px] w-full shrink-0 border-b bg-background/40 md:flex">
         {TIME_INTERVALS.map((item) => (
           <button
@@ -358,13 +393,16 @@ const KLineChart = () => {
           </button>
         ))}
       </div>
+      )}
 
-      {/* Mobile: show subset + dropdown for the rest */}
-      <div className="flex h-[40px] w-full shrink-0 border-b bg-background/40 md:hidden">
-        {MOBILE_VISIBLE_INTERVALS.map((item) => (
+      {/* Compact: show smaller visible set + overflow */}
+      {isCompactChart && (
+      <div className={cn("flex w-full shrink-0 border-b bg-background/40", compactToolbarHeightClass)}>
+        {visibleIntervals.map((item) => (
           <button
             className={cn(
-              "border-r px-3 text-sm text-primary/80 hover:text-theme",
+              "border-r text-sm text-primary/80 hover:text-theme",
+              isPhoneChart ? "px-3" : "px-3.5",
               timeInterval === item.id && "text-theme"
             )}
             key={item.name}
@@ -390,7 +428,7 @@ const KLineChart = () => {
                 {overflowLabel}
               </option>
             )}
-            {MOBILE_OVERFLOW_INTERVALS.map((item) => (
+            {overflowIntervals.map((item) => (
               <option key={item.name} value={item.id}>
                 {item.name}
               </option>
@@ -401,6 +439,7 @@ const KLineChart = () => {
           </span>
         </div>
       </div>
+      )}
       <div
         ref={containerRef}
         className="relative min-h-0 w-full flex-1 touch-none"
