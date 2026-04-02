@@ -2,7 +2,7 @@
 
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatSatsCompact, truncateHash } from "@/lib/helpers";
+import { formatMarginPair, formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { usdNumberFormatter } from "@/lib/utils/format";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -103,24 +103,19 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                   ? "bg-green-medium/70"
                   : outcomeTone === "negative"
                     ? "bg-red/70"
-                    : "bg-theme/60";
+                    : "bg-border/70";
 
               const statusDot =
                 outcomeTone === "positive"
                   ? "bg-green-medium"
                   : outcomeTone === "negative"
                     ? "bg-red"
-                    : "bg-theme";
+                    : "bg-border/80";
 
               // Side is identity, not direction-colored
-              const sideClass = "bg-primary/10 text-primary/70";
+              const sideClass = "border border-border/50 bg-background/60 text-primary/65";
 
-              const statusClass =
-                outcomeTone === "positive"
-                  ? "bg-green-medium/10 text-green-medium/80"
-                  : outcomeTone === "negative"
-                    ? "bg-red/10 text-red/80"
-                    : "bg-gray-500/10 text-gray-400";
+              const statusClass = "border border-border/40 bg-background/50 text-primary/50";
 
               // Zone 2: price story
               const entryLabel = `$${usdNumberFormatter.format(trade.entryPrice)}`;
@@ -135,7 +130,10 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
               const levLabel = `${trade.leverage.toFixed(1)}x`;
               const feeLabel =
                 isClosed || trade.orderStatus === "FILLED" ? formatSatsCompact(feeRaw) : "—";
-              const availLabel = formatSatsCompact(trade.availableMargin);
+              const [availLabel, maintLabel] = formatMarginPair(
+                trade.availableMargin,
+                trade.maintenanceMargin
+              );
 
               // Expanded secondary details
               const liqLabel = trade.liquidationPrice
@@ -149,7 +147,7 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
               return (
                 <div
                   key={cardId}
-                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-theme/35 hover:shadow-md"
+                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-border hover:shadow-md"
                 >
                   {/* Left accent bar */}
                   <div className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)} />
@@ -188,11 +186,11 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       {hasPnl ? (
                         <PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="hero" />
                       ) : (
-                        <div className="rounded-lg border-l-2 border-primary/20 bg-primary/[0.02] px-3 py-2.5">
+                        <div className="rounded-lg border-l-2 border-border/60 bg-background/40 px-3 py-2.5">
                           <span className="block text-lg font-semibold leading-tight tabular-nums text-primary">
                             {notionalLabel}
                           </span>
-                          <span className="mt-0.5 block text-sm tabular-nums opacity-70 text-primary">Notional</span>
+                          <span className="mt-0.5 block text-sm tabular-nums text-primary/60">Notional</span>
                         </div>
                       )}
                     </div>
@@ -200,26 +198,26 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                     {/* ── Trade context: entry/close, notional, lev ── */}
                     <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                        <span className="text-gray-500">Entry</span>
+                        <span className="text-primary/40">Entry</span>
                         <span className="font-medium text-primary/80">{entryLabel}</span>
                       </span>
                       {closeLabel && (
                         <>
                           <span className="text-primary/30">→</span>
                           <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                            <span className="text-gray-500">Close</span>
+                            <span className="text-primary/40">Close</span>
                             <span className="font-medium text-primary/80">{closeLabel}</span>
                           </span>
                         </>
                       )}
                       <span className="text-primary/25">•</span>
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                        <span className="text-gray-500">Notional</span>
+                        <span className="text-primary/40">Notional</span>
                         <span className="font-medium text-primary/80">{notionalLabel}</span>
                       </span>
                       <span className="text-primary/25">•</span>
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                        <span className="text-gray-500">Lev</span>
+                        <span className="text-primary/40">Lev</span>
                         <span className="font-medium text-primary/80">{levLabel}</span>
                       </span>
                     </div>
@@ -229,7 +227,7 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       <button
                         type="button"
                         onClick={() => toggleExpand(cardId)}
-                        className="flex w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-gray-500 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[44px] md:py-0.5"
+                        className="flex w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[44px] md:py-0.5"
                       >
                         <span>Details</span>
                         {isExpanded ? (
@@ -242,23 +240,27 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       {isExpanded && (
                         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Fee</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Fee</span>
                             <span className="font-medium">{feeLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Avail</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Avail</span>
                             <span className="font-medium">{availLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Liq</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Maint.</span>
+                            <span className="font-medium">{maintLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Liq</span>
                             <span className="font-medium">{liqLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Pos. Value</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Pos. Value</span>
                             <span className="font-medium">{posValueLabel}</span>
                           </div>
                           <div className="col-span-2 flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Order ID</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Order ID</span>
                             <button
                               type="button"
                               className="min-w-0 truncate font-medium transition-colors duration-150 hover:text-primary hover:underline"
@@ -271,28 +273,37 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                             </button>
                           </div>
                           <div className="col-span-2 flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">Funding</span>
-                            <span
-                              className={cn(
-                                "font-medium",
-                                funding > 0
-                                  ? "text-green-medium"
-                                  : funding < 0
-                                    ? "text-red"
-                                    : ""
-                              )}
-                            >
-                              {formatSatsCompact(funding)}
-                            </span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Funding</span>
+                            <span className="font-medium">{formatSatsCompact(funding)}</span>
                             {isClosed && (
                               <button
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); openFundingDialog(trade); }}
-                                className="ml-1 shrink-0 rounded p-1 text-primary-accent/40 transition-all duration-150 hover:scale-105 hover:bg-theme/20 hover:text-primary-accent"
+                                className="ml-1 shrink-0 rounded p-1 text-primary/35 transition-all duration-150 hover:scale-105 hover:bg-primary/5 hover:text-primary/65"
                                 aria-label="View funding history"
                               >
                                 <Info className="h-3 w-3" />
                               </button>
+                            )}
+                          </div>
+                          <div className="col-span-2 flex items-start gap-2">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Tx Hash</span>
+                            {trade.tx_hash ? (
+                              <button
+                                type="button"
+                                className="min-w-0 break-all text-left font-medium transition-colors duration-150 hover:text-primary hover:underline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(trade.tx_hash);
+                                  toast({
+                                    title: "Copied to clipboard",
+                                    description: `Tx hash ${truncateHash(trade.tx_hash, 6, 6)} copied`,
+                                  });
+                                }}
+                              >
+                                {trade.tx_hash}
+                              </button>
+                            ) : (
+                              <span className="font-medium text-primary/45">—</span>
                             )}
                           </div>
                         </div>

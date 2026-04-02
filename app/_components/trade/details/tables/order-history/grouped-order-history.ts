@@ -121,8 +121,14 @@ function getOrderHistoryParentTypeRow(rowsAsc: TradeOrder[]): TradeOrder {
   );
 }
 
+const ORDER_HISTORY_PNL_STATUSES = new Set(["FILLED", "SETTLED", "LIQUIDATE"]);
+
 export function getOrderHistoryPnl(trade?: TradeOrder): number | null {
   if (!trade) return null;
+
+  if (!ORDER_HISTORY_PNL_STATUSES.has(trade.orderStatus)) {
+    return null;
+  }
 
   if (trade.orderStatus === "LIQUIDATE") {
     return -trade.initialMargin;
@@ -194,6 +200,52 @@ export function getOrderHistoryPriceChange(trade: TradeOrder): {
     before: trade.old_price ?? null,
     after: trade.new_price ?? null,
   };
+}
+
+// Maps known eventStatus values to user-friendly timeline labels.
+// Only covers values confirmed in useSyncTrades.tsx derivePriceKind and lifecycle constants.
+const TIMELINE_EVENT_LABELS: Record<string, string> = {
+  PENDING: "Order Created",
+  FILLED: "Filled",
+  SETTLED: "Settled",
+  CANCELLED: "Cancelled",
+  LIQUIDATE: "Liquidated",
+  LimitPriceAdded: "Limit Price Added",
+  LimitPriceUpdated: "Limit Price Updated",
+  CancelledLimitClose: "Limit Close Cancelled",
+  StopLossAdded: "Stop Loss Added",
+  StopLossUpdated: "Stop Loss Updated",
+  CancelledStopLoss: "Stop Loss Cancelled",
+  TakeProfitAdded: "Take Profit Added",
+  TakeProfitUpdated: "Take Profit Updated",
+  CancelledTakeProfit: "Take Profit Cancelled",
+  RejectedByRiskEngine: "Rejected (Risk Engine)",
+  RejectedByExchange: "Rejected (Exchange)",
+  RejectedByRelayer: "Rejected (Relayer)",
+  Error: "Error",
+};
+
+export function getTimelineEventTitle(trade: TradeOrder): string {
+  const rawEvent = getOrderHistoryPrimaryEventValue(trade);
+  const priceChange = getOrderHistoryPriceChange(trade);
+
+  // Entry price amendment → show old → new
+  if (priceChange && priceChange.before != null && priceChange.after != null) {
+    return `Price Updated $${priceChange.before.toFixed(2)} → $${priceChange.after.toFixed(2)}`;
+  }
+
+  // Trigger price amendment → show old → new when displayPriceBefore/After are available
+  if (
+    trade.displayPriceBefore != null &&
+    trade.displayPriceAfter != null &&
+    trade.displayPriceBefore !== trade.displayPriceAfter
+  ) {
+    const label = TIMELINE_EVENT_LABELS[rawEvent] ?? formatOrderHistoryRawLabel(rawEvent);
+    return `${label} $${trade.displayPriceBefore.toFixed(2)} → $${trade.displayPriceAfter.toFixed(2)}`;
+  }
+
+  // Known event → friendly label; unknown → format raw value
+  return TIMELINE_EVENT_LABELS[rawEvent] ?? formatOrderHistoryRawLabel(rawEvent);
 }
 
 export function buildOrderHistoryGroups(
@@ -275,7 +327,8 @@ export function buildOrderHistoryGroups(
         pnlRow,
         parentType: parentTypeRow.orderType,
         parentSide: oldestRow.positionType,
-        parentEntryPrice: oldestRow.entryPrice,
+        parentEntryPrice: latestRow.entryPrice,
+        // Leverage is immutable for the order lifecycle (no old_leverage/new_leverage amendment fields exist in the schema)
         parentLeverage: oldestRow.leverage,
         latestDate: latestRow.date,
         lifecycleValue,

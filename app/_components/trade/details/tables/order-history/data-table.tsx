@@ -1,7 +1,7 @@
 "use client";
 
 import cn from "@/lib/cn";
-import { truncateHash, formatSatsCompact, formatSatsMBtc } from "@/lib/helpers";
+import { truncateHash, formatSatsMBtc } from "@/lib/helpers";
 import Link from "next/link";
 import dayjs from "dayjs";
 import {
@@ -29,15 +29,10 @@ import {
 import { Info, SlidersHorizontal, ChevronUp, ChevronDown } from "lucide-react";
 import { PnlCell } from "@/lib/components/pnl-display";
 import {
-  formatOrderHistoryRawLabel,
   getOrderHistoryFee,
   getOrderHistoryFunding,
-  getOrderHistoryNotionalLabel,
-  getOrderHistoryPositionValueSats,
   getOrderHistoryPnl,
-  getOrderHistoryPriceChange,
-  getOrderHistoryPrimaryEventValue,
-  getOrderHistoryRawEventValue,
+  getTimelineEventTitle,
   OrderHistoryGroup,
   PRICE_KIND_LABELS,
 } from "./grouped-order-history";
@@ -134,7 +129,7 @@ function MetadataItem({
     <div className={cn("flex flex-col gap-0.5", className)}>
       <span
         className={cn(
-          "text-[10px] uppercase tracking-wide text-gray-500",
+          "text-[10px] uppercase tracking-wide text-primary/40",
           labelClassName
         )}
       >
@@ -158,6 +153,12 @@ function TimelineRow({
   openFundingDialog: (trade: TradeOrder) => void;
   isLast: boolean;
 }) {
+  const eventTitle = getTimelineEventTitle(trade);
+  const fee = getOrderHistoryFee(trade);
+  const funding = getOrderHistoryFunding(trade);
+  const pnl = getOrderHistoryPnl(trade);
+  const showClose =
+    trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
   const triggerPrice =
     trade.displayPrice != null &&
     trade.priceKind &&
@@ -167,19 +168,16 @@ function TimelineRow({
           value: `$${trade.displayPrice.toFixed(2)}`,
         }
       : null;
-  const priceChange = getOrderHistoryPriceChange(trade);
-  const fee = getOrderHistoryFee(trade);
-  const funding = getOrderHistoryFunding(trade);
-  const pnl = getOrderHistoryPnl(trade);
-  const posValueSats = getOrderHistoryPositionValueSats(trade);
-  const rawEventValue = getOrderHistoryPrimaryEventValue(trade);
-  const rawEventLabel = formatOrderHistoryRawLabel(rawEventValue);
-  const rawStatusLabel = formatOrderHistoryRawLabel(trade.orderStatus);
-  const showDistinctStatus =
-    !!getOrderHistoryRawEventValue(trade) &&
-    getOrderHistoryRawEventValue(trade) !== trade.orderStatus;
-  const showClose =
-    trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
+
+  const hasDetails =
+    showClose ||
+    triggerPrice ||
+    pnl != null ||
+    fee != null ||
+    funding != null ||
+    trade.tx_hash ||
+    trade.request_id ||
+    trade.reason;
 
   return (
     <div className="relative pl-4">
@@ -188,7 +186,7 @@ function TimelineRow({
       )}
       <div className="bg-border/70 absolute left-0 top-2 h-2 w-2 rounded-full" />
 
-      <div className="border-border/50 rounded-lg border bg-background/70 px-3 py-2.5">
+      <div className="border-border/50 rounded-lg border bg-background/70 px-3 py-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <span
@@ -197,194 +195,118 @@ function TimelineRow({
                 getTimelineBadgeClasses()
               )}
             >
-              {rawEventLabel}
+              {eventTitle}
             </span>
             <span className="text-[11px] font-medium text-primary/70">
               {trade.orderType}
             </span>
           </div>
-
           <span className="text-[11px] text-primary/55 tabular-nums">
             {dayjs(trade.date).format("DD MMM YYYY HH:mm:ss")}
           </span>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-3 xl:grid-cols-6">
-          <MetadataItem
-            label="Side"
-            value={<span className="font-medium">{trade.positionType}</span>}
-            valueClassName="font-medium"
-          />
-          <MetadataItem
-            label="Entry"
-            value={
-              <span className="font-medium">${trade.entryPrice.toFixed(2)}</span>
-            }
-            valueClassName="font-medium"
-          />
-
-          {showClose && (
-            <MetadataItem
-              label="Close"
-              value={
-                <span className="font-medium">
-                  ${trade.settlementPrice.toFixed(2)}
-                </span>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {triggerPrice && (
-            <MetadataItem
-              label={triggerPrice.label}
-              value={<span className="font-medium">{triggerPrice.value}</span>}
-              valueClassName="font-medium"
-            />
-          )}
-
-          <MetadataItem
-            label="Notional"
-            value={
-              <span className="font-medium">
-                {getOrderHistoryNotionalLabel(trade)}
-              </span>
-            }
-            valueClassName="font-medium"
-          />
-          <MetadataItem
-            label="Leverage"
-            value={<span className="font-medium">{trade.leverage.toFixed(2)}x</span>}
-            valueClassName="font-medium"
-          />
-          <MetadataItem
-            label="PnL"
-            value={<PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="inline" />}
-          />
-        </div>
-
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-3 xl:grid-cols-5">
-          {showDistinctStatus && (
-            <MetadataItem
-              label="Status"
-              value={<span className="font-medium">{rawStatusLabel}</span>}
-              valueClassName="font-medium"
-            />
-          )}
-
-          {posValueSats != null && (
-            <MetadataItem
-              label="Pos. Value"
-              value={
-                <span className="font-medium">
-                  {formatSatsCompact(posValueSats)}
-                </span>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {funding != null && (
-            <MetadataItem
-              label="Funding"
-              value={
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span>{formatSatsMBtc(funding)}</span>
-                  {(trade.orderStatus === "SETTLED" ||
-                    trade.orderStatus === "LIQUIDATE") && (
-                    <button
-                      type="button"
-                      onClick={() => openFundingDialog(trade)}
-                      className="rounded p-0.5 text-primary/40 transition-colors hover:bg-primary/5 hover:text-primary/60"
-                      aria-label="View funding history"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </span>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {fee != null && (
-            <MetadataItem
-              label="Fee"
-              value={<span className="font-medium">{formatSatsMBtc(fee)}</span>}
-              valueClassName="font-medium"
-            />
-          )}
-
-          <MetadataItem
-            label="Avail. Margin"
-            value={
-              <span className="font-medium">
-                {formatSatsCompact(trade.availableMargin)}
-              </span>
-            }
-            valueClassName="font-medium"
-          />
-
-          {priceChange && (
-            <MetadataItem
-              label="Price Change"
-              className="col-span-2 xl:col-span-2"
-              value={
-                <span className="font-medium tabular-nums">
-                  {priceChange.before != null
-                    ? `$${priceChange.before.toFixed(2)}`
-                    : "—"}{" "}
-                  →{" "}
-                  {priceChange.after != null
-                    ? `$${priceChange.after.toFixed(2)}`
-                    : "—"}
-                </span>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {trade.request_id && (
-            <MetadataItem
-              label="Request ID"
-              value={
-                <button
-                  type="button"
-                  onClick={() => copyValue(trade.request_id!, "Request ID")}
-                  className="font-medium hover:underline"
-                >
-                  {truncateHash(trade.request_id, 4, 4)}
-                </button>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {trade.tx_hash && (
-            <MetadataItem
-              label="Tx Hash"
-              value={
-                <Link
-                  href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${trade.tx_hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium hover:underline"
-                >
-                  {truncateHash(trade.tx_hash)}
-                </Link>
-              }
-              valueClassName="font-medium"
-            />
-          )}
-
-          {trade.reason && (
-            <MetadataItem
-              label="Reason"
-              className="col-span-2 xl:col-span-5"
-              value={<span className="text-primary/70">{trade.reason}</span>}
-            />
-          )}
-        </div>
+        {hasDetails && (
+          <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 lg:grid-cols-3 xl:grid-cols-4">
+            {showClose && (
+              <MetadataItem
+                label="Close"
+                value={
+                  <span className="font-medium">
+                    ${trade.settlementPrice.toFixed(2)}
+                  </span>
+                }
+              />
+            )}
+            {triggerPrice && (
+              <MetadataItem
+                label={triggerPrice.label}
+                value={
+                  <span className="font-medium">{triggerPrice.value}</span>
+                }
+              />
+            )}
+            {pnl != null && (
+              <MetadataItem
+                label="PnL"
+                value={
+                  <PnlCell
+                    pnlSats={pnl}
+                    btcPriceUsd={btcPriceUsd}
+                    layout="inline"
+                  />
+                }
+              />
+            )}
+            {fee != null && (
+              <MetadataItem
+                label="Fee"
+                value={
+                  <span className="font-medium">{formatSatsMBtc(fee)}</span>
+                }
+              />
+            )}
+            {funding != null && (
+              <MetadataItem
+                label="Funding"
+                value={
+                  <span className="inline-flex items-center gap-1.5 font-medium">
+                    <span>{formatSatsMBtc(funding)}</span>
+                    {(trade.orderStatus === "SETTLED" ||
+                      trade.orderStatus === "LIQUIDATE") && (
+                      <button
+                        type="button"
+                        onClick={() => openFundingDialog(trade)}
+                        className="rounded p-0.5 text-primary/40 transition-colors hover:bg-primary/5 hover:text-primary/60"
+                        aria-label="View funding history"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </span>
+                }
+              />
+            )}
+            {trade.tx_hash && (
+              <MetadataItem
+                label="Tx Hash"
+                value={
+                  <Link
+                    href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${trade.tx_hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium hover:underline"
+                  >
+                    {truncateHash(trade.tx_hash)}
+                  </Link>
+                }
+              />
+            )}
+            {trade.request_id && (
+              <MetadataItem
+                label="Request ID"
+                value={
+                  <button
+                    type="button"
+                    onClick={() => copyValue(trade.request_id!, "Request ID")}
+                    className="font-medium hover:underline"
+                  >
+                    {truncateHash(trade.request_id, 4, 4)}
+                  </button>
+                }
+              />
+            )}
+            {trade.reason && (
+              <MetadataItem
+                label="Reason"
+                className="col-span-full"
+                value={
+                  <span className="text-primary/70">{trade.reason}</span>
+                }
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -611,7 +533,7 @@ export function OrderHistoryDataTable<TValue>({
                           <div className="border-border/50 rounded-b-xl border border-t-0 bg-primary/[0.02] px-3.5 py-2.5">
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                                <span className="text-[10px] uppercase tracking-wide text-primary/40">
                                   Order ID
                                 </span>
                                 <button

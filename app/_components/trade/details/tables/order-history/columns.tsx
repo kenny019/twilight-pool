@@ -150,12 +150,12 @@ export const orderHistoryColumns: ColumnDef<OrderHistoryGroup>[] = [
       const group = row.row.original;
 
       if (group.closeOrTriggerValue == null) {
-        return <span className="text-xs text-gray-500">—</span>;
+        return <span className="text-xs text-primary/40">—</span>;
       }
 
       return (
         <div className="flex flex-col leading-tight">
-          <span className="text-[10px] uppercase tracking-wide text-gray-500">
+          <span className="text-[10px] uppercase tracking-wide text-primary/40">
             {group.closeOrTriggerLabel}
           </span>
           <span className="font-medium">
@@ -175,7 +175,7 @@ export const orderHistoryColumns: ColumnDef<OrderHistoryGroup>[] = [
       const meta = row.table.options.meta as OrderHistoryTableMeta;
 
       if (!group.pnlRow) {
-        return <span className="text-xs text-gray-500">—</span>;
+        return <span className="text-xs text-primary/40">—</span>;
       }
 
       return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import Button from "@/components/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import cn from "@/lib/cn";
 import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { AccountLedgerEntry } from "@/lib/types";
@@ -11,7 +11,7 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-function formatDate(value: Date | string) {
+export function formatDate(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleString();
 }
@@ -24,7 +24,10 @@ function formatWithPrecision(value: Big, decimals: number): string {
   return out;
 }
 
-function formatBalance(value: number | null, unit: LedgerDisplayUnit = "auto") {
+export function formatBalance(
+  value: number | null,
+  unit: LedgerDisplayUnit = "auto"
+) {
   if (value == null) return "—";
   if (unit === "auto") return formatSatsCompact(value);
 
@@ -38,14 +41,14 @@ function formatBalance(value: number | null, unit: LedgerDisplayUnit = "auto") {
   return `${formatWithPrecision(sats.div(100_000_000), 6)} BTC`;
 }
 
-function formatType(type: string) {
+export function formatType(type: string) {
   return type
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
 
-function formatAccountWithType(value: string) {
+export function formatAccountWithType(value: string) {
   const separatorIndex = value.lastIndexOf("-");
   if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
     return value;
@@ -64,6 +67,19 @@ function formatAccountWithType(value: string) {
 export interface AccountLedgerTableMeta {
   toast: (options: { title: string; description?: string }) => void;
   displayUnit: LedgerDisplayUnit;
+}
+
+export function getLedgerStatusClass(status: string) {
+  return cn(
+    "rounded px-2 py-1 text-[11px] font-medium",
+    status === "confirmed"
+      ? "bg-green-medium/10 text-green-medium"
+      : status === "cancelled"
+        ? "bg-theme/10 text-theme"
+        : status === "failed"
+          ? "bg-red/10 text-red"
+          : "bg-orange/10 text-orange"
+  );
 }
 
 function CopyableCell({
@@ -197,30 +213,6 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     accessorFn: (row) => formatType(row.type),
   },
   {
-    accessorKey: "order_id",
-    header: "Order ID",
-    cell: (row) => {
-      const orderId = row.getValue() as string | null;
-      if (!orderId) {
-        return <span className="text-primary-accent">—</span>;
-      }
-      const meta = row.table.options.meta as AccountLedgerTableMeta;
-      return (
-        <CopyableCell
-          displayValue={truncateHash(orderId, 6, 6)}
-          fullValue={orderId}
-          onCopy={() => {
-            meta?.toast({
-              title: "Copied to clipboard",
-              description: "Order ID copied to clipboard",
-            });
-            navigator.clipboard.writeText(orderId);
-          }}
-        />
-      );
-    },
-  },
-  {
     accessorKey: "amount_sats",
     header: "Amount",
     cell: (row) => {
@@ -229,8 +221,16 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     },
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: (row) => {
+      const status = row.getValue() as string;
+      return <span className={getLedgerStatusClass(status)}>{status}</span>;
+    },
+  },
+  {
     accessorKey: "from_acc",
-    header: "From Account-Type",
+    header: "From",
     cell: (row) => {
       const rawValue = row.getValue() as string;
       const meta = row.table.options.meta as AccountLedgerTableMeta;
@@ -251,7 +251,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "to_acc",
-    header: "To Account-Type",
+    header: "To",
     cell: (row) => {
       const rawValue = row.getValue() as string;
       const meta = row.table.options.meta as AccountLedgerTableMeta;
@@ -272,7 +272,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "fund_bal",
-    header: "Fund Bal",
+    header: "Funding",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
       return (
@@ -302,7 +302,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "trade_bal",
-    header: "Trade Bal",
+    header: "Trading",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
       return (
@@ -335,7 +335,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "t_positions_bal",
-    header: "T.Pos Bal",
+    header: "Open Pos.",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
       return (
@@ -371,7 +371,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "l_deposits_bal",
-    header: "L.Dep Bal",
+    header: "Lend",
     cell: (row) => {
       const meta = row.table.options.meta as AccountLedgerTableMeta;
       return (
@@ -406,25 +406,26 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
     },
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: "order_id",
+    header: "Order ID",
     cell: (row) => {
-      const status = row.getValue() as string;
+      const orderId = row.getValue() as string | null;
+      if (!orderId) {
+        return <span className="text-primary-accent">—</span>;
+      }
+      const meta = row.table.options.meta as AccountLedgerTableMeta;
       return (
-        <span
-          className={cn(
-            "rounded px-2 py-1 text-[11px] font-medium",
-            status === "confirmed"
-              ? "bg-green-medium/10 text-green-medium"
-              : status === "cancelled"
-                ? "bg-theme/10 text-theme"
-                : status === "failed"
-                  ? "bg-red/10 text-red"
-                  : "bg-orange/10 text-orange"
-          )}
-        >
-          {status}
-        </span>
+        <CopyableCell
+          displayValue={truncateHash(orderId, 6, 6)}
+          fullValue={orderId}
+          onCopy={() => {
+            meta?.toast({
+              title: "Copied to clipboard",
+              description: "Order ID copied to clipboard",
+            });
+            navigator.clipboard.writeText(orderId);
+          }}
+        />
       );
     },
   },
@@ -445,7 +446,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
   },
   {
     accessorKey: "tx_hash",
-    header: "Transaction Hash",
+    header: "Tx Hash",
     cell: (row) => {
       const txHash = row.getValue() as string | null;
       if (!txHash) {

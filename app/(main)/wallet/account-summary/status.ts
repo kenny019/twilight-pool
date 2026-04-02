@@ -48,6 +48,6 @@ export function getActiveAccountStatusClass(status: ActiveAccountStatus) {
     case "Locked in Lending":
       return "bg-yellow-500/10 text-yellow-500";
     case "Action Required":
-      return "bg-blue-500/10 text-blue-500";
+      return "border border-blue-500/25 bg-blue-500/[0.08] text-blue-300";
   }
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useCallback, useContext } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,7 @@ import cn from "@/lib/cn";
 import { useTheme } from "next-themes";
 import Button from "@/components/button";
 import { useToast } from "@/lib/hooks/useToast";
-import { useSessionStore } from "@/lib/providers/session";
-import { useTwilightStore } from "@/lib/providers/store";
+import { twilightStoreContext, useTwilightStore } from "@/lib/providers/store";
 import { useWallet } from "@cosmos-kit/react-lite";
 
 // workaround for tailwind css
@@ -37,12 +36,91 @@ const Settings = () => {
   const { colorTheme, setColorTheme } = useTwilight();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const twilightStore = useContext(twilightStoreContext);
 
-  const privateKey = useSessionStore((state) => state.privateKey);
-
-  const { status } = useWallet();
+  const { status, mainWallet } = useWallet();
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
   const setOptInLeaderboard = useTwilightStore((state) => state.setOptInLeaderboard);
+  const twilightAddress =
+    mainWallet?.getChainWallet("nyks")?.address || "";
+
+  const exportData = useCallback(() => {
+    if (!twilightAddress) {
+      toast({
+        title: "Export failed",
+        description: "Please connect your wallet first.",
+      });
+      return;
+    }
+
+    if (!twilightStore) {
+      toast({
+        title: "Export failed",
+        description: "Store not available",
+      });
+      return;
+    }
+
+    const storeState = twilightStore.getState();
+    const jsonString = JSON.stringify(storeState);
+
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${twilightAddress}-data.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported successfully",
+      description: "Exported account data to your device.",
+    });
+  }, [toast, twilightAddress, twilightStore]);
+
+  const importData = useCallback(() => {
+    if (!twilightAddress) {
+      toast({
+        title: "Import failed",
+        description: "Please connect your wallet first.",
+      });
+      return;
+    }
+
+    if (!twilightStore) {
+      toast({
+        title: "Import failed",
+        description: "Store not available",
+      });
+      return;
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        twilightStore.setState(data);
+        toast({
+          title: "Imported successfully",
+          description: "Account data has been imported.",
+        });
+      } catch {
+        toast({
+          title: "Import failed",
+          description: "Invalid JSON file.",
+        });
+      }
+    };
+    input.click();
+  }, [toast, twilightAddress, twilightStore]);
 
   return (
     <Dialog>
@@ -128,6 +206,31 @@ const Settings = () => {
             >
               Export Seed to Clipboard
             </Button> */}
+          </div>
+          <Text className="select-none font-ui text-xs uppercase text-primary-accent">
+            App Data
+          </Text>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="ui"
+              className="w-full justify-center"
+              onClick={exportData}
+            >
+              Export App Data
+            </Button>
+            <Button
+              type="button"
+              variant="ui"
+              className="w-full justify-center"
+              onClick={importData}
+            >
+              Import App Data
+            </Button>
+            <Text className="text-xs text-primary-accent">
+              Move your local Twilight state between browsers on the same
+              account.
+            </Text>
           </div>
           {status === "Connected" && (
             <>

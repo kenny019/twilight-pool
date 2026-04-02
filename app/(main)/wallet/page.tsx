@@ -9,14 +9,13 @@ import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
-import { useTwilightStore, twilightStoreContext } from "@/lib/providers/store";
+import { useTwilightStore } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
 import { ArrowLeftRight } from "lucide-react";
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -64,8 +63,6 @@ export type ActiveAccount = {
 const Page = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("account-summary");
   const { toast } = useToast();
-
-  const twilightStore = useContext(twilightStoreContext);
   const privateKey = useSessionStore((state) => state.privateKey);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
@@ -502,84 +499,6 @@ const Page = () => {
     ]
   );
 
-  const exportData = useCallback(() => {
-    if (!twilightAddress) {
-      toast({
-        title: "Export failed",
-        description: "Please connect your wallet first.",
-      });
-      return;
-    }
-
-    if (!twilightStore) {
-      toast({
-        title: "Export failed",
-        description: "Store not available",
-      });
-      return;
-    }
-
-    const storeState = twilightStore.getState();
-    const jsonString = JSON.stringify(storeState);
-
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${twilightAddress}-data.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exported successfully",
-      description: "Exported account data to your device.",
-    });
-  }, [twilightStore, toast, twilightAddress]);
-
-  const importData = useCallback(() => {
-    if (!twilightAddress) {
-      toast({
-        title: "Import failed",
-        description: "Please connect your wallet first.",
-      });
-      return;
-    }
-
-    if (!twilightStore) {
-      toast({
-        title: "Import failed",
-        description: "Store not available",
-      });
-      return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        twilightStore.setState(data);
-        toast({
-          title: "Imported successfully",
-          description: "Account data has been imported.",
-        });
-      } catch (error) {
-        toast({
-          title: "Import failed",
-          description: "Invalid JSON file.",
-        });
-      }
-    };
-    input.click();
-  }, [twilightStore, toast, twilightAddress]);
-
   function renderTableContent() {
     switch (currentTab) {
       case "account-summary":
@@ -890,53 +809,46 @@ const Page = () => {
       </div>
       <div className="bg-card space-y-1 rounded-lg border border-outline p-4 md:space-y-2 md:p-6">
         <div className="flex w-full flex-col gap-2 border-b border-outline pb-2 md:flex-row md:items-center md:justify-between md:pb-0">
-          <Tabs defaultValue={currentTab}>
-            <TabsList className="flex w-full border-b-0" variant="underline">
+          <Tabs defaultValue={currentTab} className="min-w-0 w-full">
+            <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-none touch-pan-x">
+              <TabsList
+                className="min-w-max flex-nowrap justify-start border-b-0 pr-3 max-md:space-x-3"
+                variant="underline"
+              >
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-summary")}
                 value="account-summary"
                 variant="underline"
               >
-                Active Accounts
+                <span className="md:hidden">Accounts</span>
+                <span className="hidden md:inline">Active Accounts</span>
               </TabsTrigger>
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
                 onClick={() => setCurrentTab("transaction-history")}
                 value="transaction-history"
                 variant="underline"
               >
-                Transaction History
+                <span className="md:hidden">Transactions</span>
+                <span className="hidden md:inline">Transaction History</span>
               </TabsTrigger>
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[36px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-ledger")}
                 value="account-ledger"
                 variant="underline"
               >
-                Account Ledger
+                <span className="md:hidden">Ledger</span>
+                <span className="hidden md:inline">Account Ledger</span>
               </TabsTrigger>
-            </TabsList>
+              </TabsList>
+            </div>
           </Tabs>
 
-          <div className="flex w-full items-center justify-end gap-1 md:w-auto md:shrink-0">
-            <Button
-              type="button"
-              variant="link"
-              className="px-1.5 py-1 text-xs md:min-h-0 md:px-2 md:py-1.5"
-              onClick={importData}
-            >
-              Import
-            </Button>
-            <Button
-              type="button"
-              variant="link"
-              className="px-1.5 py-1 text-xs md:min-h-0 md:px-2 md:py-1.5"
-              onClick={exportData}
-            >
-              Export
-            </Button>
-          </div>
         </div>
 
-        <div className="h-full min-h-[400px] w-full overflow-auto py-1">
+        <div className="h-full min-h-[400px] w-full overflow-visible py-1 md:overflow-auto">
           {renderTableContent()}
         </div>
       </div>

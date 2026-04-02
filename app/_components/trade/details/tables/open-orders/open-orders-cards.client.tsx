@@ -173,7 +173,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                   {/* ── Secondary visible: Notional (USD) + Leverage — mobile only ── */}
                   <div className="mb-2 grid grid-cols-2 gap-x-4 md:hidden">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                      <span className="text-[10px] uppercase tracking-wide text-primary/40">
                         Notional
                       </span>
                       <span className="text-sm font-semibold tabular-nums text-primary">
@@ -181,7 +181,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                      <span className="text-[10px] uppercase tracking-wide text-primary/40">
                         Leverage
                       </span>
                       <span className="text-sm font-semibold tabular-nums text-primary">
@@ -209,13 +209,13 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                   {isExpanded && (
                     <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/40 pt-2 md:hidden">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        <span className="text-[10px] uppercase tracking-wide text-primary/40">
                           Size (BTC)
                         </span>
                         <span className="text-sm font-medium">{positionSizeRaw} BTC</span>
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        <span className="text-[10px] uppercase tracking-wide text-primary/40">
                           Avail
                         </span>
                         <span className="text-sm font-medium">
@@ -223,7 +223,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                         </span>
                       </div>
                       <div className="col-span-2 flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        <span className="text-[10px] uppercase tracking-wide text-primary/40">
                           Order ID
                         </span>
                         <button
@@ -256,10 +256,10 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                       {triggerPrice}
                     </span>
                     <span className="text-primary/35">•</span>
-                    <span className="text-gray-500">Notional</span>
+                    <span className="text-primary/40">Notional</span>
                     <span className="font-medium text-primary/80">${positionSize}</span>
                     <span className="text-primary/35">•</span>
-                    <span className="text-gray-500">Lev</span>
+                    <span className="text-primary/40">Lev</span>
                     <span className="font-medium text-primary/80">
                       {trade.leverage.toFixed(1)}x
                     </span>
@@ -267,7 +267,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
 
                   {/* Desktop: Order ID / Avail / Type inline */}
                   <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:flex">
-                    <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                    <span className="text-[10px] uppercase tracking-wide text-primary/40">
                       Order ID
                     </span>
                     <button
@@ -284,7 +284,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                       {truncatedUuid}
                     </button>
                     <span className="text-primary/30">•</span>
-                    <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                    <span className="text-[10px] uppercase tracking-wide text-primary/40">
                       Avail
                     </span>
                     <span className="font-medium">
@@ -293,7 +293,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
                     {shouldShowOrderType && (
                       <>
                         <span className="text-primary/30">•</span>
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                        <span className="text-[10px] uppercase tracking-wide text-primary/40">
                           Type
                         </span>
                         <span className="font-medium">

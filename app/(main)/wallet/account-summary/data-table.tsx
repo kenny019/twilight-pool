@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/button";
 import { ToastProps } from '@/components/toast';
 import cn from "@/lib/cn";
 import { useToast } from '@/lib/hooks/useToast';
@@ -190,33 +191,45 @@ export function AccountSummaryDataTable<TData, TValue>({
                   </span>
                 </div>
 
-                {/* Secondary: 2×2 metadata grid */}
-                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 text-xs">
-                  <span className="min-w-0 text-primary-accent">{account.tag}</span>
-                  <span
-                    className={cn(
-                      "justify-self-end rounded px-1.5 py-0.5 text-[11px] font-medium",
-                      statusCls
-                    )}
-                  >
-                    {status}
-                  </span>
-                  <span className="min-w-0 text-primary-accent">Created: {createdDate}</span>
-                </div>
-
-                {/* Actions */}
-                {canTransfer && (
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      className="flex min-h-[44px] items-center rounded border border-outline px-3 text-xs font-medium text-primary transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={isTransferring}
-                      onClick={() => wrappedTransfer(account.address)}
-                    >
-                      {isTransferring ? "Transferring…" : "Transfer →"}
-                    </button>
+                <div className="mt-2 flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1 text-xs">
+                    <div className="min-w-0 truncate text-primary-accent">
+                      {account.tag}
+                    </div>
+                    <div className="text-primary-accent">Created: {createdDate}</div>
                   </div>
-                )}
+
+	                  <div className="flex shrink-0 flex-col items-end gap-2">
+	                    {status === "Action Required" && canTransfer ? (
+	                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-blue-300/85">
+	                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400/70" />
+	                        <span>Action Required</span>
+	                      </div>
+	                    ) : (
+	                      <span
+	                        className={cn(
+	                          "rounded px-1.5 py-0.5 text-[11px] font-medium",
+	                          statusCls
+	                        )}
+	                      >
+	                        {status}
+	                      </span>
+	                    )}
+
+	                    {canTransfer && (
+	                      <Button
+	                        type="button"
+	                        variant="ui"
+	                        size="small"
+	                        className="min-h-[36px] gap-1.5 border-blue-500/35 bg-blue-500/[0.14] px-3 text-[11px] text-blue-200 hover:border-blue-400/55 hover:bg-blue-500/[0.2] hover:text-blue-100"
+	                        disabled={isTransferring}
+	                        onClick={() => wrappedTransfer(account.address)}
+	                      >
+                        {isTransferring ? "Transferring…" : "Transfer"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
                 {/* Expand toggle */}
                 <button
