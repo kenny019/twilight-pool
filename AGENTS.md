@@ -136,14 +136,17 @@ Approved roles:
 - `sm:` → typography only (never layout)
 - `md:` → primary layout breakpoint
 - `lg:` → limited use (header, ticker strip, header navigation only)
-- `xl:` → card grid scaling only
+- `xl:` → card grid scaling plus ticker strip desktop sizing
+- `2xl:` → ticker strip only, for conservative large-screen recovery
+- `3xl:` → ticker strip only, for ultra-wide large-screen recovery
 - `max-md:` → approved mobile override pattern
 
 Constraints:
-- Do NOT introduce new breakpoints
+- Do NOT introduce new breakpoints without approval
 - Do NOT use `sm:` for layout changes
 - Do NOT expand `lg:` usage beyond approved areas
 - Do NOT repurpose breakpoint roles
+- Do NOT use `2xl:` or `3xl:` outside the ticker strip until the broader large-screen audit is completed
 
 Behavioral constant:
 - `showOrderbook` threshold at **996px** is a JS behavioral constant

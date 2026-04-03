@@ -179,14 +179,17 @@ Approved roles:
 - `sm:` — typography only (not layout)
 - `md:` — primary layout breakpoint
 - `lg:` — limited use (header, ticker strip, header navigation)
-- `xl:` — card grid scaling only
+- `xl:` — card grid scaling plus ticker strip desktop sizing
+- `2xl:` — ticker strip only, for conservative large-desktop width/spacing recovery
+- `3xl:` — ticker strip only, for ultra-wide width/spacing recovery
 - `max-md:` — approved mobile override prefix
 
 Constraints:
-- Do NOT introduce new breakpoints
+- Do NOT introduce new breakpoints without documentation and approval
 - Do NOT use `sm:` for layout changes
 - Do NOT expand `lg:` usage beyond approved areas
 - Do NOT repurpose breakpoint roles for new behaviors
+- Do NOT use `2xl:` or `3xl:` outside the ticker strip until the broader large-screen audit is completed
 - Do NOT use CSS to replicate behavioral thresholds
 
 Behavioral constant:

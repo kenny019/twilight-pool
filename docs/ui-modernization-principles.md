@@ -166,11 +166,13 @@ Dual-layout is a concession, not a pattern to extend. New surfaces should defaul
 | `sm:` | Typography only (Text component) | Heading size steps — do not use for layout |
 | `md:` | Primary layout breakpoint | Panel visibility, grid columns, spacing, form layout |
 | `lg:` | 3 files only: header, ticker, trade-wrapper | Desktop nav visibility, trade grid — do not add new `lg:` usage outside these areas without audit |
-| `xl:` | Card grids only (4 card variant files) | `xl:grid-cols-2` for card density — do not use for general layout |
+| `xl:` | Card grids + ticker rail desktop sizing | `xl:grid-cols-2` for card density; wider ticker metric sizing at desktop widths |
+| `2xl:` | Ticker rail only | Conservative large-desktop ticker scaling; no layout changes |
+| `3xl:` | Ticker rail only | Ultra-wide ticker scaling; must remain spacing/width only |
 | `max-md:` | Mobile-specific overrides | Touch targets, mobile-only layout variants, soft-fill buttons |
 | `996px` JS | `showOrderbook` in trade-wrapper | Behavioral panel switch — not a CSS breakpoint |
 
-**Rule:** Do not introduce new `lg:` or `xl:` breakpoint usage outside its current scope without documenting the reason. This prevents breakpoint drift.
+**Rule:** Do not introduce new `lg:` / `xl:` / `2xl:` / `3xl:` breakpoint usage outside its current scope without documenting the reason. This prevents breakpoint drift. `2xl:` and `3xl:` are a narrow exception for the desktop ticker rail only, added so 1280-class laptops can use tighter `xl` widths without making very wide desktops look under-scaled.
 
 ### Mobile-first override pattern
 

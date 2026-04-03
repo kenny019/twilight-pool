@@ -4,7 +4,7 @@ import React from "react";
 
 type Props = {
   className?: string;
-  title: string;
+  title: React.ReactNode;
   children: React.ReactNode;
   border?: boolean;
   itemClassName?: string;
@@ -23,10 +23,10 @@ const TickerItem = ({
 }: Props) => {
   return (
     <div className={cn("flex min-w-0 flex-row items-center", itemClassName)}>
-      <div className="flex min-w-0 flex-col justify-center px-2.5 xl:px-3.5">
+      <div className="flex min-w-0 flex-col justify-center px-1.5 xl:px-3 2xl:px-3.5 3xl:px-4">
         <p
           className={cn(
-            "truncate text-[10px] font-medium leading-none text-primary/50 xl:text-[11px]",
+            "truncate text-[10px] font-medium leading-none text-primary/50 xl:text-[11px] 2xl:text-[11px] 3xl:text-[12px]",
             titleClassName
           )}
         >
@@ -34,7 +34,7 @@ const TickerItem = ({
         </p>
         <div
           className={cn(
-            "mt-1.5 whitespace-nowrap text-[14px] font-medium leading-none tabular-nums text-primary/92 xl:text-[15px]",
+            "mt-1.5 whitespace-nowrap text-[13px] font-medium leading-none tabular-nums text-primary/92 xl:text-[14px] 2xl:text-[15px] 3xl:text-[15px]",
             className
           )}
         >

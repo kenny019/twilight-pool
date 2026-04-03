@@ -1465,11 +1465,11 @@ const OrderMarketForm = () => {
       {/* 5. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-row gap-1.5 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
+          <div className="flex flex-col gap-1.5 pt-0.5 max-md:flex-row max-md:border-t max-md:border-border/30 max-md:pt-2.5">
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"
-              className="min-w-0 flex-1 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
+              className="min-w-0 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:flex-1 max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
               variant="ui"
               disabled={
                 isSubmitting ||
@@ -1487,7 +1487,7 @@ const OrderMarketForm = () => {
               onClick={() => submitMarket("SELL")}
               id="btn-market-sell"
               variant="ui"
-              className="min-w-0 flex-1 border-red py-2 text-sm text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
+              className="min-w-0 border-red py-2 text-sm text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:flex-1 max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||
