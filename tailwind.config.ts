@@ -49,6 +49,9 @@ const config: Config = {
       ui: ["var(--font-ui)"],
     },
     extend: {
+      screens: {
+        "3xl": "1920px",
+      },
       borderRadius: {
         default: "125rem",
       },
