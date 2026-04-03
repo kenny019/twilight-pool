@@ -601,8 +601,8 @@ const OrderMarketForm = () => {
       setIsSubmitting(true);
 
       toast({
-        title: "Placing order",
-        description: "Order is being placed, please do not close this page.",
+        title: "Step 1/3: Preparing account",
+        description: "Transferring funds to a new trading account...",
       });
 
       // Generate the new order account before entering the queue — this is
@@ -676,6 +676,11 @@ const OrderMarketForm = () => {
             scalar: updatedTradingAccountScalar,
             updatedAddress: updatedTradingAccountAddress,
           } = privateTxSingleResult.data;
+
+          toast({
+            title: "Step 1/3: Transfer broadcast",
+            description: "Waiting for on-chain confirmation...",
+          });
 
           const newZkAccount: ZkAccount = {
             scalar: updatedTradingAccountScalar,
@@ -767,6 +772,11 @@ const OrderMarketForm = () => {
 
       const { newZkAccount } = queueResult;
 
+      toast({
+        title: "Step 2/3: Submitting order",
+        description: "Sending trade order to the relayer...",
+      });
+
       const { success, msg } = await createZkOrder({
         leverage: leverageVal,
         orderType: "MARKET",
@@ -803,6 +813,11 @@ const OrderMarketForm = () => {
 
       console.log(data);
 
+      toast({
+        title: "Step 3/3: Confirming order",
+        description: "Waiting for order confirmation...",
+      });
+
       const transactionHashCondition = (
         txHashResult: Awaited<ReturnType<typeof queryTransactionHashes>>
       ) => {
@@ -834,7 +849,7 @@ const OrderMarketForm = () => {
         queryTransactionHashes,
         30,
         newZkAccount.address,
-        1000,
+        100,
         transactionHashCondition,
         transactionHashFailCondition
       );
