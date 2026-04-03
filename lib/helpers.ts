@@ -162,7 +162,28 @@ export function formatSatsMBtc(sats: number): string {
   if (!Number.isFinite(sats)) return "0";
   const mBtc = sats / 100_000; // 1 mBTC = 100,000 sats
   const s = mBtc.toFixed(5).replace(/\.?0+$/, "");
-  return s === "-0" ? "0" : s;
+  return s === "-0" ? "0 mBTC" : `${s} mBTC`;
+}
+
+/**
+ * Formats two margin sats values using the same unit.
+ * If the larger value is >= 1 BTC (100M sats) both show in BTC,
+ * otherwise both show in mBTC — so they're always directly comparable.
+ */
+export function formatMarginPair(a: number, b: number): [string, string] {
+  const BTC_THRESHOLD = 100_000_000; // 1 BTC in sats
+  const maxAbs = Math.max(Math.abs(a), Math.abs(b));
+
+  const fmtBtc = (n: number) => {
+    const v = (n / 100_000_000).toFixed(6).replace(/\.?0+$/, "");
+    return `${v} BTC`;
+  };
+  const fmtMBtc = (n: number) => {
+    const s = (n / 100_000).toFixed(5).replace(/\.?0+$/, "");
+    return `${s === "-0" ? "0" : s} mBTC`;
+  };
+
+  return maxAbs >= BTC_THRESHOLD ? [fmtBtc(a), fmtBtc(b)] : [fmtMBtc(a), fmtMBtc(b)];
 }
 
 export function formatSatsCompact(

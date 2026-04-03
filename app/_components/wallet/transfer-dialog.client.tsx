@@ -57,7 +57,7 @@ import {
   getMasterAccountBlockedMessage,
 } from "@/lib/utils/masterAccountRecovery";
 
-const renameTag = (tag: string) => tag === "main" ? "Trading Account" : tag;
+const renameTag = (tag: string) => tag === "main" ? "Primary Trading Account" : tag;
 
 type Props = {
   children: React.ReactNode;
@@ -874,10 +874,10 @@ const TransferDialog = ({
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="left-auto right-0 min-h-screen max-w-2xl translate-x-0 rounded-none border-r-0">
+      <DialogContent className="left-auto right-0 min-h-dvh max-w-2xl translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <DialogTitle>Transfer</DialogTitle>
         <form onSubmit={submitTransfer} className="max-w-sm space-y-2">
-          <div className="flex flex-row justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between">
             <div className="space-y-2">
               <div className="space-y-1">
                 <Text className="text-xs text-primary-accent" asChild>
@@ -899,7 +899,7 @@ const TransferDialog = ({
                 >
                   <SelectTrigger
                     id="dropdown-transfer-from"
-                    className="w-[180px]"
+                    className="w-full md:w-[180px]"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -944,7 +944,7 @@ const TransferDialog = ({
                   >
                     <SelectTrigger
                       id="dropdown-trading-account-from"
-                      className="w-[180px]"
+                      className="w-full md:w-[180px]"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -1036,7 +1036,7 @@ const TransferDialog = ({
                 >
                   <SelectTrigger
                     id="dropdown-transfer-to"
-                    className="w-[180px]"
+                    className="w-full md:w-[180px]"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -1098,7 +1098,7 @@ const TransferDialog = ({
                   >
                     <SelectTrigger
                       id="dropdown-trading-account-to"
-                      className="w-[180px]"
+                      className="w-full md:w-[180px]"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -1192,6 +1192,7 @@ const TransferDialog = ({
 
           <div className="pt-2">
             <Button
+              variant="terminal"
               disabled={
                 isSubmitLoading ||
                 !depositAmount ||

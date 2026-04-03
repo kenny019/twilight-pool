@@ -1,6 +1,6 @@
 import { useTwilightStore } from "@/lib/providers/store";
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { Sheet, SheetContent, SheetTitle } from "./sheet";
 import { NumberInput } from "./input";
 import Button from "./button";
 import { useToast } from "@/lib/hooks/useToast";
@@ -283,9 +283,9 @@ function EditOrderDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogTitle>Edit Limit Order</DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="md:bottom-auto md:left-[50%] md:right-auto md:top-[50%] md:w-full md:max-w-sm md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-md md:border">
+        <SheetTitle>Edit Limit Order</SheetTitle>
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-primary-accent">
@@ -339,8 +339,8 @@ function EditOrderDialog({
             )}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

@@ -134,6 +134,25 @@ export const openOrdersColumns: ColumnDef<OpenOrderRow, any>[] = [
     },
   },
   {
+    id: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const trade = row.original;
+      if (trade.orderStatus === "PENDING") {
+        return (
+          <span className="rounded bg-yellow-400/15 px-2 py-1 text-xs font-medium text-yellow-400">
+            Pending
+          </span>
+        );
+      }
+      return (
+        <span className="rounded bg-green-medium/15 px-2 py-1 text-xs font-medium text-green-medium">
+          Active
+        </span>
+      );
+    },
+  },
+  {
     accessorKey: "positionSize",
     header: "Position Size (USD)",
     cell: (row) => {

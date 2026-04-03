@@ -21,76 +21,98 @@ const MobileNav = () => {
   const path = usePathname();
   const [open, setOpen] = useState(false);
 
-  function MobileLink({ href, text }: { href: string; text: string }) {
+  function MobileLink({
+    href,
+    text,
+    external = false,
+  }: {
+    href: string;
+    text: string;
+    external?: boolean;
+  }) {
+    const isActive = !external && path === href;
+
     return (
-      <div>
-        <Link passHref href={href}>
-          <button
-            className={cn(
-              "focus-visible:ring-ring inline-flex h-10 w-full items-center justify-normal rounded-md border px-2 py-0 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 md:animate-in",
-              path === href ? "border-theme" : "border-outline"
-            )}
-            onClick={() => setOpen(false)}
-          >
-            {text}
-          </button>
+      <Close asChild>
+        <Link
+          href={href}
+          target={external ? "_blank" : undefined}
+          rel={external ? "noreferrer" : undefined}
+          onClick={() => setOpen(false)}
+          className={cn(
+            "focus-visible:ring-ring relative inline-flex min-h-[50px] w-full items-center px-4 py-2.5 text-[15px] font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 touch-manipulation",
+            isActive
+              ? "bg-theme/[0.04] text-primary"
+              : "text-primary/80 hover:bg-primary/[0.03] hover:text-primary"
+          )}
+        >
+          {isActive ? (
+            <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-theme" />
+          ) : null}
+          <span className="block truncate">{text}</span>
         </Link>
-      </div>
+      </Close>
     );
   }
 
   return (
     <Root open={open} onOpenChange={setOpen}>
       <Trigger asChild>
-        <button>
-          <Menu />
+        <button className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md -mr-1 touch-manipulation transition-colors hover:bg-primary/5">
+          <Menu className="h-5 w-5" />
         </button>
       </Trigger>
 
       <Portal>
         <Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Content
-          className="fixed right-0 top-0 z-50 min-h-screen w-full max-w-xs border-l bg-background px-6 py-4 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+          className="fixed right-0 top-0 z-50 min-h-dvh w-[calc(100vw-3.5rem)] max-w-[17.5rem] overflow-y-auto border-l bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
         >
-          <Close className="absolute right-4 top-4 rounded-md border-0 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-primary disabled:pointer-events-none">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </Close>
-          <div className="space-y-4 pt-8">
-            <div className="space-y-1">
-              <Text className="font-ui text-xs uppercase text-primary/80">
-                Links
-              </Text>
-              <div className="space-y-2">
-                {marketSubLinks.map((link) => (
-                  <MobileLink
-                    key={link.href}
-                    href={link.href}
-                    text={link.title}
-                  />
-                ))}
-                {TWILIGHT_NETWORK_TYPE === "testnet" ? (
+          <div className="flex items-center justify-between gap-3 border-b border-outline/30 pb-2.5">
+            <Text className="font-ui text-[11px] uppercase tracking-[0.08em] text-primary/45">
+              Menu
+            </Text>
+            <Close asChild>
+              <button className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md border border-outline/60 text-primary/55 transition-colors hover:bg-primary/5 hover:text-primary focus:outline-none focus:ring-1 focus:ring-primary touch-manipulation">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </button>
+            </Close>
+          </div>
+
+          <nav className="pt-3">
+            <div className="overflow-hidden rounded-lg border border-outline/50 bg-background/40">
+              {marketSubLinks.map((link, index) => (
+                <div
+                  key={link.href}
+                  className={cn(index !== 0 && "border-t border-outline/35")}
+                >
+                  <MobileLink href={link.href} text={link.title} />
+                </div>
+              ))}
+              {TWILIGHT_NETWORK_TYPE === "testnet" ? (
+                <div className="border-t border-outline/35">
                   <MobileLink href="/faucet" text="Faucet" />
-                ) : (
-                  btcSubLinks.map((link) => (
-                    <MobileLink
-                      key={link.href}
-                      href={link.href}
-                      text={link.title}
-                    />
-                  ))
-                )}
+                </div>
+              ) : (
+                btcSubLinks.map((link) => (
+                  <div key={link.href} className="border-t border-outline/35">
+                    <MobileLink href={link.href} text={link.title} />
+                  </div>
+                ))
+              )}
+              <div className="border-t border-outline/35">
                 <MobileLink
                   href="https://docs.twilight.org/"
                   text="Docs"
+                  external
                 />
               </div>
             </div>
-          </div>
+          </nav>
         </Content>
       </Portal>
     </Root>
   );
 };
-
 export default MobileNav;

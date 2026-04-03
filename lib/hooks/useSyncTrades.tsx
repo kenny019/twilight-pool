@@ -574,7 +574,7 @@ export const useSyncTrades = () => {
                       from: zkAccountToSettle.address,
                       fromTag: zkAccountToSettle.tag,
                       to: pendingTradingAccount.address,
-                      toTag: "Trading Account",
+                      toTag: "Primary Trading Account",
                       tx_hash: privateTxSingleResult.data.txId,
                       type: "Transfer",
                       value: zkAccountToSettle.value,
@@ -628,7 +628,7 @@ export const useSyncTrades = () => {
                     from: zkAccountToSettle.address,
                     fromTag: zkAccountToSettle.tag,
                     to: updatedTradingAccountAddress,
-                    toTag: "Trading Account",
+                    toTag: "Primary Trading Account",
                     tx_hash: txId,
                     type: "Transfer",
                     value: zkAccountToSettle.value,
@@ -650,7 +650,7 @@ export const useSyncTrades = () => {
                           Big(zkAccountToSettle.value)
                         )
                           .convert("BTC")
-                          .toString()} BTC to the Trading Account.`}
+                          .toString()} BTC to the Primary Trading Account.`}
                         <Link
                           href={`${
                             process.env.NEXT_PUBLIC_EXPLORER_URL as string

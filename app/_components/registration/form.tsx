@@ -202,9 +202,9 @@ const WalletRegistrationForm = () => {
         />
       </div>
 
-      <button
+      <Button
         disabled={!isWalletConnected || isLoading}
-        className="w-full justify-center bg-primary text-background rounded-default px-4 py-2 hover:bg-primary/80 transition-colors"
+        className="w-full bg-primary text-background hover:bg-primary/80"
         type="submit"
       >
         {isLoading ? (
@@ -214,7 +214,7 @@ const WalletRegistrationForm = () => {
         ) : (
           "Register"
         )}
-      </button>
+      </Button>
     </form>
   );
 };

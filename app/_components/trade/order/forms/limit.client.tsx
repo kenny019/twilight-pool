@@ -62,6 +62,52 @@ const COLLATERAL_STEP_BTC = 0.000001;
 const COLLATERAL_STEP_USD = 10;
 const COLLATERAL_PRESETS = [25, 50, 75, 100] as const;
 const LEVERAGE_PRESETS = [2, 5, 10, 25, 50] as const;
+const MAX_PRICE_INTEGER_DIGITS = 8;
+const MAX_COLLATERAL_INTEGER_DIGITS = 8;
+const MAX_LEVERAGE_DIGITS = 2;
+
+function sanitizeDecimalInput(
+  rawValue: string,
+  maxIntegerDigits: number,
+  maxDecimals: number
+): string {
+  const cleaned = rawValue.replace(/[^\d.]/g, "");
+
+  if (!cleaned) return "";
+
+  const startsWithDot = cleaned.startsWith(".");
+  const [integerRaw = "", ...decimalRawParts] = cleaned.split(".");
+  const integerPart = integerRaw.slice(0, maxIntegerDigits);
+  const decimalPart = decimalRawParts.join("").slice(0, maxDecimals);
+
+  if (startsWithDot) {
+    return decimalPart ? `.${decimalPart}` : ".";
+  }
+
+  if (cleaned.includes(".")) {
+    return `${integerPart}.${decimalPart}`;
+  }
+
+  return integerPart;
+}
+
+function trimTrailingZeros(value: string): string {
+  return value.replace(/(\.\d*?[1-9])0+$|\.0*$/, "$1");
+}
+
+function formatAmountInputValue(
+  value: number,
+  unit: "btc" | "usd"
+): string {
+  if (!Number.isFinite(value) || value <= 0) return "";
+
+  return unit === "btc"
+    ? trimTrailingZeros(value.toFixed(8))
+    : value.toFixed(2);
+}
+
+const formatOrderPriceValue = (price: number) =>
+  price > 0 ? (Math.round(price * 100) / 100).toFixed(2) : "";
 
 const OrderLimitForm = () => {
   const { width } = useGrid();
@@ -74,6 +120,10 @@ const OrderLimitForm = () => {
   const [percent, setPercent] = useState<number>(0);
   const [btcAmount, setBtcAmount] = useState<string>("");
   const [collateralUnit, setCollateralUnit] = useState<"btc" | "usd">("btc");
+  const [amountInput, setAmountInput] = useState<string>("");
+  const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
+  const [leverageInput, setLeverageInput] = useState("5");
+  const [isLeverageInputFocused, setIsLeverageInputFocused] = useState(false);
 
   const updatePercent = useCallback((value: number) => {
     const finalValue = Math.max(0, Math.min(value, 100));
@@ -88,15 +138,193 @@ const OrderLimitForm = () => {
   );
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
   const markPrice = liveBtcPrice || storedBtcPrice;
+  const { status, mainWallet } = useWallet();
+  const privateKey = useSessionStore((state) => state.privateKey);
+  const { retrySign } = useSignStatus();
+  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
+  const masterAccountBlocked = useTwilightStore(
+    (state) => state.zk.masterAccountBlocked
+  );
+  const masterAccountBlockReason = useTwilightStore(
+    (state) => state.zk.masterAccountBlockReason
+  );
+  const setMasterAccountRecovery = useTwilightStore(
+    (state) => state.zk.setMasterAccountRecovery
+  );
+  const addTrade = useTwilightStore((state) => state.trade.addTrade);
+  const addTradeHistory = useTwilightStore(
+    (state) => state.trade_history.addTrade
+  );
+  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
+  const tradingAccount = zkAccounts.find((account) => account.tag === "main");
+  const tradingAccountBalance = tradingAccount?.value || 0;
+  const tradingAccountBalanceString = new BTC(
+    "sats",
+    Big(tradingAccountBalance)
+  )
+    .convert("BTC")
+    .toFixed(8);
+  const maxCollateralBtc = useMemo(
+    () => parseFloat(tradingAccountBalanceString || "0") || 0,
+    [tradingAccountBalanceString]
+  );
+  const maxCollateralUsd = useMemo(() => {
+    if (!markPrice || markPrice <= 0 || maxCollateralBtc <= 0) return 0;
+    return Number(Big(maxCollateralBtc).mul(markPrice).toFixed(2));
+  }, [markPrice, maxCollateralBtc]);
+  const usdAmount = useMemo(() => {
+    if (!btcAmount || !markPrice || markPrice <= 0) return "";
+    const btc = parseFloat(btcAmount);
+    if (!Number.isFinite(btc) || btc <= 0) return "";
+    return Big(btc).mul(markPrice).toFixed(2);
+  }, [btcAmount, markPrice]);
 
   const [orderPrice, setOrderPrice] = useState(
     markPrice ? Math.round(markPrice * 100) / 100 : 0
   );
+  const [orderPriceInput, setOrderPriceInput] = useState(() =>
+    formatOrderPriceValue(markPrice ? Math.round(markPrice * 100) / 100 : 0)
+  );
+  const hasInitializedOrderPrice = useRef(markPrice > 0);
+
+  const syncOrderPrice = useCallback((nextPrice: number) => {
+    setOrderPrice(nextPrice);
+    setOrderPriceInput(formatOrderPriceValue(nextPrice));
+  }, []);
+
+  const handleOrderPriceChange = useCallback((rawValue: string) => {
+    const nextValue = sanitizeDecimalInput(rawValue, MAX_PRICE_INTEGER_DIGITS, 2);
+    setOrderPriceInput(nextValue);
+
+    if (!nextValue || nextValue === ".") {
+      setOrderPrice(0);
+      return;
+    }
+
+    const parsedValue = parseFloat(nextValue);
+    if (!Number.isNaN(parsedValue) && parsedValue >= 0) {
+      setOrderPrice(parsedValue);
+    }
+  }, []);
+
+  const handleOrderPriceBlur = useCallback(() => {
+    setOrderPriceInput(formatOrderPriceValue(orderPrice));
+  }, [orderPrice]);
+
+  const updateCollateralFromInput = useCallback(
+    (rawValue: string) => {
+      const nextValue = sanitizeDecimalInput(
+        rawValue,
+        MAX_COLLATERAL_INTEGER_DIGITS,
+        collateralUnit === "btc" ? 8 : 2
+      );
+
+      if (!nextValue) {
+        setAmountInput("");
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      if (nextValue === ".") {
+        setAmountInput(nextValue);
+        setBtcAmount("");
+        setPercent(0);
+        return;
+      }
+
+      let parsedValue = parseFloat(nextValue);
+      if (!Number.isFinite(parsedValue) || parsedValue < 0) return;
+
+      const maxValue =
+        collateralUnit === "btc" ? maxCollateralBtc : maxCollateralUsd;
+      if (maxValue > 0) {
+        parsedValue = Math.min(parsedValue, maxValue);
+      }
+
+      const normalizedInput =
+        parsedValue === parseFloat(nextValue)
+          ? nextValue
+          : formatAmountInputValue(parsedValue, collateralUnit);
+
+      setAmountInput(normalizedInput);
+
+      const nextBtcAmount =
+        collateralUnit === "btc"
+          ? parsedValue
+          : markPrice > 0
+            ? Number(Big(parsedValue).div(markPrice).toFixed(8))
+            : 0;
+
+      setBtcAmount(
+        nextBtcAmount > 0 ? trimTrailingZeros(nextBtcAmount.toFixed(8)) : ""
+      );
+
+      if (maxCollateralBtc > 0) {
+        updatePercent((nextBtcAmount / maxCollateralBtc) * 100);
+      } else {
+        setPercent(0);
+      }
+    },
+    [collateralUnit, markPrice, maxCollateralBtc, maxCollateralUsd, updatePercent]
+  );
+
+  const normalizeAmountInput = useCallback(() => {
+    if (!amountInput || amountInput === ".") {
+      setAmountInput("");
+      setBtcAmount("");
+      setPercent(0);
+      return;
+    }
+
+    const normalizedValue =
+      collateralUnit === "btc"
+        ? formatAmountInputValue(parseFloat(btcAmount || "0"), "btc")
+        : usdAmount;
+
+    setAmountInput(normalizedValue);
+  }, [amountInput, btcAmount, collateralUnit, usdAmount]);
+
+  const handleLeverageInputChange = useCallback((rawValue: string) => {
+    const nextValue = rawValue.replace(/\D/g, "").slice(0, MAX_LEVERAGE_DIGITS);
+    setLeverageInput(nextValue);
+
+    if (!nextValue) {
+      setLeverage("");
+      return;
+    }
+
+    const parsedValue = parseInt(nextValue, 10);
+    if (!Number.isFinite(parsedValue)) return;
+
+    if (parsedValue > 50) {
+      setLeverage("50");
+      setLeverageInput("50");
+      return;
+    }
+
+    if (parsedValue >= 1) {
+      setLeverage(String(parsedValue));
+    }
+  }, []);
+
+  const handleLeverageInputBlur = useCallback(() => {
+    const parsedValue = parseInt(leverageInput || leverage || "5", 10);
+    const normalizedValue = Number.isFinite(parsedValue)
+      ? Math.max(1, Math.min(parsedValue, 50))
+      : 5;
+
+    setLeverage(String(normalizedValue));
+    setLeverageInput(String(normalizedValue));
+  }, [leverage, leverageInput]);
 
   useEffect(() => {
-    if (markPrice > 0 && orderPrice === 0)
-      setOrderPrice(Math.round(markPrice * 100) / 100);
-  }, [markPrice]);
+    if (!hasInitializedOrderPrice.current && markPrice > 0) {
+      const initialPrice = Math.round(markPrice * 100) / 100;
+      syncOrderPrice(initialPrice);
+      hasInitializedOrderPrice.current = true;
+    }
+  }, [markPrice, syncOrderPrice]);
 
   const orderSats = useMemo(() => {
     if (!btcAmount) return 0;
@@ -108,13 +336,6 @@ const OrderLimitForm = () => {
       return 0;
     }
   }, [btcAmount]);
-
-  const usdAmount = useMemo(() => {
-    if (!btcAmount || !markPrice || markPrice <= 0) return "";
-    const btc = parseFloat(btcAmount);
-    if (!Number.isFinite(btc) || btc <= 0) return "";
-    return Big(btc).mul(markPrice).toFixed(2);
-  }, [btcAmount, markPrice]);
 
   const positionSize = useMemo(() => {
     if (!orderPrice || !leverage || !orderSats) return "0.00";
@@ -204,33 +425,6 @@ const OrderLimitForm = () => {
     }
   }, [orderPrice, leverage, orderSats]);
 
-  const { status, mainWallet } = useWallet();
-  const privateKey = useSessionStore((state) => state.privateKey);
-  const { retrySign } = useSignStatus();
-  const updateZkAccount = useTwilightStore((state) => state.zk.updateZkAccount);
-  const masterAccountBlocked = useTwilightStore(
-    (state) => state.zk.masterAccountBlocked
-  );
-  const masterAccountBlockReason = useTwilightStore(
-    (state) => state.zk.masterAccountBlockReason
-  );
-  const setMasterAccountRecovery = useTwilightStore(
-    (state) => state.zk.setMasterAccountRecovery
-  );
-  const addTrade = useTwilightStore((state) => state.trade.addTrade);
-  const addTradeHistory = useTwilightStore(
-    (state) => state.trade_history.addTrade
-  );
-  const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
-  const tradingAccount = zkAccounts.find((account) => account.tag === "main");
-  const tradingAccountBalance = tradingAccount?.value || 0;
-  const tradingAccountBalanceString = new BTC(
-    "sats",
-    Big(tradingAccountBalance)
-  )
-    .convert("BTC")
-    .toFixed(8);
-
   const addZkAccount = useTwilightStore((state) => state.zk.addZkAccount);
   const optInLeaderboard = useTwilightStore((state) => state.optInLeaderboard);
   const addTransactionHistory = useTwilightStore(
@@ -249,14 +443,24 @@ const OrderLimitForm = () => {
     (pct: number) => {
       if (markPrice <= 0) return;
       const newPrice = markPrice * (1 + pct / 100);
-      setOrderPrice(Math.max(0.01, Math.round(newPrice * 100) / 100));
+      syncOrderPrice(Math.max(0.01, Math.round(newPrice * 100) / 100));
     },
-    [markPrice]
+    [markPrice, syncOrderPrice]
   );
 
-  const adjustPrice = useCallback((delta: number) => {
-    setOrderPrice((p) => Math.max(0.01, Math.round((p + delta) * 100) / 100));
-  }, []);
+  const adjustPrice = useCallback(
+    (delta: number) => {
+      setOrderPrice((currentPrice) => {
+        const nextPrice = Math.max(
+          0.01,
+          Math.round((currentPrice + delta) * 100) / 100
+        );
+        setOrderPriceInput(formatOrderPriceValue(nextPrice));
+        return nextPrice;
+      });
+    },
+    []
+  );
 
   const priceRepeatRef = useRef<{
     timeoutId: ReturnType<typeof setTimeout> | null;
@@ -566,7 +770,7 @@ const OrderLimitForm = () => {
             addTransactionHistory({
               date: new Date(),
               from: currentTradingAccount.address,
-              fromTag: "Trading Account",
+              fromTag: "Primary Trading Account",
               to: updatedTradingAccountAddress,
               toTag: newZkAccount.tag,
               tx_hash: txId,
@@ -600,7 +804,7 @@ const OrderLimitForm = () => {
           addTransactionHistory({
             date: new Date(),
             from: currentTradingAccount.address,
-            fromTag: "Trading Account",
+            fromTag: "Primary Trading Account",
             to: updatedTradingAccountAddress,
             toTag: newZkAccount.tag,
             tx_hash: txId,
@@ -785,7 +989,7 @@ const OrderLimitForm = () => {
       setLeverage("5");
       setPercent(0);
       setBtcAmount("");
-      setOrderPrice(markPrice ? Math.round(markPrice * 100) / 100 : 0);
+      syncOrderPrice(markPrice ? Math.round(markPrice * 100) / 100 : 0);
     } catch (err) {
       if (typeof err === "string") {
         toast({
@@ -813,13 +1017,25 @@ const OrderLimitForm = () => {
     collateralUnit === "btc" ? COLLATERAL_STEP_BTC : COLLATERAL_STEP_USD;
   collateralStepRef.current = collateralStep;
 
+  useEffect(() => {
+    if (!isAmountInputFocused) {
+      setAmountInput(primaryValue);
+    }
+  }, [isAmountInputFocused, primaryValue]);
+
+  useEffect(() => {
+    if (!isLeverageInputFocused) {
+      setLeverageInput(leverage || "");
+    }
+  }, [isLeverageInputFocused, leverage]);
+
   const marginStepDisabled =
     !tradingAccountBalance || (collateralUnit === "usd" && !markPrice);
 
   return (
     <form
       onSubmit={submitLimitOrder}
-      className="flex flex-col gap-2 px-3 py-2.5"
+      className="flex flex-col gap-1 px-3 py-2"
     >
       {status === "Connected" && !tradingAccountBalance && (
         <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
@@ -880,7 +1096,7 @@ const OrderLimitForm = () => {
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
           <span className="text-xs text-primary/50">From Mark</span>
           {PRICE_PRESETS.map((pct) => (
             <button
@@ -895,18 +1111,72 @@ const OrderLimitForm = () => {
             </button>
           ))}
         </div>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input + Mark] [+] */}
+        <div className="flex items-stretch gap-1.5 md:hidden">
+          <button
+            type="button"
+            disabled={!tradingAccountBalance}
+            onPointerDown={(e) => {
+              if (!tradingAccountBalance || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startPriceRepeat(-PRICE_STEP);
+            }}
+            onPointerUp={clearPriceRepeat}
+            onPointerCancel={clearPriceRepeat}
+            onLostPointerCapture={clearPriceRepeat}
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-md border border-outline bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <Input
+              id="input-order-price-mobile"
+              type="text"
+              value={orderPriceInput}
+              onChange={(e) => handleOrderPriceChange(e.target.value)}
+              onBlur={handleOrderPriceBlur}
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent text-center text-base tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+            <button
+              type="button"
+              onClick={() =>
+                markPrice > 0 &&
+                syncOrderPrice(Math.round(markPrice * 100) / 100)
+              }
+              disabled={!tradingAccountBalance || markPrice <= 0}
+              className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+            >
+              Mark
+            </button>
+          </div>
+          <button
+            type="button"
+            disabled={!tradingAccountBalance}
+            onPointerDown={(e) => {
+              if (!tradingAccountBalance || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startPriceRepeat(PRICE_STEP);
+            }}
+            onPointerUp={clearPriceRepeat}
+            onPointerCancel={clearPriceRepeat}
+            onLostPointerCapture={clearPriceRepeat}
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <div className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1">
             <Input
               id="input-order-price"
               type="text"
-              value={orderPrice > 0 ? orderPrice.toFixed(2) : ""}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) setOrderPrice(n);
-                else if (v === "") setOrderPrice(0);
-              }}
+              value={orderPriceInput}
+              onChange={(e) => handleOrderPriceChange(e.target.value)}
+              onBlur={handleOrderPriceBlur}
               className="h-6 min-w-0 flex-1 border-0 bg-transparent text-base tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
@@ -914,7 +1184,7 @@ const OrderLimitForm = () => {
               type="button"
               onClick={() =>
                 markPrice > 0 &&
-                setOrderPrice(Math.round(markPrice * 100) / 100)
+                syncOrderPrice(Math.round(markPrice * 100) / 100)
               }
               disabled={!tradingAccountBalance || markPrice <= 0}
               className="shrink-0 text-xs font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
@@ -969,43 +1239,101 @@ const OrderLimitForm = () => {
         >
           Margin Amount
         </label>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input + toggle] [+] */}
+        <div className="flex items-stretch gap-2 md:hidden">
+          <button
+            type="button"
+            disabled={marginStepDisabled}
+            onPointerDown={(e) => {
+              if (marginStepDisabled || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startCollateralRepeat(-1);
+            }}
+            onPointerUp={clearCollateralRepeat}
+            onPointerCancel={clearCollateralRepeat}
+            onLostPointerCapture={clearCollateralRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2">
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={amountInput}
+                onChange={(e) => updateCollateralFromInput(e.target.value)}
+                onFocus={() => setIsAmountInputFocused(true)}
+                onBlur={() => {
+                  setIsAmountInputFocused(false);
+                  normalizeAmountInput();
+                }}
+                className="h-auto min-h-0 w-full border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+                disabled={!tradingAccountBalance}
+              />
+              {secondaryRef && (
+                <span className="text-xs text-primary/50">{secondaryRef}</span>
+              )}
+            </div>
+            <div className="flex flex-col border-l border-outline">
+              <button
+                type="button"
+                onClick={() => setCollateralUnit("btc")}
+                className={cn(
+                  "flex-1 px-2 text-[10px] font-medium transition-colors",
+                  collateralUnit === "btc"
+                    ? "bg-theme/20 text-theme"
+                    : "text-primary/50 hover:text-primary/80"
+                )}
+              >
+                BTC
+              </button>
+              <button
+                type="button"
+                onClick={() => setCollateralUnit("usd")}
+                className={cn(
+                  "flex-1 px-2 text-[10px] font-medium transition-colors",
+                  collateralUnit === "usd"
+                    ? "bg-theme/20 text-theme"
+                    : "text-primary/50 hover:text-primary/80"
+                )}
+              >
+                USD
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={marginStepDisabled}
+            onPointerDown={(e) => {
+              if (marginStepDisabled || e.button !== 0) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startCollateralRepeat(1);
+            }}
+            onPointerUp={clearCollateralRepeat}
+            onPointerCancel={clearCollateralRepeat}
+            onLostPointerCapture={clearCollateralRepeat}
+            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1">
             <Input
               type="text"
               inputMode="decimal"
               placeholder="0"
-              value={primaryValue}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                if (!v) {
-                  setBtcAmount("");
-                  setPercent(0);
-                  return;
-                }
-                const n = parseFloat(v);
-                if (!Number.isNaN(n) && n >= 0) {
-                  if (collateralUnit === "btc") {
-                    setBtcAmount(v);
-                    if (tradingAccountBalance > 0) {
-                      const maxBtc = parseFloat(
-                        tradingAccountBalanceString || "0"
-                      );
-                      updatePercent((n / maxBtc) * 100);
-                    }
-                  } else {
-                    if (markPrice > 0) {
-                      const btc = n / markPrice;
-                      setBtcAmount(btc.toFixed(8));
-                      if (tradingAccountBalance > 0) {
-                        const maxBtc = parseFloat(
-                          tradingAccountBalanceString || "0"
-                        );
-                        updatePercent((btc / maxBtc) * 100);
-                      }
-                    }
-                  }
-                }
+              value={amountInput}
+              onChange={(e) => updateCollateralFromInput(e.target.value)}
+              onFocus={() => setIsAmountInputFocused(true)}
+              onBlur={() => {
+                setIsAmountInputFocused(false);
+                normalizeAmountInput();
               }}
               className="h-auto min-h-0 w-full border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
@@ -1075,7 +1403,7 @@ const OrderLimitForm = () => {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {COLLATERAL_PRESETS.map((v) => (
             <button
               key={v}
@@ -1092,7 +1420,7 @@ const OrderLimitForm = () => {
                 "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
                 percent === v
                   ? "border-theme/50 bg-theme/20 text-theme"
-                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
               )}
             >
               {v}%
@@ -1117,7 +1445,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 4. Leverage — own row */}
-      <div className="space-y-0.5">
+      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1126,20 +1454,65 @@ const OrderLimitForm = () => {
         >
           Leverage
         </label>
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+        {/* Mobile: [−] [input] [+] */}
+        <div className="flex items-stretch gap-1.5 md:hidden">
+          <button
+            type="button"
+            onClick={() =>
+              setLeverage(
+                String(Math.max(1, (parseInt(leverage, 10) || 1) - 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
+            }
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="5"
+              value={leverageInput}
+              onChange={(e) => handleLeverageInputChange(e.target.value)}
+              onFocus={() => setIsLeverageInputFocused(true)}
+              onBlur={() => {
+                setIsLeverageInputFocused(false);
+                handleLeverageInputBlur();
+              }}
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setLeverage(
+                String(Math.min(50, (parseInt(leverage, 10) || 1) + 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
+            }
+            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Desktop: original stacked stepper layout */}
+        <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
           <Input
             type="text"
             inputMode="numeric"
             placeholder="5"
-            value={leverage}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "");
-              const n = parseInt(v || "5", 10);
-              if (n >= 1 && n <= 50) {
-                setLeverage(String(n));
-              } else if (v === "") {
-                setLeverage("");
-              }
+            value={leverageInput}
+            onChange={(e) => handleLeverageInputChange(e.target.value)}
+            onFocus={() => setIsLeverageInputFocused(true)}
+            onBlur={() => {
+              setIsLeverageInputFocused(false);
+              handleLeverageInputBlur();
             }}
             className="h-6 min-w-0 flex-1 border-0 bg-transparent px-2 py-1 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
             disabled={!tradingAccountBalance}
@@ -1187,7 +1560,7 @@ const OrderLimitForm = () => {
           disabled={!tradingAccountBalance}
           className="w-full"
         />
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {LEVERAGE_PRESETS.map((v) => (
             <button
               key={v}
@@ -1198,7 +1571,7 @@ const OrderLimitForm = () => {
                 "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
                 parseInt(leverage, 10) === v
                   ? "border-theme/50 bg-theme/20 text-theme"
-                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
+                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
               )}
             >
               {v}x
@@ -1208,7 +1581,7 @@ const OrderLimitForm = () => {
       </div>
 
       {/* 5. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="text-sm font-medium tabular-nums">
@@ -1222,13 +1595,13 @@ const OrderLimitForm = () => {
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-green-medium/70">Liq Buy</span>
+          <span className="text-xs text-primary/50">Liq Buy</span>
           <span className="text-sm font-medium tabular-nums text-green-medium/90">
             ${liquidationPrices.long}
           </span>
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-xs text-red/70">Liq Sell</span>
+          <span className="text-xs text-primary/50">Liq Sell</span>
           <span className="text-sm font-medium tabular-nums text-red/90">
             ${liquidationPrices.short}
           </span>
@@ -1238,9 +1611,9 @@ const OrderLimitForm = () => {
       {/* 6. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-row gap-2 pt-0.5">
+          <div className="flex flex-row gap-1.5 pt-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2">
             <Button
-              className="min-w-0 flex-1 border-green-medium py-1 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium"
+              className="min-w-0 flex-1 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-opacity hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
               variant="ui"
               type="submit"
               value="buy"
@@ -1253,7 +1626,7 @@ const OrderLimitForm = () => {
               )}
             </Button>
             <Button
-              className="min-w-0 flex-1 border-red py-1 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red"
+              className="min-w-0 flex-1 border-red py-2 text-sm text-red opacity-70 transition-opacity hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
               variant="ui"
               type="submit"
               value="sell"

@@ -9,14 +9,13 @@ import { ZK_ACCOUNT_INDEX } from "@/lib/constants";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
-import { useTwilightStore, twilightStoreContext } from "@/lib/providers/store";
+import { useTwilightStore } from "@/lib/providers/store";
 import BTC from "@/lib/twilight/denoms";
 import { ZkAccount } from "@/lib/types";
 import Big from "big.js";
 import { ArrowLeftRight } from "lucide-react";
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -64,8 +63,6 @@ export type ActiveAccount = {
 const Page = () => {
   const [currentTab, setCurrentTab] = useState<TabType>("account-summary");
   const { toast } = useToast();
-
-  const twilightStore = useContext(twilightStoreContext);
   const privateKey = useSessionStore((state) => state.privateKey);
   const btcPrice = useSessionStore((state) => state.price.btcPrice);
   const zkAccounts = useTwilightStore((state) => state.zk.zkAccounts);
@@ -98,7 +95,7 @@ const Page = () => {
 
       acc.push({
         address: account.address,
-        tag: account.tag === "main" ? "Trading Account" : account.tag,
+        tag: account.tag === "main" ? "Primary Trading Account" : account.tag,
         createdAt: account.createdAt || dayjs().unix(),
         value: account.value || 0,
         type,
@@ -502,84 +499,6 @@ const Page = () => {
     ]
   );
 
-  const exportData = useCallback(() => {
-    if (!twilightAddress) {
-      toast({
-        title: "Export failed",
-        description: "Please connect your wallet first.",
-      });
-      return;
-    }
-
-    if (!twilightStore) {
-      toast({
-        title: "Export failed",
-        description: "Store not available",
-      });
-      return;
-    }
-
-    const storeState = twilightStore.getState();
-    const jsonString = JSON.stringify(storeState);
-
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${twilightAddress}-data.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exported successfully",
-      description: "Exported account data to your device.",
-    });
-  }, [twilightStore, toast, twilightAddress]);
-
-  const importData = useCallback(() => {
-    if (!twilightAddress) {
-      toast({
-        title: "Import failed",
-        description: "Please connect your wallet first.",
-      });
-      return;
-    }
-
-    if (!twilightStore) {
-      toast({
-        title: "Import failed",
-        description: "Store not available",
-      });
-      return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        twilightStore.setState(data);
-        toast({
-          title: "Imported successfully",
-          description: "Account data has been imported.",
-        });
-      } catch (error) {
-        toast({
-          title: "Import failed",
-          description: "Invalid JSON file.",
-        });
-      }
-    };
-    input.click();
-  }, [twilightStore, toast, twilightAddress]);
-
   function renderTableContent() {
     switch (currentTab) {
       case "account-summary":
@@ -612,7 +531,7 @@ const Page = () => {
   return (
     <div className="mx-4 mt-4 space-y-4 md:mx-8 md:space-y-8">
       <div className="flex flex-col space-y-4 md:grid md:grid-cols-12 md:gap-4 md:space-y-0">
-        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-4 md:p-6">
+        <div className="bg-card flex flex-col gap-6 rounded-xl border border-border/70 p-4 md:col-span-4 md:p-6">
           <div className="space-y-3">
             <Text
               heading="h2"
@@ -683,7 +602,7 @@ const Page = () => {
             </Resource>
           </div>
         </div>
-        <div className="bg-card flex flex-col gap-6 rounded-lg border border-outline p-4 md:col-span-3 md:p-6">
+        <div className="bg-card flex flex-col gap-6 rounded-xl border border-border/70 p-4 md:col-span-3 md:p-6">
           <div className="space-y-4">
             <Text
               heading="h2"
@@ -754,7 +673,7 @@ const Page = () => {
             </div>
           </div>
         </div>
-        <div className="bg-card flex flex-col rounded-lg border border-outline p-4 md:col-span-5 md:p-6">
+        <div className="bg-card flex flex-col rounded-xl border border-border/70 p-4 md:col-span-5 md:p-6">
           <Text
             heading="h2"
             className="text-sm font-medium text-primary-accent"
@@ -762,7 +681,7 @@ const Page = () => {
             My Accounts
           </Text>
           <div className="mt-4 space-y-4">
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <div className="min-w-0">
                 <Tooltip
                   title="Funding"
@@ -773,7 +692,7 @@ const Page = () => {
                   </span>
                 </Tooltip>
               </div>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -798,11 +717,11 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Trading
               </Text>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -827,11 +746,11 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <Text className="text-sm font-medium text-primary/80 md:text-base">
                 Lending
               </Text>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -854,7 +773,7 @@ const Page = () => {
 
             <Separator />
 
-            <div className="grid w-full grid-cols-3 items-center gap-2">
+            <div className="grid w-full grid-cols-1 sm:grid-cols-3 items-center gap-2">
               <div className="min-w-0">
                 <Tooltip
                   title="Allocated"
@@ -865,7 +784,7 @@ const Page = () => {
                   </span>
                 </Tooltip>
               </div>
-              <div className="mx-auto">
+              <div className="sm:mx-auto">
                 <Resource
                   isLoaded={!satsLoading}
                   placeholder={<Skeleton className="h-5 w-[140px]" />}
@@ -888,55 +807,48 @@ const Page = () => {
           </div>
         </div>
       </div>
-      <div className="bg-card space-y-1 rounded-lg border border-outline p-4 md:space-y-2 md:p-6">
-        <div className="flex w-full justify-between border-b border-outline">
-          <Tabs defaultValue={currentTab}>
-            <TabsList className="flex w-full border-b-0" variant="underline">
+      <div className="bg-card space-y-1 rounded-xl border border-border/70 p-4 md:space-y-2 md:p-6">
+        <div className="flex w-full flex-col gap-2 border-b border-outline pb-2 md:flex-row md:items-center md:justify-between md:pb-0">
+          <Tabs defaultValue={currentTab} className="min-w-0 w-full">
+            <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-none touch-pan-x">
+              <TabsList
+                className="min-w-max flex-nowrap justify-start border-b-0 pr-3 max-md:space-x-3"
+                variant="underline"
+              >
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-summary")}
                 value="account-summary"
                 variant="underline"
               >
-                Active Accounts
+                <span className="md:hidden">Accounts</span>
+                <span className="hidden md:inline">Active Accounts</span>
               </TabsTrigger>
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("transaction-history")}
                 value="transaction-history"
                 variant="underline"
               >
-                Transaction History
+                <span className="md:hidden">Transactions</span>
+                <span className="hidden md:inline">Transaction History</span>
               </TabsTrigger>
               <TabsTrigger
+                className="shrink-0 max-md:min-h-[44px] max-md:text-xs"
                 onClick={() => setCurrentTab("account-ledger")}
                 value="account-ledger"
                 variant="underline"
               >
-                Account Ledger
+                <span className="md:hidden">Ledger</span>
+                <span className="hidden md:inline">Account Ledger</span>
               </TabsTrigger>
-            </TabsList>
+              </TabsList>
+            </div>
           </Tabs>
 
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              type="button"
-              variant="link"
-              className="min-h-0 px-2 py-1.5 text-xs"
-              onClick={importData}
-            >
-              Import
-            </Button>
-            <Button
-              type="button"
-              variant="link"
-              className="min-h-0 px-2 py-1.5 text-xs"
-              onClick={exportData}
-            >
-              Export
-            </Button>
-          </div>
         </div>
 
-        <div className="h-full min-h-[400px] w-full overflow-auto py-1">
+        <div className="h-full min-h-[400px] w-full overflow-visible py-1 md:overflow-auto">
           {renderTableContent()}
         </div>
       </div>

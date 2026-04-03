@@ -28,7 +28,7 @@ function getSelectMenuText(selectedZkAccount: number, zkAccounts: ZkAccount[]) {
   }
 
   if (selectedZkAccount === ZK_ACCOUNT_INDEX.MAIN) {
-    return "Trading Account";
+    return "Primary Trading Account";
   }
 
   return zkAccounts[selectedZkAccount].tag;
@@ -56,7 +56,7 @@ const SubaccountSelect = () => {
     return (
       <ExchangeResource>
         <button className="flex h-10 w-[160px] items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-primary transition-colors placeholder:text-primary-accent focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50">
-          <p>Trading Account</p> <ChevronDown className="h-4 w-4 opacity-50" />
+          <p>Primary Trading Account</p> <ChevronDown className="h-4 w-4 opacity-50" />
         </button>
       </ExchangeResource>
     );
@@ -108,7 +108,7 @@ const SubaccountSelect = () => {
                 value={ZK_ACCOUNT_INDEX.MAIN.toString()}
                 isNotSpan
               >
-                Trading Account
+                Primary Trading Account
                 <span className="text-xs text-primary-accent">
                   {new BTC("sats", Big(0)).convert("BTC").toString()} BTC
                 </span>
@@ -126,7 +126,7 @@ const SubaccountSelect = () => {
                     value={ZK_ACCOUNT_INDEX.MAIN.toString()}
                     isNotSpan
                   >
-                    Trading Account
+                    Primary Trading Account
                     <span className="text-xs text-primary-accent">
                       {new BTC(
                         "sats",

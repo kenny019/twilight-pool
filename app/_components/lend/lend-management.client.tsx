@@ -3,6 +3,7 @@ import Button from "@/components/button";
 import { PopoverInput } from "@/components/input";
 import Resource from "@/components/resource";
 import { Text } from "@/components/typography";
+import cn from "@/lib/cn";
 import { sendLendOrder } from "@/lib/api/client";
 import { queryLendOrder } from "@/lib/api/relayer";
 import {
@@ -34,6 +35,9 @@ import { ZkPrivateAccount } from "@/lib/zk/account";
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 import { buildLendLedgerEntryFromRelayerEvent } from "@/lib/account-ledger/from-relayer";
+import { Slider } from "@/components/slider";
+
+const DEPOSIT_PRESETS = [25, 50, 75, 100] as const;
 
 const LendManagement = () => {
   const { toast } = useToast();
@@ -50,7 +54,8 @@ const LendManagement = () => {
   const lendOrders = useTwilightStore((state) => state.lend.lends);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
 
-  const [approxPoolShare, setApproxPoolShare] = useState<string>("0.00");
+  const [approxPoolShare, setApproxPoolShare] = useState<string>("0");
+  const [sliderSats, setSliderSats] = useState(0);
 
   const addLendOrder = useTwilightStore((state) => state.lend.addLend);
   const addLendHistory = useTwilightStore((state) => state.lend.addLendHistory);
@@ -72,6 +77,40 @@ const LendManagement = () => {
   const { mainWallet } = useWallet();
 
   const depositRef = useRef<HTMLInputElement>(null);
+
+  const clampDepositSats = useCallback(
+    (sats: number) => {
+      const maxSats = Math.max(0, twilightSats || 0);
+      return Math.min(Math.max(0, Math.round(sats)), maxSats);
+    },
+    [twilightSats]
+  );
+
+  const normalizeDepositInput = useCallback(
+    (rawValue: string, denom: BTCDenoms) => {
+      if (!rawValue.trim()) {
+        return {
+          displayValue: "",
+          clampedSats: 0,
+        };
+      }
+
+      const parsedValue = Number(rawValue);
+      if (!Number.isFinite(parsedValue)) {
+        return null;
+      }
+
+      const nonNegativeValue = Math.max(0, parsedValue);
+      const sats = new BTC(denom, Big(nonNegativeValue)).convert("sats").toNumber();
+      const clampedSats = clampDepositSats(sats);
+
+      return {
+        displayValue: new BTC("sats", Big(clampedSats)).convert(denom).toString(),
+        clampedSats,
+      };
+    },
+    [clampDepositSats]
+  );
 
   async function submitDepositForm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,7 +142,12 @@ const LendManagement = () => {
       return;
     }
 
-    if (!depositRef.current?.value) {
+    const normalizedDeposit = normalizeDepositInput(
+      depositRef.current?.value || "",
+      depositDenom as BTCDenoms
+    );
+
+    if (!normalizedDeposit || normalizedDeposit.clampedSats <= 0) {
       toast({
         title: "Invalid amount",
         description: "Please enter an amount to deposit.",
@@ -126,12 +170,12 @@ const LendManagement = () => {
         "Please do not close this page while your deposit is being submitted...",
     });
 
-    const transferAmount = new BTC(
-      depositDenom as BTCDenoms,
-      Big(depositRef.current.value)
-    )
-      .convert("sats")
-      .toNumber();
+    syncDepositUi(
+      normalizedDeposit.displayValue,
+      normalizedDeposit.clampedSats
+    );
+
+    const transferAmount = normalizedDeposit.clampedSats;
 
     const stargateClient = await chainWallet.getSigningStargateClient();
 
@@ -418,7 +462,8 @@ const LendManagement = () => {
         if (depositRef.current) {
           depositRef.current.value = "";
         }
-        setApproxPoolShare("0.00");
+        setApproxPoolShare("0");
+        setSliderSats(0);
       } else {
         toast({
           variant: "error",
@@ -459,30 +504,65 @@ const LendManagement = () => {
 
       const sharePrice = poolInfo?.pool_share;
       if (!sharePrice || sharePrice <= 0) {
-        setApproxPoolShare("0.00");
+        setApproxPoolShare("0");
         return;
       }
 
       const poolShare = sats / sharePrice;
       setApproxPoolShare(
-        Number.isFinite(poolShare) ? poolShare.toFixed(2) : "0.00"
+        Number.isFinite(poolShare) ? Math.round(poolShare).toLocaleString() : "0"
       );
     },
     [depositDenom, poolInfo?.pool_share]
   );
 
+  const syncDepositUi = useCallback(
+    (displayValue: string, clampedSats: number) => {
+      if (depositRef.current) {
+        depositRef.current.value = displayValue;
+      }
+      setSliderSats(clampedSats);
+      calculateApproxPoolShare(displayValue || "0");
+    },
+    [calculateApproxPoolShare]
+  );
+
+  const applyDepositSats = useCallback(
+    (sats: number) => {
+      const clampedSats = clampDepositSats(sats);
+      const converted = new BTC("sats", Big(clampedSats)).convert(
+        depositDenom as BTCDenoms
+      );
+      syncDepositUi(converted.toString(), clampedSats);
+    },
+    [clampDepositSats, depositDenom, syncDepositUi]
+  );
+
+  const activeDepositPreset = useMemo(() => {
+    if (!twilightSats || sliderSats <= 0) return null;
+
+    return (
+      DEPOSIT_PRESETS.find(
+        (preset) =>
+          clampDepositSats((twilightSats * preset) / 100) === sliderSats
+      ) ?? null
+    );
+  }, [clampDepositSats, sliderSats, twilightSats]);
+
   function renderDepositForm() {
     return (
-      <form onSubmit={submitDepositForm} className="space-y-4">
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <Text className="text-primary-accent" asChild>
-              <label htmlFor="amount-dep">Amount BTC</label>
-            </Text>
-            <Text className="text-primary-accent">
-              Available: {availableBalance} BTC
-            </Text>
+      <form onSubmit={submitDepositForm} className="space-y-3 md:space-y-4">
+        <div className="space-y-2.5 md:space-y-2">
+          {/* Available balance — own row, matching trade form style */}
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm text-primary/60">Available</span>
+            <span className="tabular-nums text-sm font-medium">{availableBalance} BTC</span>
           </div>
+
+          {/* Amount label */}
+          <Text className="text-xs text-primary-accent" asChild>
+            <label htmlFor="amount-dep">Amount</label>
+          </Text>
 
           <PopoverInput
             id="amount-dep"
@@ -492,26 +572,83 @@ const LendManagement = () => {
               if (!depositRef.current?.value) return;
 
               const toDenom = e.currentTarget.value as BTCDenoms;
-
-              const currentValue = new BTC(
-                depositDenom as BTCDenoms,
-                Big(depositRef.current.value)
+              const normalized = normalizeDepositInput(
+                new BTC(
+                  depositDenom as BTCDenoms,
+                  Big(depositRef.current.value)
+                )
+                  .convert(toDenom)
+                  .toString(),
+                toDenom
               );
-
-              depositRef.current.value = currentValue
-                .convert(toDenom)
-                .toString();
+              if (!normalized) return;
+              if (depositRef.current) {
+                depositRef.current.value = normalized.displayValue;
+              }
+              setSliderSats(normalized.clampedSats);
             }}
             type="number"
             step="any"
+            min="0"
+            max={new BTC("sats", Big(Math.max(0, twilightSats || 0)))
+              .convert(depositDenom as BTCDenoms)
+              .toString()}
+            inputMode="decimal"
             placeholder="0.00"
             options={["BTC", "mBTC", "sats"]}
             setSelected={setDepositDenom}
             selected={depositDenom}
             ref={depositRef}
+            className="border-outline/60 bg-background/40 pr-16 font-semibold text-primary"
+            selectorWrapperClassName="border-outline/[0.06]"
+            selectorClassName="gap-0.5 px-2 text-primary/70 data-[state=open]:text-primary"
             onChange={(e) => {
-              const value = e.target.value;
-              calculateApproxPoolShare(value);
+              const normalized = normalizeDepositInput(
+                e.target.value,
+                depositDenom as BTCDenoms
+              );
+
+              if (!normalized) {
+                return;
+              }
+
+              e.target.value = normalized.displayValue;
+              syncDepositUi(normalized.displayValue, normalized.clampedSats);
+            }}
+          />
+
+          <div className="flex flex-wrap gap-1.5">
+            {DEPOSIT_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  if (!twilightSats) return;
+                  applyDepositSats((twilightSats * preset) / 100);
+                }}
+                disabled={!twilightSats || isSubmitLoading}
+                className={cn(
+                  "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
+                  activeDepositPreset === preset
+                    ? "border-theme/50 bg-theme/20 text-theme"
+                    : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
+                )}
+              >
+                {preset}%
+              </button>
+            ))}
+          </div>
+
+          {/* Slider */}
+          <Slider
+            min={0}
+            max={twilightSats || 1}
+            step={1}
+            value={[sliderSats]}
+            className="w-full"
+            disabled={!twilightSats || isSubmitLoading}
+            onValueChange={([sats]) => {
+              applyDepositSats(sats);
             }}
           />
         </div>
@@ -522,13 +659,14 @@ const LendManagement = () => {
         </div>
 
         <Button
+          variant="ui"
           disabled={
             isSubmitLoading ||
             status !== WalletStatus.Connected ||
             isRelayerHalted
           }
           type="submit"
-          className="w-full"
+          className="w-full min-h-[44px] border-primary/70 bg-primary/[0.05] py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-primary/[0.08] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:active:bg-theme/20"
           title={
             isRelayerHalted
               ? "The relayer is halted. Deposits will be available when it resumes."

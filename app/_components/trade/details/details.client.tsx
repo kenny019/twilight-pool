@@ -17,13 +17,23 @@ import OpenOrdersCards from "./tables/open-orders/open-orders-cards.client";
 import PositionsCards from "./tables/positions/positions-cards.client";
 import TraderHistoryCards from "./tables/trader-history/trader-history-cards.client";
 import OrderHistoryCards from "./tables/order-history/order-history-cards.client";
+import { buildOrderHistoryGroups } from "./tables/order-history/grouped-order-history";
 import { useWallet } from "@cosmos-kit/react-lite";
 import { useQueryClient } from "@tanstack/react-query";
 import EditOrderDialog from "@/components/edit-order-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 import Button from "@/components/button";
+import cn from "@/lib/cn";
 import { formatCurrency } from "@/lib/twilight/ticker";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, ChevronDown } from "lucide-react";
+import { useGrid } from "@/lib/providers/grid";
+import {
+  DropdownContent,
+  DropdownGroup,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from "@/components/dropdown";
 
 // A row in the Open Orders table. Regular rows = plain TradeOrder.
 // Rows synthesised from SLTP legs carry `_sltpLeg` to identify which leg they
@@ -46,6 +56,8 @@ type SltpCancelPending = {
 };
 
 const DetailsPanel = () => {
+  const COMPACT_TRADE_LAYOUT_THRESHOLD = 996;
+  const { width } = useGrid();
   const [currentTab, setCurrentTab] = useState<TabType>("positions");
   const [settlingOrders, setSettlingOrders] = useState<Set<string>>(new Set());
   const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(
@@ -129,6 +141,10 @@ const DetailsPanel = () => {
         trade.orderStatus === "LIQUIDATE" ||
         trade.orderStatus === "FILLED"
     );
+  }, [orderHistoryData]);
+
+  const orderHistoryGroups = useMemo(() => {
+    return buildOrderHistoryGroups(orderHistoryData);
   }, [orderHistoryData]);
 
   const { toast } = useToast();
@@ -428,52 +444,144 @@ const DetailsPanel = () => {
     currentTab === "open-orders" ||
     currentTab === "trader-history" ||
     currentTab === "history"
-      ? viewByTab[currentTab]
+      ? width < COMPACT_TRADE_LAYOUT_THRESHOLD
+        ? "cards"
+        : viewByTab[currentTab]
       : "table";
+
+  const historyMenuLabel =
+    currentTab === "trader-history"
+      ? "Trader History"
+      : currentTab === "history"
+        ? "Order History"
+        : "History";
+
+  const isCompactTradeLayout = width < COMPACT_TRADE_LAYOUT_THRESHOLD;
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="sticky top-0 z-10 flex w-full flex-col gap-2 border-b bg-background px-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <Tabs defaultValue={currentTab}>
-          <TabsList className="flex w-full border-b-0" variant="underline">
-            <TabsTrigger
+      <div className="sticky top-0 z-10 flex w-full flex-col gap-2 border-b bg-background px-3 pt-2 md:flex-row md:items-center md:justify-between md:gap-3">
+        {isCompactTradeLayout ? (
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+            <button
+              type="button"
               onClick={() => setCurrentTab("positions")}
-              value={"positions"}
-              variant="underline"
+              className="min-w-0 border-b-2 px-1 py-2 text-center text-sm font-medium transition-colors min-h-[44px] data-[state=active]:border-theme data-[state=active]:text-primary border-transparent text-primary/85"
+              data-state={currentTab === "positions" ? "active" : "inactive"}
             >
-              Positions
-            </TabsTrigger>
-            <TabsTrigger
+              <span className="block truncate">Positions</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setCurrentTab("open-orders")}
-              value={"open-orders"}
-              variant="underline"
+              className="min-w-0 border-b-2 px-1 py-2 text-center text-sm font-medium transition-colors min-h-[44px] data-[state=active]:border-theme data-[state=active]:text-primary border-transparent text-primary/85"
+              data-state={currentTab === "open-orders" ? "active" : "inactive"}
             >
-              Open Orders
-            </TabsTrigger>
-            <TabsTrigger
-              onClick={() => setCurrentTab("trader-history")}
-              value={"trader-history"}
-              variant="underline"
-            >
-              Trader History
-            </TabsTrigger>
-            <TabsTrigger
-              onClick={() => setCurrentTab("history")}
-              value={"history"}
-              variant="underline"
-            >
-              Order History
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <span className="block truncate">Open Orders</span>
+            </button>
+            <DropdownMenu>
+              <DropdownTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "group inline-flex min-h-[44px] items-center justify-center gap-1 border-b-2 px-1 py-2 text-sm font-medium transition-colors data-[state=open]:text-primary",
+                    currentTab === "trader-history" || currentTab === "history"
+                      ? "border-theme text-primary"
+                      : "border-transparent text-primary/85"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "whitespace-nowrap",
+                      (currentTab === "trader-history" ||
+                        currentTab === "history") &&
+                        "text-primary"
+                    )}
+                  >
+                    {historyMenuLabel}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-data-[state=open]:rotate-180" />
+                </button>
+              </DropdownTrigger>
+              <DropdownContent
+                align="end"
+                className="min-w-[12rem] bg-background p-1.5 dark:bg-background dark:before:from-white/20 dark:before:to-white/5"
+              >
+                <DropdownGroup>
+                  <DropdownItem
+                    className={cn(
+                      currentTab === "trader-history" && "text-theme",
+                      "hover:bg-primary hover:text-background"
+                    )}
+                    onClick={() => setCurrentTab("trader-history")}
+                  >
+                    Trader History
+                  </DropdownItem>
+                  <DropdownItem
+                    className={cn(
+                      currentTab === "history" && "text-theme",
+                      "hover:bg-primary hover:text-background"
+                    )}
+                    onClick={() => setCurrentTab("history")}
+                  >
+                    Order History
+                  </DropdownItem>
+                </DropdownGroup>
+              </DropdownContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <Tabs value={currentTab} className="min-w-0 w-full">
+            <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-none touch-pan-x">
+              <TabsList
+                className="min-w-max flex-nowrap justify-start border-b-0 pr-3"
+                variant="underline"
+              >
+                <TabsTrigger
+                  className="shrink-0"
+                  onClick={() => setCurrentTab("positions")}
+                  value={"positions"}
+                  variant="underline"
+                >
+                  Positions
+                </TabsTrigger>
+                <TabsTrigger
+                  className="shrink-0"
+                  onClick={() => setCurrentTab("open-orders")}
+                  value={"open-orders"}
+                  variant="underline"
+                >
+                  Open Orders
+                </TabsTrigger>
+                <TabsTrigger
+                  className="shrink-0"
+                  onClick={() => setCurrentTab("trader-history")}
+                  value={"trader-history"}
+                  variant="underline"
+                >
+                  Trader History
+                </TabsTrigger>
+                <TabsTrigger
+                  className="shrink-0"
+                  onClick={() => setCurrentTab("history")}
+                  value={"history"}
+                  variant="underline"
+                >
+                  Order History
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </Tabs>
+        )}
         {(currentTab === "positions" ||
           currentTab === "open-orders" ||
           currentTab === "trader-history" ||
-          currentTab === "history") && (
+          currentTab === "history") &&
+          !isCompactTradeLayout && (
           <button
             type="button"
             aria-label="Toggle table and cards view"
-            className="mb-2 flex flex-shrink-0 flex-row items-center justify-center gap-1 self-end rounded-md border border-outline px-2 py-1 text-xs transition-colors duration-300 hover:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+            className="mb-2 flex-shrink-0 flex-row items-center justify-center gap-1 self-end rounded-md border border-outline px-2 py-1 text-xs transition-colors duration-300 hover:border-primary focus-visible:ring-1 focus-visible:ring-primary"
             onClick={() =>
               setViewByTab((prev) => ({
                 ...prev,
@@ -533,9 +641,9 @@ const DetailsPanel = () => {
         )}
         {currentTab === "history" && (
           currentView === "table" ? (
-            <OrderHistoryTable data={orderHistoryData} />
+            <OrderHistoryTable data={orderHistoryGroups} />
           ) : (
-            <OrderHistoryCards data={orderHistoryData} />
+            <OrderHistoryCards data={orderHistoryGroups} />
           )
         )}
       </div>
@@ -555,21 +663,22 @@ const DetailsPanel = () => {
           if (!open) setSltpCancelPending(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-lg">
           <DialogTitle>
             Cancel{" "}
             {sltpCancelPending?.cancelLeg === "sl" ? "Stop Loss" : "Take Profit"}
           </DialogTitle>
-          <p className="text-sm text-primary-accent">
+          <p className="min-w-0 break-words text-sm text-primary-accent">
             You also have a{" "}
             <span className="font-medium text-primary">
               {sltpConfirmOtherLabel}
             </span>{" "}
             active. Do you want to cancel it as well?
           </p>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2 md:flex-row">
             <Button
               variant="ui"
+              className="w-full min-h-[44px] md:w-auto md:min-h-0"
               onClick={async () => {
                 if (!sltpCancelPending) return;
                 const { trade, cancelLeg } = sltpCancelPending;
@@ -585,6 +694,7 @@ const DetailsPanel = () => {
             </Button>
             <Button
               variant="ui"
+              className="w-full min-h-[44px] md:w-auto md:min-h-0"
               onClick={async () => {
                 if (!sltpCancelPending) return;
                 const { trade, cancelLeg } = sltpCancelPending;

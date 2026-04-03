@@ -257,7 +257,7 @@ const OrderMyTrades = () => {
           <div className="opacity-90">
             {`Successfully sent ${new BTC("sats", Big(zkAccount.value))
               .convert("BTC")
-              .toString()} BTC to the Trading Account.`}
+              .toString()} BTC to the Primary Trading Account.`}
             <Link
               href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${mintBurnRes.transactionHash}`}
               target={"_blank"}

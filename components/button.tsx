@@ -19,12 +19,13 @@ const variantStyles = {
     disabled:bg-button-primary disabled:border-gray-500 disabled:hover:bg-button-primary dark:disabled:hover:bg-button-primary
   `,
   ui: `border hover:border-primary rounded-md py-0 disabled:hover:border-outline`,
+  terminal: `border border-outline rounded-md hover:border-theme disabled:hover:border-outline`,
 } as const;
 
 const sizeStyles = {
-  default: "px-10 py-3 gap-2",
-  small: "px-4 py-2 gap-2",
-  icon: "p-3",
+  default: "px-10 py-3 gap-2 min-h-[44px]",
+  small: "px-4 py-2 gap-2 min-h-[40px]",
+  icon: "p-3 min-h-[44px] min-w-[44px]",
 } as const;
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -43,7 +44,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       asChild ? Slot : "button",
       {
         className: cn(
-          "flex relative justify-center items-center flex-shrink-0 disabled:text-gray-500 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed",
+          "flex relative justify-center items-center flex-shrink-0 touch-manipulation disabled:text-gray-500 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed",
           sizeStyles[size],
           variantStyles[variant],
           className

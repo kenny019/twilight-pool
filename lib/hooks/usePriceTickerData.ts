@@ -86,13 +86,15 @@ export default function usePriceTickerData(currentPrice: number) {
   const marketStatsQuery = useGetMarketStats();
 
   const priceTickerData = useMemo<PriceTickerData>(() => {
-    if (!candleQuery.data || currentPrice === 0) {
+    if (!candleQuery.data) {
       return { high: 0, low: 0, turnover: 0, change: 0 };
     }
 
     const { high, low, close, usd_volume: turnover } = candleQuery.data;
-    const changeAmount = currentPrice - parseFloat(close);
-    const changePercent = (changeAmount / currentPrice) * 100;
+    const safeCurrentPrice = currentPrice > 0 ? currentPrice : 0;
+    const changeAmount = safeCurrentPrice - parseFloat(close);
+    const changePercent =
+      safeCurrentPrice > 0 ? (changeAmount / safeCurrentPrice) * 100 : 0;
 
     return {
       high: parseFloat(high),
@@ -141,6 +143,9 @@ export default function usePriceTickerData(currentPrice: number) {
   }, [queryClient]);
 
   const hasInit = candleQuery.isSuccess;
+  const hasPriceStats = !!candleQuery.data;
+  const hasFundingData = !!fundingQuery.data;
+  const hasMarketStats = !!marketStatsQuery.data;
 
   return {
     priceTickerData,
@@ -149,5 +154,8 @@ export default function usePriceTickerData(currentPrice: number) {
     skewData,
     resetFunding,
     hasInit,
+    hasPriceStats,
+    hasFundingData,
+    hasMarketStats,
   };
 }

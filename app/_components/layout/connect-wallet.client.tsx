@@ -50,7 +50,7 @@ export default function ConnectWallet() {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-md border border-outline bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary/40"
+            className="flex min-h-[40px] items-center gap-2 rounded-md border border-outline bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary/40"
           >
             <Wallet className="h-4 w-4 text-primary-accent/60" />
             <span className="font-mono text-xs">
@@ -104,7 +104,7 @@ export default function ConnectWallet() {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button size="small" className="w-[180px]">
+        <Button size="small" className="w-auto max-w-[180px] max-md:px-3">
           Connect Wallet
         </Button>
       </DialogTrigger>

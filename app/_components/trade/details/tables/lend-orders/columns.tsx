@@ -44,7 +44,7 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "value",
-    header: "Deposit (BTC)",
+    header: "Size (BTC)",
     cell: (row) => {
       const order = row.row.original;
       const amountBTC = new BTC("sats", Big(order.value)).convert("BTC");
@@ -167,7 +167,9 @@ export const lendOrdersColumns: ColumnDef<
       const rewardsBTC = new BTC("sats", Big(accruedRewards)).convert("BTC");
 
       return (
-        <Text className="font-medium">{BTC.format(rewardsBTC, "BTC")}</Text>
+        <Text className={cn("font-medium", accruedRewards > 0 ? "text-green-medium" : "text-red")}>
+          {BTC.format(rewardsBTC, "BTC")}
+        </Text>
       );
     },
   },
@@ -181,7 +183,7 @@ export const lendOrdersColumns: ColumnDef<
           case "WITHDRAWING":
             return "bg-primary/10 text-primary";
           case "LENDED":
-            return "bg-green-medium/10 text-green-medium";
+            return "bg-primary/10 text-primary/50";
           case "ERROR":
             return "bg-red/10 text-red";
           default:
@@ -190,6 +192,12 @@ export const lendOrdersColumns: ColumnDef<
       };
 
       const statusLabel = order.withdrawPending ? "WITHDRAWING" : order.orderStatus;
+      const statusDisplayLabel =
+        statusLabel === "LENDED"
+          ? "ACTIVE"
+          : statusLabel === "SETTLED"
+            ? "CLOSED"
+            : statusLabel;
 
       return (
         <span
@@ -198,7 +206,7 @@ export const lendOrdersColumns: ColumnDef<
             getStatusColor(statusLabel)
           )}
         >
-          {statusLabel}
+          {statusDisplayLabel}
         </span>
       );
     },
@@ -231,6 +239,7 @@ export const lendOrdersColumns: ColumnDef<
             }
           >
             <Button
+              variant="terminal"
               size="small"
               onClick={() => meta.settleLendOrder(order)}
               disabled={withdrawDisabled}

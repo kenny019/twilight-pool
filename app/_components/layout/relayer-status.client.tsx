@@ -45,11 +45,12 @@ export default function RelayerStatus({ dotOnly = false }: { dotOnly?: boolean }
   const badge = (
     <button
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors",
+        "inline-flex min-h-[36px] min-w-[36px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition-colors touch-manipulation",
         config.bg,
         config.text,
         dotOnly && "px-0 py-0 bg-transparent"
       )}
+      onClick={() => showPopover && setIsOpen((prev) => !prev)}
       onMouseEnter={() => showPopover && setIsOpen(true)}
       onMouseLeave={() => showPopover && setIsOpen(false)}
     >

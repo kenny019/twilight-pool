@@ -305,7 +305,7 @@ const VerificationStep = ({
                         <button
                           onClick={handleRetryBlockHeight}
                           disabled={isRefetchingBlockHeight}
-                          className="rounded p-1 text-primary-accent transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50"
+                          className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded p-2 text-primary-accent transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 touch-manipulation"
                           aria-label="Retry fetching block height"
                         >
                           <RefreshCw className={`h-4 w-4 ${isRefetchingBlockHeight ? "animate-spin" : ""}`} />
@@ -347,9 +347,9 @@ const VerificationStep = ({
                               <button
                                 onClick={handleRefreshReserves}
                                 disabled={isRefetchingReserves}
-                                className="text-red-500 text-xs underline hover:no-underline inline-flex items-center gap-1 disabled:opacity-50 disabled:no-underline"
+                                className="inline-flex min-h-[36px] items-center gap-1 text-xs text-red-500 underline hover:no-underline disabled:opacity-50 disabled:no-underline touch-manipulation"
                               >
-                                <RefreshCw className={`h-3 w-3 ${isRefetchingReserves ? "animate-spin" : ""}`} />
+                                <RefreshCw className={`h-3.5 w-3.5 ${isRefetchingReserves ? "animate-spin" : ""}`} />
                                 Refresh reserves
                               </button>
                             )}

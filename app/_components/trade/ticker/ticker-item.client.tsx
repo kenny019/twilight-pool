@@ -7,18 +7,34 @@ type Props = {
   title: string;
   children: React.ReactNode;
   border?: boolean;
+  itemClassName?: string;
+  titleClassName?: string;
+  separatorClassName?: string;
 };
 
-const TickerItem = ({ className, title, border = true, children }: Props) => {
+const TickerItem = ({
+  className,
+  title,
+  border = true,
+  children,
+  itemClassName,
+  titleClassName,
+  separatorClassName,
+}: Props) => {
   return (
-    <div className="flex flex-row items-center">
-      <div className="flex flex-col px-2 2xl:px-4">
-        <p className="whitespace-nowrap text-xs opacity-50">
+    <div className={cn("flex min-w-0 flex-row items-center", itemClassName)}>
+      <div className="flex min-w-0 flex-col justify-center px-2.5 xl:px-3.5">
+        <p
+          className={cn(
+            "truncate text-[10px] font-medium leading-none text-primary/50 xl:text-[11px]",
+            titleClassName
+          )}
+        >
           <small>{title}</small>
         </p>
         <div
           className={cn(
-            "whitespace-nowrap text-sm tabular-nums opacity-90",
+            "mt-1.5 whitespace-nowrap text-[14px] font-medium leading-none tabular-nums text-primary/92 xl:text-[15px]",
             className
           )}
         >
@@ -26,7 +42,13 @@ const TickerItem = ({ className, title, border = true, children }: Props) => {
         </div>
       </div>
       {border && (
-        <Separator className="h-[calc(100%-8px)]" orientation="vertical" />
+        <Separator
+          className={cn(
+            "h-[82%] shrink-0 self-center bg-outline opacity-70 xl:h-[85%]",
+            separatorClassName
+          )}
+          orientation="vertical"
+        />
       )}
     </div>
   );

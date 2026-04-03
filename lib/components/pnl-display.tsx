@@ -10,7 +10,6 @@ type PnlHeaderProps = {
 
 export function PnlHeader({ variant }: PnlHeaderProps) {
   const label = variant === "uPnL" ? "uPnL" : "PnL";
-
   return <span>{label}</span>;
 }
 
@@ -18,8 +17,13 @@ type PnlCellProps = {
   pnlSats: number | null | undefined;
   btcPriceUsd: number;
   className?: string;
-  /** stacked = table default; inline = one line BTC + ( ~USD); responsive = mobile matches Entry/Mark row + type scale; desktop inline from md */
-  layout?: "stacked" | "inline" | "responsive";
+  /**
+   * stacked    = table default (BTC + USD stacked, small)
+   * inline     = one line BTC + ( ~USD) — desktop rows
+   * responsive = stacked on mobile, inline from md
+   * hero       = mobile full-width hero block (BTC text-2xl, USD text-sm below, bg tint)
+   */
+  layout?: "stacked" | "inline" | "responsive" | "hero";
 };
 
 export function PnlCell({
@@ -41,9 +45,54 @@ export function PnlCell({
   const toneClass = cn(
     isPositive && "text-green-medium",
     isNegative && "text-red",
-    !isPositive && !isNegative && "text-gray-500"
+    !isPositive && !isNegative && "text-primary/40"
   );
 
+  // ── Hero (mobile full-width PnL block) ──────────────────────────────────
+  if (layout === "hero") {
+    const borderAccent = isPositive
+      ? "border-green-medium/60"
+      : isNegative
+        ? "border-red/60"
+        : "border-primary/20";
+    const bgTint = isPositive
+      ? "bg-green-medium/[0.04]"
+      : isNegative
+        ? "bg-red/[0.04]"
+        : "bg-primary/[0.02]";
+
+    return (
+      <div
+        className={cn(
+          "rounded-lg border-l-2 px-3 py-2.5",
+          borderAccent,
+          bgTint,
+          className
+        )}
+      >
+        <span
+          className={cn(
+            "block text-lg font-semibold leading-tight tabular-nums",
+            toneClass
+          )}
+        >
+          {btcValue}
+        </span>
+        {usdValue && (
+          <span
+            className={cn(
+              "mt-0.5 block text-sm tabular-nums opacity-70",
+              toneClass
+            )}
+          >
+            ≈ {prefix}{usdValue}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // ── Inline (desktop rows) ────────────────────────────────────────────────
   if (layout === "inline") {
     return (
       <span
@@ -64,6 +113,7 @@ export function PnlCell({
     );
   }
 
+  // ── Responsive (old mobile card rows — kept for other usages) ────────────
   if (layout === "responsive") {
     return (
       <span
@@ -106,6 +156,7 @@ export function PnlCell({
     );
   }
 
+  // ── Stacked default (tables) ─────────────────────────────────────────────
   return (
     <span className="inline-flex flex-col leading-tight">
       <span className={cn("text-xs font-medium", toneClass, className)}>

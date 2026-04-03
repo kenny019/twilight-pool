@@ -44,6 +44,24 @@ export interface UseWalletConnectionReturn {
   isConnected: boolean;
 }
 
+type WalletWithAddress = {
+  address?: string;
+};
+
+async function waitForWalletAddress(
+  wallet: WalletWithAddress,
+  timeoutMs = 2_000
+): Promise<boolean> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (wallet.address) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  return !!wallet.address;
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -232,9 +250,12 @@ export function useWalletConnection(): UseWalletConnectionReturn {
           await connectWithTimeout(() => targetChainWallet.connect(true));
         }
 
-        // Verify we got an address
-        if (!targetChainWallet.address) {
-          setState({ view: "not_installed", wallet });
+        // Cosmos Kit can resolve connect() before the address is hydrated.
+        // Give it a brief window before deciding the connection failed.
+        const hasAddress = await waitForWalletAddress(targetChainWallet);
+
+        if (!hasAddress) {
+          setState({ view: "error", wallet, errorType: "timeout" });
           return;
         }
 

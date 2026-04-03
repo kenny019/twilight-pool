@@ -22,16 +22,23 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  ArrowUpRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   SlidersHorizontal,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   DEFAULT_HIDDEN_COLUMNS,
   MANDATORY_COLUMNS,
+  formatAccountWithType,
+  formatBalance,
+  formatDate,
+  formatType,
+  getLedgerStatusClass,
   type AccountLedgerTableMeta,
   type LedgerDisplayUnit,
 } from "./columns";
@@ -41,6 +48,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/dialog";
+import { AccountLedgerEntry } from "@/lib/types";
 
 const VISIBILITY_KEY = "account-ledger-columns";
 const ORDER_KEY = "account-ledger-column-order";
@@ -141,6 +149,33 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
 }
 
+const BALANCE_SECTIONS = [
+  {
+    key: "funding",
+    label: "Funding",
+    beforeKey: "fund_bal_before",
+    afterKey: "fund_bal_after",
+  },
+  {
+    key: "trading",
+    label: "Trading",
+    beforeKey: "trade_bal_before",
+    afterKey: "trade_bal_after",
+  },
+  {
+    key: "positions",
+    label: "Open Positions",
+    beforeKey: "t_positions_bal_before",
+    afterKey: "t_positions_bal_after",
+  },
+  {
+    key: "lend",
+    label: "Lend Deposits",
+    beforeKey: "l_deposits_bal_before",
+    afterKey: "l_deposits_bal_after",
+  },
+] as const;
+
 export function AccountLedgerDataTable<TData, TValue>({
   columns,
   data,
@@ -162,6 +197,7 @@ export function AccountLedgerDataTable<TData, TValue>({
   const [displayUnit, setDisplayUnit] = useState<LedgerDisplayUnit>(() =>
     loadDisplayUnit()
   );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -212,16 +248,26 @@ export function AccountLedgerDataTable<TData, TValue>({
     []
   );
 
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between pb-2">
+      <div className="flex flex-col gap-2 pb-2 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-primary-accent">Units</span>
+          <span className="text-[11px] font-medium text-primary-accent">
+            Units
+          </span>
           <Select
             value={displayUnit}
             onValueChange={(value) => setDisplayUnit(value as LedgerDisplayUnit)}
           >
-            <SelectTrigger className="h-7 w-[140px] rounded px-2 py-1 text-[11px]">
+            <SelectTrigger className="h-8 w-[160px] rounded px-2 py-1 text-[11px] md:h-7 md:w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -235,7 +281,7 @@ export function AccountLedgerDataTable<TData, TValue>({
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium text-primary-accent transition-colors hover:bg-theme/20 hover:text-primary"
+          className="hidden items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium text-primary-accent transition-colors hover:bg-theme/20 hover:text-primary md:flex"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Columns
@@ -307,10 +353,10 @@ export function AccountLedgerDataTable<TData, TValue>({
       </Dialog>
 
       <div
-        className="overflow-x-auto"
+        className="hidden overflow-x-auto md:block"
         style={{ minHeight: `${pagination.pageSize * 34 + 20}px` }}
       >
-        <table cellSpacing={0} className="relative min-w-[1200px] w-full">
+        <table cellSpacing={0} className="relative min-w-[1120px] w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
@@ -368,6 +414,240 @@ export function AccountLedgerDataTable<TData, TValue>({
           </tbody>
         </table>
       </div>
+
+      <div className="md:hidden">
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => {
+            const entry = row.original as AccountLedgerEntry;
+            const isExpanded = expandedIds.has(row.id);
+            const statusClass = getLedgerStatusClass(entry.status);
+            const amountLabel = formatBalance(entry.amount_sats, displayUnit);
+            const routeFrom = formatAccountWithType(entry.from_acc);
+            const routeTo = formatAccountWithType(entry.to_acc);
+            const visibleBalanceSections = BALANCE_SECTIONS.filter((section) => {
+              const before = entry[section.beforeKey];
+              const after = entry[section.afterKey];
+              return before != null || after != null;
+            });
+
+            return (
+              <div key={row.id} className="border-b border-border/40 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 text-sm font-medium text-primary">
+                    {formatType(entry.type)}
+                  </span>
+                  <span className="shrink-0 text-sm tabular-nums text-primary">
+                    {amountLabel}
+                  </span>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <span className="min-w-0 text-xs text-primary-accent">
+                    {formatDate(entry.timestamp)}
+                  </span>
+                  <span className={statusClass}>{entry.status}</span>
+                </div>
+
+                <div className="mt-1.5 flex items-center gap-2 text-xs text-primary-accent/80">
+                  <span className="min-w-0 flex-1 truncate">{routeFrom}</span>
+                  <span className="shrink-0 text-primary-accent/50">→</span>
+                  <span className="min-w-0 flex-1 truncate text-right">
+                    {routeTo}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-1 flex min-h-[44px] items-center gap-1 text-xs text-primary-accent/60 transition-colors hover:text-primary-accent"
+                  onClick={() => toggleExpand(row.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                  Details
+                </button>
+
+                {isExpanded && (
+                  <div className="mt-1 space-y-3 rounded-lg bg-primary/[0.02] px-3 py-2.5 text-xs">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          From
+                        </span>
+                        <button
+                          type="button"
+                          className="mt-0.5 break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(entry.from_acc);
+                            toast({
+                              title: "Copied to clipboard",
+                              description: "From account copied to clipboard",
+                            });
+                          }}
+                        >
+                          {entry.from_acc}
+                        </button>
+                      </div>
+
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          To
+                        </span>
+                        <button
+                          type="button"
+                          className="mt-0.5 break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(entry.to_acc);
+                            toast({
+                              title: "Copied to clipboard",
+                              description: "To account copied to clipboard",
+                            });
+                          }}
+                        >
+                          {entry.to_acc}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          Order ID
+                        </span>
+                        {entry.order_id ? (
+                          <button
+                            type="button"
+                            className="mt-0.5 break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(entry.order_id!);
+                              toast({
+                                title: "Copied to clipboard",
+                                description: "Order ID copied to clipboard",
+                              });
+                            }}
+                          >
+                            {entry.order_id}
+                          </button>
+                        ) : (
+                          <span className="mt-0.5 block text-primary-accent">
+                            —
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          Tx Hash
+                        </span>
+                        {entry.tx_hash ? (
+                          <div className="mt-0.5 space-y-1">
+                            <button
+                              type="button"
+                              className="break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(entry.tx_hash!);
+                                toast({
+                                  title: "Copied to clipboard",
+                                  description:
+                                    "Transaction hash copied to clipboard",
+                                });
+                              }}
+                            >
+                              {entry.tx_hash}
+                            </button>
+                            <Link
+                              href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${entry.tx_hash}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 text-primary-accent/70 underline-offset-2 hover:text-primary hover:underline"
+                            >
+                              View on Explorer
+                              <ArrowUpRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        ) : (
+                          <span className="mt-0.5 block text-primary-accent">
+                            —
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {entry.remarks ? (
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          Remarks
+                        </span>
+                        <p className="mt-0.5 text-primary/80">{entry.remarks}</p>
+                      </div>
+                    ) : null}
+
+                    {visibleBalanceSections.length ? (
+                      <div className="space-y-2">
+                        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                          Balance Impact
+                        </span>
+                        <div className="space-y-2">
+                          {visibleBalanceSections.map((section) => (
+                            <div
+                              key={section.key}
+                              className="flex items-start justify-between gap-3"
+                            >
+                              <span className="text-primary-accent/80">
+                                {section.label}
+                              </span>
+                              <div className="text-right tabular-nums text-primary/80">
+                                <div>
+                                  {formatBalance(
+                                    entry[section.beforeKey],
+                                    displayUnit
+                                  )}
+                                </div>
+                                <div className="text-primary-accent/60">
+                                  →
+                                </div>
+                                <div>
+                                  {formatBalance(
+                                    entry[section.afterKey],
+                                    displayUnit
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-2">
+                      <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+                        Audit
+                      </span>
+
+                      <div className="space-y-1 text-primary/80">
+                        <div>
+                          <span className="text-primary-accent/60">Created:</span>{" "}
+                          {formatDate(entry.created_at)}
+                        </div>
+                        <div>
+                          <span className="text-primary-accent/60">Updated:</span>{" "}
+                          {formatDate(entry.updated_at)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-10 text-center text-xs text-primary-accent">
+            No ledger entries yet.
+          </div>
+        )}
+      </div>
+
       {table.getPageCount() > 1 && (
         <div className="flex items-center justify-between pt-3 text-xs text-primary-accent">
           <span className="font-ui">
@@ -375,7 +655,7 @@ export function AccountLedgerDataTable<TData, TValue>({
           </span>
           <div className="flex items-center gap-2">
             <button
-              className="rounded-full border border-outline p-1 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full border border-outline p-2 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 touch-manipulation"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -389,7 +669,7 @@ export function AccountLedgerDataTable<TData, TValue>({
               {table.getPageCount()}
             </span>
             <button
-              className="rounded-full border border-outline p-1 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full border border-outline p-2 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 touch-manipulation"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >

@@ -40,7 +40,7 @@ import {
 } from "@/lib/utils/masterAccountRecovery";
 
 type Props = {
-  type?: "icon" | "large";
+  type?: "icon" | "large" | "compact";
   defaultTransferType?: "fund" | "trade";
 };
 
@@ -206,7 +206,7 @@ function FundingTradeButton({
         from: twilightAddress,
         fromTag: "Funding",
         to: updatedTradingAccountAddress,
-        toTag: "Trading Account",
+        toTag: "Primary Trading Account",
         tx_hash: txId,
         type: "Transfer",
         value: amount,
@@ -219,7 +219,7 @@ function FundingTradeButton({
           <div className="opacity-90">
             {`Successfully sent ${new BTC("sats", Big(amount))
               .convert("BTC")
-              .toString()} BTC to your Trading Account. `}
+              .toString()} BTC to your Primary Trading Account. `}
             <Link
               href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${broadcastResponse.transactionHash}`}
               target={"_blank"}
@@ -362,7 +362,7 @@ function FundingTradeButton({
           addTransactionHistory({
             date: new Date(),
             from: currentTradingAccount.address,
-            fromTag: "Trading Account",
+            fromTag: "Primary Trading Account",
             to: updatedTransientAddress,
             toTag: `temp ${updatedTransientAddress.slice(0, 6)}`,
             tx_hash: txId,
@@ -539,7 +539,7 @@ function FundingTradeButton({
         addTransactionHistory({
           date: new Date(),
           from: newTradingAccount.address,
-          fromTag: "Trading Account",
+          fromTag: "Primary Trading Account",
           to: twilightAddress,
           toTag: "Funding",
           tx_hash: mintBurnRes.transactionHash,
@@ -726,6 +726,11 @@ function FundingTradeButton({
           <Button variant="ui" size="icon">
             <ArrowLeftRight className="h-4 w-4" />
           </Button>
+        ) : type === "compact" ? (
+          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-md border border-outline px-2.5 py-1.5 text-xs font-medium text-primary/80 transition-colors hover:border-primary/60 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40">
+            <ArrowLeftRight className="h-3 w-3" />
+            Transfer
+          </button>
         ) : (
           <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1 rounded-md border  border-outline bg-primary px-2 py-1 text-xs text-background transition-colors duration-300 hover:bg-primary/80 focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:border-outline">
             Fund
@@ -816,6 +821,7 @@ function FundingTradeButton({
             </label>
           </div>
           <Button
+            variant="terminal"
             onClick={handleTransfer}
             className="!mt-4 w-full"
             size="small"

@@ -13,9 +13,9 @@ type Props = {
 };
 
 const headingStyles = {
-  h1: "text-4xl font-extrabold",
-  h2: "text-3xl font-semibold",
-  h3: "text-2xl font-semibold",
+  h1: "text-2xl sm:text-4xl font-extrabold",
+  h2: "text-xl sm:text-3xl font-semibold",
+  h3: "text-lg sm:text-2xl font-semibold",
 } as const;
 
 const Text = ({

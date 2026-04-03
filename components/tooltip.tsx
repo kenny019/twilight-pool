@@ -20,9 +20,13 @@ export function Tooltip({ title, body, children, className }: TooltipProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <span
-          className={cn("inline-flex cursor-help items-center gap-1", className)}
+          className={cn("inline-flex cursor-help items-center gap-1 touch-manipulation", className)}
           onMouseEnter={() => setIsOpen(true)}
           onMouseLeave={() => setIsOpen(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen((prev) => !prev);
+          }}
         >
           {children}
           <Info className="h-3.5 w-3.5 shrink-0 text-primary-accent" />
