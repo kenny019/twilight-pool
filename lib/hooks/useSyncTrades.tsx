@@ -34,6 +34,11 @@ import {
   buildTradeLedgerEntryFromRelayerEvent,
   shouldInsertTradeLedgerEvent,
 } from "../account-ledger/from-relayer";
+import {
+  buildPersistedTerminalTradeAccount,
+  shouldNotifyCleanupFailure,
+  shouldPersistTerminalTradeAccount,
+} from "../utils/tradeRecovery";
 
 const statusToSkip = ["CANCELLED", "SETTLED", "LIQUIDATE"];
 
@@ -193,6 +198,7 @@ export const useSyncTrades = () => {
     privateKey,
     isHydrated,
   });
+  const cleanupFailureNotifiedRef = useRef<Set<string>>(new Set());
 
   runContextRef.current = {
     twilightAddress,
@@ -212,6 +218,26 @@ export const useSyncTrades = () => {
       activeContext.twilightAddress === runAddress &&
       activeContext.privateKey === runPrivateKey
     );
+  };
+
+  const notifyCleanupFailureOnce = (
+    accountAddress: string,
+    description: string
+  ) => {
+    if (
+      !shouldNotifyCleanupFailure(
+        cleanupFailureNotifiedRef.current,
+        accountAddress
+      )
+    ) {
+      return;
+    }
+
+    toast({
+      variant: "error",
+      title: "Automatic cleanup failed",
+      description: `${description} Recover the funds from Wallet with Transfer to Funding.`,
+    });
   };
 
   useQuery({
@@ -438,11 +464,24 @@ export const useSyncTrades = () => {
                   // If the account was already cleaned up by another path, bail.
                   if (!currentZkAccount) return;
 
-                  const zkAccountToSettle: ZkAccount = {
-                    ...currentZkAccount,
-                    value: newBalance,
-                    type: accountType,
-                  };
+                  const zkAccountToSettle: ZkAccount =
+                    buildPersistedTerminalTradeAccount({
+                      currentAccount: currentZkAccount,
+                      orderStatus: newTrade.orderStatus,
+                      availableMargin: newBalance,
+                    });
+
+                  if (
+                    shouldPersistTerminalTradeAccount(
+                      currentZkAccount,
+                      zkAccountToSettle
+                    )
+                  ) {
+                    updateZkAccount(
+                      currentZkAccount.address,
+                      zkAccountToSettle
+                    );
+                  }
 
                   if (!zkAccountToSettle.value) {
                     console.warn(
@@ -550,6 +589,11 @@ export const useSyncTrades = () => {
                     console.error(
                       "useSyncTrades cleanup failed:",
                       privateTxSingleResult.message
+                    );
+                    notifyCleanupFailureOnce(
+                      accountAddress,
+                      privateTxSingleResult.message ||
+                        "The trading-account merge could not be completed."
                     );
                     return;
                   }
@@ -668,6 +712,12 @@ export const useSyncTrades = () => {
                   console.error(
                     "useSyncTrades cleanup queue task failed:",
                     err
+                  );
+                  notifyCleanupFailureOnce(
+                    accountAddress,
+                    err instanceof Error
+                      ? err.message
+                      : "The trading-account merge could not be completed."
                   );
                 });
 
