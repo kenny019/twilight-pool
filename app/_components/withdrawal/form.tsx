@@ -4,7 +4,7 @@ import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { isUserRejection } from "@/lib/helpers";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import Big from "big.js";
 import React, { useRef, useState } from "react";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";

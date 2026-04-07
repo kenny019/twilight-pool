@@ -6,7 +6,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import useVerifyStatus from "@/lib/hooks/useVerifyStatus";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 import { WalletStatus } from "@cosmos-kit/core";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 

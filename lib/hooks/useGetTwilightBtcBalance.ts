@@ -1,5 +1,5 @@
 import { WalletStatus } from "@cosmos-kit/core";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import { useQuery } from "@tanstack/react-query";
 
 export default function useGetTwilightBTCBalance() {

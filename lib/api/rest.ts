@@ -7,6 +7,7 @@ import {
   twilightRegistedBtcAddressStruct,
 } from "../types";
 
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 
 async function getBTCDepositAddress(depositAddress: string) {
@@ -52,6 +53,11 @@ type ReserveDataStruct = {
 };
 
 async function getReserveData() {
+  if (IS_MOCK) {
+    const { MOCK_BTC_RESERVES } = await import("../mock/constants");
+    return { success: true as const, data: { BtcReserves: MOCK_BTC_RESERVES } };
+  }
+
   const { success, data, error } = await wfetch(
     new URL(REST_URL + "/twilight-project/nyks/volt/btc_reserve")
   )
@@ -456,6 +462,14 @@ type WithdrawRequestsData = {
 };
 
 async function getWithdrawRequests() {
+  if (IS_MOCK) {
+    const { getMockState } = await import("../mock/state");
+    return {
+      success: true as const,
+      data: { withdrawRequest: getMockState().withdrawRequests },
+    };
+  }
+
   const { success, data, error } = await wfetch(
     new URL(REST_URL + "/twilight-project/nyks/bridge/withdraw_btc_request_all")
   )

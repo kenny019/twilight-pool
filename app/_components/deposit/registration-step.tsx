@@ -5,7 +5,7 @@ import { Input, PopoverInput } from "@/components/input";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import { WalletStatus } from "@cosmos-kit/core";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import { z } from "zod";
 import Long from "long";
 import { Loader2 } from "lucide-react";

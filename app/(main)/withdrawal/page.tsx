@@ -3,7 +3,7 @@ import BtcWithdrawalForm from "@/app/_components/withdrawal/form";
 import WithdrawRequestsTable from "@/app/_components/withdrawal/requests-table";
 import WithdrawalInfo from "@/app/_components/withdrawal/withdrawal-info";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import React from "react";
 
 const Page = () => {
