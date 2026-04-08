@@ -14,8 +14,7 @@ import {
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import BTC from "@/lib/twilight/denoms";
-import Big from "big.js";
+import { formatSatsCompact } from "@/lib/helpers";
 import { convertDate } from "./columns";
 import { TransactionHistory } from "@/lib/types";
 
@@ -134,7 +133,7 @@ export function TransactionHistoryDataTable<TData, TValue>({
           table.getRowModel().rows.map((row) => {
             const tx = row.original as TransactionHistory;
             const isExpanded = expandedIds.has(row.id);
-            const btcAmount = new BTC("sats", Big(tx.value)).convert("BTC").toString();
+            const btcAmount = formatSatsCompact(tx.value);
             const dateStr = convertDate(tx.date).toLocaleString();
             const fromLabel = tx.fromTag === "main" ? "Primary Trading Account" : tx.fromTag;
             const toLabel = tx.toTag === "main" ? "Primary Trading Account" : tx.toTag;
@@ -146,7 +145,7 @@ export function TransactionHistoryDataTable<TData, TValue>({
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-sm font-medium text-primary">{tx.type}</span>
                   <span className="shrink-0 text-sm tabular-nums text-primary">
-                    {btcAmount} BTC
+                    {btcAmount}
                   </span>
                 </div>
 

@@ -5,6 +5,8 @@ import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
 import { useTwilightStore } from "@/lib/providers/store";
 import { calculateAPR } from "@/lib/helpers";
+import { computeLendingMarkToValue } from "@/lib/lend/lend-mark-to-value";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const MIN_HOLDING_SECONDS = 3600; // 1 hour - don't annualize before this
 import { Tooltip } from "@/components/tooltip";
@@ -13,7 +15,6 @@ import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import dayjs from "dayjs";
 import React, { useMemo, useState } from "react";
-import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const MyInvestment = () => {
@@ -24,13 +25,11 @@ const MyInvestment = () => {
   const poolShareValue = poolInfo?.pool_share ?? 0;
 
   const data = useMemo(() => {
+    const { activePrincipalSats, pendingRewardsSats } =
+      computeLendingMarkToValue(lendOrders, poolShareValue);
+
     const lendedOrders = lendOrders.filter(
       (order) => order.orderStatus === "LENDED"
-    );
-
-    const activePrincipalSats = lendedOrders.reduce(
-      (sum, order) => sum + order.value,
-      0
     );
 
     const totalDepositsSats = lendHistory
@@ -41,9 +40,7 @@ const MyInvestment = () => {
       .filter((o) => o.orderStatus === "SETTLED")
       .reduce((sum, order) => sum + (order.payment || 0), 0);
 
-    let pendingRewardsSats = 0;
     let annualizedReturn = 0;
-
     let showAnnualizedReturn = false;
 
     if (poolShareValue && lendedOrders.length > 0) {
@@ -54,12 +51,8 @@ const MyInvestment = () => {
         if (!order.npoolshare || !order.value) continue;
 
         const rewards =
-          poolShareValue * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
-        if (rewards >= 100 || rewards < 0) {
-          pendingRewardsSats += rewards;
-        } else if (rewards > 0) {
-          // dust filter: positive but < 100 sats => 0
-        }
+          poolShareValue * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) -
+          order.value;
 
         const timeElapsed =
           (Date.now() - dayjs(order.timestamp).valueOf()) / 1000;
