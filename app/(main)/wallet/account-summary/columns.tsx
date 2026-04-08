@@ -1,11 +1,9 @@
 "use client";
 
 import Button from "@/components/button";
-import BTC from "@/lib/twilight/denoms";
 import { ColumnDef } from "@tanstack/react-table";
-import Big from "big.js";
 import dayjs from "dayjs";
-import { truncateHash } from "@/lib/helpers";
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { AccountSummaryTableMeta } from "./data-table";
 import { ActiveAccount } from "../page";
 import Link from "next/link";
@@ -50,11 +48,11 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   },
   {
     accessorKey: "value",
-    header: "Balance (BTC)",
-    accessorFn: (row) =>
-      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8),
+    header: "Balance",
     cell: (row) => (
-      <span className="tabular-nums font-medium">{row.getValue() as string}</span>
+      <span className="tabular-nums font-medium">
+        {formatSatsCompact(row.row.original.value || 0)}
+      </span>
     ),
   },
   {

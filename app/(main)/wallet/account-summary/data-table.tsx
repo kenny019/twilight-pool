@@ -15,10 +15,8 @@ import {
 import { useCallback, useState } from "react";
 import { ChevronDown, ChevronUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import BTC from "@/lib/twilight/denoms";
-import Big from "big.js";
 import dayjs from "dayjs";
-import { truncateHash } from "@/lib/helpers";
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { ActiveAccount } from "../page";
 import {
   ACTION_REQUIRED_MESSAGE,
@@ -170,7 +168,7 @@ export function AccountSummaryDataTable<TData, TValue>({
             const account = row.original as ActiveAccount;
             const isExpanded = expandedIds.has(row.id);
             const isTransferring = transferringAddress === account.address;
-            const btcBalance = new BTC("sats", Big(account.value || 0)).convert("BTC").toFixed(8);
+            const btcBalance = formatSatsCompact(account.value || 0);
             const createdDate = account.createdAt
               ? dayjs.unix(account.createdAt).format("DD/MM/YYYY")
               : "—";
@@ -181,20 +179,20 @@ export function AccountSummaryDataTable<TData, TValue>({
 
             return (
               <div key={row.id} className="border-b border-border/40 py-3">
-                {/* Primary: truncated address + balance */}
+                {/* Primary: label + balance */}
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-sm text-primary">
-                    {truncateHash(account.address)}
+                  <span className="min-w-0 truncate text-sm font-medium text-primary">
+                    {account.tag}
                   </span>
                   <span className="shrink-0 text-sm tabular-nums text-primary">
-                    {btcBalance} BTC
+                    {btcBalance}
                   </span>
                 </div>
 
                 <div className="mt-2 flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1 text-xs">
-                    <div className="min-w-0 truncate text-primary-accent">
-                      {account.tag}
+                    <div className="font-mono text-primary-accent/85">
+                      {truncateHash(account.address)}
                     </div>
                     <div className="text-primary-accent">Created: {createdDate}</div>
                   </div>
