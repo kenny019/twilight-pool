@@ -33,10 +33,10 @@ export type PendingItem = {
 type WalletData = {
   summary: {
     totalBalanceSats: number;
-    availableToTradeSats: number;
+    availableCapitalSats: number;
     lockedCapitalSats: number;
     totalBalanceUsd: number;
-    availableToTradeUsd: number;
+    availableCapitalUsd: number;
     lockedCapitalUsd: number;
   };
   allocation: {
@@ -117,7 +117,7 @@ export default function useWalletData(): WalletData {
   const tradingSats =
     zkAccounts.find((account) => account.tag === "main")?.value || 0;
 
-  const lockedCapitalSats = useMemo(() => {
+  const committedCapitalSats = useMemo(() => {
     return zkAccounts
       .filter((account) => account.tag !== "main" && account.type === "Memo")
       .reduce((acc, account) => acc + (account.value || 0), 0);
@@ -132,20 +132,28 @@ export default function useWalletData(): WalletData {
 
   const summary = useMemo(() => {
     const totalBalanceSats = fundingSats + tradingSats + lendingMarkToValueSats;
+    // Overview model: Total Capital = Available Capital + Locked Capital.
+    // Locked capital is derived from the current committed/in-use source,
+    // then clamped so the rendered overview remains internally consistent.
+    const lockedCapitalSats = Math.min(
+      Math.max(committedCapitalSats, 0),
+      Math.max(totalBalanceSats, 0)
+    );
+    const availableCapitalSats = Math.max(totalBalanceSats - lockedCapitalSats, 0);
 
     return {
       totalBalanceSats,
-      availableToTradeSats: tradingSats,
+      availableCapitalSats,
       lockedCapitalSats,
       totalBalanceUsd: satsToUsd(totalBalanceSats, btcPriceUsd),
-      availableToTradeUsd: satsToUsd(tradingSats, btcPriceUsd),
+      availableCapitalUsd: satsToUsd(availableCapitalSats, btcPriceUsd),
       lockedCapitalUsd: satsToUsd(lockedCapitalSats, btcPriceUsd),
     };
   }, [
     btcPriceUsd,
+    committedCapitalSats,
     fundingSats,
     lendingMarkToValueSats,
-    lockedCapitalSats,
     tradingSats,
   ]);
 

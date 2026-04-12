@@ -56,14 +56,6 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
     ),
   },
   {
-    accessorKey: "type",
-    header: "Type",
-    cell: (ctx) => {
-      const raw = ctx.row.original.type;
-      return <span>{raw === "Account" ? "Recovery" : raw}</span>;
-    },
-  },
-  {
     id: "status",
     header: "Status",
     cell: (ctx) => {

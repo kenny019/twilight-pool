@@ -1,11 +1,9 @@
 "use client";
 
 import Button from "@/components/button";
-import { truncateHash } from '@/lib/helpers';
-import BTC from "@/lib/twilight/denoms";
+import { formatSatsCompact, truncateHash } from '@/lib/helpers';
 import { TransactionHistory } from "@/lib/types";
 import { ColumnDef } from "@tanstack/react-table";
-import Big from "big.js";
 import { ArrowUpRight } from 'lucide-react';
 import Link from "next/link";
 
@@ -20,14 +18,15 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
     accessorFn: (row) => convertDate(row.date).toLocaleString(),
   },
   {
-    accessorKey: "value",
-    header: "Amount (BTC)",
-    accessorFn: (row) =>
-      new BTC("sats", Big(row.value)).convert("BTC").toString(),
+    id: "value",
+    header: "Amount",
+    accessorFn: (row) => row.value,
+    sortingFn: "basic",
     cell: (row) => (
-      <span className="tabular-nums font-medium">{row.getValue() as string}</span>
+      <span className="tabular-nums font-medium">
+        {formatSatsCompact(row.row.original.value)}
+      </span>
     ),
-    enableSorting: true,
   },
   {
     accessorKey: "type",

@@ -178,9 +178,9 @@ export function AccountSummaryDataTable<TData, TValue>({
             const hasTxHash = !!account.txHash && account.utilized;
 
             return (
-              <div key={row.id} className="border-b border-border/40 py-3">
+              <div key={row.id} className="border-b border-border/40 py-4">
                 {/* Primary: label + balance */}
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-3">
                   <span className="min-w-0 truncate text-sm font-medium text-primary">
                     {account.tag}
                   </span>
@@ -189,15 +189,15 @@ export function AccountSummaryDataTable<TData, TValue>({
                   </span>
                 </div>
 
-                <div className="mt-2 flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1 text-xs">
+                <div className="mt-2.5 flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-1.5 text-xs">
                     <div className="font-mono text-primary-accent/85">
                       {truncateHash(account.address)}
                     </div>
                     <div className="text-primary-accent">Created: {createdDate}</div>
                   </div>
 
-	                  <div className="flex shrink-0 flex-col items-end gap-2">
+		                  <div className="flex shrink-0 flex-col items-end gap-2.5">
 	                    {status === "Action Required" && canTransfer ? (
 	                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-blue-300/85">
 	                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400/70" />
@@ -232,7 +232,7 @@ export function AccountSummaryDataTable<TData, TValue>({
                 {/* Expand toggle */}
                 <button
                   type="button"
-                  className="mt-1 flex min-h-[44px] items-center gap-1 text-xs text-primary-accent/60 transition-colors hover:text-primary-accent"
+                  className="mt-2 flex min-h-[44px] items-center gap-1 text-xs text-primary-accent/60 transition-colors hover:text-primary-accent"
                   onClick={() => toggleExpand(row.id)}
                 >
                   {isExpanded ? (
@@ -245,7 +245,7 @@ export function AccountSummaryDataTable<TData, TValue>({
 
                 {/* Expandable section */}
                 {isExpanded && (
-                  <div className="mt-1 space-y-2 rounded-lg bg-primary/[0.02] px-3 py-2.5 text-xs">
+                  <div className="mt-2 space-y-2.5 rounded-lg bg-primary/[0.02] px-3 py-3 text-xs">
                     {status === "Action Required" && (
                       <div>
                         <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
