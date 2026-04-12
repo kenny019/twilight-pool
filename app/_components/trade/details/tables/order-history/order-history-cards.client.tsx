@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
 import { formatSatsMBtc, truncateHash } from "@/lib/helpers";
@@ -310,9 +311,7 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
       <div className="relative w-full overscroll-none px-3 py-2">
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
           {data.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">
-              No results.
-            </div>
+            <EmptyState title="No order history." />
           ) : (
             data.map((group) => {
               const isExpanded = expandedIds.has(group.uuid);

@@ -1,5 +1,6 @@
 "use client";
 
+import { TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import {
   ColumnDef,
@@ -138,11 +139,7 @@ export function PositionsDataTable<TData, TValue>({
               </tr>
             ))
           ) : (
-            <tr>
-              <td colSpan={columns.length} className="h-24 px-2 text-center text-xs text-primary-accent">
-                No results.
-              </td>
-            </tr>
+            <TableEmptyRow colSpan={columns.length} title="No open positions." />
           )}
         </tbody>
       </table>

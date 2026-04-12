@@ -1,5 +1,6 @@
 "use client";
 
+import { TableEmptyRow } from "@/components/empty-state";
 import { Text } from "@/components/typography";
 import cn from "@/lib/cn";
 import useWithdrawRequests from "@/lib/hooks/useWithdrawRequests";
@@ -77,14 +78,7 @@ function DataTable<TData, TValue>({
               </tr>
             ))
           ) : (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="h-24 text-center text-primary-accent"
-              >
-                No withdrawal requests yet
-              </td>
-            </tr>
+            <TableEmptyRow colSpan={columns.length} title="No withdrawal requests yet." />
           )}
         </tbody>
       </table>

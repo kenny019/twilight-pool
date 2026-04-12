@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import {
   ColumnDef,
@@ -114,14 +115,7 @@ export function TransactionHistoryDataTable<TData, TValue>({
                 </tr>
               ))
             ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-24 px-2 py-2 text-center text-xs text-primary-accent"
-                >
-                  No transactions yet.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={columns.length} title="No transactions yet." />
             )}
           </tbody>
         </table>
@@ -215,9 +209,7 @@ export function TransactionHistoryDataTable<TData, TValue>({
             );
           })
         ) : (
-          <div className="py-10 text-center text-xs text-primary-accent">
-            No transactions yet.
-          </div>
+          <EmptyState title="No transactions yet." />
         )}
       </div>
 

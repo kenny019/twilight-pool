@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import {
   ColumnDef,
@@ -111,11 +112,7 @@ export function LendHistoryDataTable<TData, TValue>({
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan={columns.length} className="h-24 px-2 text-center">
-                  No lend history.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={columns.length} title="No lend history." />
             )}
           </tbody>
         </table>
@@ -250,9 +247,7 @@ export function LendHistoryDataTable<TData, TValue>({
             );
           })
         ) : (
-          <div className="py-10 text-center text-sm text-primary-accent">
-            No lend history.
-          </div>
+          <EmptyState title="No lend history." />
         )}
       </div>
     </div>

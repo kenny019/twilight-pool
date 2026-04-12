@@ -666,7 +666,7 @@ const LendManagement = () => {
             isRelayerHalted
           }
           type="submit"
-          className="w-full min-h-[44px] border-primary/70 bg-primary/[0.05] py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-primary/[0.08] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:active:bg-theme/20"
+          className="w-full min-h-[44px] border-primary/70 bg-primary/[0.05] py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-primary/[0.08] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
           title={
             isRelayerHalted
               ? "The relayer is halted. Deposits will be available when it resumes."

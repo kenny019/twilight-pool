@@ -1,6 +1,7 @@
 "use client";
 import TransferDialog from "@/app/_components/wallet/transfer-dialog.client";
 import Button from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import Resource from "@/components/resource";
 import { Separator } from "@/components/seperator";
@@ -772,7 +773,7 @@ const Page = () => {
             </div>
           )}
           {activeAccounts.length === 0 && (
-            <p className="text-xs text-primary-accent">No accounts yet.</p>
+            <EmptyState title="No accounts yet." />
           )}
         </div>
       </div>

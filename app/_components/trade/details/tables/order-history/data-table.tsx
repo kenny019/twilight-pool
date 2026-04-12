@@ -1,5 +1,6 @@
 "use client";
 
+import { TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import { truncateHash, formatSatsMBtc } from "@/lib/helpers";
 import Link from "next/link";
@@ -572,14 +573,7 @@ export function OrderHistoryDataTable<TValue>({
                 );
               })
             ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-24 px-2 text-center text-xs text-primary-accent"
-                >
-                  No results.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={columns.length} title="No order history." />
             )}
           </tbody>
         </table>

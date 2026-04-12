@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/sheet";
@@ -108,9 +109,7 @@ const PositionsCards = React.memo(function PositionsCards({
       <div className="relative w-full overscroll-none px-3 py-2">
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {sorted.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">
-              No results.
-            </div>
+            <EmptyState title="No open positions." />
           ) : (
             sorted.map((trade) => {
               const markPrice = getCurrentPrice() || trade.entryPrice;

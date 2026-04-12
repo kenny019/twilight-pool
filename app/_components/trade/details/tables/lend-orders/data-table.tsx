@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import {
   ColumnDef,
@@ -121,11 +122,7 @@ export function LendOrdersDataTable<TData, TValue>({
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan={columns.length} className="h-24 px-2 text-center">
-                  No active lend orders.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={columns.length} title="No active lend orders." />
             )}
           </tbody>
         </table>
@@ -308,9 +305,9 @@ export function LendOrdersDataTable<TData, TValue>({
                       className="block"
                     >
                       <Button
-                        variant="terminal"
+                        variant="ui"
                         size="small"
-                        className="w-full min-h-[44px] justify-center"
+                        className="w-full min-h-[44px] justify-center border-theme/70 text-primary transition-colors hover:border-theme max-md:h-12 max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
                         disabled={withdrawDisabled}
                         onClick={() => settleLendOrder(order)}
                       >
@@ -332,9 +329,7 @@ export function LendOrdersDataTable<TData, TValue>({
             );
           })
         ) : (
-          <div className="py-10 text-center text-sm text-primary-accent">
-            No active positions.
-          </div>
+          <EmptyState title="No active positions." />
         )}
       </div>
     </div>

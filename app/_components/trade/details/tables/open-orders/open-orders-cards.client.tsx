@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import { capitaliseFirstLetter, formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { useToast } from "@/lib/hooks/useToast";
@@ -92,7 +93,7 @@ const OpenOrdersCards = React.memo(function OpenOrdersCards({
     >
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {sorted.length === 0 ? (
-          <div className="py-10 text-center text-sm text-primary-accent">No results.</div>
+          <EmptyState title="No open orders." />
         ) : (
           sorted.map((trade) => {
             const isCancelling = isCancellingOrder(trade.uuid);

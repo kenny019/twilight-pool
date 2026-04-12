@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@/components/button";
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import { ToastProps } from '@/components/toast';
 import cn from "@/lib/cn";
 import { useToast } from '@/lib/hooks/useToast';
@@ -148,14 +149,7 @@ export function AccountSummaryDataTable<TData, TValue>({
                 </tr>
               ))
             ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-24 px-2 py-2 text-center text-xs text-primary-accent"
-                >
-                  No active accounts.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={columns.length} title="No active accounts." />
             )}
           </tbody>
         </table>
@@ -295,9 +289,7 @@ export function AccountSummaryDataTable<TData, TValue>({
             );
           })
         ) : (
-          <div className="py-10 text-center text-xs text-primary-accent">
-            No active accounts.
-          </div>
+          <EmptyState title="No active accounts." />
         )}
       </div>
     </div>

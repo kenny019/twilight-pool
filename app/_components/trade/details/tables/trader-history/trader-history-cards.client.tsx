@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
 import { formatMarginPair, formatSatsCompact, truncateHash } from "@/lib/helpers";
@@ -58,7 +59,7 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
       >
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
           {sorted.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">No results.</div>
+            <EmptyState title="No trade history." />
           ) : (
             sorted.map((trade) => {
               const cardId = `${trade.uuid}_${trade.date.toString()}`;
