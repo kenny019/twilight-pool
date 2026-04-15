@@ -1,11 +1,12 @@
 "use client";
 
 import Button from "@/components/button";
-import { formatSatsCompact, truncateHash } from '@/lib/helpers';
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { TransactionHistory } from "@/lib/types";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import dayjs from "dayjs";
 
 export function convertDate(toParse: Date | string) {
   return typeof toParse === "string" ? new Date(toParse) : toParse;
@@ -15,7 +16,8 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
   {
     accessorKey: "date",
     header: "Date & Time",
-    accessorFn: (row) => convertDate(row.date).toLocaleString(),
+    accessorFn: (row) =>
+      dayjs(convertDate(row.date)).format("DD/MM/YYYY HH:mm"),
   },
   {
     id: "value",
@@ -23,7 +25,7 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
     accessorFn: (row) => row.value,
     sortingFn: "basic",
     cell: (row) => (
-      <span className="tabular-nums font-medium">
+      <span className="font-medium tabular-nums">
         {formatSatsCompact(row.row.original.value)}
       </span>
     ),
@@ -31,7 +33,9 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
   {
     accessorKey: "type",
     header: "Type",
-    cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
+    cell: (row) => (
+      <span className="font-medium">{row.getValue() as string}</span>
+    ),
   },
   {
     accessorKey: "fromTag",
@@ -42,20 +46,29 @@ export const transactionHistoryColumns: ColumnDef<TransactionHistory, any>[] = [
   {
     accessorKey: "toTag",
     header: "To Account",
-    accessorFn: (row) => (row.toTag === "main" ? "Primary Trading Account" : row.toTag),
+    accessorFn: (row) =>
+      row.toTag === "main" ? "Primary Trading Account" : row.toTag,
   },
   {
     accessorKey: "tx_hash",
     header: "Transaction Hash",
-    cell: (row) => (
-      <Button className="justify-end gap-0 items-start" asChild variant="link">
-        <Link
-          href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${row.getValue()}`}
-          target="_blank"
+    cell: (row) => {
+      const txHash = row.getValue() as string | null;
+      if (!txHash) return <span className="text-primary-accent">—</span>;
+      return (
+        <Button
+          className="items-center justify-start gap-0"
+          asChild
+          variant="link"
         >
-          {truncateHash(row.getValue() as string)} <ArrowUpRight className="h-3 w-3" />
-        </Link>
-      </Button>
-    ),
+          <Link
+            href={`${process.env.NEXT_PUBLIC_EXPLORER_URL as string}/txs/${txHash}`}
+            target="_blank"
+          >
+            {truncateHash(txHash)} <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </Button>
+      );
+    },
   },
 ];

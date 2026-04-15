@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./dialog";
-import { ArrowLeftRight, Loader2 } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, ArrowUpDown, Loader2 } from "lucide-react";
 import { Input } from "./input";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useTwilightStore } from "@/lib/providers/store";
@@ -42,11 +42,13 @@ import {
 type Props = {
   type?: "icon" | "large" | "compact";
   defaultTransferType?: "fund" | "trade";
+  children?: React.ReactNode;
 };
 
 function FundingTradeButton({
   type = "large",
   defaultTransferType = "fund",
+  children,
 }: Props) {
   const [transferType, setTransferType] = useState<"fund" | "trade">(
     defaultTransferType
@@ -94,6 +96,62 @@ function FundingTradeButton({
   const privateKey = useSessionStore((state) => state.privateKey);
   const { retrySign } = useSignStatus();
   const storeApi = useTwilightStoreApi();
+
+  const btcPriceUsd = useSessionStore((state) => state.price.btcPrice);
+
+  // Derived display values for the dialog
+  const fundingUsd = btcPriceUsd
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }).format((twilightSats / 1e8) * btcPriceUsd)
+    : null;
+  const tradingUsd = btcPriceUsd
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }).format((tradingAccountBalance / 1e8) * btcPriceUsd)
+    : null;
+  const parsedInput = parseFloat(inputValue) || 0;
+  const parsedSats = Math.round(parsedInput * 1e8);
+  const sourceBalance =
+    transferType === "fund" ? twilightSats : tradingAccountBalance;
+  const inputUsd = btcPriceUsd
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(parsedInput * btcPriceUsd)
+    : null;
+  const inputError: string | null = (() => {
+    if (!inputValue || parsedInput <= 0) return null;
+    if (parsedSats > sourceBalance) return "Insufficient funds";
+    if (transferType === "fund" && parsedSats < 1000) return "Min. 0.00001 BTC";
+    return null;
+  })();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.currentTarget.value;
+    value = value.replace(/[^0-9.]/g, "");
+    const decimalCount = (value.match(/\./g) || []).length;
+    if (decimalCount > 1) {
+      const firstDecimalIndex = value.indexOf(".");
+      value =
+        value.substring(0, firstDecimalIndex + 1) +
+        value.substring(firstDecimalIndex + 1).replace(/\./g, "");
+    }
+    const decimalIndex = value.indexOf(".");
+    if (decimalIndex !== -1 && value.substring(decimalIndex + 1).length > 8) {
+      value = value.substring(0, decimalIndex + 9);
+    }
+    if (value.length > 1 && value[0] === "0" && value[1] !== ".") {
+      value = value.substring(1);
+    }
+    setInputValue(value);
+  };
 
   const handleFundingToTradeTransfer = useCallback(
     async (amount: number, chainWallet: ChainWalletBase) => {
@@ -722,116 +780,181 @@ function FundingTradeButton({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger disabled={status !== WalletStatus.Connected} asChild>
-        {type === "icon" ? (
-          <Button variant="ui" size="icon">
-            <ArrowLeftRight className="h-4 w-4" />
-          </Button>
-        ) : type === "compact" ? (
-          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-md border border-theme/60 bg-theme/10 px-2.5 py-1.5 text-xs font-medium text-primary/70 transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:opacity-40 disabled:hover:border-outline">
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-            Transfer
-          </button>
-        ) : (
-          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-lg border border-theme/60 bg-theme/10 px-3 py-1.5 text-[13px] font-medium text-primary/70 shadow-sm transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary focus-visible:ring-1 focus-visible:ring-theme/60 disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:hover:border-outline">
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-            Transfer
-          </button>
-        )}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) setInputValue("");
+      }}
+    >
+      <DialogTrigger
+        disabled={children == null && status !== WalletStatus.Connected}
+        asChild
+      >
+        {children ??
+          (type === "icon" ? (
+            <Button variant="ui" size="icon">
+              <ArrowLeftRight className="h-4 w-4" />
+            </Button>
+          ) : type === "compact" ? (
+            <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-md border border-theme/60 bg-theme/10 px-2.5 py-1.5 text-xs font-medium text-primary/70 transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:opacity-40 disabled:hover:border-outline">
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Transfer
+            </button>
+          ) : (
+            <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-lg border border-theme/60 bg-theme/10 px-3 py-1.5 text-[13px] font-medium text-primary/70 shadow-sm transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary focus-visible:ring-1 focus-visible:ring-theme/60 disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:hover:border-outline">
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Transfer
+            </button>
+          ))}
       </DialogTrigger>
-      <DialogContent>
+
+      <DialogContent className="max-w-[calc(100vw-2rem)] gap-0 p-0 md:max-w-sm">
         <DialogTitle className="sr-only">Transfer Bitcoin</DialogTitle>
-        <div className="space-y-2 py-4 text-center">
-          <div className="text-xl font-semibold">Transfer Bitcoin</div>
-          <div className="text-sm text-primary/80">
-            Transfer Bitcoin between your Funding and Trading balance.
+
+        <div className="px-5 pb-5 pt-10">
+          {/* Header */}
+          <div className="mb-4">
+            <div className="text-base font-semibold text-primary">
+              Transfer Bitcoin
+            </div>
+            <div className="mt-0.5 text-xs text-primary-accent">
+              Move funds between your Funding and Trading accounts.
+            </div>
           </div>
-          <div className="flex flex-row items-center justify-center">
+
+          {/* FROM card */}
+          <div className="border-outline/70 rounded-lg border bg-background/50 p-3">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-primary-accent/60">
+              From
+            </span>
+            <div className="mt-1.5 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-primary">
+                {transferType === "fund"
+                  ? "Funding"
+                  : "Primary Trading Account"}
+              </span>
+              <span className="shrink-0 text-xs tabular-nums text-primary">
+                {transferType === "fund"
+                  ? twilightSatsString
+                  : tradingAccountBalanceString}{" "}
+                BTC
+              </span>
+            </div>
+            <div className="mt-0.5 text-right text-[10px] tabular-nums text-primary-accent/50">
+              ≈{" "}
+              {transferType === "fund"
+                ? (fundingUsd ?? "—")
+                : (tradingUsd ?? "—")}
+            </div>
+          </div>
+
+          {/* Swap direction button */}
+          <div className="my-1.5 flex justify-center">
             <button
-              onClick={() =>
-                setTransferType(transferType === "fund" ? "trade" : "fund")
-              }
-              className="flex flex-shrink-0 flex-row items-center justify-center gap-1 rounded-md border border-outline px-2 py-1 text-xs transition-colors duration-300 hover:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:border-outline"
+              type="button"
+              onClick={() => {
+                setTransferType(transferType === "fund" ? "trade" : "fund");
+                setInputValue("");
+              }}
+              className="border-outline/70 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border bg-background text-primary-accent transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+              aria-label="Swap transfer direction"
             >
-              {transferType === "fund" ? "Fund" : "Trade"}
-              <ArrowLeftRight className="h-3 w-3" />
-              {transferType === "fund" ? "Trade" : "Fund"}
+              <ArrowUpDown className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="relative">
+          {/* TO card */}
+          <div className="border-outline/70 rounded-lg border bg-background/50 p-3">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-primary-accent/60">
+              To
+            </span>
+            <div className="mt-1.5 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-primary">
+                {transferType === "fund"
+                  ? "Primary Trading Account"
+                  : "Funding"}
+              </span>
+              <span className="shrink-0 text-xs tabular-nums text-primary">
+                {transferType === "fund"
+                  ? tradingAccountBalanceString
+                  : twilightSatsString}{" "}
+                BTC
+              </span>
+            </div>
+            <div className="mt-0.5 text-right text-[10px] tabular-nums text-primary-accent/50">
+              ≈{" "}
+              {transferType === "fund"
+                ? (tradingUsd ?? "—")
+                : (fundingUsd ?? "—")}
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between">
+              <label
+                htmlFor="transfer-amount-input"
+                className="text-xs text-primary-accent"
+              >
+                Amount (BTC)
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setInputValue(
+                    transferType === "fund"
+                      ? twilightSatsString
+                      : tradingAccountBalanceString
+                  )
+                }
+                className="text-[10px] font-medium text-theme/70 transition-colors hover:text-theme"
+              >
+                MAX
+              </button>
+            </div>
+
             <Input
               ref={inputRef}
               id="transfer-amount-input"
-              type="number"
-              step="any"
-              placeholder="0.000"
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00000000"
               value={inputValue}
-              onChange={(e) => {
-                let value = e.currentTarget.value;
-
-                // Remove any non-numeric characters except decimal point
-                value = value.replace(/[^0-9.]/g, "");
-
-                // Prevent multiple decimal points
-                const decimalCount = (value.match(/\./g) || []).length;
-                if (decimalCount > 1) {
-                  const firstDecimalIndex = value.indexOf(".");
-                  value =
-                    value.substring(0, firstDecimalIndex + 1) +
-                    value.substring(firstDecimalIndex + 1).replace(/\./g, "");
-                }
-
-                // Limit to 8 decimal places (BTC precision)
-                const decimalIndex = value.indexOf(".");
-                if (
-                  decimalIndex !== -1 &&
-                  value.substring(decimalIndex + 1).length > 8
-                ) {
-                  value = value.substring(0, decimalIndex + 9);
-                }
-
-                // Prevent leading zeros except for decimal values
-                if (value.length > 1 && value[0] === "0" && value[1] !== ".") {
-                  value = value.substring(1);
-                }
-
-                // Update the state and input field value
-                setInputValue(value);
-                e.currentTarget.value = value;
-              }}
+              onChange={handleInputChange}
               disabled={isLoading}
+              className="tabular-nums"
             />
 
-            <label
-              htmlFor="transfer-amount-input"
-              onClick={() => {
-                setInputValue(
-                  transferType === "fund"
-                    ? twilightSatsString
-                    : tradingAccountBalanceString
-                );
-              }}
-              className="absolute inset-y-0 right-0 z-10 flex h-full cursor-pointer select-none items-center justify-center px-1.5 font-ui text-xs text-primary opacity-60 hover:opacity-100 data-[state=open]:opacity-90"
-            >
-              MAX:{" "}
-              {transferType === "fund"
-                ? twilightSatsString
-                : tradingAccountBalanceString}
-            </label>
+            <div className="mt-1.5 flex min-h-[16px] items-center justify-between gap-2">
+              <span className="text-[11px] tabular-nums text-primary-accent/60">
+                {parsedInput > 0 && inputUsd !== null ? `≈ ${inputUsd}` : ""}
+              </span>
+              {inputError && (
+                <span className="text-[11px] text-red/80">{inputError}</span>
+              )}
+            </div>
           </div>
+
+          {/* CTA */}
           <Button
-            variant="terminal"
+            variant="ui"
             onClick={handleTransfer}
-            className="!mt-4 w-full"
+            className="mt-3 w-full gap-1.5 border-theme/60 bg-theme/[0.12] text-primary hover:border-theme hover:bg-theme/[0.18] disabled:border-outline disabled:bg-transparent"
             size="small"
-            disabled={!inputValue || inputValue === "0" || isLoading}
+            disabled={
+              !inputValue || parsedInput <= 0 || isLoading || !!inputError
+            }
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              "Transfer"
+              <>
+                {transferType === "fund"
+                  ? "Transfer to Trading"
+                  : "Transfer to Funding"}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </>
             )}
           </Button>
         </div>
