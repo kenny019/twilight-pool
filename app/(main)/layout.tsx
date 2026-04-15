@@ -10,12 +10,6 @@ import { TWILIGHT_NETWORK_TYPE } from '@/lib/constants';
 
 export const metadata = baseMetadata;
 
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
-
 export default function RootLayout({
   children,
 }: {

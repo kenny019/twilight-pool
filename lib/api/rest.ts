@@ -362,6 +362,12 @@ export type MarketStatsData = {
     max_position_pct: number;
     min_position_btc: number;
   };
+  funding_rate: {
+    funding_rate: number;
+    funding_rate_timestamp: string;
+    estimated_funding_rate: number;
+    estimated_funding_rate_timestamp: string;
+  } | null;
 };
 
 async function getMarketStats() {

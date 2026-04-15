@@ -10,6 +10,7 @@ import { computeLendingMarkToValue } from "@/lib/lend/lend-mark-to-value";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore } from "@/lib/providers/session";
 import { useTwilightStore } from "@/lib/providers/store";
+import type { AccountSlices } from "@/lib/state/utils";
 
 export type ActiveAccount = {
   address: string;
@@ -67,8 +68,8 @@ type WalletData = {
     btcPriceUsd: number;
   };
   activity: {
-    transactionHistory: ReturnType<typeof useTwilightStore.getState>["history"]["transactions"];
-    accountLedgerEntries: ReturnType<typeof useTwilightStore.getState>["account_ledger"]["entries"];
+    transactionHistory: AccountSlices["history"]["transactions"];
+    accountLedgerEntries: AccountSlices["account_ledger"]["entries"];
   };
 };
 

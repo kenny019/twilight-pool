@@ -32,7 +32,7 @@ const Order = () => {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="sticky top-0 z-10 bg-background pt-2">
+      <div className="top-0 z-10 bg-background pt-2 md:sticky">
         <div className="relative flex w-full items-center justify-between border-b pl-3">
           <Tabs defaultValue={currentTab}>
             <TabsList variant="underline">
@@ -40,7 +40,7 @@ const Order = () => {
                 onClick={() => setCurrentTab("market")}
                 value={"market"}
                 variant="underline"
-                className="data-[state=active]:text-theme max-md:px-3 max-md:py-2 max-md:text-sm max-md:data-[state=active]:bg-theme/5"
+                className="data-[state=active]:text-theme max-md:px-2.5 max-md:py-1.5 max-md:text-[13px] max-md:data-[state=active]:bg-theme/5"
               >
                 Market
               </TabsTrigger>
@@ -48,7 +48,7 @@ const Order = () => {
                 onClick={() => setCurrentTab("limit")}
                 value={"limit"}
                 variant="underline"
-                className="data-[state=active]:text-theme max-md:px-3 max-md:py-2 max-md:text-sm max-md:data-[state=active]:bg-theme/5"
+                className="data-[state=active]:text-theme max-md:px-2.5 max-md:py-1.5 max-md:text-[13px] max-md:data-[state=active]:bg-theme/5"
               >
                 Limit
               </TabsTrigger>

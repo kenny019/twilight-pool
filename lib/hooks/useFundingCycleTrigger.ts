@@ -1,30 +1,20 @@
 import { useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFundingRate } from "../api/rest";
+import { useQueryClient } from "@tanstack/react-query";
+import useGetMarketStats from "./useGetMarketStats";
 import dayjs from "dayjs";
 
 /**
- * Independent funding cycle detector (Option A).
- * Uses funding-rate API as source of truth, triggers funding history refresh
- * when the clock crosses the next hourly boundary. Decoupled from the ticker.
+ * Independent funding cycle detector.
+ * Uses market_stats.funding_rate.funding_rate_timestamp as source of truth,
+ * triggers funding history refresh when the clock crosses the next hourly
+ * boundary. Decoupled from the ticker.
  */
 export function useFundingCycleTrigger() {
   const queryClient = useQueryClient();
   const lastTriggeredRef = useRef<number>(0);
 
-  const fundingQuery = useQuery({
-    queryKey: ["funding-rate"],
-    queryFn: async () => {
-      const fundingRes = await getFundingRate();
-      if (!fundingRes.success || fundingRes.error) {
-        throw new Error("Failed to fetch funding rate");
-      }
-      return fundingRes.data.result;
-    },
-    staleTime: 60_000,
-  });
-
-  const fundingTimestamp = fundingQuery.data?.timestamp;
+  const marketStats = useGetMarketStats();
+  const fundingTimestamp = marketStats.data?.funding_rate?.funding_rate_timestamp;
 
   useEffect(() => {
     if (!fundingTimestamp) return;
@@ -40,7 +30,7 @@ export function useFundingCycleTrigger() {
         if (lastTriggeredRef.current === cycleKey) return;
         lastTriggeredRef.current = cycleKey;
 
-        queryClient.invalidateQueries({ queryKey: ["funding-rate"] });
+        queryClient.invalidateQueries({ queryKey: ["market-stats"] });
         queryClient.invalidateQueries({ queryKey: ["funding-history-refresh"] });
       }
     }, 1000);

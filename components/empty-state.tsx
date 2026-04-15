@@ -52,11 +52,16 @@ function TableEmptyRow({
       <td
         colSpan={colSpan}
         className={cn(
-          "h-24 px-2 py-2 text-center text-xs text-primary-accent",
+          "h-28 px-3 py-4 text-center",
           className
         )}
       >
-        {title}
+        <div className="flex flex-col items-center justify-center gap-2 text-center">
+          <span className="text-primary-accent/35">
+            <Inbox className="h-5 w-5" />
+          </span>
+          <p className="text-xs text-primary-accent">{title}</p>
+        </div>
       </td>
     </tr>
   );

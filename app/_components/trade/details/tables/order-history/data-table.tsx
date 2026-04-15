@@ -15,7 +15,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Fragment, type ReactNode, useCallback, useEffect, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   OrderHistoryTableMeta,
   MANDATORY_COLUMNS,
@@ -27,7 +33,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/dialog";
-import { Info, SlidersHorizontal, ChevronUp, ChevronDown } from "lucide-react";
+import { Info, ChevronUp, ChevronDown } from "lucide-react";
 import { PnlCell } from "@/lib/components/pnl-display";
 import {
   getOrderHistoryFee,
@@ -102,7 +108,7 @@ function saveToStorage(key: string, value: unknown) {
 }
 
 function getTimelineBadgeClasses(): string {
-  return "border border-border/50 bg-background text-primary/60";
+  return "border border-theme/25 bg-theme/10 text-theme";
 }
 
 function copyValue(value: string, label: string) {
@@ -136,7 +142,7 @@ function MetadataItem({
       >
         {label}
       </span>
-      <div className={cn("text-[11px] text-primary/85", valueClassName)}>
+      <div className={cn("text-primary/85 text-[11px]", valueClassName)}>
         {value}
       </div>
     </div>
@@ -161,9 +167,7 @@ function TimelineRow({
   const showClose =
     trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
   const triggerPrice =
-    trade.displayPrice != null &&
-    trade.priceKind &&
-    trade.priceKind !== "NONE"
+    trade.displayPrice != null && trade.priceKind && trade.priceKind !== "NONE"
       ? {
           label: PRICE_KIND_LABELS[trade.priceKind] ?? "Trigger",
           value: `$${trade.displayPrice.toFixed(2)}`,
@@ -179,6 +183,7 @@ function TimelineRow({
     trade.tx_hash ||
     trade.request_id ||
     trade.reason;
+  const showMarginData = trade.orderStatus === "FILLED" || showClose;
 
   return (
     <div className="relative pl-4">
@@ -202,7 +207,7 @@ function TimelineRow({
               {trade.orderType}
             </span>
           </div>
-          <span className="text-[11px] text-primary/55 tabular-nums">
+          <span className="text-primary/55 text-[11px] tabular-nums">
             {dayjs(trade.date).format("DD MMM YYYY HH:mm:ss")}
           </span>
         </div>
@@ -268,6 +273,48 @@ function TimelineRow({
                 }
               />
             )}
+            {showMarginData &&
+              trade.executionPrice > 0 &&
+              trade.executionPrice !== trade.entryPrice && (
+                <MetadataItem
+                  label="Exec Price"
+                  value={
+                    <span className="font-medium">
+                      ${trade.executionPrice.toFixed(2)}
+                    </span>
+                  }
+                />
+              )}
+            {showMarginData && trade.initialMargin > 0 && (
+              <MetadataItem
+                label="Init Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.initialMargin)}
+                  </span>
+                }
+              />
+            )}
+            {showMarginData && trade.availableMargin > 0 && (
+              <MetadataItem
+                label="Avail Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.availableMargin)}
+                  </span>
+                }
+              />
+            )}
+            {showMarginData && trade.maintenanceMargin > 0 && (
+              <MetadataItem
+                label="Maint. Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.maintenanceMargin)}
+                  </span>
+                }
+              />
+            )}
             {trade.tx_hash && (
               <MetadataItem
                 label="Tx Hash"
@@ -301,9 +348,7 @@ function TimelineRow({
               <MetadataItem
                 label="Reason"
                 className="col-span-full"
-                value={
-                  <span className="text-primary/70">{trade.reason}</span>
-                }
+                value={<span className="text-primary/70">{trade.reason}</span>}
               />
             )}
           </div>
@@ -318,6 +363,8 @@ interface DataTableProps<TValue> {
   data: OrderHistoryGroup[];
   getBtcPriceUsd: () => number;
   openFundingDialog: (trade: TradeOrder) => void;
+  columnConfigOpen?: boolean;
+  onColumnConfigOpenChange?: (open: boolean) => void;
 }
 
 export function OrderHistoryDataTable<TValue>({
@@ -325,6 +372,8 @@ export function OrderHistoryDataTable<TValue>({
   data,
   getBtcPriceUsd,
   openFundingDialog,
+  columnConfigOpen,
+  onColumnConfigOpenChange,
 }: DataTableProps<TValue>) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "latestDate", desc: true },
@@ -336,6 +385,8 @@ export function OrderHistoryDataTable<TValue>({
     loadColumnOrder(columns)
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const effectiveDialogOpen = columnConfigOpen ?? dialogOpen;
+  const setEffectiveDialogOpen = onColumnConfigOpenChange ?? setDialogOpen;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -404,18 +455,7 @@ export function OrderHistoryDataTable<TValue>({
 
   return (
     <div className="w-full overflow-hidden">
-      <div className="flex items-center justify-end px-3 py-1.5">
-        <button
-          type="button"
-          onClick={() => setDialogOpen(true)}
-          className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium text-primary-accent transition-colors hover:bg-theme/20 hover:text-primary"
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Columns
-        </button>
-      </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={effectiveDialogOpen} onOpenChange={setEffectiveDialogOpen}>
         <DialogContent>
           <DialogTitle>Configure Columns</DialogTitle>
           <DialogDescription>
@@ -477,7 +517,7 @@ export function OrderHistoryDataTable<TValue>({
         </DialogContent>
       </Dialog>
 
-      <div className="relative w-full overflow-x-auto overscroll-none px-3">
+      <div className="w-full overflow-x-auto overscroll-none px-3 md:overflow-visible">
         <table cellSpacing={0} className="w-full table-auto">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -487,7 +527,7 @@ export function OrderHistoryDataTable<TValue>({
               >
                 {headerGroup.headers.map((header) => (
                   <th
-                    className="sticky top-0 z-10 border-b border-outline/10 bg-background px-2 py-2 text-start font-medium"
+                    className="border-outline/10 sticky top-0 z-10 border-b bg-background px-2 py-2 text-start font-medium"
                     key={header.id}
                   >
                     <div className="block text-start">
@@ -503,7 +543,7 @@ export function OrderHistoryDataTable<TValue>({
               </tr>
             ))}
           </thead>
-          <tbody className="w-full table-auto overflow-auto">
+          <tbody className="w-full table-auto">
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => {
                 const group = row.original;
@@ -512,11 +552,12 @@ export function OrderHistoryDataTable<TValue>({
 
                 return (
                   <Fragment key={row.id}>
-                    <tr
-                      className="text-xs transition-colors hover:bg-theme/20"
-                    >
+                    <tr className="text-xs transition-colors hover:bg-theme/20">
                       {row.getVisibleCells().map((cell) => (
-                        <td className="whitespace-nowrap px-2 py-2" key={cell.id}>
+                        <td
+                          className="whitespace-nowrap px-2 py-2"
+                          key={cell.id}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()
@@ -540,12 +581,14 @@ export function OrderHistoryDataTable<TValue>({
                                 <button
                                   type="button"
                                   className="text-[11px] font-medium hover:underline"
-                                  onClick={() => copyValue(group.uuid, "Order ID")}
+                                  onClick={() =>
+                                    copyValue(group.uuid, "Order ID")
+                                  }
                                 >
                                   {truncateHash(group.uuid, 4, 4)}
                                 </button>
                               </div>
-                              <span className="text-[11px] text-primary/55">
+                              <span className="text-primary/55 text-[11px]">
                                 {group.rows.length} event
                                 {group.rows.length === 1 ? "" : "s"}
                               </span>
@@ -573,7 +616,10 @@ export function OrderHistoryDataTable<TValue>({
                 );
               })
             ) : (
-              <TableEmptyRow colSpan={columns.length} title="No order history." />
+              <TableEmptyRow
+                colSpan={columns.length}
+                title="No order history."
+              />
             )}
           </tbody>
         </table>

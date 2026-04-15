@@ -1,7 +1,12 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as klinecharts from "klinecharts";
-import type { Chart, Period, AxisCreateRangeParams } from "klinecharts";
+import type {
+  Chart,
+  Period,
+  AxisCreateRangeParams,
+  KLineData,
+} from "klinecharts";
 import { useGrid } from "@/lib/providers/grid";
 import { useTheme } from "next-themes";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -17,6 +22,7 @@ import {
 import cn from "@/lib/cn";
 import dayjs, { type ManipulateType } from "dayjs";
 import useWindow from "@/lib/hooks/useWindow";
+import { BookOpen } from "lucide-react";
 
 // klinecharts ships ESM named exports but Next.js 13 may resolve to CJS default
 const { init, dispose } = (klinecharts as any) ?? klinecharts;
@@ -95,7 +101,11 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   [CandleInterval.ONE_DAY]: "1d",
 };
 
-const KLineChart = () => {
+type KLineChartProps = {
+  onShowTrades?: () => void;
+};
+
+const KLineChart = ({ onShowTrades }: KLineChartProps) => {
   const chartRef = useRef<Chart | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -107,9 +117,13 @@ const KLineChart = () => {
   const [timeInterval, setTimeInterval] = useState<CandleInterval>(
     DEFAULT_TIME_INTERVAL
   );
-  const isCompactChart = windowWidth > 0 && windowWidth < COMPACT_CHART_THRESHOLD;
+  const isCompactChart =
+    windowWidth > 0 && windowWidth < COMPACT_CHART_THRESHOLD;
   const isPhoneChart = windowWidth > 0 && windowWidth < 768;
   const compactToolbarHeightClass = isCompactChart ? "h-[36px]" : "h-[40px]";
+
+  const [tooltipData, setTooltipData] = useState<KLineData | null>(null);
+  const isHoveringRef = useRef(false);
 
   // Keep addPrice ref in sync to avoid stale closure in subscribeBar
   useEffect(() => {
@@ -202,9 +216,7 @@ const KLineChart = () => {
             console.error("NEXT_PUBLIC_TWILIGHT_PRICE_WS is not defined");
             return;
           }
-          const ws = new WebSocket(
-            process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS
-          );
+          const ws = new WebSocket(process.env.NEXT_PUBLIC_TWILIGHT_PRICE_WS);
           ws.onopen = () => {
             ws.send(
               JSON.stringify({
@@ -263,6 +275,26 @@ const KLineChart = () => {
       volumePrecision: 4,
     });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[DEFAULT_TIME_INTERVAL]);
+
+    // Drive the custom OHLCV overlay from crosshair + visible-range events
+    const onCrosshairChange = (data?: unknown) => {
+      const { kLineData } = (data ?? {}) as { kLineData?: KLineData };
+      if (kLineData) {
+        isHoveringRef.current = true;
+        setTooltipData(kLineData);
+      } else {
+        isHoveringRef.current = false;
+        const list = chartRef.current?.getDataList() ?? [];
+        if (list.length > 0) setTooltipData(list[list.length - 1]);
+      }
+    };
+    const onVisibleRangeChange = () => {
+      if (isHoveringRef.current) return;
+      const list = chartRef.current?.getDataList() ?? [];
+      if (list.length > 0) setTooltipData(list[list.length - 1]);
+    };
+    chart.subscribeAction("onCrosshairChange", onCrosshairChange);
+    chart.subscribeAction("onVisibleRangeChange", onVisibleRangeChange);
 
     // Keep a dedicated right-side price scale on wider widths so the Y-axis
     // remains legible. On phones, move labels inside the plot to preserve
@@ -336,6 +368,8 @@ const KLineChart = () => {
 
     const container = containerRef.current;
     return () => {
+      chart.unsubscribeAction("onCrosshairChange", onCrosshairChange);
+      chart.unsubscribeAction("onVisibleRangeChange", onVisibleRangeChange);
       wsRef.current?.close();
       if (container) dispose(container);
       chartRef.current = null;
@@ -350,7 +384,9 @@ const KLineChart = () => {
   // Theme changes
   useEffect(() => {
     if (!chartRef.current) return;
-    chartRef.current.setStyles(getThemeStyles(theme, isCompactChart, isPhoneChart));
+    chartRef.current.setStyles(
+      getThemeStyles(theme, isCompactChart, isPhoneChart)
+    );
   }, [isCompactChart, isPhoneChart, theme]);
 
   const handleIntervalChange = useCallback(
@@ -369,81 +405,165 @@ const KLineChart = () => {
     ? MOBILE_VISIBLE_INTERVALS
     : COMPACT_VISIBLE_INTERVALS;
 
-  const overflowItem = overflowIntervals.find(
-    (i) => i.id === timeInterval
-  );
+  const overflowItem = overflowIntervals.find((i) => i.id === timeInterval);
   const overflowActive = !!overflowItem;
   const overflowLabel = overflowItem?.name ?? "More";
+
+  const intervalName =
+    TIME_INTERVALS.find((i) => i.id === timeInterval)?.name ?? "";
+  const fmtPrice = (n: number) =>
+    n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  const fmtVol = (n: number) => n.toFixed(4);
+  const fmtDate = (ts: number) =>
+    dayjs(ts).format(isPhoneChart ? "MM-DD HH:mm" : "YYYY-MM-DD HH:mm");
 
   return (
     <div className="flex h-full w-full touch-none flex-col overflow-hidden">
       {/* Desktop: show all intervals inline */}
       {!isCompactChart && (
-      <div className="hidden h-[40px] w-full shrink-0 border-b bg-background/40 md:flex">
-        {TIME_INTERVALS.map((item) => (
-          <button
-            className={cn(
-              "border-r px-4 text-sm text-primary/80 hover:text-theme",
-              timeInterval === item.id && "text-theme"
-            )}
-            key={item.name}
-            onClick={() => handleIntervalChange(item)}
-          >
-            {item.name}
-          </button>
-        ))}
-      </div>
+        <div className="hidden h-[40px] w-full shrink-0 items-center border-b bg-background/40 md:flex">
+          {TIME_INTERVALS.map((item) => (
+            <button
+              className={cn(
+                "h-full border-r px-4 text-sm text-primary/80 hover:text-theme",
+                timeInterval === item.id && "text-theme"
+              )}
+              key={item.name}
+              onClick={() => handleIntervalChange(item)}
+            >
+              {item.name}
+            </button>
+          ))}
+          {onShowTrades && (
+            <button
+              className="ml-4 flex h-full items-center gap-1.5 px-2 text-primary/60 transition-colors hover:text-primary"
+              title="Show Trades"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onShowTrades}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold tracking-wide text-primary/80">
+                Trades
+              </span>
+            </button>
+          )}
+        </div>
       )}
 
       {/* Compact: show smaller visible set + overflow */}
       {isCompactChart && (
-      <div className={cn("flex w-full shrink-0 border-b bg-background/40", compactToolbarHeightClass)}>
-        {visibleIntervals.map((item) => (
-          <button
-            className={cn(
-              "border-r text-sm text-primary/80 hover:text-theme",
-              isPhoneChart ? "px-3" : "px-3.5",
-              timeInterval === item.id && "text-theme"
-            )}
-            key={item.name}
-            onClick={() => handleIntervalChange(item)}
-          >
-            {item.name}
-          </button>
-        ))}
-        <div className="relative border-r">
-          <select
-            value={overflowActive ? timeInterval : ""}
-            onChange={(e) => {
-              const found = TIME_INTERVALS.find((i) => i.id === e.target.value);
-              if (found) handleIntervalChange(found);
-            }}
-            className={cn(
-              "h-full appearance-none bg-transparent px-3 pr-6 text-sm text-primary/80 outline-none",
-              overflowActive && "text-theme"
-            )}
-          >
-            {!overflowActive && (
-              <option value="" disabled>
-                {overflowLabel}
-              </option>
-            )}
-            {overflowIntervals.map((item) => (
-              <option key={item.name} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-xs text-primary/50">
-            ▾
-          </span>
+        <div
+          className={cn(
+            "flex w-full shrink-0 border-b bg-background/40",
+            compactToolbarHeightClass
+          )}
+        >
+          {visibleIntervals.map((item) => (
+            <button
+              className={cn(
+                "border-r text-sm text-primary/80 hover:text-theme",
+                isPhoneChart ? "px-3" : "px-3.5",
+                timeInterval === item.id && "text-theme"
+              )}
+              key={item.name}
+              onClick={() => handleIntervalChange(item)}
+            >
+              {item.name}
+            </button>
+          ))}
+          <div className="relative border-r">
+            <select
+              value={overflowActive ? timeInterval : ""}
+              onChange={(e) => {
+                const found = TIME_INTERVALS.find(
+                  (i) => i.id === e.target.value
+                );
+                if (found) handleIntervalChange(found);
+              }}
+              className={cn(
+                "h-full appearance-none bg-transparent px-3 pr-6 text-sm text-primary/80 outline-none",
+                overflowActive && "text-theme"
+              )}
+            >
+              {!overflowActive && (
+                <option value="" disabled>
+                  {overflowLabel}
+                </option>
+              )}
+              {overflowIntervals.map((item) => (
+                <option key={item.name} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-xs text-primary/50">
+              ▾
+            </span>
+          </div>
+          {onShowTrades && !isPhoneChart && (
+            <button
+              className="ml-4 flex h-full items-center gap-1.5 px-2 text-primary/60 transition-colors hover:text-primary"
+              title="Show Trades"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onShowTrades}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold tracking-wide text-primary/80">
+                Trades
+              </span>
+            </button>
+          )}
         </div>
-      </div>
       )}
-      <div
-        ref={containerRef}
-        className="relative min-h-0 w-full flex-1 touch-none"
-      />
+      <div className="relative min-h-0 w-full flex-1 touch-none">
+        <div ref={containerRef} className="h-full w-full" />
+        {/* Custom OHLC tooltip overlay — compact / phone */}
+        {isCompactChart && (
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center py-0.5 pl-2",
+              isPhoneChart ? "pr-16" : "pr-20"
+            )}
+          >
+            <div className="flex items-center gap-x-2 text-[10px] leading-none text-primary/70">
+              {tooltipData ? (
+                <>
+                  <span>O: {fmtPrice(tooltipData.open)}</span>
+                  <span>H: {fmtPrice(tooltipData.high)}</span>
+                  <span>L: {fmtPrice(tooltipData.low)}</span>
+                  <span>C: {fmtPrice(tooltipData.close)}</span>
+                  {!isPhoneChart && (
+                    <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                  )}
+                </>
+              ) : null}
+            </div>
+          </div>
+        )}
+        {/* Custom OHLCV tooltip overlay — desktop only */}
+        {!isCompactChart && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between py-1 pl-2 pr-20">
+            <div className="flex flex-wrap items-center gap-x-3 text-[11px] leading-none text-primary/75">
+              {tooltipData ? (
+                <>
+                  <span>Time: {fmtDate(tooltipData.timestamp)}</span>
+                  <span>Open: {fmtPrice(tooltipData.open)}</span>
+                  <span>High: {fmtPrice(tooltipData.high)}</span>
+                  <span>Low: {fmtPrice(tooltipData.low)}</span>
+                  <span>Close: {fmtPrice(tooltipData.close)}</span>
+                  <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                </>
+              ) : null}
+            </div>
+            <div className="shrink-0 text-[12px] font-medium text-primary/50">
+              BTCUSD · {intervalName}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

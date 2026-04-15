@@ -1,6 +1,11 @@
 import { Metadata } from "next";
 
 export const baseMetadata: Metadata = {
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  },
   title: {
     default: "Twilight Finance",
     template: "%s | Twilight",

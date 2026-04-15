@@ -268,7 +268,9 @@ function FundingTradeButton({
             message:
               error instanceof Error
                 ? error.message
-                : getMasterAccountBlockedMessage(state.zk.masterAccountBlockReason),
+                : getMasterAccountBlockedMessage(
+                    state.zk.masterAccountBlockReason
+                  ),
           };
         }
 
@@ -727,15 +729,14 @@ function FundingTradeButton({
             <ArrowLeftRight className="h-4 w-4" />
           </Button>
         ) : type === "compact" ? (
-          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-md border border-outline px-2.5 py-1.5 text-xs font-medium text-primary/80 transition-colors hover:border-primary/60 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40">
-            <ArrowLeftRight className="h-3 w-3" />
+          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-md border border-theme/60 bg-theme/10 px-2.5 py-1.5 text-xs font-medium text-primary/70 transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:opacity-40 disabled:hover:border-outline">
+            <ArrowLeftRight className="h-3.5 w-3.5" />
             Transfer
           </button>
         ) : (
-          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1 rounded-md border  border-outline bg-primary px-2 py-1 text-xs text-background transition-colors duration-300 hover:bg-primary/80 focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:border-outline">
-            Fund
-            <ArrowLeftRight className="h-3 w-3" />
-            Trade
+          <button className="flex flex-shrink-0 flex-row items-center justify-center gap-1.5 rounded-lg border border-theme/60 bg-theme/10 px-3 py-1.5 text-[13px] font-medium text-primary/70 shadow-sm transition-colors duration-300 hover:border-theme/80 hover:bg-theme/20 hover:text-primary focus-visible:ring-1 focus-visible:ring-theme/60 disabled:cursor-not-allowed disabled:border-outline disabled:bg-transparent disabled:text-gray-500 disabled:hover:border-outline">
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            Transfer
           </button>
         )}
       </DialogTrigger>

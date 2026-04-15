@@ -895,7 +895,7 @@ function ConditionalCloseDialog({
   // ── render ───────────────────────────────────────────────────────────────
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="min-h-[540px] max-h-[90dvh] md:bottom-auto md:left-[50%] md:right-auto md:top-[50%] md:w-full md:max-w-lg md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-md">
+      <SheetContent className="max-h-[90dvh] min-h-[540px] md:bottom-auto md:left-[50%] md:right-auto md:top-[50%] md:w-full md:max-w-lg md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-md">
         <DialogTitle>Close Position</DialogTitle>
         <Tabs
           value={activeTab}
@@ -912,48 +912,50 @@ function ConditionalCloseDialog({
 
           {/* ── Limit tab ─────────────────────────────────────────────── */}
           <TabsPrimitive.Content value="limit" className="mt-4">
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 pb-4">
               {/* 1. Position Context */}
-              <div className="flex flex-col gap-1 rounded border border-outline p-2">
+              <div className="border-outline/60 flex flex-col gap-0.5 rounded border bg-primary/[0.02] p-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">
+                  <span className="text-[10px] text-primary-accent/70">
                     Entry Price (USD)
                   </span>
-                  <span className="text-xs font-medium">
+                  <span className="text-[10px] font-medium">
                     {formatCurrency(entryPrice)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">
+                  <span className="text-[10px] text-primary-accent/70">
                     Mark Price (USD)
                   </span>
-                  <span className="text-xs font-medium">
+                  <span className="text-[10px] font-medium">
                     {formatCurrency(markPrice)}
                   </span>
                 </div>
                 {liquidationPrice > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">
+                    <span className="text-[10px] text-primary-accent/70">
                       Liquidation Price (USD)
                     </span>
-                    <span className="text-xs font-medium text-red">
+                    <span className="text-[10px] font-medium text-red">
                       {formatCurrency(liquidationPrice)}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">
+                  <span className="text-[10px] text-primary-accent/70">
                     Position Size (BTC)
                   </span>
-                  <span className="text-xs font-medium">
+                  <span className="text-[10px] font-medium">
                     {positionSizeDisplayBtc.toFixed(6)} BTC
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">Side</span>
+                  <span className="text-[10px] text-primary-accent/70">
+                    Side
+                  </span>
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-[10px] font-medium",
                       isLong ? "text-green-medium" : "text-red"
                     )}
                   >
@@ -1020,7 +1022,7 @@ function ConditionalCloseDialog({
                       : "—"}
                   </span>
                 </div>
-                <div className="relative pt-5">
+                <div className="relative pt-4">
                   {/* Floating price chip above the slider thumb */}
                   {limitPrice > 0 && (
                     <div
@@ -1038,15 +1040,19 @@ function ConditionalCloseDialog({
                     onValueChange={([pct]) =>
                       setLimitPrice(entryPrice * (1 + pct / 100))
                     }
+                    thumbClassName="h-3 w-3"
+                    markerCount={5}
                   />
                 </div>
               </div>
 
               {/* 4. Preset chips */}
-              <div className="space-y-1.5">
-                <span className="text-xs text-primary-accent/60">Presets</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-10 shrink-0 text-xs text-primary-accent/60">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-primary-accent/50">
+                  Presets
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className="w-8 shrink-0 text-[10px] text-primary-accent/60">
                     Profit
                   </span>
                   {limitProfitPresets.map((pct) => (
@@ -1056,15 +1062,15 @@ function ConditionalCloseDialog({
                       onClick={() =>
                         setLimitPrice(entryPrice * (1 + pct / 100))
                       }
-                      className="cursor-pointer rounded border border-green-medium/40 bg-green-medium/10 px-2.5 py-1 text-xs font-medium text-green-medium transition-colors hover:bg-green-medium/20 active:bg-green-medium/30"
+                      className="cursor-pointer rounded border border-green-medium/40 bg-green-medium/10 px-1.5 py-0.5 text-[10px] font-medium text-green-medium transition-colors hover:bg-green-medium/20 active:bg-green-medium/30"
                     >
                       {pct > 0 ? "+" : ""}
                       {pct}%
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-10 shrink-0 text-xs text-primary-accent/60">
+                <div className="flex items-center gap-1">
+                  <span className="w-8 shrink-0 text-[10px] text-primary-accent/60">
                     Loss
                   </span>
                   {limitLossPresets.map((pct) => (
@@ -1074,7 +1080,7 @@ function ConditionalCloseDialog({
                       onClick={() =>
                         setLimitPrice(entryPrice * (1 + pct / 100))
                       }
-                      className="cursor-pointer rounded border border-red/40 bg-red/10 px-2.5 py-1 text-xs font-medium text-red transition-colors hover:bg-red/20 active:bg-red/30"
+                      className="cursor-pointer rounded border border-red/40 bg-red/10 px-1.5 py-0.5 text-[10px] font-medium text-red transition-colors hover:bg-red/20 active:bg-red/30"
                     >
                       {pct > 0 ? "+" : ""}
                       {pct}%
@@ -1113,11 +1119,11 @@ function ConditionalCloseDialog({
               {/* 6. Visualization bar */}
               {limitEntryBarPct != null && (
                 <div className="space-y-1">
-                  <span className="text-xs text-primary-accent/60">
+                  <span className="text-[10px] uppercase tracking-wide text-primary-accent/50">
                     Price Range
                   </span>
-                  <div className="relative pb-5 pt-5">
-                    <div className="h-3 w-full overflow-hidden rounded bg-outline">
+                  <div className="relative py-1">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-outline">
                       {/* Profit zone: entry → limit (when limit > entry for LONG) */}
                       {limitPriceBarPct != null && isPnlLimitPositive && (
                         <div
@@ -1175,42 +1181,6 @@ function ConditionalCloseDialog({
                         />
                       )}
                     </div>
-                    {limitPriceBarPct != null && (
-                      <PriceBarLabel
-                        left={limitPriceBarPct}
-                        label={`Limit ${formatCurrency(limitPrice)}`}
-                        toneClassName={
-                          isPnlLimitPositive
-                            ? "text-green-medium"
-                            : isPnlLimitNegative
-                              ? "text-red"
-                              : "text-primary-accent"
-                        }
-                        position="top"
-                      />
-                    )}
-                    <PriceBarLabel
-                      left={limitEntryBarPct}
-                      label={`Entry ${formatCurrency(entryPrice)}`}
-                      toneClassName="text-primary-accent"
-                      position="bottom"
-                    />
-                    {limitMarkBarPct != null && (
-                      <PriceBarLabel
-                        left={limitMarkBarPct}
-                        label={`Mark ${formatCurrency(markPrice)}`}
-                        toneClassName="text-blue-400"
-                        position="top"
-                      />
-                    )}
-                    {limitLiqBarPct != null && (
-                      <PriceBarLabel
-                        left={limitLiqBarPct}
-                        label={`Liq ${formatCurrency(liquidationPrice)}`}
-                        toneClassName="text-red"
-                        position="bottom"
-                      />
-                    )}
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-1">
                     {limitPrice > 0 && (
@@ -1285,7 +1255,11 @@ function ConditionalCloseDialog({
                 <span className="text-sm font-medium">${positionSizeUsd}</span>
               </div>
 
-              <Button onClick={handleSettleLimit}>
+              <Button
+                variant="ui"
+                onClick={handleSettleLimit}
+                className="hover:bg-theme/15 mx-auto w-1/2 border-theme/40 bg-theme/10 py-2.5 text-sm font-semibold text-theme hover:border-theme/60"
+              >
                 {hasLimit ? "Update Limit" : "Confirm"}
               </Button>
             </div>
@@ -1293,40 +1267,42 @@ function ConditionalCloseDialog({
 
           {/* ── SL/TP tab ──────────────────────────────────────────────── */}
           <TabsPrimitive.Content value="sltp" className="mt-4">
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 pb-4">
               {/* 1. Position Context */}
-              <div className="flex flex-col gap-1 rounded border border-outline p-2">
+              <div className="border-outline/60 flex flex-col gap-0.5 rounded border bg-primary/[0.02] p-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">
+                  <span className="text-[10px] text-primary-accent/70">
                     Entry Price (USD)
                   </span>
-                  <span className="text-xs font-medium">
+                  <span className="text-[10px] font-medium">
                     {formatCurrency(entryPrice)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">
+                  <span className="text-[10px] text-primary-accent/70">
                     Mark Price (USD)
                   </span>
-                  <span className="text-xs font-medium">
+                  <span className="text-[10px] font-medium">
                     {formatCurrency(markPrice)}
                   </span>
                 </div>
                 {liquidationPrice > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-primary-accent">
+                    <span className="text-[10px] text-primary-accent/70">
                       Liquidation Price (USD)
                     </span>
-                    <span className="text-xs font-medium text-red">
+                    <span className="text-[10px] font-medium text-red">
                       {formatCurrency(liquidationPrice)}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-primary-accent">Side</span>
+                  <span className="text-[10px] text-primary-accent/70">
+                    Side
+                  </span>
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-[10px] font-medium",
                       isLong ? "text-green-medium" : "text-red"
                     )}
                   >
@@ -1337,7 +1313,7 @@ function ConditionalCloseDialog({
 
               {/* Position Amount + explainer + unit toggle */}
               <div className="flex items-start justify-between gap-2">
-                <p className="max-w-[55%] text-xs text-primary-accent/70">
+                <p className="max-w-[55%] text-[10px] text-primary-accent/70">
                   SL/TP trigger a market close when the mark price reaches the
                   set level.
                 </p>
@@ -1446,6 +1422,8 @@ function ConditionalCloseDialog({
                           onValueChange={([pct]) =>
                             handleSlPriceChange(markPrice * (1 + pct / 100))
                           }
+                          thumbClassName="h-3 w-3"
+                          markerCount={5}
                         />
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -1581,6 +1559,8 @@ function ConditionalCloseDialog({
                           onValueChange={([pct]) =>
                             handleTpPriceChange(markPrice * (1 + pct / 100))
                           }
+                          thumbClassName="h-3 w-3"
+                          markerCount={5}
                         />
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -1627,11 +1607,11 @@ function ConditionalCloseDialog({
               {/* 4. Outcome Visualization Bar */}
               {entryBarPct != null && (
                 <div className="space-y-1">
-                  <span className="text-xs text-primary-accent/60">
+                  <span className="text-[10px] uppercase tracking-wide text-primary-accent/50">
                     Price Range
                   </span>
-                  <div className="relative pb-5 pt-5">
-                    <div className="h-3 w-full overflow-hidden rounded bg-outline">
+                  <div className="relative py-1">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-outline">
                       {/* Red zone: liq → sl */}
                       {liqBarPct != null && slBarPct != null && (
                         <div
@@ -1695,43 +1675,38 @@ function ConditionalCloseDialog({
                         />
                       )}
                     </div>
-                    {slBarPct != null && (
-                      <PriceBarLabel
-                        left={slBarPct}
-                        label={`SL ${formatCurrency(slPrice)}`}
-                        toneClassName="text-orange-500"
-                        position="top"
-                      />
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {slPrice > 0 && slBarPct != null && (
+                      <div className="text-orange-500 flex items-center gap-1 text-[10px]">
+                        <div className="bg-orange-500 h-1.5 w-1.5 shrink-0 rounded-full" />
+                        SL {formatCurrency(slPrice)}
+                      </div>
                     )}
-                    <PriceBarLabel
-                      left={entryBarPct}
-                      label={`Entry ${formatCurrency(entryPrice)}`}
-                      toneClassName="text-primary-accent"
-                      position="bottom"
-                    />
-                    {markBarPct != null && (
-                      <PriceBarLabel
-                        left={markBarPct}
-                        label={`Mark ${formatCurrency(markPrice)}`}
-                        toneClassName="text-blue-400"
-                        position="top"
-                      />
+                    <div className="flex items-center gap-1 text-[10px] text-primary-accent">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      Entry {formatCurrency(entryPrice)}
+                    </div>
+                    {markPrice > 0 && (
+                      <div className="text-blue-400 flex items-center gap-1 text-[10px]">
+                        <div
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: "#60a5fa" }}
+                        />
+                        Mark {formatCurrency(markPrice)}
+                      </div>
                     )}
-                    {tpBarPct != null && (
-                      <PriceBarLabel
-                        left={tpBarPct}
-                        label={`TP ${formatCurrency(tpPrice)}`}
-                        toneClassName="text-green-medium"
-                        position="bottom"
-                      />
+                    {tpPrice > 0 && tpBarPct != null && (
+                      <div className="flex items-center gap-1 text-[10px] text-green-medium">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-medium" />
+                        TP {formatCurrency(tpPrice)}
+                      </div>
                     )}
-                    {liqBarPct != null && (
-                      <PriceBarLabel
-                        left={liqBarPct}
-                        label={`Liq ${formatCurrency(liquidationPrice)}`}
-                        toneClassName="text-red"
-                        position="bottom"
-                      />
+                    {liquidationPrice > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-red">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-red" />
+                        Liq {formatCurrency(liquidationPrice)}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1740,17 +1715,17 @@ function ConditionalCloseDialog({
               {/* 5. Risk / Reward Summary */}
               {hasRR && (
                 <div className="space-y-1">
-                  <span className="text-xs text-primary-accent/60">
+                  <span className="text-[10px] uppercase tracking-wide text-primary-accent/50">
                     Risk / Reward
                   </span>
-                  <div className="space-y-1 rounded border border-outline p-2">
+                  <div className="border-outline/60 flex flex-col gap-0.5 rounded border bg-primary/[0.02] p-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-primary-accent">
+                      <span className="text-[10px] text-primary-accent/70">
                         SL PnL
                       </span>
                       <span
                         className={cn(
-                          "text-xs font-medium",
+                          "text-[10px] font-medium",
                           displaySlPnlBtc >= 0
                             ? "text-green-medium"
                             : "text-red"
@@ -1762,12 +1737,12 @@ function ConditionalCloseDialog({
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-primary-accent">
+                      <span className="text-[10px] text-primary-accent/70">
                         TP PnL
                       </span>
                       <span
                         className={cn(
-                          "text-xs font-medium",
+                          "text-[10px] font-medium",
                           displayTpPnlBtc >= 0
                             ? "text-green-medium"
                             : "text-red"
@@ -1780,10 +1755,10 @@ function ConditionalCloseDialog({
                     </div>
                     {rrRatio != null && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-primary-accent">
+                        <span className="text-[10px] text-primary-accent/70">
                           Risk : Reward
                         </span>
-                        <span className="text-xs font-medium">
+                        <span className="text-[10px] font-medium">
                           1 : {rrRatio.toFixed(2)}
                         </span>
                       </div>
@@ -1810,12 +1785,14 @@ function ConditionalCloseDialog({
               <div className="border-t" />
 
               <Button
+                variant="ui"
                 onClick={handleSettleSltp}
                 disabled={
                   (!slEnabled && !tpEnabled) ||
                   (hasUserInput && hasBlockingError) ||
                   isNoChange
                 }
+                className="hover:bg-theme/15 mx-auto w-1/2 border-theme/40 bg-theme/10 py-2.5 text-sm font-semibold text-theme hover:border-theme/60 disabled:opacity-40"
               >
                 {hasSltp ? "Update SL/TP" : "Confirm"}
               </Button>

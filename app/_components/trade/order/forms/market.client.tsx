@@ -94,10 +94,7 @@ function trimTrailingZeros(value: string): string {
   return value.replace(/(\.\d*?[1-9])0+$|\.0*$/, "$1");
 }
 
-function formatAmountInputValue(
-  value: number,
-  unit: "btc" | "usd"
-): string {
+function formatAmountInputValue(value: number, unit: "btc" | "usd"): string {
   if (!Number.isFinite(value) || value <= 0) return "";
 
   return unit === "btc"
@@ -254,7 +251,13 @@ const OrderMarketForm = () => {
         setPercent(0);
       }
     },
-    [collateralUnit, currentPrice, maxCollateralBtc, maxCollateralUsd, updatePercent]
+    [
+      collateralUnit,
+      currentPrice,
+      maxCollateralBtc,
+      maxCollateralUsd,
+      updatePercent,
+    ]
   );
 
   const normalizeAmountInput = useCallback(() => {
@@ -1026,14 +1029,16 @@ const OrderMarketForm = () => {
 
   const setMaxCollateral = useCallback(() => {
     if (!tradingAccountBalance) return;
-    setBtcAmount(maxCollateralBtc > 0 ? trimTrailingZeros(maxCollateralBtc.toFixed(8)) : "");
+    setBtcAmount(
+      maxCollateralBtc > 0 ? trimTrailingZeros(maxCollateralBtc.toFixed(8)) : ""
+    );
     setPercent(100);
   }, [maxCollateralBtc, tradingAccountBalance]);
 
   return (
     <form
       onSubmit={(e) => e.preventDefault()}
-      className="flex flex-col gap-2 px-3 py-3"
+      className="flex h-full flex-col gap-3 px-3 py-2 md:justify-between md:gap-0 md:py-3"
     >
       {status === "Connected" && !tradingAccountBalance && (
         <div className="rounded-md border border-outline bg-theme/5 px-3 py-2.5">
@@ -1074,16 +1079,45 @@ const OrderMarketForm = () => {
       </div>
 
       {/* 2. Margin Amount — single master input */}
-      <div className="-mt-0.5 space-y-0.5">
-        <label
-          className={cn(
-            "block text-sm font-medium text-primary/90",
-            width < 350 && "text-xs"
-          )}
-        >
-          Margin Amount
-        </label>
-        {/* Mobile: [−] [input + toggle] [+] */}
+      <div className="space-y-1.5 md:space-y-1">
+        {/* Label row — unit toggle inline on mobile */}
+        <div className="flex items-center justify-between">
+          <label
+            className={cn(
+              "text-sm font-medium text-primary/90",
+              width < 350 && "text-xs"
+            )}
+          >
+            Margin Amount
+          </label>
+          <div className="flex overflow-hidden rounded border border-outline text-[10px] font-medium md:hidden">
+            <button
+              type="button"
+              onClick={() => setCollateralUnit("btc")}
+              className={cn(
+                "px-2 py-1 transition-colors",
+                collateralUnit === "btc"
+                  ? "bg-theme/20 text-theme"
+                  : "text-primary/50 hover:text-primary/80"
+              )}
+            >
+              BTC
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollateralUnit("usd")}
+              className={cn(
+                "border-l border-outline px-2 py-1 transition-colors",
+                collateralUnit === "usd"
+                  ? "bg-theme/20 text-theme"
+                  : "text-primary/50 hover:text-primary/80"
+              )}
+            >
+              USD
+            </button>
+          </div>
+        </div>
+        {/* Mobile: [−] [input + Max] [+] — single clean line */}
         <div className="flex items-stretch gap-2 md:hidden">
           <button
             type="button"
@@ -1097,66 +1131,33 @@ const OrderMarketForm = () => {
             onPointerUp={clearCollateralRepeat}
             onPointerCancel={clearCollateralRepeat}
             onLostPointerCapture={clearCollateralRepeat}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Minus className="h-4 w-4" />
           </button>
-          <div className="flex min-w-0 flex-1 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary">
-            <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2">
-              <div className="flex items-center gap-1">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={amountInput}
-                  onChange={(e) => updateCollateralFromInput(e.target.value)}
-                  onFocus={() => setIsAmountInputFocused(true)}
-                  onBlur={() => {
-                    setIsAmountInputFocused(false);
-                    normalizeAmountInput();
-                  }}
-                  className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
-                  disabled={!tradingAccountBalance}
-                />
-                <button
-                  type="button"
-                  onClick={setMaxCollateral}
-                  disabled={!tradingAccountBalance}
-                  className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
-                >
-                  Max
-                </button>
-              </div>
-              {secondaryRef && (
-                <span className="text-xs text-primary/50">{secondaryRef}</span>
-              )}
-            </div>
-            <div className="flex flex-col border-l border-outline">
-              <button
-                type="button"
-                onClick={() => setCollateralUnit("btc")}
-                className={cn(
-                  "flex-1 px-2 text-[10px] font-medium transition-colors",
-                  collateralUnit === "btc"
-                    ? "bg-theme/20 text-theme"
-                    : "text-primary/50 hover:text-primary/80"
-                )}
-              >
-                BTC
-              </button>
-              <button
-                type="button"
-                onClick={() => setCollateralUnit("usd")}
-                className={cn(
-                  "flex-1 px-2 text-[10px] font-medium transition-colors",
-                  collateralUnit === "usd"
-                    ? "bg-theme/20 text-theme"
-                    : "text-primary/50 hover:text-primary/80"
-                )}
-              >
-                USD
-              </button>
-            </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-md border border-outline bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-primary">
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={amountInput}
+              onChange={(e) => updateCollateralFromInput(e.target.value)}
+              onFocus={() => setIsAmountInputFocused(true)}
+              onBlur={() => {
+                setIsAmountInputFocused(false);
+                normalizeAmountInput();
+              }}
+              className="h-10 min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+            <button
+              type="button"
+              onClick={setMaxCollateral}
+              disabled={!tradingAccountBalance}
+              className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+            >
+              Max
+            </button>
           </div>
           <button
             type="button"
@@ -1170,41 +1171,42 @@ const OrderMarketForm = () => {
             onPointerUp={clearCollateralRepeat}
             onPointerCancel={clearCollateralRepeat}
             onLostPointerCapture={clearCollateralRepeat}
-            className="flex h-12 w-12 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
           </button>
         </div>
+
         {/* Desktop: original stacked stepper layout */}
         <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
-          <div className="flex min-w-0 flex-1 flex-col justify-center px-2 py-1.5">
-            <div className="flex items-center gap-1">
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0"
-                value={amountInput}
-                onChange={(e) => updateCollateralFromInput(e.target.value)}
-                onFocus={() => setIsAmountInputFocused(true)}
-                onBlur={() => {
-                  setIsAmountInputFocused(false);
-                  normalizeAmountInput();
-                }}
-                className="h-auto min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
-                disabled={!tradingAccountBalance}
-              />
-              <button
-                type="button"
-                onClick={setMaxCollateral}
-                disabled={!tradingAccountBalance}
-                className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
-              >
-                Max
-              </button>
-            </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-0.5">
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={amountInput}
+              onChange={(e) => updateCollateralFromInput(e.target.value)}
+              onFocus={() => setIsAmountInputFocused(true)}
+              onBlur={() => {
+                setIsAmountInputFocused(false);
+                normalizeAmountInput();
+              }}
+              className="h-5 min-h-0 min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
             {secondaryRef && (
-              <span className="text-xs text-primary/50">{secondaryRef}</span>
+              <span className="text-primary/45 shrink-0 text-[11px]">
+                {secondaryRef}
+              </span>
             )}
+            <button
+              type="button"
+              onClick={setMaxCollateral}
+              disabled={!tradingAccountBalance}
+              className="shrink-0 text-[10px] font-medium text-theme transition-colors hover:opacity-80 disabled:opacity-40"
+            >
+              Max
+            </button>
           </div>
           <div className="flex flex-col border-l border-outline">
             <button
@@ -1219,7 +1221,7 @@ const OrderMarketForm = () => {
               onPointerUp={clearCollateralRepeat}
               onPointerCancel={clearCollateralRepeat}
               onLostPointerCapture={clearCollateralRepeat}
-              className="flex h-5 w-9 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -1235,7 +1237,7 @@ const OrderMarketForm = () => {
               onPointerUp={clearCollateralRepeat}
               onPointerCancel={clearCollateralRepeat}
               onLostPointerCapture={clearCollateralRepeat}
-              className="flex h-5 w-9 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 touch-manipulation select-none items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -1245,7 +1247,7 @@ const OrderMarketForm = () => {
               type="button"
               onClick={() => setCollateralUnit("btc")}
               className={cn(
-                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                "px-2 py-0.5 text-xs font-medium transition-colors",
                 collateralUnit === "btc"
                   ? "bg-theme/20 text-theme"
                   : "text-primary/50 hover:text-primary/80"
@@ -1257,7 +1259,7 @@ const OrderMarketForm = () => {
               type="button"
               onClick={() => setCollateralUnit("usd")}
               className={cn(
-                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                "px-2 py-0.5 text-xs font-medium transition-colors",
                 collateralUnit === "usd"
                   ? "bg-theme/20 text-theme"
                   : "text-primary/50 hover:text-primary/80"
@@ -1267,29 +1269,36 @@ const OrderMarketForm = () => {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1">
-          {COLLATERAL_PRESETS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => {
-                if (!tradingAccountBalance) return;
-                const maxBtc = parseFloat(tradingAccountBalanceString || "0");
-                const btc = maxBtc * (v / 100);
-                setBtcAmount(btc > 0 ? btc.toFixed(8) : "");
-                setPercent(v);
-              }}
-              disabled={!tradingAccountBalance}
-              className={cn(
-                "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
-                percent === v
-                  ? "border-theme/50 bg-theme/20 text-theme"
-                  : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
-              )}
-            >
-              {v}%
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1">
+            {COLLATERAL_PRESETS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  if (!tradingAccountBalance) return;
+                  const maxBtc = parseFloat(tradingAccountBalanceString || "0");
+                  const btc = maxBtc * (v / 100);
+                  setBtcAmount(btc > 0 ? btc.toFixed(8) : "");
+                  setPercent(v);
+                }}
+                disabled={!tradingAccountBalance}
+                className={cn(
+                  "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
+                  percent === v
+                    ? "border-theme/50 bg-theme/20 text-theme"
+                    : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
+                )}
+              >
+                {v}%
+              </button>
+            ))}
+          </div>
+          {secondaryRef && (
+            <span className="shrink-0 text-xs text-primary/50 md:hidden">
+              {secondaryRef}
+            </span>
+          )}
         </div>
         <Slider
           value={[percent]}
@@ -1304,12 +1313,14 @@ const OrderMarketForm = () => {
           max={100}
           step={1}
           disabled={!tradingAccountBalance}
-          className="w-full"
+          className="w-full md:py-2"
+          thumbClassName="h-4 w-4"
+          markers={[0, 25, 50, 75, 100]}
         />
       </div>
 
       {/* 3. Leverage — input first, then slider, then presets */}
-      <div className="space-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
+      <div className="max-md:border-border/30 space-y-1.5 max-md:border-t max-md:pt-2 md:space-y-1">
         <label
           className={cn(
             "block text-sm font-medium text-primary/90",
@@ -1322,9 +1333,15 @@ const OrderMarketForm = () => {
         <div className="flex items-stretch gap-2 md:hidden">
           <button
             type="button"
-            onClick={() => setLeverage(String(Math.max(1, (parseInt(leverage, 10) || 1) - 1)))}
-            disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1}
-            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            onClick={() =>
+              setLeverage(
+                String(Math.max(1, (parseInt(leverage, 10) || 1) - 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
+            }
+            className="flex h-10 w-10 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -1341,36 +1358,44 @@ const OrderMarketForm = () => {
                 setIsLeverageInputFocused(false);
                 handleLeverageInputBlur();
               }}
-              className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
+              className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 text-center text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
               disabled={!tradingAccountBalance}
             />
           </div>
           <button
             type="button"
-            onClick={() => setLeverage(String(Math.min(50, (parseInt(leverage, 10) || 1) + 1)))}
-            disabled={!tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50}
-            className="flex h-11 w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+            onClick={() =>
+              setLeverage(
+                String(Math.min(50, (parseInt(leverage, 10) || 1) + 1))
+              )
+            }
+            disabled={
+              !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
+            }
+            className="flex h-10 w-10 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-outline text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
           </button>
         </div>
         {/* Desktop: original stacked stepper layout */}
         <div className="hidden items-stretch gap-0 overflow-hidden rounded-md border border-outline bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-primary md:flex">
-          <Input
-            ref={leverageRef}
-            type="text"
-            inputMode="numeric"
-            placeholder="5"
-            value={leverageInput}
-            onChange={(e) => handleLeverageInputChange(e.target.value)}
-            onFocus={() => setIsLeverageInputFocused(true)}
-            onBlur={() => {
-              setIsLeverageInputFocused(false);
-              handleLeverageInputBlur();
-            }}
-            className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base font-medium tabular-nums shadow-none focus-visible:ring-0"
-            disabled={!tradingAccountBalance}
-          />
+          <div className="flex min-w-0 flex-1 items-center px-2 py-0.5">
+            <Input
+              ref={leverageRef}
+              type="text"
+              inputMode="numeric"
+              placeholder="5"
+              value={leverageInput}
+              onChange={(e) => handleLeverageInputChange(e.target.value)}
+              onFocus={() => setIsLeverageInputFocused(true)}
+              onBlur={() => {
+                setIsLeverageInputFocused(false);
+                handleLeverageInputBlur();
+              }}
+              className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-medium tabular-nums shadow-none focus-visible:ring-0"
+              disabled={!tradingAccountBalance}
+            />
+          </div>
           <div className="flex flex-col border-l border-outline">
             <button
               type="button"
@@ -1382,7 +1407,7 @@ const OrderMarketForm = () => {
               disabled={
                 !tradingAccountBalance || (parseInt(leverage, 10) || 1) >= 50
               }
-              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -1396,7 +1421,7 @@ const OrderMarketForm = () => {
               disabled={
                 !tradingAccountBalance || (parseInt(leverage, 10) || 1) <= 1
               }
-              className="flex h-5 w-9 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
+              className="flex h-4 w-8 shrink-0 items-center justify-center text-primary/70 transition-colors hover:bg-theme/10 hover:text-primary disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -1412,7 +1437,9 @@ const OrderMarketForm = () => {
           max={50}
           step={1}
           disabled={!tradingAccountBalance}
-          className="mt-1 w-full md:mt-0"
+          className="w-full md:py-2"
+          thumbClassName="h-4 w-4"
+          markers={[1, 10, 25, 50]}
         />
         <div className="flex flex-wrap gap-1">
           {LEVERAGE_PRESETS.map((v) => (
@@ -1435,7 +1462,7 @@ const OrderMarketForm = () => {
       </div>
 
       {/* 4. Trade Summary / Risk */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-md:border-t max-md:border-border/30 max-md:pt-2.5">
+      <div className="max-md:border-border/30 grid grid-cols-2 gap-x-4 gap-y-1.5 max-md:border-t max-md:pt-2 md:gap-y-1">
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/60">Position Value</span>
           <span className="text-sm font-medium tabular-nums">
@@ -1450,13 +1477,13 @@ const OrderMarketForm = () => {
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/50">Liq Buy</span>
-          <span className="tabular-nums text-sm font-medium text-green-medium/90">
+          <span className="text-sm font-medium tabular-nums text-green-medium/90">
             ${liquidationPrices.long}
           </span>
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-xs text-primary/50">Liq Sell</span>
-          <span className="tabular-nums text-sm font-medium text-red/90">
+          <span className="text-sm font-medium tabular-nums text-red/90">
             ${liquidationPrices.short}
           </span>
         </div>
@@ -1465,16 +1492,18 @@ const OrderMarketForm = () => {
       {/* 5. Execution Zone */}
       {status === "Connected" ? (
         <ExchangeResource>
-          <div className="flex flex-col gap-1.5 pt-0.5 max-md:flex-row max-md:border-t max-md:border-border/30 max-md:pt-2.5">
+          <div className="max-md:border-border/30 flex flex-col gap-2 pt-2 max-md:flex-row max-md:gap-1.5 max-md:border-t md:pt-2.5">
             <Button
               onClick={() => submitMarket("BUY")}
               id="btn-market-buy"
-              className="min-w-0 border-green-medium py-2 text-sm text-green-medium opacity-70 transition-colors hover:border-green-medium hover:text-green-medium hover:opacity-100 disabled:opacity-40 disabled:hover:border-green-medium max-md:flex-1 max-md:h-12 max-md:bg-green-medium/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-green-medium/20"
+              className="min-w-0 border-green-medium/70 bg-green-medium/10 py-2 text-sm text-green-medium transition-colors hover:border-green-medium hover:bg-green-medium/20 disabled:opacity-40 disabled:hover:border-green-medium/70 disabled:hover:bg-green-medium/10 max-md:h-12 max-md:flex-1 max-md:text-base max-md:font-medium max-md:active:bg-green-medium/25 md:h-12 md:w-full md:text-base md:font-medium md:tracking-wide"
               variant="ui"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||
-                Big(tradingAccountBalance).lte(0)
+                Big(tradingAccountBalance).lte(0) ||
+                !btcAmount ||
+                Big(btcAmount || "0").lte(0)
               }
             >
               {isSubmitting ? (
@@ -1487,11 +1516,13 @@ const OrderMarketForm = () => {
               onClick={() => submitMarket("SELL")}
               id="btn-market-sell"
               variant="ui"
-              className="min-w-0 border-red py-2 text-sm text-red opacity-70 transition-colors hover:border-red hover:text-red hover:opacity-100 disabled:opacity-40 disabled:hover:border-red max-md:flex-1 max-md:h-12 max-md:bg-red/10 max-md:text-base max-md:font-semibold max-md:opacity-100 max-md:active:bg-red/20"
+              className="min-w-0 border-red/70 bg-red/10 py-2 text-sm text-red transition-colors hover:border-red hover:bg-red/20 disabled:opacity-40 disabled:hover:border-red/70 disabled:hover:bg-red/10 max-md:h-12 max-md:flex-1 max-md:text-base max-md:font-medium max-md:active:bg-red/25 md:h-12 md:w-full md:text-base md:font-medium md:tracking-wide"
               disabled={
                 isSubmitting ||
                 !isPageLoaded ||
-                Big(tradingAccountBalance).lte(0)
+                Big(tradingAccountBalance).lte(0) ||
+                !btcAmount ||
+                Big(btcAmount || "0").lte(0)
               }
             >
               {isSubmitting ? (
@@ -1503,7 +1534,7 @@ const OrderMarketForm = () => {
           </div>
         </ExchangeResource>
       ) : (
-        <div className="flex w-full justify-center">
+        <div className="max-md:border-border/30 flex w-full items-center justify-center pt-2 max-md:border-t md:pt-2.5">
           <ConnectWallet />
         </div>
       )}

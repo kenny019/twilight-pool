@@ -87,6 +87,10 @@ export const darkThemeStyles = {
   },
   candle: {
     type: "candle_solid" as const,
+    margin: {
+      top: 0.4,
+      bottom: 0.1,
+    },
     bar: {
       upColor: "#5FDB66",
       downColor: "#F84952",
@@ -143,7 +147,7 @@ export const darkThemeStyles = {
       },
     },
     tooltip: {
-      showRule: "always" as const,
+      showRule: "none" as const,
       showType: "standard" as const,
       custom: [
         { title: "O", value: "{open}" },
@@ -332,6 +336,10 @@ export const lightThemeStyles = {
   },
   candle: {
     type: "candle_solid" as const,
+    margin: {
+      top: 0.4,
+      bottom: 0.1,
+    },
     bar: {
       upColor: "#5FDB66",
       downColor: "#F84952",
@@ -388,7 +396,7 @@ export const lightThemeStyles = {
       },
     },
     tooltip: {
-      showRule: "always" as const,
+      showRule: "none" as const,
       showType: "standard" as const,
       custom: [
         { title: "O", value: "{open}" },
@@ -653,7 +661,7 @@ export const apyChartStyles = {
       },
     },
     tooltip: {
-      showRule: "follow_cross" as const,
+      showRule: "always" as const,
       showType: "standard" as const,
       custom: [{ title: "APY", value: "{close}" }],
       text: {

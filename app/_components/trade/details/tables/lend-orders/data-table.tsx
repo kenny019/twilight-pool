@@ -329,7 +329,7 @@ export function LendOrdersDataTable<TData, TValue>({
             );
           })
         ) : (
-          <EmptyState title="No active positions." />
+          <EmptyState title="No active lend orders." />
         )}
       </div>
     </div>

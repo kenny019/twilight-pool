@@ -1,12 +1,13 @@
 "use client";
-import React, { useMemo } from "react";
+import React from "react";
 import WalletVerificationForm from "@/app/_components/verification/form";
 import Stepper from "@/components/stepper";
 import { Text } from "@/components/typography";
 import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@cosmos-kit/react-lite";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
-import { AlertCircle, Clock, KeyRound, FileCheck } from "lucide-react";
+import { AlertCircle, Clock, KeyRound, FileCheck, Hourglass } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 
 const verificationSteps = [
   { id: "register", label: "Register" },
@@ -91,10 +92,11 @@ const Page = () => {
         <div className="grid gap-8 md:grid-cols-2">
           {/* Form section */}
           <div className="rounded-lg border bg-background p-6">
-            {/* <WalletVerificationForm
-              btcDepositAddress={btcDepositAddress}
-              btcSatoshiTestAmount={btcSatoshiTestAmount}
-            /> */}
+            <EmptyState
+              icon={<Hourglass className="h-6 w-6" />}
+              title="Coming Soon"
+              description="Verification will be available in an upcoming release."
+            />
           </div>
 
           {/* Important notices section */}

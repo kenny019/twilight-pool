@@ -417,7 +417,7 @@ const Page = () => {
             </div>
             <Button
               onClick={handleSubmitAddress}
-              className="w-full justify-center"
+              className="w-full justify-center max-md:h-12 max-md:text-base max-md:font-semibold"
               disabled={isLoading}
             >
               Continue
@@ -438,7 +438,7 @@ const Page = () => {
             </div>
             <Button
               onClick={handleGetNyks}
-              className="w-full justify-center"
+              className="w-full justify-center max-md:h-12 max-md:text-base max-md:font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -463,7 +463,7 @@ const Page = () => {
             </div>
             <Button
               onClick={handleRegisterBTC}
-              className="w-full justify-center"
+              className="w-full justify-center max-md:h-12 max-md:text-base max-md:font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -488,7 +488,7 @@ const Page = () => {
             </div>
             <Button
               onClick={handleGetBTC}
-              className="w-full justify-center"
+              className="w-full justify-center max-md:h-12 max-md:text-base max-md:font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -515,7 +515,7 @@ const Page = () => {
             </Text>
             <Button
               onClick={handleReset}
-              className="w-full justify-center"
+              className="w-full justify-center max-md:h-12 max-md:text-base max-md:font-semibold"
               variant="secondary"
             >
               Start Over
@@ -527,7 +527,7 @@ const Page = () => {
 
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">
-      <div className="mx-auto my-8 flex h-full w-full max-w-5xl grid-cols-2 flex-col gap-8 sm:my-16 sm:grid md:gap-16">
+      <div className="mx-auto my-6 flex h-full w-full max-w-5xl grid-cols-2 flex-col gap-6 sm:my-12 sm:grid md:gap-10">
         <div className="space-y-6">
           <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
             Twilight Faucet
@@ -570,13 +570,13 @@ const Page = () => {
           </div>
 
           {/* Current Step Content */}
-          <div className="border rounded-md p-6">
+          <div className="rounded-lg border bg-background p-5 md:p-6">
             {renderStepContent()}
           </div>
         </div>
 
         {/* Information Panel */}
-        <div className="rounded-md border p-4">
+        <div className="rounded-lg border bg-background p-5 md:p-6">
           <Text heading="h3" className="mb-4">Important Information:</Text>
           <div className="space-y-3">
             <Text className="text-primary opacity-80 text-sm" asChild>

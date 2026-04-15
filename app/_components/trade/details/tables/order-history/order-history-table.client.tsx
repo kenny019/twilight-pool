@@ -11,17 +11,26 @@ import { OrderHistoryGroup } from "./grouped-order-history";
 
 interface OrderHistoryTableProps {
   data: OrderHistoryGroup[];
+  columnConfigOpen?: boolean;
+  onColumnConfigOpenChange?: (open: boolean) => void;
 }
 
 const OrderHistoryTable = React.memo(function OrderHistoryTable({
   data,
+  columnConfigOpen,
+  onColumnConfigOpenChange,
 }: OrderHistoryTableProps) {
   const storedBtcPrice = useSessionStore((state) => state.price.btcPrice);
   const { getCurrentPrice, subscribe } = usePriceFeed();
-  const currentPrice = useSyncExternalStore(subscribe, getCurrentPrice, () => 0);
+  const currentPrice = useSyncExternalStore(
+    subscribe,
+    getCurrentPrice,
+    () => 0
+  );
   const getBtcPriceUsd = () => currentPrice || storedBtcPrice;
 
-  const [fundingDialogTrade, setFundingDialogTrade] = useState<TradeOrder | null>(null);
+  const [fundingDialogTrade, setFundingDialogTrade] =
+    useState<TradeOrder | null>(null);
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
 
   const openFundingDialog = useCallback((trade: TradeOrder) => {
@@ -36,6 +45,8 @@ const OrderHistoryTable = React.memo(function OrderHistoryTable({
         data={data}
         getBtcPriceUsd={getBtcPriceUsd}
         openFundingDialog={openFundingDialog}
+        columnConfigOpen={columnConfigOpen}
+        onColumnConfigOpenChange={onColumnConfigOpenChange}
       />
       <FundingHistoryDialog
         trade={fundingDialogTrade}

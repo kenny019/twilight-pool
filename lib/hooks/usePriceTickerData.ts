@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CandleData, getCandleData, getFundingRate } from "../api/rest";
+import { CandleData, getCandleData } from "../api/rest";
 import { CandleInterval } from "../types";
 import dayjs from "dayjs";
 import useGetMarketStats from "./useGetMarketStats";
@@ -44,7 +44,6 @@ async function fetchCandleData(date: string) {
 
 export default function usePriceTickerData(currentPrice: number) {
   const queryClient = useQueryClient();
-  const [fundingEnabled, setFundingEnabled] = useState(true);
 
   const yesterday = dayjs().subtract(1, "d").startOf("day").toISOString();
   const today = dayjs().startOf("day").toISOString();
@@ -66,21 +65,6 @@ export default function usePriceTickerData(currentPrice: number) {
     },
     refetchInterval: 36000,
     staleTime: 30000,
-  });
-
-  const fundingQuery = useQuery({
-    queryKey: ["funding-rate"],
-    queryFn: async () => {
-      const fundingRes = await getFundingRate();
-
-      if (!fundingRes.success || fundingRes.error) {
-        throw new Error("Failed to fetch funding rate");
-      }
-
-      return fundingRes.data.result;
-    },
-    enabled: fundingEnabled,
-    refetchInterval: false,
   });
 
   const marketStatsQuery = useGetMarketStats();
@@ -105,15 +89,13 @@ export default function usePriceTickerData(currentPrice: number) {
   }, [candleQuery.data, currentPrice]);
 
   const fundingTickerData = useMemo<FundingTickerData>(() => {
-    if (!fundingQuery.data) {
-      return { timestamp: "", rate: "" };
-    }
-
+    const fr = marketStatsQuery.data?.funding_rate;
+    if (!fr) return { timestamp: "", rate: "" };
     return {
-      rate: parseFloat(fundingQuery.data?.rate || "0").toFixed(5),
-      timestamp: fundingQuery.data?.timestamp || "",
+      rate: (fr.funding_rate / 100).toFixed(5),
+      timestamp: fr.funding_rate_timestamp,
     };
-  }, [fundingQuery.data]);
+  }, [marketStatsQuery.data]);
 
   const openInterestData = useMemo<OpenInterestData>(() => {
     if (!marketStatsQuery.data || currentPrice === 0) {
@@ -138,13 +120,12 @@ export default function usePriceTickerData(currentPrice: number) {
   }, [marketStatsQuery.data]);
 
   const resetFunding = useCallback(() => {
-    setFundingEnabled(true);
-    queryClient.invalidateQueries({ queryKey: ["funding-rate"] });
+    queryClient.invalidateQueries({ queryKey: ["market-stats"] });
   }, [queryClient]);
 
   const hasInit = candleQuery.isSuccess;
   const hasPriceStats = !!candleQuery.data;
-  const hasFundingData = !!fundingQuery.data;
+  const hasFundingData = !!marketStatsQuery.data?.funding_rate;
   const hasMarketStats = !!marketStatsQuery.data;
 
   return {

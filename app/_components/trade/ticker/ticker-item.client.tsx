@@ -23,7 +23,7 @@ const TickerItem = ({
 }: Props) => {
   return (
     <div className={cn("flex min-w-0 flex-row items-center", itemClassName)}>
-      <div className="flex min-w-0 flex-col justify-center px-1.5 xl:px-3 2xl:px-3.5 3xl:px-4">
+      <div className="flex min-w-0 flex-col justify-center px-1.5 xl:px-2 2xl:px-3 3xl:px-3.5">
         <p
           className={cn(
             "truncate text-[10px] font-medium leading-none text-primary/50 xl:text-[11px] 2xl:text-[11px] 3xl:text-[12px]",
@@ -34,7 +34,7 @@ const TickerItem = ({
         </p>
         <div
           className={cn(
-            "mt-1.5 whitespace-nowrap text-[13px] font-medium leading-none tabular-nums text-primary/92 xl:text-[14px] 2xl:text-[15px] 3xl:text-[15px]",
+            "text-primary/92 mt-1.5 whitespace-nowrap text-[13px] font-medium tabular-nums leading-none xl:text-[14px] 2xl:text-[15px] 3xl:text-[15px]",
             className
           )}
         >
