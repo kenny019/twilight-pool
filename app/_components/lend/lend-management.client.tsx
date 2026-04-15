@@ -101,11 +101,15 @@ const LendManagement = () => {
       }
 
       const nonNegativeValue = Math.max(0, parsedValue);
-      const sats = new BTC(denom, Big(nonNegativeValue)).convert("sats").toNumber();
+      const sats = new BTC(denom, Big(nonNegativeValue))
+        .convert("sats")
+        .toNumber();
       const clampedSats = clampDepositSats(sats);
 
       return {
-        displayValue: new BTC("sats", Big(clampedSats)).convert(denom).toString(),
+        displayValue: new BTC("sats", Big(clampedSats))
+          .convert(denom)
+          .toString(),
         clampedSats,
       };
     },
@@ -510,7 +514,9 @@ const LendManagement = () => {
 
       const poolShare = sats / sharePrice;
       setApproxPoolShare(
-        Number.isFinite(poolShare) ? Math.round(poolShare).toLocaleString() : "0"
+        Number.isFinite(poolShare)
+          ? Math.round(poolShare).toLocaleString()
+          : "0"
       );
     },
     [depositDenom, poolInfo?.pool_share]
@@ -556,7 +562,9 @@ const LendManagement = () => {
           {/* Available balance — own row, matching trade form style */}
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-sm text-primary/60">Available</span>
-            <span className="tabular-nums text-sm font-medium">{availableBalance} BTC</span>
+            <span className="text-sm font-medium tabular-nums">
+              {availableBalance} BTC
+            </span>
           </div>
 
           {/* Amount label */}
@@ -587,8 +595,7 @@ const LendManagement = () => {
               }
               setSliderSats(normalized.clampedSats);
             }}
-            type="number"
-            step="any"
+            type="text"
             min="0"
             max={new BTC("sats", Big(Math.max(0, twilightSats || 0)))
               .convert(depositDenom as BTCDenoms)
@@ -602,17 +609,38 @@ const LendManagement = () => {
             className="border-outline/60 bg-background/40 pr-16 font-semibold text-primary"
             selectorWrapperClassName="border-outline/[0.06]"
             selectorClassName="gap-0.5 px-2 text-primary/70 data-[state=open]:text-primary"
+            disabled={status !== WalletStatus.Connected || isSubmitLoading}
             onChange={(e) => {
-              const normalized = normalizeDepositInput(
-                e.target.value,
-                depositDenom as BTCDenoms
-              );
-
-              if (!normalized) {
+              const val = e.target.value;
+              if (!val.trim()) {
+                setSliderSats(0);
+                calculateApproxPoolShare("0");
                 return;
               }
-
-              e.target.value = normalized.displayValue;
+              const parsed = Number(val);
+              if (!Number.isFinite(parsed) || parsed < 0) return;
+              const rawSats = new BTC(
+                depositDenom as BTCDenoms,
+                Big(Math.max(0, parsed))
+              )
+                .convert("sats")
+                .toNumber();
+              const clamped = clampDepositSats(rawSats);
+              setSliderSats(clamped);
+              calculateApproxPoolShare(String(parsed));
+            }}
+            onBlur={() => {
+              if (!depositRef.current) return;
+              const normalized = normalizeDepositInput(
+                depositRef.current.value,
+                depositDenom as BTCDenoms
+              );
+              if (!normalized) {
+                depositRef.current.value = "";
+                setSliderSats(0);
+                calculateApproxPoolShare("0");
+                return;
+              }
               syncDepositUi(normalized.displayValue, normalized.clampedSats);
             }}
           />
@@ -640,22 +668,25 @@ const LendManagement = () => {
           </div>
 
           {/* Slider */}
-          <Slider
-            min={0}
-            max={twilightSats || 1}
-            step={1}
-            value={[sliderSats]}
-            className="w-full"
-            disabled={!twilightSats || isSubmitLoading}
-            onValueChange={([sats]) => {
-              applyDepositSats(sats);
-            }}
-          />
+          <div className="w-[65%]">
+            <Slider
+              min={0}
+              max={twilightSats || 1}
+              step={1}
+              value={[sliderSats]}
+              className="w-full"
+              disabled={!twilightSats || isSubmitLoading}
+              markerCount={5}
+              onValueChange={([sats]) => {
+                applyDepositSats(sats);
+              }}
+            />
+          </div>
         </div>
 
         <div className="flex justify-between text-sm">
           <Text className="text-primary-accent">Approx Pool Share</Text>
-          <Text>≈ {approxPoolShare}</Text>
+          <Text>≈ {approxPoolShare} shares</Text>
         </div>
 
         <Button
@@ -663,10 +694,11 @@ const LendManagement = () => {
           disabled={
             isSubmitLoading ||
             status !== WalletStatus.Connected ||
-            isRelayerHalted
+            isRelayerHalted ||
+            sliderSats === 0
           }
           type="submit"
-          className="w-full min-h-[44px] border-primary/70 bg-primary/[0.05] py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-primary/[0.08] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
+          className="min-h-[44px] w-full border-theme/70 bg-theme/[0.08] py-2 text-sm font-medium text-theme transition-colors hover:border-theme hover:bg-theme/[0.12] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
           title={
             isRelayerHalted
               ? "The relayer is halted. Deposits will be available when it resumes."

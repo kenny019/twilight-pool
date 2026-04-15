@@ -9,7 +9,7 @@ import Big from "big.js";
 import BTC from "@/lib/twilight/denoms";
 import { Loader2 } from "lucide-react";
 import cn from "@/lib/cn";
-import { calculateAPR } from "@/lib/helpers";
+import { calculateAPR, formatSatsCompact } from "@/lib/helpers";
 import { Tooltip } from "@/components/tooltip";
 import { PoolSharesCell } from "@/components/pool-shares-cell";
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
@@ -31,7 +31,12 @@ export const lendOrdersColumns: ColumnDef<
   {
     accessorKey: "timestamp",
     header: "Date",
-    accessorFn: (row) => dayjs(row.timestamp).format("DD/MM/YYYY HH:mm:ss"),
+    accessorFn: (row) => dayjs(row.timestamp).valueOf(), // keep for sorting
+    cell: (row) => (
+      <span className="tabular-nums">
+        {dayjs(row.row.original.timestamp).format("DD/MM/YYYY HH:mm:ss")}
+      </span>
+    ),
   },
   {
     accessorKey: "accountTag",
@@ -114,7 +119,8 @@ export const lendOrdersColumns: ColumnDef<
       const orderTimestampMs = dayjs(order.timestamp).valueOf();
 
       const rewards =
-        currentSharePrice * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
+        currentSharePrice * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) -
+        order.value;
       const timeElapsedSeconds = (Date.now() - orderTimestampMs) / 1000;
 
       const apr =
@@ -144,7 +150,7 @@ export const lendOrdersColumns: ColumnDef<
   },
   {
     accessorKey: "accrued_rewards",
-    header: "PnL (BTC)",
+    header: "PnL",
     cell: (row) => {
       const order = row.row.original;
       const meta = row.table.options.meta as LendOrdersTableMeta;
@@ -158,17 +164,22 @@ export const lendOrdersColumns: ColumnDef<
       const shareQty = order.npoolshare;
 
       const accruedRewards =
-        currentSharePrice * (shareQty / POOL_SHARE_DECIMALS_SCALE) - order.value;
+        currentSharePrice * (shareQty / POOL_SHARE_DECIMALS_SCALE) -
+        order.value;
 
-      if (accruedRewards < 100) {
-        return <Text className="font-medium">0</Text>;
+      // Suppress small positive dust only. Always show negative values.
+      if (accruedRewards >= 0 && accruedRewards < 100) {
+        return <Text className="font-medium text-primary/50">0</Text>;
       }
 
-      const rewardsBTC = new BTC("sats", Big(accruedRewards)).convert("BTC");
-
       return (
-        <Text className={cn("font-medium", accruedRewards > 0 ? "text-green-medium" : "text-red")}>
-          {BTC.format(rewardsBTC, "BTC")}
+        <Text
+          className={cn(
+            "font-medium",
+            accruedRewards > 0 ? "text-green-medium" : "text-red"
+          )}
+        >
+          {formatSatsCompact(Math.round(accruedRewards))}
         </Text>
       );
     },
@@ -183,7 +194,7 @@ export const lendOrdersColumns: ColumnDef<
           case "WITHDRAWING":
             return "bg-primary/10 text-primary";
           case "LENDED":
-            return "bg-primary/10 text-primary/50";
+            return "bg-green-medium/10 text-green-medium/80";
           case "ERROR":
             return "bg-red/10 text-red";
           default:
@@ -191,7 +202,9 @@ export const lendOrdersColumns: ColumnDef<
         }
       };
 
-      const statusLabel = order.withdrawPending ? "WITHDRAWING" : order.orderStatus;
+      const statusLabel = order.withdrawPending
+        ? "WITHDRAWING"
+        : order.orderStatus;
       const statusDisplayLabel =
         statusLabel === "LENDED"
           ? "ACTIVE"
@@ -239,11 +252,11 @@ export const lendOrdersColumns: ColumnDef<
             }
           >
             <Button
-              variant="terminal"
+              variant="ui"
               size="small"
               onClick={() => meta.settleLendOrder(order)}
               disabled={withdrawDisabled}
-              className="px-3 py-1"
+              className="border-theme/60 bg-theme/[0.08] px-3 py-1.5 text-theme hover:border-theme hover:bg-theme/[0.12]"
             >
               {isSettling ? (
                 <>

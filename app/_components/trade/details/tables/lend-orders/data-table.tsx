@@ -75,15 +75,12 @@ export function LendOrdersDataTable<TData, TValue>({
   return (
     <div className="w-full">
       {/* Desktop table — hidden on mobile */}
-      <div className="hidden md:block overflow-x-auto">
-        <table
-          cellSpacing={0}
-          className="relative min-w-[880px] w-full"
-        >
+      <div className="hidden overflow-x-auto md:block">
+        <table cellSpacing={0} className="relative w-full min-w-[880px]">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
-                className="text-xs font-normal text-primary-accent border-b border-outline/10"
+                className="border-outline/20 border-b text-xs font-normal text-primary-accent"
                 key={headerGroup.id}
               >
                 {headerGroup.headers.map((header) => {
@@ -95,9 +92,9 @@ export function LendOrdersDataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </th>
                   );
                 })}
@@ -113,23 +110,29 @@ export function LendOrdersDataTable<TData, TValue>({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
-                      className={cn("px-2 py-2 whitespace-nowrap")}
+                      className={cn("whitespace-nowrap px-2 py-2")}
                       key={cell.id}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </td>
                   ))}
                 </tr>
               ))
             ) : (
-              <TableEmptyRow colSpan={columns.length} title="No active lend orders." />
+              <TableEmptyRow
+                colSpan={columns.length}
+                title="No active lend orders."
+              />
             )}
           </tbody>
         </table>
       </div>
 
       {/* Mobile cards — hidden on desktop */}
-      <div className="md:hidden space-y-2.5 px-1 py-2">
+      <div className="space-y-2.5 px-1 py-2 md:hidden">
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => {
             const order = row.original as LendOrderWithAccountTag;
@@ -211,7 +214,7 @@ export function LendOrdersDataTable<TData, TValue>({
             return (
               <div
                 key={cardId}
-                className="rounded-xl border border-border/70 bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-border hover:shadow-md"
+                className="border-border/70 hover:border-border rounded-xl border bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md"
               >
                 <div className="px-3 py-2.5">
                   {/* Header: Status (left) + Date (right) */}
@@ -231,8 +234,10 @@ export function LendOrdersDataTable<TData, TValue>({
 
                   {/* Primary: Size (BTC) — dominant, full width */}
                   <div className="mb-3">
-                    <span className="block text-[10px] text-primary/40">Size</span>
-                    <span className="block truncate text-lg font-semibold leading-tight tabular-nums text-primary">
+                    <span className="block text-[10px] text-primary/40">
+                      Size
+                    </span>
+                    <span className="block truncate text-lg font-semibold tabular-nums leading-tight text-primary">
                       {depositLabel} BTC
                     </span>
                   </div>
@@ -241,7 +246,9 @@ export function LendOrdersDataTable<TData, TValue>({
                   <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-3">
                     {/* PnL */}
                     <div className="min-w-0">
-                      <span className="block text-[10px] text-primary/40">PnL</span>
+                      <span className="block text-[10px] text-primary/40">
+                        PnL
+                      </span>
                       <PnlCell
                         pnlSats={pnlSats}
                         btcPriceUsd={btcPriceUsd}
@@ -250,7 +257,9 @@ export function LendOrdersDataTable<TData, TValue>({
                     </div>
                     {/* Ann. Return */}
                     <div className="min-w-0">
-                      <span className="block text-[10px] text-primary/40">Ann. Return</span>
+                      <span className="block text-[10px] text-primary/40">
+                        Ann. Return
+                      </span>
                       <span
                         className={cn(
                           "block truncate text-sm font-medium",
@@ -266,7 +275,9 @@ export function LendOrdersDataTable<TData, TValue>({
                     </div>
                     {/* Shares */}
                     <div className="min-w-0">
-                      <span className="block text-[10px] text-primary/40">Shares</span>
+                      <span className="block text-[10px] text-primary/40">
+                        Shares
+                      </span>
                       <span className="block truncate text-sm font-medium">
                         {order.npoolshare ? (
                           <PoolSharesCell npoolshare={order.npoolshare} />
@@ -277,7 +288,9 @@ export function LendOrdersDataTable<TData, TValue>({
                     </div>
                     {/* NAV */}
                     <div className="min-w-0">
-                      <span className="block text-[10px] text-primary/40">NAV</span>
+                      <span className="block text-[10px] text-primary/40">
+                        NAV
+                      </span>
                       <span className="block truncate text-sm font-medium tabular-nums">
                         {navLabel}
                       </span>
@@ -287,8 +300,10 @@ export function LendOrdersDataTable<TData, TValue>({
                   {/* Account tag */}
                   {order.accountTag && (
                     <div className="mb-3">
-                      <span className="text-[10px] text-primary/40">Account </span>
-                      <span className="text-[10px] text-primary/60 truncate">
+                      <span className="text-[10px] text-primary/40">
+                        Account{" "}
+                      </span>
+                      <span className="truncate text-[10px] text-primary/60">
                         {order.accountTag}
                       </span>
                     </div>
@@ -307,7 +322,7 @@ export function LendOrdersDataTable<TData, TValue>({
                       <Button
                         variant="ui"
                         size="small"
-                        className="w-full min-h-[44px] justify-center border-theme/70 text-primary transition-colors hover:border-theme max-md:h-12 max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
+                        className="min-h-[44px] w-full justify-center border-theme/70 text-primary transition-colors hover:border-theme max-md:h-12 max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
                         disabled={withdrawDisabled}
                         onClick={() => settleLendOrder(order)}
                       >

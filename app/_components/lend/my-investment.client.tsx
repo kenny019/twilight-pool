@@ -4,7 +4,7 @@ import { Text } from "@/components/typography";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
 import { useTwilightStore } from "@/lib/providers/store";
-import { calculateAPR } from "@/lib/helpers";
+import { calculateAPR, formatSatsCompact } from "@/lib/helpers";
 import { computeLendingMarkToValue } from "@/lib/lend/lend-mark-to-value";
 import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
@@ -87,10 +87,18 @@ const MyInvestment = () => {
     };
   }, [lendOrders, lendHistory, poolShareValue]);
 
-  const activePrincipalBTC = new BTC("sats", Big(data.activePrincipalSats)).convert("BTC");
-  const totalDepositsBTC = new BTC("sats", Big(data.totalDepositsSats)).convert("BTC");
-  const pendingRewardsBTC = new BTC("sats", Big(data.pendingRewardsSats)).convert("BTC");
-  const realizedRewardsBTC = new BTC("sats", Big(data.realizedRewardsSats)).convert("BTC");
+  const activePrincipalBTC = new BTC(
+    "sats",
+    Big(data.activePrincipalSats)
+  ).convert("BTC");
+  const totalDepositsBTC = new BTC("sats", Big(data.totalDepositsSats)).convert(
+    "BTC"
+  );
+
+  const realizedRewardsBTC = new BTC(
+    "sats",
+    Big(data.realizedRewardsSats)
+  ).convert("BTC");
 
   const totalDepositsStat = (
     <div className="flex flex-col gap-1">
@@ -131,7 +139,7 @@ const MyInvestment = () => {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <Text className="text-base font-medium">My Investment</Text>
+      <Text className="text-sm font-medium text-primary/70">My Investment</Text>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm md:gap-x-4 md:gap-y-4">
         {/* Primary: Active Principal — full-width, dominant */}
@@ -140,7 +148,9 @@ const MyInvestment = () => {
             title="Active Principal"
             body="Your currently active deposited amount (open lend orders)."
           >
-            <Text className="text-sm text-primary-accent">Active Principal</Text>
+            <Text className="text-sm text-primary-accent">
+              Active Principal
+            </Text>
           </Tooltip>
           <Resource isLoaded placeholder={<Skeleton className="h-6 w-28" />}>
             <Text className="text-lg font-semibold">
@@ -161,11 +171,11 @@ const MyInvestment = () => {
             <Text
               className={cn(
                 "font-medium",
-                Number(pendingRewardsBTC) > 0 && "text-green-medium",
-                Number(pendingRewardsBTC) < 0 && "text-red"
+                data.pendingRewardsSats > 0 && "text-green-medium",
+                data.pendingRewardsSats < 0 && "text-red"
               )}
             >
-              {BTC.format(pendingRewardsBTC, "BTC")} BTC
+              {formatSatsCompact(data.pendingRewardsSats)}
             </Text>
           </Resource>
         </div>
@@ -205,7 +215,7 @@ const MyInvestment = () => {
         <button
           type="button"
           onClick={() => setShowSupportingDetails((prev) => !prev)}
-          className="flex min-h-[44px] w-full items-center justify-between border-t border-outline/[0.06] pt-3 text-xs text-primary/50 transition-colors hover:text-primary/70"
+          className="border-outline/[0.06] flex min-h-[44px] w-full items-center justify-between border-t pt-3 text-xs text-primary/50 transition-colors hover:text-primary/70"
         >
           <span>{showSupportingDetails ? "Hide details" : "More details"}</span>
           {showSupportingDetails ? (
