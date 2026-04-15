@@ -55,8 +55,8 @@ export function TraderHistoryDataTable<TData, TValue>({
   });
 
   return (
-    <div className="px-3 w-full overscroll-none relative">
-      <table cellSpacing={0} className="w-full overflow-auto table-auto">
+    <div className="relative w-full overflow-x-auto overscroll-none px-3">
+      <table cellSpacing={0} className="min-w-max table-auto">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -66,16 +66,18 @@ export function TraderHistoryDataTable<TData, TValue>({
               {headerGroup.headers.map((header, index) => {
                 return (
                   <th
-                    className={"px-2 py-2 font-medium text-start sticky z-10 top-0 bg-background border-b border-outline/10"}
+                    className={
+                      "border-outline/10 sticky top-0 z-10 border-b bg-background px-2 py-2 text-start font-medium"
+                    }
                     key={header.id}
                   >
                     <div className="block">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </div>
                   </th>
                 );
@@ -83,7 +85,7 @@ export function TraderHistoryDataTable<TData, TValue>({
             </tr>
           ))}
         </thead>
-        <tbody className="w-full overflow-auto table-auto">
+        <tbody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <tr
@@ -92,7 +94,7 @@ export function TraderHistoryDataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell, index) => (
                   <td
-                    className={cn("px-2 py-2 whitespace-nowrap")}
+                    className={cn("whitespace-nowrap px-2 py-2")}
                     key={cell.id}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

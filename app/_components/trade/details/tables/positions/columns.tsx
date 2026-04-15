@@ -171,7 +171,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
               funding > 0 ? "text-green-medium" : funding < 0 ? "text-red" : ""
             )}
           >
-            {formatSatsMBtc(funding)}
+            {formatSatsMBtc(funding).split(" ")[0]}
           </span>
           <button
             type="button"
@@ -191,7 +191,7 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
   {
     accessorKey: "feeFilled",
     header: "Fee (mBTC)",
-    accessorFn: (row) => formatSatsMBtc(row.feeFilled),
+    accessorFn: (row) => formatSatsMBtc(row.feeFilled).split(" ")[0],
   },
   {
     accessorKey: "positionType",
@@ -235,77 +235,115 @@ export const positionsColumns: ColumnDef<MyTradeOrder, any>[] = [
         : null;
 
       const sltpActive = !!(slPrice || tpPrice);
-      const sltpLabel =
-        slPrice && tpPrice ? (
-          <span className="flex flex-col items-start leading-tight">
-            <span className="text-red">SL {slPrice}</span>
-            <span className="text-green-medium">TP {tpPrice}</span>
-          </span>
-        ) : slPrice ? (
-          `SL ${slPrice}`
-        ) : tpPrice ? (
-          `TP ${tpPrice}`
-        ) : (
-          "Set SL/TP"
-        );
       const limitActive = !!limitPrice;
       const hasAnchors = limitActive || sltpActive;
       const isCancelling = meta.isCancellingOrder(trade.uuid);
 
+      const sltpButtonLabel = !sltpActive
+        ? "SL / TP"
+        : slPrice && tpPrice
+          ? "Update SL / TP"
+          : slPrice
+            ? "Update Stop Loss"
+            : "Update Take Profit";
+
+      const sltpButtonClass = sltpActive
+        ? slPrice && tpPrice
+          ? "border-theme/60 text-theme bg-theme/6 hover:bg-theme/10"
+          : slPrice
+            ? "border-red/60 text-red bg-red/6 hover:bg-red/10"
+            : "border-green-medium/60 text-green-medium bg-green-medium/6 hover:bg-green-medium/10"
+        : undefined;
+
       return (
-        <div className="flex flex-row gap-1">
-          <Button
-            onClick={async (e) => {
-              e.preventDefault();
-              await meta.settleMarketOrder(trade, meta.getCurrentPrice());
-            }}
-            variant="ui"
-            size="small"
-            disabled={isSettling}
-            title="Close at market price"
-          >
-            {isSettling ? "..." : "MKT"}
-          </Button>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              meta.openConditionalDialog(trade.accountAddress, "limit");
-            }}
-            variant="ui"
-            size="small"
-            disabled={isSettling}
-            title={
-              limitActive
-                ? `Update close limit at ${limitPrice}`
-                : "Close with limit order"
-            }
-            className={
-              limitActive ? "border-yellow-400/40 text-yellow-400" : undefined
-            }
-          >
-            {limitActive ? limitPrice! : "LMT"}
-          </Button>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              meta.openConditionalDialog(trade.accountAddress, "sltp");
-            }}
-            variant="ui"
-            size="small"
-            disabled={isSettling}
-            title={sltpActive ? "Update SL/TP" : "Set Stop Loss / Take Profit"}
-            className={sltpActive ? "border-theme/40 text-theme" : undefined}
-          >
-            {sltpLabel}
-          </Button>
-          {hasAnchors && (
-            <RemoveOrdersDropdown
-              trade={trade}
-              cancelOrder={meta.cancelOrder}
-              isCancelling={isCancelling}
+        <div className="flex flex-col gap-1.5">
+          {/* Action buttons row */}
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={async (e) => {
+                e.preventDefault();
+                await meta.settleMarketOrder(trade, meta.getCurrentPrice());
+              }}
+              variant="ui"
+              size="small"
               disabled={isSettling}
-              variant="table"
-            />
+              title="Close at market price"
+              className="hover:bg-theme/8 !h-7 !min-h-0 border-theme/50 !py-0 px-2.5 text-[11px] text-theme"
+            >
+              {isSettling ? "..." : "Market"}
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openConditionalDialog(trade.accountAddress, "limit");
+              }}
+              variant="ui"
+              size="small"
+              disabled={isSettling}
+              title={
+                limitActive
+                  ? `Update close limit at ${limitPrice}`
+                  : "Close with limit order"
+              }
+              className={cn(
+                "!h-7 !min-h-0 !py-0 px-2.5 text-[11px]",
+                limitActive
+                  ? "bg-yellow-400/6 border-yellow-400/60 text-yellow-400 hover:bg-yellow-400/10"
+                  : undefined
+              )}
+            >
+              {limitActive ? "Update Limit" : "Limit"}
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                meta.openConditionalDialog(trade.accountAddress, "sltp");
+              }}
+              variant="ui"
+              size="small"
+              disabled={isSettling}
+              title={
+                sltpActive
+                  ? "Update Stop Loss / Take Profit"
+                  : "Set Stop Loss / Take Profit"
+              }
+              className={cn(
+                "!h-7 !min-h-0 !py-0 px-2.5 text-[11px]",
+                sltpButtonClass
+              )}
+            >
+              {sltpButtonLabel}
+            </Button>
+            {hasAnchors && (
+              <RemoveOrdersDropdown
+                trade={trade}
+                cancelOrder={meta.cancelOrder}
+                isCancelling={isCancelling}
+                disabled={isSettling}
+                variant="table"
+              />
+            )}
+          </div>
+
+          {/* Anchor price pills — only rendered when orders are set */}
+          {hasAnchors && (
+            <div className="flex flex-wrap gap-1">
+              {limitPrice && (
+                <span className="border-yellow-400/45 bg-yellow-400/15 rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                  LMT {limitPrice}
+                </span>
+              )}
+              {slPrice && (
+                <span className="border-red/45 bg-red/15 rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-red">
+                  SL {slPrice}
+                </span>
+              )}
+              {tpPrice && (
+                <span className="border-green-medium/45 bg-green-medium/15 rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-green-medium">
+                  TP {tpPrice}
+                </span>
+              )}
+            </div>
           )}
         </div>
       );

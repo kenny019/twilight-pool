@@ -517,8 +517,8 @@ export function OrderHistoryDataTable<TValue>({
         </DialogContent>
       </Dialog>
 
-      <div className="w-full overflow-x-auto overscroll-none px-3 md:overflow-visible">
-        <table cellSpacing={0} className="w-full table-auto">
+      <div className="w-full overflow-x-auto overscroll-none px-3">
+        <table cellSpacing={0} className="min-w-max table-auto">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr

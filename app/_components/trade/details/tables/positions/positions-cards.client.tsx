@@ -370,15 +370,26 @@ const PositionsCards = React.memo(function PositionsCards({
                             size="small"
                             disabled={isSettling}
                             className={cn(
-                              "h-8 min-w-[146px] border-2 border-white/70 px-4 text-[13px] font-medium text-primary transition-all duration-150 hover:border-white/80 hover:text-primary hover:brightness-110",
-                              slPrice || tpPrice
-                                ? "hover:bg-background/45 bg-background/25"
-                                : "text-primary/88 hover:bg-background/45 bg-background/25"
+                              "h-8 min-w-[146px] border-2 px-4 text-[13px] font-medium transition-all duration-150 hover:brightness-110",
+                              slPrice && tpPrice
+                                ? "bg-theme/6 border-theme/60 text-theme hover:border-theme/70 hover:bg-theme/10"
+                                : slPrice
+                                  ? "bg-red/6 border-red/60 text-red hover:border-red/70 hover:bg-red/10"
+                                  : tpPrice
+                                    ? "bg-green-medium/6 border-green-medium/60 text-green-medium hover:border-green-medium/70 hover:bg-green-medium/10"
+                                    : "hover:bg-background/45 hover:border-primary/55 border-primary/40 bg-background/25 text-primary/80 hover:text-primary"
                             )}
                           >
-                            {slPrice || tpPrice ? "Update SL/TP" : "Set SL/TP"}
+                            {slPrice && tpPrice
+                              ? "Update SL / TP"
+                              : slPrice
+                                ? "Update Stop Loss"
+                                : tpPrice
+                                  ? "Update Take Profit"
+                                  : "SL / TP"}
                           </Button>
                         </div>
+
                         {hasAnchors && (
                           <RemoveOrdersDropdown
                             trade={trade}
@@ -388,6 +399,7 @@ const PositionsCards = React.memo(function PositionsCards({
                             variant="cards"
                           />
                         )}
+
                         <button
                           type="button"
                           onClick={() => toggleExpand(trade.uuid)}
@@ -454,6 +466,20 @@ const PositionsCards = React.memo(function PositionsCards({
                               </div>
                             </MetricCell>
                           </div>
+                          {hasAnchors && (
+                            <div className="border-border/20 mt-3 border-t pt-2.5">
+                              <p className="text-primary/35 mb-1.5 text-[10px] font-medium uppercase tracking-[0.1em]">
+                                Remove Orders
+                              </p>
+                              <RemoveOrdersDropdown
+                                trade={trade}
+                                cancelOrder={cancelOrder}
+                                isCancelling={isCancellingOrder(trade.uuid)}
+                                disabled={isSettling}
+                                variant="inline"
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

@@ -10,7 +10,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 import Button from "@/components/button";
 import { TradeOrder } from "@/lib/types";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { ChevronDown, Trash2, X } from "lucide-react";
 
 interface RemoveOrdersDropdownProps {
   trade: TradeOrder;
@@ -82,11 +82,14 @@ export function RemoveOrdersDropdown({
         variant="ui"
         size="small"
         disabled={disabled || isCancelling}
-        title="Remove limit, SL, or TP orders"
-        className="h-8 px-3 text-xs transition-all duration-150 hover:border-red/30 hover:text-red/90 hover:brightness-110"
+        title="Remove limit or SL/TP orders"
+        className="text-primary/35 h-8 w-8 border-primary/20 p-0 hover:border-red/50 hover:text-red"
       >
-        {isCancelling ? "Removing..." : "Remove"}
-        <ChevronDown className="ml-0.5 h-3 w-3 opacity-70" />
+        {isCancelling ? (
+          <span className="text-[9px]">…</span>
+        ) : (
+          <Trash2 className="h-3.5 w-3.5" />
+        )}
       </Button>
     ) : (
       <Button
@@ -94,25 +97,28 @@ export function RemoveOrdersDropdown({
         size="small"
         disabled={disabled || isCancelling}
         title="Remove limit, SL, or TP orders"
-        className="hover:border-red/30 hover:text-red/90"
+        className="text-primary/35 h-7 w-7 border-primary/20 p-0 hover:border-red/50 hover:text-red"
       >
-        {isCancelling ? "..." : "Remove"}
-        <ChevronDown className="ml-0.5 h-3 w-3 opacity-70" />
+        {isCancelling ? (
+          <span className="text-[9px]">…</span>
+        ) : (
+          <X className="h-3 w-3" />
+        )}
       </Button>
     );
 
   if (variant === "inline") {
     return (
       <>
-        <div className="flex flex-col">
+        <div className="flex flex-row flex-wrap gap-x-1 gap-y-0.5">
           {hasAny && (
             <button
               type="button"
               disabled={disabled || isCancelling}
               onClick={() => withConfirm(handleRemoveAll)}
-              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
+              <Trash2 className="h-3 w-3 shrink-0" />
               Remove All
             </button>
           )}
@@ -121,10 +127,10 @@ export function RemoveOrdersDropdown({
               type="button"
               disabled={disabled || isCancelling}
               onClick={() => withConfirm(handleRemoveLimit)}
-              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
-              Remove Limit Order
+              <Trash2 className="h-3 w-3 shrink-0" />
+              Remove Limit
             </button>
           )}
           {hasSl && (
@@ -132,9 +138,9 @@ export function RemoveOrdersDropdown({
               type="button"
               disabled={disabled || isCancelling}
               onClick={() => withConfirm(handleRemoveSl)}
-              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
+              <Trash2 className="h-3 w-3 shrink-0" />
               Remove Stop Loss
             </button>
           )}
@@ -143,9 +149,9 @@ export function RemoveOrdersDropdown({
               type="button"
               disabled={disabled || isCancelling}
               onClick={() => withConfirm(handleRemoveTp)}
-              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
+              <Trash2 className="h-3 w-3 shrink-0" />
               Remove Take Profit
             </button>
           )}
@@ -154,10 +160,10 @@ export function RemoveOrdersDropdown({
               type="button"
               disabled={disabled || isCancelling}
               onClick={() => withConfirm(handleRemoveTpAndSl)}
-              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red/70 transition-colors hover:bg-red/5 hover:text-red disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
-              Remove Stop Loss &amp; Take Profit
+              <Trash2 className="h-3 w-3 shrink-0" />
+              Remove SL &amp; TP
             </button>
           )}
         </div>
