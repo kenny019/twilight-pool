@@ -158,7 +158,7 @@ export function LendOrdersDataTable<TData, TValue>({
                   : statusLabel;
             const statusCls =
               statusLabel === "LENDED"
-                ? "bg-primary/10 text-primary/50"
+                ? "bg-green-medium/10 text-green-medium/80"
                 : statusLabel === "WITHDRAWING"
                   ? "bg-primary/10 text-primary"
                   : "bg-red/10 text-red";
@@ -175,7 +175,10 @@ export function LendOrdersDataTable<TData, TValue>({
                 currentSharePrice *
                   (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) -
                 order.value;
-              pnlSats = accruedRewards < 100 ? 0 : Math.round(accruedRewards);
+              pnlSats =
+                accruedRewards >= 0 && accruedRewards < 100
+                  ? 0
+                  : Math.round(accruedRewards);
 
               const timeElapsedSeconds =
                 (Date.now() - dayjs(order.timestamp).valueOf()) / 1000;
@@ -317,12 +320,12 @@ export function LendOrdersDataTable<TData, TValue>({
                           ? "The relayer is halted. Withdrawals will be available when it resumes."
                           : undefined
                       }
-                      className="block"
+                      className="flex justify-center"
                     >
                       <Button
                         variant="ui"
                         size="small"
-                        className="min-h-[44px] w-full justify-center border-theme/70 text-primary transition-colors hover:border-theme max-md:h-12 max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
+                        className="min-h-[44px] w-3/4 justify-center border-theme/70 text-primary transition-colors hover:border-theme max-md:h-12 max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
                         disabled={withdrawDisabled}
                         onClick={() => settleLendOrder(order)}
                       >

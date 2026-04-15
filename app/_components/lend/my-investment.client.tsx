@@ -14,11 +14,9 @@ import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import dayjs from "dayjs";
-import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import React, { useMemo } from "react";
 
 const MyInvestment = () => {
-  const [showSupportingDetails, setShowSupportingDetails] = useState(false);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
   const lendHistory = useTwilightStore((state) => state.lend.lendHistory);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
@@ -203,34 +201,8 @@ const MyInvestment = () => {
           </Resource>
         </div>
 
-        <div className="hidden md:flex md:flex-col md:gap-1">
-          {totalDepositsStat}
-        </div>
-        <div className="hidden md:flex md:flex-col md:gap-1">
-          {realizedRewardsStat}
-        </div>
-      </div>
-
-      <div className="md:hidden">
-        <button
-          type="button"
-          onClick={() => setShowSupportingDetails((prev) => !prev)}
-          className="border-outline/[0.06] flex min-h-[44px] w-full items-center justify-between border-t pt-3 text-xs text-primary/50 transition-colors hover:text-primary/70"
-        >
-          <span>{showSupportingDetails ? "Hide details" : "More details"}</span>
-          {showSupportingDetails ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </button>
-
-        {showSupportingDetails && (
-          <div className="mt-2 grid grid-cols-2 gap-3 text-sm md:gap-4">
-            {totalDepositsStat}
-            {realizedRewardsStat}
-          </div>
-        )}
+        <div className="flex flex-col gap-1">{totalDepositsStat}</div>
+        <div className="flex flex-col gap-1">{realizedRewardsStat}</div>
       </div>
     </div>
   );

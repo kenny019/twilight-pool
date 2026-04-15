@@ -659,7 +659,7 @@ const LendManagement = () => {
                   "rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40",
                   activeDepositPreset === preset
                     ? "border-theme/50 bg-theme/20 text-theme"
-                    : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10 max-md:opacity-60 max-md:hover:opacity-100"
+                    : "border-outline text-primary/70 hover:border-theme/30 hover:bg-theme/10"
                 )}
               >
                 {preset}%
@@ -668,7 +668,7 @@ const LendManagement = () => {
           </div>
 
           {/* Slider */}
-          <div className="w-[65%]">
+          <div className="w-full md:w-[65%]">
             <Slider
               min={0}
               max={twilightSats || 1}
@@ -689,29 +689,31 @@ const LendManagement = () => {
           <Text>≈ {approxPoolShare} shares</Text>
         </div>
 
-        <Button
-          variant="ui"
-          disabled={
-            isSubmitLoading ||
-            status !== WalletStatus.Connected ||
-            isRelayerHalted ||
-            sliderSats === 0
-          }
-          type="submit"
-          className="min-h-[44px] w-full border-theme/70 bg-theme/[0.08] py-2 text-sm font-medium text-theme transition-colors hover:border-theme hover:bg-theme/[0.12] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
-          title={
-            isRelayerHalted
-              ? "The relayer is halted. Deposits will be available when it resumes."
-              : undefined
-          }
-        >
-          <Resource
-            isLoaded={!isSubmitLoading}
-            placeholder={<Loader2 className="animate-spin" />}
+        <div className="max-md:flex max-md:justify-center">
+          <Button
+            variant="ui"
+            disabled={
+              isSubmitLoading ||
+              status !== WalletStatus.Connected ||
+              isRelayerHalted ||
+              sliderSats === 0
+            }
+            type="submit"
+            className="min-h-[44px] w-full border-theme/70 bg-theme/[0.08] py-2 text-sm font-medium text-theme transition-colors hover:border-theme hover:bg-theme/[0.12] disabled:border-outline disabled:bg-transparent disabled:hover:border-outline max-md:h-12 max-md:w-3/4 max-md:border-theme max-md:bg-theme/10 max-md:text-base max-md:font-semibold max-md:text-theme max-md:active:bg-theme/20"
+            title={
+              isRelayerHalted
+                ? "The relayer is halted. Deposits will be available when it resumes."
+                : undefined
+            }
           >
-            Deposit
-          </Resource>
-        </Button>
+            <Resource
+              isLoaded={!isSubmitLoading}
+              placeholder={<Loader2 className="animate-spin" />}
+            >
+              Deposit
+            </Resource>
+          </Button>
+        </div>
         {isRelayerHalted && (
           <Text className="text-xs text-primary-accent">
             Deposits paused — relayer is halted

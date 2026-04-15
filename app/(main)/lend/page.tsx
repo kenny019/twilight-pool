@@ -267,30 +267,32 @@ const Page = () => {
 
       {/* Positions / History tabs */}
       <div className="border-outline/60 overflow-hidden rounded-md border bg-background">
-        <div className="space-y-3">
-          <div className="border-outline/60 flex w-full items-center border-b">
-            <Tabs defaultValue={currentTab}>
-              <TabsList className="flex w-full border-b-0" variant="underline">
-                <TabsTrigger
-                  onClick={() => setCurrentTab("active-orders")}
-                  value="active-orders"
-                  variant="underline"
-                >
-                  Positions
-                </TabsTrigger>
-                <TabsTrigger
-                  onClick={() => setCurrentTab("lend-history")}
-                  value="lend-history"
-                  variant="underline"
-                >
-                  History
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          <div className="px-2 pb-2">{renderTableContent()}</div>
+        {/* Header: section label on top, tab strip below — mirrors trade panel pattern */}
+        <div className="border-outline/60 flex flex-col gap-1.5 border-b px-3 pt-2.5">
+          <span className="text-xs font-medium text-primary/50">
+            Lend Activity
+          </span>
+          <Tabs defaultValue={currentTab}>
+            <TabsList className="border-b-0" variant="underline">
+              <TabsTrigger
+                onClick={() => setCurrentTab("active-orders")}
+                value="active-orders"
+                variant="underline"
+              >
+                Positions
+              </TabsTrigger>
+              <TabsTrigger
+                onClick={() => setCurrentTab("lend-history")}
+                value="lend-history"
+                variant="underline"
+              >
+                History
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
+
+        <div className="px-2 pb-2">{renderTableContent()}</div>
       </div>
     </div>
   );
