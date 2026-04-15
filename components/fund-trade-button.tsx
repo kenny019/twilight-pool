@@ -301,6 +301,7 @@ function FundingTradeButton({
       tradingAccount,
       storeApi,
       twilightAddress,
+      twilightSats,
     ]
   );
 
@@ -641,6 +642,7 @@ function FundingTradeButton({
       setMasterAccountRecovery,
       storeApi,
       twilightAddress,
+      twilightSats,
     ]
   );
 

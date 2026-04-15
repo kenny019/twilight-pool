@@ -535,7 +535,7 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
                   <span>H: {fmtPrice(tooltipData.high)}</span>
                   <span>L: {fmtPrice(tooltipData.low)}</span>
                   <span>C: {fmtPrice(tooltipData.close)}</span>
-                  {!isPhoneChart && (
+                  {!isPhoneChart && tooltipData.volume !== undefined && (
                     <span>Vol: {fmtVol(tooltipData.volume)}</span>
                   )}
                 </>
@@ -554,7 +554,9 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
                   <span>High: {fmtPrice(tooltipData.high)}</span>
                   <span>Low: {fmtPrice(tooltipData.low)}</span>
                   <span>Close: {fmtPrice(tooltipData.close)}</span>
-                  <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                  {tooltipData.volume !== undefined && (
+                    <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                  )}
                 </>
               ) : null}
             </div>
