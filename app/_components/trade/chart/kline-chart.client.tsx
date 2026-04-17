@@ -276,17 +276,29 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
     });
     chart.setPeriod(CANDLE_INTERVAL_TO_PERIOD[DEFAULT_TIME_INTERVAL]);
 
-    // Drive the custom OHLCV overlay from crosshair + visible-range events
+    // Drive the custom OHLCV overlay from crosshair + visible-range events.
+    // klinecharts v10 passes only { x, y, paneId } to the onCrosshairChange
+    // callback — it does NOT include kLineData. We use convertFromPixel to
+    // translate the x coordinate into a data index and look up the candle.
     const onCrosshairChange = (data?: unknown) => {
-      const { kLineData } = (data ?? {}) as { kLineData?: KLineData };
-      if (kLineData) {
-        isHoveringRef.current = true;
-        setTooltipData(kLineData);
-      } else {
-        isHoveringRef.current = false;
-        const list = chartRef.current?.getDataList() ?? [];
-        if (list.length > 0) setTooltipData(list[list.length - 1]);
+      const cr = data as { x?: number; paneId?: string } | undefined;
+      if (cr?.paneId && cr.x !== undefined) {
+        const result = chartRef.current?.convertFromPixel([{ x: cr.x }]);
+        const pt = Array.isArray(result) ? result[0] : result;
+        const dataIndex = (pt as any)?.dataIndex;
+        if (typeof dataIndex === "number") {
+          const list = chartRef.current?.getDataList() ?? [];
+          const kld = list[Math.max(0, Math.min(dataIndex, list.length - 1))];
+          if (kld) {
+            isHoveringRef.current = true;
+            setTooltipData(kld);
+            return;
+          }
+        }
       }
+      isHoveringRef.current = false;
+      const list = chartRef.current?.getDataList() ?? [];
+      if (list.length > 0) setTooltipData(list[list.length - 1]);
     };
     const onVisibleRangeChange = () => {
       if (isHoveringRef.current) return;
@@ -419,6 +431,15 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
   const fmtVol = (n: number) => n.toFixed(4);
   const fmtDate = (ts: number) =>
     dayjs(ts).format(isPhoneChart ? "MM-DD HH:mm" : "YYYY-MM-DD HH:mm");
+  const candleColor = tooltipData
+    ? tooltipData.close >= tooltipData.open
+      ? "text-green-medium"
+      : "text-red"
+    : "text-primary/75";
+  const chgPct = tooltipData
+    ? ((tooltipData.close - tooltipData.open) / tooltipData.open) * 100
+    : 0;
+  const chgFormatted = `${chgPct >= 0 ? "+" : ""}${chgPct.toFixed(2)}%`;
 
   return (
     <div className="flex h-full w-full touch-none flex-col overflow-hidden">
@@ -518,25 +539,55 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
           )}
         </div>
       )}
-      <div className="relative min-h-0 w-full flex-1 touch-none">
+      <div
+        className="relative min-h-0 w-full flex-1 touch-none"
+        onPointerLeave={() => {
+          if (isHoveringRef.current) {
+            isHoveringRef.current = false;
+            const list = chartRef.current?.getDataList() ?? [];
+            if (list.length > 0) setTooltipData(list[list.length - 1]);
+          }
+        }}
+      >
         <div ref={containerRef} className="h-full w-full" />
         {/* Custom OHLC tooltip overlay — compact / phone */}
         {isCompactChart && (
           <div
             className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center py-0.5 pl-2",
+              "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center bg-background py-0.5 pl-2",
               isPhoneChart ? "pr-16" : "pr-20"
             )}
           >
-            <div className="flex items-center gap-x-2 text-[10px] leading-none text-primary/70">
+            <div className="flex items-center gap-x-2 text-[10px] leading-none">
               {tooltipData ? (
                 <>
-                  <span>O: {fmtPrice(tooltipData.open)}</span>
-                  <span>H: {fmtPrice(tooltipData.high)}</span>
-                  <span>L: {fmtPrice(tooltipData.low)}</span>
-                  <span>C: {fmtPrice(tooltipData.close)}</span>
+                  {!isPhoneChart && (
+                    <span className="text-primary/50">
+                      {fmtDate(tooltipData.timestamp)}
+                    </span>
+                  )}
+                  <span>
+                    <span className="text-primary/50">O </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.open)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">H </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.high)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">L </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.low)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">C </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.close)}</span>
+                  </span>
+                  <span className={candleColor}>{chgFormatted}</span>
                   {!isPhoneChart && tooltipData.volume !== undefined && (
-                    <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                    <span>
+                      <span className="text-primary/50">Vol </span>
+                      <span className="text-primary/75">{fmtVol(tooltipData.volume)}</span>
+                    </span>
                   )}
                 </>
               ) : null}
@@ -546,16 +597,34 @@ const KLineChart = ({ onShowTrades }: KLineChartProps) => {
         {/* Custom OHLCV tooltip overlay — desktop only */}
         {!isCompactChart && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between py-1 pl-2 pr-20">
-            <div className="flex flex-wrap items-center gap-x-3 text-[11px] leading-none text-primary/75">
+            <div className="flex flex-wrap items-center gap-x-3 text-[11px] leading-none">
               {tooltipData ? (
                 <>
-                  <span>Time: {fmtDate(tooltipData.timestamp)}</span>
-                  <span>Open: {fmtPrice(tooltipData.open)}</span>
-                  <span>High: {fmtPrice(tooltipData.high)}</span>
-                  <span>Low: {fmtPrice(tooltipData.low)}</span>
-                  <span>Close: {fmtPrice(tooltipData.close)}</span>
+                  <span className="text-primary/50">
+                    {fmtDate(tooltipData.timestamp)}
+                  </span>
+                  <span>
+                    <span className="text-primary/50">O </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.open)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">H </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.high)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">L </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.low)}</span>
+                  </span>
+                  <span>
+                    <span className="text-primary/50">C </span>
+                    <span className={candleColor}>{fmtPrice(tooltipData.close)}</span>
+                  </span>
+                  <span className={candleColor}>{chgFormatted}</span>
                   {tooltipData.volume !== undefined && (
-                    <span>Vol: {fmtVol(tooltipData.volume)}</span>
+                    <span>
+                      <span className="text-primary/50">Vol </span>
+                      <span className="text-primary/75">{fmtVol(tooltipData.volume)}</span>
+                    </span>
                   )}
                 </>
               ) : null}

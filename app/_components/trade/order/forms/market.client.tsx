@@ -18,7 +18,7 @@ import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
-import { useGrid } from "@/lib/providers/grid";
+import useWindowWidth from "@/lib/hooks/useWindowWidth";
 import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
 import { useTwilight } from "@/lib/providers/twilight";
@@ -103,7 +103,7 @@ function formatAmountInputValue(value: number, unit: "btc" | "usd"): string {
 }
 
 const OrderMarketForm = () => {
-  const { width } = useGrid();
+  const width = useWindowWidth();
 
   const privateKey = useSessionStore((state) => state.privateKey);
   const { retrySign } = useSignStatus();

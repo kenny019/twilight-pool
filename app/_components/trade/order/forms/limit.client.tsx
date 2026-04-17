@@ -16,7 +16,7 @@ import cn from "@/lib/cn";
 import { retry } from "@/lib/helpers";
 import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import { useToast } from "@/lib/hooks/useToast";
-import { useGrid } from "@/lib/providers/grid";
+import useWindowWidth from "@/lib/hooks/useWindowWidth";
 import { usePriceFeed } from "@/lib/providers/feed";
 import { useSessionStore, useSignStatus } from "@/lib/providers/session";
 import { useTwilightStore, useTwilightStoreApi } from "@/lib/providers/store";
@@ -107,7 +107,7 @@ const formatOrderPriceValue = (price: number) =>
   price > 0 ? (Math.round(price * 100) / 100).toFixed(2) : "";
 
 const OrderLimitForm = () => {
-  const { width } = useGrid();
+  const width = useWindowWidth();
   const { toast } = useToast();
   const marketStats = useGetMarketStats();
   const storeApi = useTwilightStoreApi();
@@ -1134,6 +1134,7 @@ const OrderLimitForm = () => {
             <Input
               id="input-order-price-mobile"
               type="text"
+              inputMode="decimal"
               value={orderPriceInput}
               onChange={(e) => handleOrderPriceChange(e.target.value)}
               onBlur={handleOrderPriceBlur}

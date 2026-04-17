@@ -72,7 +72,6 @@ const FILTER_STATUS_CHIPS = [
 const FILTER_TYPE_CHIPS = [
   { value: "MARKET", label: "Market" },
   { value: "LIMIT", label: "Limit" },
-  { value: "DARK", label: "Dark" },
 ] as const;
 
 type OrderHistoryFilter = {

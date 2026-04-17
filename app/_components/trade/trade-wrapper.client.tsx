@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import useWindow from "@/lib/hooks/useWindow";
+import useWindowWidth from "@/lib/hooks/useWindowWidth";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import Order from "./order/order.client";
 import Orderbook from "./orderbook/orderbook.client";
@@ -116,7 +116,24 @@ const TradeWrapper = () => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(MOBILE_TRADES_STORAGE_KEY) === "true";
   });
-  const { width: windowWidth, height: windowHeight } = useWindow();
+  const windowWidth = useWindowWidth();
+
+  // Track window height for desktop detailsH only.
+  // The 996px guard means this never fires on mobile (keyboard appearance
+  // changes innerHeight on mobile but NOT on desktop), so the soft keyboard
+  // cannot trigger a re-render of this component and dismiss the focused input.
+  const [windowHeight, setWindowHeight] = useState(0);
+  useEffect(() => {
+    function updateHeight() {
+      if (window.innerWidth >= 996) {
+        setWindowHeight(window.innerHeight);
+      }
+    }
+    if (typeof window === "undefined") return;
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const [gridTop, setGridTop] = useState<number | null>(null);
 
@@ -296,7 +313,7 @@ const TradeWrapper = () => {
           dimension={gridDimensions}
           name="chart"
           isMobile={isMobile}
-          mobileClassName="h-[40dvh] min-h-[280px] max-h-[420px]"
+          mobileClassName="h-[40svh] min-h-[280px] max-h-[420px]"
           title="Chart"
           key="chart"
           id="chart"
