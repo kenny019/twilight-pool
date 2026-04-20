@@ -1,10 +1,22 @@
 "use client";
 
 import Button from "@/components/button";
-import cn from '@/lib/cn';
+import cn from "@/lib/cn";
 import React, { useMemo, useCallback } from "react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { useApyChartData, APY_PERIOD_PARAMS } from "@/lib/hooks/useApyChartData";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
+import {
+  useApyChartData,
+  APY_PERIOD_PARAMS,
+} from "@/lib/hooks/useApyChartData";
+import { median } from "@/lib/utils/lend-metrics";
 
 type TimePeriod = "1D" | "1W" | "1M";
 
@@ -18,7 +30,14 @@ function formatApy(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
-const GREEN = "rgb(34, 197, 94)";
+const CHART_GREEN = "hsl(123, 64%, 62%)"; // --green-medium
+const CHART_RED = "hsl(357, 93%, 63%)"; // --red
+
+const CHART_MEDIAN_N: Record<TimePeriod, number | undefined> = {
+  "1D": undefined, // use all values for 1D
+  "1W": 6,
+  "1M": 4,
+};
 
 type ApyChartProps = {
   selectedPeriod: TimePeriod;
@@ -28,25 +47,46 @@ type ApyChartProps = {
 const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
   const timePeriods: TimePeriod[] = ["1D", "1W", "1M"];
 
-  const params = useMemo(() => APY_PERIOD_PARAMS[selectedPeriod], [selectedPeriod]);
+  const params = useMemo(
+    () => APY_PERIOD_PARAMS[selectedPeriod],
+    [selectedPeriod]
+  );
   const { data: chartData } = useApyChartData(params);
 
-  const tickFormatter = useCallback((time: number) => {
-    const d = new Date(time * 1000);
-    if (selectedPeriod === "1D") {
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  }, [selectedPeriod]);
+  const chartColor = useMemo(() => {
+    if (!chartData?.length) return CHART_GREEN;
+    const values = chartData.map((p) => p.value);
+    const representative = median(values, CHART_MEDIAN_N[selectedPeriod]) ?? 0;
+    return representative < 0 ? CHART_RED : CHART_GREEN;
+  }, [chartData, selectedPeriod]);
 
-  const tooltipLabelFormatter = useCallback((label: any) => {
-    const time = Number(label);
-    const d = new Date(time * 1000);
-    if (selectedPeriod === "1D") {
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }, [selectedPeriod]);
+  const tickFormatter = useCallback(
+    (time: number) => {
+      const d = new Date(time * 1000);
+      if (selectedPeriod === "1D") {
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+      return d.toLocaleDateString([], { month: "short", day: "numeric" });
+    },
+    [selectedPeriod]
+  );
+
+  const tooltipLabelFormatter = useCallback(
+    (label: any) => {
+      const time = Number(label);
+      const d = new Date(time * 1000);
+      if (selectedPeriod === "1D") {
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+      return d.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+    [selectedPeriod]
+  );
 
   return (
     <div className="flex flex-col space-y-3">
@@ -58,7 +98,10 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
               variant={"ui"}
               size="small"
               onClick={() => onPeriodChange(period)}
-              className={cn("px-3 py-1.5 transition-colors hover:border-theme", selectedPeriod === period && "border-theme")}
+              className={cn(
+                "px-3 py-1.5 transition-colors hover:border-theme",
+                selectedPeriod === period && "border-theme"
+              )}
             >
               {period}
             </Button>
@@ -71,8 +114,8 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
           <AreaChart data={chartData ?? []}>
             <defs>
               <linearGradient id="apyGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={GREEN} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={GREEN} stopOpacity={0} />
+                <stop offset="0%" stopColor={chartColor} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="rgba(156, 163, 175, 0.1)" />
@@ -82,30 +125,30 @@ const ApyChart = ({ selectedPeriod, onPeriodChange }: ApyChartProps) => {
               stroke="rgb(156, 163, 175)"
               tick={{ fontSize: 12 }}
               tickLine={false}
-              axisLine={{ stroke: 'rgba(156, 163, 175, 0.2)' }}
+              axisLine={{ stroke: "rgba(156, 163, 175, 0.2)" }}
             />
             <YAxis
               tickFormatter={formatApy}
               stroke="rgb(156, 163, 175)"
               tick={{ fontSize: 12 }}
               tickLine={false}
-              axisLine={{ stroke: 'rgba(156, 163, 175, 0.2)' }}
+              axisLine={{ stroke: "rgba(156, 163, 175, 0.2)" }}
               width={60}
             />
             <Tooltip
               labelFormatter={tooltipLabelFormatter}
               formatter={(value: any) => [formatApy(Number(value ?? 0)), "APY"]}
               contentStyle={{
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                border: '1px solid rgba(156, 163, 175, 0.2)',
-                borderRadius: '8px',
-                color: 'rgb(156, 163, 175)',
+                backgroundColor: "rgba(0, 0, 0, 0.8)",
+                border: "1px solid rgba(156, 163, 175, 0.2)",
+                borderRadius: "8px",
+                color: "rgb(156, 163, 175)",
               }}
             />
             <Area
               type="monotone"
               dataKey="value"
-              stroke={GREEN}
+              stroke={chartColor}
               strokeWidth={2}
               fill="url(#apyGradient)"
             />

@@ -15,7 +15,6 @@ import {
 } from "@/components/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { Text } from "@/components/typography";
-import { Separator } from "@/components/seperator";
 import useGetMarketStats from "@/lib/hooks/useGetMarketStats";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useToast } from "@/lib/hooks/useToast";
@@ -173,19 +172,28 @@ const Page = () => {
 
       {/* Mobile / Tablet — single column stack */}
       <div className="flex flex-col gap-4 lg:hidden">
-        <div className="bg-card rounded-lg border border-outline p-4">
-          <Text className="mb-3 text-base font-medium">Pool Performance</Text>
+        <div className="border-outline/60 rounded-md border bg-background p-4">
+          <Text className="mb-3 text-sm font-medium text-primary/70">
+            Pool Performance
+          </Text>
           <PoolInfo selectedApyPeriod={selectedApyPeriod} />
         </div>
-        <div className="bg-card rounded-lg border border-outline p-4">
-          <Text className="mb-3 text-base font-medium">APY Trend</Text>
-          <ApyChart selectedPeriod={selectedApyPeriod} onPeriodChange={setSelectedApyPeriod} />
+        <div className="border-outline/60 rounded-md border bg-background p-4">
+          <Text className="mb-3 text-sm font-medium text-primary/70">
+            APY Trend
+          </Text>
+          <ApyChart
+            selectedPeriod={selectedApyPeriod}
+            onPeriodChange={setSelectedApyPeriod}
+          />
         </div>
-        <div className="bg-card rounded-lg border border-outline p-4">
+        <div className="border-outline/60 rounded-md border bg-background p-4">
           <MyInvestment />
         </div>
-        <div className="bg-card rounded-lg border border-outline p-4">
-          <Text className="mb-3 text-base font-medium">Add Liquidity</Text>
+        <div className="border-outline/60 rounded-md border bg-background p-4">
+          <Text className="mb-3 text-sm font-medium text-primary/70">
+            Add Liquidity
+          </Text>
           <div className="space-y-3">
             <LendManagement />
             <p className="text-xs text-primary-accent/50">
@@ -193,8 +201,10 @@ const Page = () => {
             </p>
           </div>
         </div>
-        <div className="bg-card rounded-lg border border-outline p-4">
-          <Text className="mb-3 text-base font-medium">Pool Health</Text>
+        <div className="border-outline/60 rounded-md border bg-background p-4">
+          <Text className="mb-3 text-sm font-medium text-primary/70">
+            Pool Health
+          </Text>
           <PoolHealth />
         </div>
       </div>
@@ -204,57 +214,66 @@ const Page = () => {
           Right (4): Add Liquidity → My Investment → Pool Health
       */}
       <div className="hidden lg:flex lg:gap-5">
-
         {/* Left column — metrics + chart */}
         <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <div className="bg-card rounded-lg border border-outline p-4">
-            <Text className="mb-3 text-base font-medium">Pool Performance</Text>
+          <div className="border-outline/60 rounded-md border bg-background p-4">
+            <Text className="mb-3 text-sm font-medium text-primary/70">
+              Pool Performance
+            </Text>
             <PoolInfo selectedApyPeriod={selectedApyPeriod} />
           </div>
-          <div className="bg-card flex flex-1 flex-col rounded-lg border border-outline p-5">
-            <Text className="mb-3 shrink-0 text-base font-medium">APY Trend</Text>
-            <div className="flex-1 min-h-[280px]">
-              <ApyChart selectedPeriod={selectedApyPeriod} onPeriodChange={setSelectedApyPeriod} />
+          <div className="border-outline/60 flex flex-1 flex-col rounded-md border bg-background p-5">
+            <Text className="mb-3 shrink-0 text-sm font-medium text-primary/70">
+              APY Trend
+            </Text>
+            <div className="min-h-[280px] flex-1">
+              <ApyChart
+                selectedPeriod={selectedApyPeriod}
+                onPeriodChange={setSelectedApyPeriod}
+              />
             </div>
           </div>
         </div>
 
         {/* Right column — action rail with intentional hierarchy */}
         <div className="flex w-[460px] shrink-0 flex-col gap-5">
-
           {/* Add Liquidity — primary: full padding, full border weight */}
-          <div className="bg-card rounded-lg border border-outline p-5">
-            <Text className="mb-4 text-base font-medium">Add Liquidity</Text>
+          <div className="border-outline/60 rounded-md border bg-background p-5">
+            <Text className="mb-4 text-sm font-medium text-primary/70">
+              Add Liquidity
+            </Text>
             <div className="space-y-3">
-            <LendManagement />
-            <p className="text-xs text-primary-accent/50">
-              Earn yield from trading fees and lending.
-            </p>
+              <LendManagement />
+              <p className="text-xs text-primary-accent/50">
+                Earn yield from trading fees and lending.
+              </p>
+            </div>
           </div>
-        </div>
 
           {/* My Investment — secondary: slightly tighter, border de-emphasized */}
-          <div className="bg-card rounded-lg border border-outline/70 p-4">
+          <div className="border-outline/60 rounded-md border bg-background p-4">
             <MyInvestment />
           </div>
 
           {/* Pool Health — supporting: most compact, most muted border */}
-          <div className="bg-card rounded-lg border border-outline/40 p-4">
-            <Text className="mb-3 text-sm font-medium text-primary/60">Pool Health</Text>
+          <div className="border-outline/60 rounded-md border bg-background p-4">
+            <Text className="mb-3 text-sm font-medium text-primary/70">
+              Pool Health
+            </Text>
             <PoolHealth />
           </div>
-
         </div>
-
       </div>
 
-      <Separator />
-
       {/* Positions / History tabs */}
-      <div className="space-y-3">
-        <div className="flex w-full items-center border-b">
+      <div className="border-outline/60 overflow-hidden rounded-md border bg-background">
+        {/* Header: section label on top, tab strip below — mirrors trade panel pattern */}
+        <div className="border-outline/60 flex flex-col gap-1.5 border-b px-3 pt-2.5">
+          <span className="text-xs font-medium text-primary/50">
+            Lend Activity
+          </span>
           <Tabs defaultValue={currentTab}>
-            <TabsList className="flex w-full border-b-0" variant="underline">
+            <TabsList className="border-b-0" variant="underline">
               <TabsTrigger
                 onClick={() => setCurrentTab("active-orders")}
                 value="active-orders"
@@ -273,7 +292,7 @@ const Page = () => {
           </Tabs>
         </div>
 
-        <div>{renderTableContent()}</div>
+        <div className="px-2 pb-2">{renderTableContent()}</div>
       </div>
     </div>
   );

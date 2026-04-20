@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import cn from "@/lib/cn";
 import {
   Select,
@@ -402,14 +403,7 @@ export function AccountLedgerDataTable<TData, TValue>({
                 </tr>
               ))
             ) : (
-              <tr>
-                <td
-                  colSpan={Math.max(table.getVisibleFlatColumns().length, 1)}
-                  className="h-24 px-2 py-2 text-center text-xs text-primary-accent"
-                >
-                  No ledger entries yet.
-                </td>
-              </tr>
+              <TableEmptyRow colSpan={Math.max(table.getVisibleFlatColumns().length, 1)} title="No ledger entries yet." />
             )}
           </tbody>
         </table>
@@ -642,9 +636,7 @@ export function AccountLedgerDataTable<TData, TValue>({
             );
           })
         ) : (
-          <div className="py-10 text-center text-xs text-primary-accent">
-            No ledger entries yet.
-          </div>
+          <EmptyState title="No ledger entries yet." />
         )}
       </div>
 

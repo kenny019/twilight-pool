@@ -39,7 +39,7 @@ const Page = () => {
 
   if (!isWalletConnected || !chainWallet) {
     return (
-      <div className="mx-auto mt-8 max-w-4xl px-4 md:px-0">
+      <div className="mx-auto my-6 max-w-4xl px-4 sm:my-10 md:px-0">
         <div className="flex items-center gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-yellow-500" />
           <div>

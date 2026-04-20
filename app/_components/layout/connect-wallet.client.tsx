@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogTrigger } from "@/components/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/popover";
-import Button from "@/components/button";
+
 import {
   useWalletConnection,
   isActiveView,
@@ -50,9 +50,9 @@ export default function ConnectWallet() {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex min-h-[40px] items-center gap-2 rounded-md border border-outline bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary/40"
+            className="flex min-h-[40px] items-center gap-2 rounded-md border border-theme/30 bg-theme/5 px-3 py-1.5 text-sm transition-colors hover:border-theme/50 hover:bg-theme/10 max-md:min-h-[36px] max-md:gap-1.5 max-md:px-2.5 max-md:py-1"
           >
-            <Wallet className="h-4 w-4 text-primary-accent/60" />
+            <Wallet className="h-4 w-4 text-theme/60" />
             <span className="font-mono text-xs">
               {truncateAddress(address)}
             </span>
@@ -104,9 +104,13 @@ export default function ConnectWallet() {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button size="small" className="w-auto max-w-[180px] max-md:px-3">
-          Connect Wallet
-        </Button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-md border border-theme/60 bg-theme/20 px-3 py-1.5 text-xs font-medium text-theme transition-colors duration-200 hover:border-theme/80 hover:bg-theme/40 hover:shadow-[0_0_15px_rgba(var(--theme-rgb),0.2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary max-md:min-h-[38px] max-md:px-3 max-md:text-xs"
+        >
+          <Wallet className="h-3 w-3 shrink-0" />
+          <span>Connect Wallet</span>
+        </button>
       </DialogTrigger>
       <WalletModal
         state={state}

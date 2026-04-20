@@ -1,8 +1,9 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
-import { formatMarginPair, formatSatsCompact, truncateHash } from "@/lib/helpers";
+import { formatMarginPair, formatSatsCompact, formatSatsMBtc, truncateHash } from "@/lib/helpers";
 import { usdNumberFormatter } from "@/lib/utils/format";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePriceFeed } from "@/lib/providers/feed";
@@ -58,7 +59,7 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
       >
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
           {sorted.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">No results.</div>
+            <EmptyState title="No trade history." />
           ) : (
             sorted.map((trade) => {
               const cardId = `${trade.uuid}_${trade.date.toString()}`;
@@ -139,10 +140,9 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
               const liqLabel = trade.liquidationPrice
                 ? `$${usdNumberFormatter.format(trade.liquidationPrice)}`
                 : "—";
-              const posValueSats = Math.round(
-                Math.abs(trade.positionSize / (trade.settlementPrice || trade.entryPrice || 1))
-              );
-              const posValueLabel = formatSatsCompact(posValueSats);
+              const posMarkPrice = trade.settlementPrice || trade.entryPrice || 1;
+              const posValueBTC = new BTC("sats", Big(Math.abs(trade.positionSize / posMarkPrice))).convert("BTC");
+              const posValueLabel = BTC.format(posValueBTC, "BTC");
 
               return (
                 <div
@@ -175,50 +175,52 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                       </div>
                       <div className="flex items-center gap-1.5 text-[11px] text-primary/55">
                         <span className="tabular-nums">
-                          {dayjs(trade.date).format("DD MMM HH:mm:ss")}
+                          {dayjs(trade.date).format("DD MMM YYYY HH:mm:ss")}
                         </span>
                         <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDot)} />
                       </div>
                     </div>
 
-                    {/* ── Dominant: outcome amount ── */}
-                    <div className="mb-2">
-                      {hasPnl ? (
+                    {/* ── Dominant: outcome amount (only when settled/liquidated) ── */}
+                    {hasPnl && (
+                      <div className="mb-2">
                         <PnlCell pnlSats={pnl} btcPriceUsd={btcPriceUsd} layout="hero" />
-                      ) : (
-                        <div className="rounded-lg border-l-2 border-border/60 bg-background/40 px-3 py-2.5">
-                          <span className="block text-lg font-semibold leading-tight tabular-nums text-primary">
-                            {notionalLabel}
-                          </span>
-                          <span className="mt-0.5 block text-sm tabular-nums text-primary/60">Notional</span>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* ── Trade context: entry/close, notional, lev ── */}
-                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
                         <span className="text-primary/40">Entry</span>
-                        <span className="font-medium text-primary/80">{entryLabel}</span>
+                        <span className="font-medium text-primary/90">{entryLabel}</span>
                       </span>
                       {closeLabel && (
                         <>
                           <span className="text-primary/30">→</span>
                           <span className="inline-flex items-center gap-1 whitespace-nowrap">
                             <span className="text-primary/40">Close</span>
-                            <span className="font-medium text-primary/80">{closeLabel}</span>
+                            <span className="font-medium text-primary/90">{closeLabel}</span>
                           </span>
                         </>
                       )}
                       <span className="text-primary/25">•</span>
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
                         <span className="text-primary/40">Notional</span>
-                        <span className="font-medium text-primary/80">{notionalLabel}</span>
+                        <span className="font-medium text-primary/90">{notionalLabel}</span>
                       </span>
+                      {trade.initialMargin > 0 && (
+                        <>
+                          <span className="text-primary/25">•</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <span className="text-primary/40">Margin</span>
+                            <span className="font-medium text-primary/90">{formatSatsMBtc(trade.initialMargin)}</span>
+                          </span>
+                        </>
+                      )}
                       <span className="text-primary/25">•</span>
                       <span className="inline-flex items-center gap-1 whitespace-nowrap">
                         <span className="text-primary/40">Lev</span>
-                        <span className="font-medium text-primary/80">{levLabel}</span>
+                        <span className="font-medium text-primary/90">{levLabel}</span>
                       </span>
                     </div>
 
@@ -256,7 +258,7 @@ const TraderHistoryCards = React.memo(function TraderHistoryCards({
                             <span className="font-medium">{liqLabel}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Pos. Value</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-primary/40">Pos. Value (BTC)</span>
                             <span className="font-medium">{posValueLabel}</span>
                           </div>
                           <div className="col-span-2 flex items-center gap-2">

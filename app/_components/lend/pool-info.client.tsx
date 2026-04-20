@@ -6,7 +6,7 @@ import cn from "@/lib/cn";
 import Skeleton from "@/components/skeleton";
 import { useTwilightStore } from "@/lib/providers/store";
 import { useSessionStore } from "@/lib/providers/session";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useGetPoolShareValue } from "@/lib/hooks/useGetPoolShareValue";
 import {
   useApyChartData,
@@ -14,7 +14,7 @@ import {
   ApyPeriod,
 } from "@/lib/hooks/useApyChartData";
 import { Tooltip } from "@/components/tooltip";
-import { ChevronDown, ChevronUp } from "lucide-react";
+
 import {
   median,
   periodReturnFromApy,
@@ -67,7 +67,9 @@ const StatBlock = ({
   fixedLabelHeight?: boolean;
 }) => (
   <div className={containerClassName}>
-    <div className={fixedLabelHeight ? "min-h-[1.25rem]" : undefined}>{label}</div>
+    <div className={fixedLabelHeight ? "min-h-[1.25rem]" : undefined}>
+      {label}
+    </div>
     <Resource isLoaded={isLoaded} placeholder={placeholder}>
       <Text className={valueClassName}>{value}</Text>
     </Resource>
@@ -75,7 +77,6 @@ const StatBlock = ({
 );
 
 const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
-  const [showSupportingDetails, setShowSupportingDetails] = useState(false);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
   const currentPrice = useSessionStore((state) => state.price.btcPrice);
 
@@ -110,13 +111,13 @@ const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
           body="Net asset value per pool share. Computed from pool equity divided by total pool shares. Used to value deposits and rewards."
           className="gap-0.5"
         >
-          <Text className="text-xs text-primary-accent/50">Share NAV</Text>
+          <Text className="text-xs text-primary-accent/70">Share NAV</Text>
         </Tooltip>
       }
       value={poolShareValue != null ? `${poolShareValue.toFixed(0)} sats` : "—"}
       isLoaded={poolShareValue != null}
       placeholder={<Skeleton className="h-4 w-14" />}
-      valueClassName="text-sm font-medium text-primary/55 md:text-base"
+      valueClassName="text-sm font-medium text-primary/75 md:text-base"
       containerClassName="flex flex-col gap-1"
       fixedLabelHeight
     />
@@ -126,13 +127,13 @@ const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
     <StatBlock
       label={
         <div className="flex min-h-[1.25rem] items-center">
-          <Text className="text-xs text-primary-accent/50">BTC Price</Text>
+          <Text className="text-xs text-primary-accent/70">BTC Price</Text>
         </div>
       }
       value={`$${currentPrice?.toLocaleString() || "—"}`}
       isLoaded={!!currentPrice}
       placeholder={<Skeleton className="h-4 w-16" />}
-      valueClassName="text-sm font-medium text-primary/55 md:text-base"
+      valueClassName="text-sm font-medium text-primary/75 md:text-base"
       containerClassName="flex flex-col gap-1"
       fixedLabelHeight
     />
@@ -164,7 +165,7 @@ const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
       />
 
       {/* Secondary + Supporting — merged into one responsive row, separated by a rule */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-3 border-t border-outline/[0.06] pt-4 md:gap-y-4 lg:grid-cols-4 lg:gap-x-0 lg:divide-x lg:divide-outline/[0.06] lg:pt-5">
+      <div className="border-outline/[0.06] lg:divide-outline/[0.06] grid grid-cols-2 gap-x-3 gap-y-3 border-t pt-4 md:gap-y-4 lg:grid-cols-4 lg:gap-x-0 lg:divide-x lg:pt-5">
         <StatBlock
           label={
             <Tooltip
@@ -213,8 +214,8 @@ const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
           value={shareNavStat.props.value}
           isLoaded={shareNavStat.props.isLoaded}
           placeholder={shareNavStat.props.placeholder}
-          valueClassName="hidden md:block text-sm font-medium text-primary/55 lg:text-base"
-          containerClassName="hidden md:flex md:flex-col md:gap-1 lg:px-4"
+          valueClassName="text-sm font-medium text-primary/75 lg:text-base"
+          containerClassName="flex flex-col gap-1 lg:px-4"
           fixedLabelHeight
         />
         <StatBlock
@@ -222,32 +223,10 @@ const PoolInfo = ({ selectedApyPeriod }: PoolInfoProps) => {
           value={btcPriceStat.props.value}
           isLoaded={btcPriceStat.props.isLoaded}
           placeholder={btcPriceStat.props.placeholder}
-          valueClassName="hidden md:block text-sm font-medium text-primary/55 lg:text-base"
-          containerClassName="hidden md:flex md:flex-col md:gap-1 lg:pl-4"
+          valueClassName="text-sm font-medium text-primary/75 lg:text-base"
+          containerClassName="flex flex-col gap-1 lg:pl-4"
           fixedLabelHeight
         />
-      </div>
-
-      <div className="md:hidden">
-        <button
-          type="button"
-          onClick={() => setShowSupportingDetails((prev) => !prev)}
-          className="flex min-h-[44px] w-full items-center justify-between border-t border-outline/[0.06] pt-3 text-xs text-primary/50 transition-colors hover:text-primary/70"
-        >
-          <span>{showSupportingDetails ? "Hide details" : "More details"}</span>
-          {showSupportingDetails ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </button>
-
-        {showSupportingDetails && (
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            {shareNavStat}
-            {btcPriceStat}
-          </div>
-        )}
       </div>
     </div>
   );

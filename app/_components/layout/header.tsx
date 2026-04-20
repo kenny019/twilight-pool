@@ -112,13 +112,13 @@ const Header = () => {
             <Settings />
           </div>
         </div>
-        <div className="relative flex items-center justify-between px-2 md:hidden">
+        <div className="relative flex items-center justify-between gap-3 px-2 py-0.5 md:hidden">
           <Link href="/">
-            <Logo className="w-6" />
+            <Logo className="w-7" />
           </Link>
-          <div className="flex items-center space-x-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             {/* <KycStatus /> */}
-            <RelayerStatus />
+            <RelayerStatus dotOnly />
             <ConnectWallet />
             <Settings />
             <MobileNav />

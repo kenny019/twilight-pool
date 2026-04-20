@@ -10,10 +10,10 @@ import Big from "big.js";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import dayjs from "dayjs";
 
 export function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleString();
+  return dayjs(value).format("DD/MM/YYYY HH:mm");
 }
 
 export type LedgerDisplayUnit = "auto" | "SATS" | "mBTC" | "BTC";
@@ -455,7 +455,7 @@ export const accountLedgerColumns: ColumnDef<AccountLedgerEntry, any>[] = [
 
       return (
         <Button
-          className="items-start justify-end gap-0"
+          className="items-center justify-start gap-0"
           asChild
           variant="link"
         >

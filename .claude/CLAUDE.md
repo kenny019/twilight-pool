@@ -24,15 +24,10 @@ If CLAUDE.md conflicts with AGENTS.md, AGENTS.md always takes precedence.
 
 ---
 
-## 3. Mandatory Reading (Before Any Task)
+## 3. Reference Docs
 
-Before making ANY UI or frontend change, you MUST read:
-
-1. AGENTS.md (primary contract)
-2. docs/ui-pattern-extraction-and-modernization-audit.md
-3. docs/ui-modernization-principles.md
-4. docs/responsive-pattern-matrix.md
-5. docs/implementation-guardrails.md
+Consult `AGENTS.md §2` for a full index of reference docs.
+Pull in only the docs relevant to the current task — do not load all of them by default.
 
 If there is ambiguity:
 - Follow the most conservative interpretation

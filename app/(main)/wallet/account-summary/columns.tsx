@@ -1,11 +1,9 @@
 "use client";
 
 import Button from "@/components/button";
-import BTC from "@/lib/twilight/denoms";
 import { ColumnDef } from "@tanstack/react-table";
-import Big from "big.js";
 import dayjs from "dayjs";
-import { truncateHash } from "@/lib/helpers";
+import { formatSatsCompact, truncateHash } from "@/lib/helpers";
 import { AccountSummaryTableMeta } from "./data-table";
 import { ActiveAccount } from "../page";
 import Link from "next/link";
@@ -24,9 +22,7 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
     accessorKey: "createdAt",
     header: "Created",
     accessorFn: (row) =>
-      row.createdAt
-        ? dayjs.unix(row.createdAt).format("DD/MM/YYYY HH:mm:ss")
-        : "",
+      row.createdAt ? dayjs.unix(row.createdAt).format("DD/MM/YYYY HH:mm") : "",
   },
   {
     accessorKey: "address",
@@ -50,20 +46,12 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
   },
   {
     accessorKey: "value",
-    header: "Balance (BTC)",
-    accessorFn: (row) =>
-      new BTC("sats", Big(row.value || 0)).convert("BTC").toFixed(8),
+    header: "Balance",
     cell: (row) => (
-      <span className="tabular-nums font-medium">{row.getValue() as string}</span>
+      <span className="font-medium tabular-nums">
+        {formatSatsCompact(row.row.original.value || 0)}
+      </span>
     ),
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-    cell: (ctx) => {
-      const raw = ctx.row.original.type;
-      return <span>{raw === "Account" ? "Recovery" : raw}</span>;
-    },
   },
   {
     id: "status",
@@ -72,12 +60,17 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
       const status = getActiveAccountStatus(ctx.row.original);
       const cls = getActiveAccountStatusClass(status);
       const pill = (
-        <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-medium", cls)}>
+        <span
+          className={cn("rounded px-1.5 py-0.5 text-[11px] font-medium", cls)}
+        >
           {status}
         </span>
       );
 
-      if (status === "Action Required" && canTransferActiveAccount(ctx.row.original)) {
+      if (
+        status === "Action Required" &&
+        canTransferActiveAccount(ctx.row.original)
+      ) {
         return (
           <Tooltip title={status} body={ACTION_REQUIRED_MESSAGE}>
             {pill}
@@ -103,7 +96,7 @@ export const accountSummaryColumns: ColumnDef<ActiveAccount, any>[] = [
 
       return (
         <Button
-          className="items-start justify-start gap-0"
+          className="items-center justify-start gap-0"
           asChild
           variant="link"
         >

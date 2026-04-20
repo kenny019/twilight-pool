@@ -4,7 +4,9 @@ import { Text } from "@/components/typography";
 import Resource from "@/components/resource";
 import Skeleton from "@/components/skeleton";
 import { useTwilightStore } from "@/lib/providers/store";
-import { calculateAPR } from "@/lib/helpers";
+import { calculateAPR, formatSatsCompact } from "@/lib/helpers";
+import { computeLendingMarkToValue } from "@/lib/lend/lend-mark-to-value";
+import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
 
 const MIN_HOLDING_SECONDS = 3600; // 1 hour - don't annualize before this
 import { Tooltip } from "@/components/tooltip";
@@ -12,25 +14,20 @@ import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import dayjs from "dayjs";
-import React, { useMemo, useState } from "react";
-import { POOL_SHARE_DECIMALS_SCALE } from "@/lib/format/poolShares";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import React, { useMemo } from "react";
 
 const MyInvestment = () => {
-  const [showSupportingDetails, setShowSupportingDetails] = useState(false);
   const lendOrders = useTwilightStore((state) => state.lend.lends);
   const lendHistory = useTwilightStore((state) => state.lend.lendHistory);
   const poolInfo = useTwilightStore((state) => state.lend.poolInfo);
   const poolShareValue = poolInfo?.pool_share ?? 0;
 
   const data = useMemo(() => {
+    const { activePrincipalSats, pendingRewardsSats } =
+      computeLendingMarkToValue(lendOrders, poolShareValue);
+
     const lendedOrders = lendOrders.filter(
       (order) => order.orderStatus === "LENDED"
-    );
-
-    const activePrincipalSats = lendedOrders.reduce(
-      (sum, order) => sum + order.value,
-      0
     );
 
     const totalDepositsSats = lendHistory
@@ -41,9 +38,7 @@ const MyInvestment = () => {
       .filter((o) => o.orderStatus === "SETTLED")
       .reduce((sum, order) => sum + (order.payment || 0), 0);
 
-    let pendingRewardsSats = 0;
     let annualizedReturn = 0;
-
     let showAnnualizedReturn = false;
 
     if (poolShareValue && lendedOrders.length > 0) {
@@ -54,12 +49,8 @@ const MyInvestment = () => {
         if (!order.npoolshare || !order.value) continue;
 
         const rewards =
-          poolShareValue * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) - order.value;
-        if (rewards >= 100 || rewards < 0) {
-          pendingRewardsSats += rewards;
-        } else if (rewards > 0) {
-          // dust filter: positive but < 100 sats => 0
-        }
+          poolShareValue * (order.npoolshare / POOL_SHARE_DECIMALS_SCALE) -
+          order.value;
 
         const timeElapsed =
           (Date.now() - dayjs(order.timestamp).valueOf()) / 1000;
@@ -94,10 +85,18 @@ const MyInvestment = () => {
     };
   }, [lendOrders, lendHistory, poolShareValue]);
 
-  const activePrincipalBTC = new BTC("sats", Big(data.activePrincipalSats)).convert("BTC");
-  const totalDepositsBTC = new BTC("sats", Big(data.totalDepositsSats)).convert("BTC");
-  const pendingRewardsBTC = new BTC("sats", Big(data.pendingRewardsSats)).convert("BTC");
-  const realizedRewardsBTC = new BTC("sats", Big(data.realizedRewardsSats)).convert("BTC");
+  const activePrincipalBTC = new BTC(
+    "sats",
+    Big(data.activePrincipalSats)
+  ).convert("BTC");
+  const totalDepositsBTC = new BTC("sats", Big(data.totalDepositsSats)).convert(
+    "BTC"
+  );
+
+  const realizedRewardsBTC = new BTC(
+    "sats",
+    Big(data.realizedRewardsSats)
+  ).convert("BTC");
 
   const totalDepositsStat = (
     <div className="flex flex-col gap-1">
@@ -138,7 +137,7 @@ const MyInvestment = () => {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <Text className="text-base font-medium">My Investment</Text>
+      <Text className="text-sm font-medium text-primary/70">My Investment</Text>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm md:gap-x-4 md:gap-y-4">
         {/* Primary: Active Principal — full-width, dominant */}
@@ -147,7 +146,9 @@ const MyInvestment = () => {
             title="Active Principal"
             body="Your currently active deposited amount (open lend orders)."
           >
-            <Text className="text-sm text-primary-accent">Active Principal</Text>
+            <Text className="text-sm text-primary-accent">
+              Active Principal
+            </Text>
           </Tooltip>
           <Resource isLoaded placeholder={<Skeleton className="h-6 w-28" />}>
             <Text className="text-lg font-semibold">
@@ -168,11 +169,11 @@ const MyInvestment = () => {
             <Text
               className={cn(
                 "font-medium",
-                Number(pendingRewardsBTC) > 0 && "text-green-medium",
-                Number(pendingRewardsBTC) < 0 && "text-red"
+                data.pendingRewardsSats > 0 && "text-green-medium",
+                data.pendingRewardsSats < 0 && "text-red"
               )}
             >
-              {BTC.format(pendingRewardsBTC, "BTC")} BTC
+              {formatSatsCompact(data.pendingRewardsSats)}
             </Text>
           </Resource>
         </div>
@@ -200,34 +201,8 @@ const MyInvestment = () => {
           </Resource>
         </div>
 
-        <div className="hidden md:flex md:flex-col md:gap-1">
-          {totalDepositsStat}
-        </div>
-        <div className="hidden md:flex md:flex-col md:gap-1">
-          {realizedRewardsStat}
-        </div>
-      </div>
-
-      <div className="md:hidden">
-        <button
-          type="button"
-          onClick={() => setShowSupportingDetails((prev) => !prev)}
-          className="flex min-h-[44px] w-full items-center justify-between border-t border-outline/[0.06] pt-3 text-xs text-primary/50 transition-colors hover:text-primary/70"
-        >
-          <span>{showSupportingDetails ? "Hide details" : "More details"}</span>
-          {showSupportingDetails ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </button>
-
-        {showSupportingDetails && (
-          <div className="mt-2 grid grid-cols-2 gap-3 text-sm md:gap-4">
-            {totalDepositsStat}
-            {realizedRewardsStat}
-          </div>
-        )}
+        <div className="flex flex-col gap-1">{totalDepositsStat}</div>
+        <div className="flex flex-col gap-1">{realizedRewardsStat}</div>
       </div>
     </div>
   );

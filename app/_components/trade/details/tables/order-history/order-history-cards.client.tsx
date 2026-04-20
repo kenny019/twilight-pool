@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import FundingHistoryDialog from "@/components/funding-history-dialog";
 import cn from "@/lib/cn";
 import { formatSatsMBtc, truncateHash } from "@/lib/helpers";
@@ -11,14 +12,11 @@ import { TradeOrder } from "@/lib/types";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import Link from "next/link";
-import React, {
-  useCallback,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import React, { useCallback, useState, useSyncExternalStore } from "react";
 import {
   getOrderHistoryFee,
   getOrderHistoryFunding,
+  getOrderHistoryNotionalLabel,
   getOrderHistoryPnl,
   getTimelineEventTitle,
   OrderHistoryGroup,
@@ -53,7 +51,7 @@ function getLifecycleClasses(lifecycle: string): string {
 }
 
 function getTimelineBadgeClasses(): string {
-  return "border border-border/50 bg-background text-primary/60";
+  return "border border-theme/25 bg-theme/10 text-theme";
 }
 
 function copyValue(value: string, label: string) {
@@ -84,7 +82,7 @@ function MetadataItem({
       >
         {label}
       </span>
-      <div className={cn("text-[11px] text-primary/85", valueClassName)}>
+      <div className={cn("text-primary/85 text-[11px]", valueClassName)}>
         {value}
       </div>
     </div>
@@ -107,13 +105,10 @@ function TimelineItem({
   const eventTitle = getTimelineEventTitle(trade);
   const fee = getOrderHistoryFee(trade);
   const funding = getOrderHistoryFunding(trade);
-  const pnl = getOrderHistoryPnl(trade);
   const showClose =
     trade.orderStatus === "SETTLED" || trade.orderStatus === "LIQUIDATE";
   const triggerPrice =
-    trade.displayPrice != null &&
-    trade.priceKind &&
-    trade.priceKind !== "NONE"
+    trade.displayPrice != null && trade.priceKind && trade.priceKind !== "NONE"
       ? {
           label: PRICE_KIND_LABELS[trade.priceKind] ?? "Trigger",
           value: `$${trade.displayPrice.toFixed(2)}`,
@@ -123,12 +118,12 @@ function TimelineItem({
   const hasDetails =
     showClose ||
     triggerPrice ||
-    pnl != null ||
     fee != null ||
     funding != null ||
     trade.tx_hash ||
     trade.request_id ||
     trade.reason;
+  const showMarginData = trade.orderStatus === "FILLED" || showClose;
 
   return (
     <div className="relative pl-4">
@@ -152,8 +147,8 @@ function TimelineItem({
               {trade.orderType}
             </span>
           </div>
-          <span className="text-[11px] text-primary/55 tabular-nums">
-            {dayjs(trade.date).format("DD MMM HH:mm:ss")}
+          <span className="text-primary/55 text-[11px] tabular-nums">
+            {dayjs(trade.date).format("DD MMM YYYY HH:mm:ss")}
           </span>
         </div>
 
@@ -174,18 +169,6 @@ function TimelineItem({
                 label={triggerPrice.label}
                 value={
                   <span className="font-medium">{triggerPrice.value}</span>
-                }
-              />
-            )}
-            {pnl != null && (
-              <MetadataItem
-                label="PnL"
-                value={
-                  <PnlCell
-                    pnlSats={pnl}
-                    btcPriceUsd={btcPriceUsd}
-                    layout="inline"
-                  />
                 }
               />
             )}
@@ -218,6 +201,48 @@ function TimelineItem({
                 }
               />
             )}
+            {showMarginData &&
+              trade.executionPrice > 0 &&
+              trade.executionPrice !== trade.entryPrice && (
+                <MetadataItem
+                  label="Exec Price"
+                  value={
+                    <span className="font-medium">
+                      ${trade.executionPrice.toFixed(2)}
+                    </span>
+                  }
+                />
+              )}
+            {showMarginData && trade.initialMargin > 0 && (
+              <MetadataItem
+                label="Init Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.initialMargin)}
+                  </span>
+                }
+              />
+            )}
+            {showMarginData && trade.availableMargin > 0 && (
+              <MetadataItem
+                label="Avail Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.availableMargin)}
+                  </span>
+                }
+              />
+            )}
+            {showMarginData && trade.maintenanceMargin > 0 && (
+              <MetadataItem
+                label="Maint. Margin"
+                value={
+                  <span className="font-medium">
+                    {formatSatsMBtc(trade.maintenanceMargin)}
+                  </span>
+                }
+              />
+            )}
             {trade.tx_hash && (
               <MetadataItem
                 label="Tx Hash"
@@ -239,7 +264,9 @@ function TimelineItem({
                 value={
                   <button
                     type="button"
-                    onClick={() => toastMessage("Request ID", trade.request_id!)}
+                    onClick={() =>
+                      toastMessage("Request ID", trade.request_id!)
+                    }
                     className="font-medium hover:underline"
                   >
                     {truncateHash(trade.request_id, 4, 4)}
@@ -251,9 +278,7 @@ function TimelineItem({
               <MetadataItem
                 label="Reason"
                 className="col-span-2"
-                value={
-                  <span className="text-primary/70">{trade.reason}</span>
-                }
+                value={<span className="text-primary/70">{trade.reason}</span>}
               />
             )}
           </div>
@@ -310,19 +335,42 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
       <div className="relative w-full overscroll-none px-3 py-2">
         <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
           {data.length === 0 ? (
-            <div className="py-10 text-center text-sm text-primary-accent">
-              No results.
-            </div>
+            <EmptyState title="No order history." />
           ) : (
             data.map((group) => {
               const isExpanded = expandedIds.has(group.uuid);
+              const slTpCloseKind =
+                group.terminalRow?.priceKind === "STOP_LOSS"
+                  ? "SL"
+                  : group.terminalRow?.priceKind === "TAKE_PROFIT"
+                    ? "TP"
+                    : null;
+              const pnl = group.pnlRow
+                ? getOrderHistoryPnl(group.pnlRow)
+                : null;
+              const hasPnl = pnl != null && pnl !== 0;
+              const outcomeTone =
+                group.lifecycleValue === "LIQUIDATE" || (hasPnl && pnl! < 0)
+                  ? "negative"
+                  : hasPnl && pnl! > 0
+                    ? "positive"
+                    : "neutral";
+              const accentBar =
+                outcomeTone === "positive"
+                  ? "bg-green-medium/70"
+                  : outcomeTone === "negative"
+                    ? "bg-red/70"
+                    : "bg-border/70";
 
               return (
                 <div
                   key={group.uuid}
-                  className="border-border/70 rounded-xl border bg-background/90 shadow-sm"
+                  className="border-border/70 hover:border-border group relative overflow-hidden rounded-xl border bg-background/90 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md"
                 >
-                  <div className="px-3 py-3">
+                  <div
+                    className={cn("absolute inset-y-0 left-0 w-0.5", accentBar)}
+                  />
+                  <div className="px-3 py-2.5 pl-[14px]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-1.5">
@@ -338,78 +386,106 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
                             {group.parentType}
                           </span>
                         </div>
-                        <div className="mt-1 text-[11px] text-primary/55 tabular-nums">
-                          {dayjs(group.latestDate).format("DD MMM YYYY HH:mm:ss")}
+                        <div className="text-primary/55 mt-1 text-[11px] tabular-nums">
+                          {dayjs(group.latestDate).format(
+                            "DD MMM YYYY HH:mm:ss"
+                          )}
                         </div>
                       </div>
 
-                      <span
-                        className={cn(
-                          "rounded px-2 py-1 text-[11px] font-medium",
-                          getLifecycleClasses(group.lifecycleValue)
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {slTpCloseKind && (
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.5 text-[10px] font-semibold",
+                              slTpCloseKind === "SL"
+                                ? "bg-red/10 text-red"
+                                : "bg-green-medium/10 text-green-medium"
+                            )}
+                          >
+                            {slTpCloseKind} Close
+                          </span>
                         )}
-                      >
-                        {group.lifecycleLabel}
-                      </span>
+                        <span
+                          className={cn(
+                            "rounded px-2 py-1 text-[11px] font-medium",
+                            getLifecycleClasses(group.lifecycleValue)
+                          )}
+                        >
+                          {group.lifecycleLabel}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
-                      <MetadataItem
-                        label="Entry"
-                        value={
-                          <span className="text-sm font-semibold">
-                            ${group.parentEntryPrice.toFixed(2)}
-                          </span>
-                        }
-                      />
-                      <MetadataItem
-                        label={group.closeOrTriggerLabel ?? "Close / Trigger"}
-                        value={
-                          group.closeOrTriggerValue != null ? (
-                            <span className="text-sm font-semibold">
+                    {/* ── Dominant: PnL hero (only when settled/liquidated) ── */}
+                    {hasPnl && (
+                      <div className="mb-2 mt-3">
+                        <PnlCell
+                          pnlSats={pnl!}
+                          btcPriceUsd={btcPriceUsd}
+                          layout="hero"
+                        />
+                      </div>
+                    )}
+
+                    {/* ── Trade context: entry/close · notional · margin · lev ── */}
+                    <div
+                      className={cn(
+                        "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs",
+                        hasPnl ? "" : "mt-3"
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-primary/40">Entry</span>
+                        <span className="font-medium text-primary/90">
+                          ${group.parentEntryPrice.toFixed(2)}
+                        </span>
+                      </span>
+                      {group.closeOrTriggerValue != null && (
+                        <>
+                          <span className="text-primary/30">→</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <span className="text-primary/40">
+                              {group.closeOrTriggerLabel ?? "Close"}
+                            </span>
+                            <span className="font-medium text-primary/90">
                               ${group.closeOrTriggerValue.toFixed(2)}
                             </span>
-                          ) : (
-                            <span className="text-sm text-primary/40">—</span>
-                          )
-                        }
-                      />
-                      {group.terminalRow && (
-                        <MetadataItem
-                          label="PnL"
-                          className="col-span-2"
-                          value={
-                            <PnlCell
-                              pnlSats={getOrderHistoryPnl(group.terminalRow)}
-                              btcPriceUsd={btcPriceUsd}
-                              layout="inline"
-                            />
-                          }
-                        />
-                      )}
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                      {group.latestEventValue !== group.lifecycleValue && (
-                        <>
-                          <span className="text-primary/40">Latest Event</span>
-                          <span className="font-medium text-primary/75">
-                            {group.latestEventLabel}
                           </span>
-                          <span className="text-primary/25">&bull;</span>
                         </>
                       )}
-                      <span className="text-primary/40">Lev</span>
-                      <span className="font-medium text-primary/75">
-                        {group.parentLeverage.toFixed(2)}x
+                      <span className="text-primary/25">•</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-primary/40">Notional</span>
+                        <span className="font-medium text-primary/90">
+                          {getOrderHistoryNotionalLabel(group.oldestRow)}
+                        </span>
+                      </span>
+                      {group.oldestRow.initialMargin > 0 && (
+                        <>
+                          <span className="text-primary/25">•</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <span className="text-primary/40">Margin</span>
+                            <span className="font-medium text-primary/90">
+                              {formatSatsMBtc(group.oldestRow.initialMargin)}
+                            </span>
+                          </span>
+                        </>
+                      )}
+                      <span className="text-primary/25">•</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-primary/40">Lev</span>
+                        <span className="font-medium text-primary/90">
+                          {group.parentLeverage.toFixed(1)}x
+                        </span>
                       </span>
                     </div>
 
-                    <div className="border-border/30 mt-2.5 border-t pt-1.5">
+                    <div className="border-border/30 mt-1.5 border-t pt-1 max-md:pt-2">
                       <button
                         type="button"
                         onClick={() => toggleExpand(group.uuid)}
-                        className="flex min-h-[44px] w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60"
+                        className="flex w-full items-center justify-between rounded px-0.5 py-2 text-[10px] uppercase tracking-wide text-primary/40 transition-colors duration-150 hover:bg-primary/5 hover:text-primary/60 max-md:min-h-[44px] md:py-0.5"
                       >
                         <span>Details</span>
                         {isExpanded ? (
@@ -421,17 +497,25 @@ const OrderHistoryCards = React.memo(function OrderHistoryCards({
 
                       {isExpanded && (
                         <div className="mt-1.5 space-y-2.5">
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <span className="text-[10px] uppercase tracking-wide text-primary/40">
-                              Order ID
+                          <div className="flex items-center justify-between gap-2 text-[11px]">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] uppercase tracking-wide text-primary/40">
+                                Order ID
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  showCopyToast("Order ID", group.uuid)
+                                }
+                                className="font-medium hover:underline"
+                              >
+                                {truncateHash(group.uuid, 4, 4)}
+                              </button>
+                            </div>
+                            <span className="text-primary/40">
+                              {group.rows.length} event
+                              {group.rows.length === 1 ? "" : "s"}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => showCopyToast("Order ID", group.uuid)}
-                              className="font-medium hover:underline"
-                            >
-                              {truncateHash(group.uuid, 4, 4)}
-                            </button>
                           </div>
 
                           <div className="space-y-2.5">

@@ -81,6 +81,7 @@ const NumberInput = ({
             : (inputValue || defaultValue || 0)
         }
         type="text"
+        inputMode="decimal"
         className={className}
         ref={inputRef}
         onBlur={() => {

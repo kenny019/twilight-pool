@@ -14,8 +14,8 @@ const Page = () => {
 
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">
-      <div className="mx-auto my-8 flex w-full max-w-4xl flex-col gap-8 sm:my-12">
-        <div className="grid gap-8 md:grid-cols-2">
+      <div className="mx-auto my-6 flex w-full max-w-4xl flex-col gap-6 sm:my-10 md:gap-8">
+        <div className="grid gap-6 md:grid-cols-2 md:gap-8">
           <BtcWithdrawalForm />
           <div className="flex flex-col gap-4 rounded-lg border bg-background p-6">
             <WithdrawalInfo />
