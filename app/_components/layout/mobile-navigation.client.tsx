@@ -66,7 +66,7 @@ const MobileNav = () => {
       <Portal>
         <Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Content
-          className="fixed right-0 top-0 z-50 min-h-dvh w-[calc(100vw-3.5rem)] max-w-[17.5rem] overflow-y-auto border-l bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+          className="fixed right-0 top-0 z-50 min-h-[100dvh] w-[calc(100vw-3.5rem)] max-w-[17.5rem] overflow-y-auto border-l bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
         >
           <div className="flex items-center justify-between gap-3 border-b border-outline/30 pb-2.5">
             <Text className="font-ui text-[11px] uppercase tracking-[0.08em] text-primary/45">

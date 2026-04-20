@@ -874,7 +874,7 @@ const TransferDialog = ({
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="left-auto right-0 min-h-dvh max-w-2xl translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <DialogContent className="left-auto right-0 min-h-[100dvh] max-h-[100dvh] max-w-2xl translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)] data-[state=open]:![--tw-enter-scale:1] data-[state=closed]:![--tw-exit-scale:1] data-[state=open]:![--tw-enter-translate-y:0px] data-[state=closed]:![--tw-exit-translate-y:0px] data-[state=open]:![--tw-enter-translate-x:100%] data-[state=closed]:![--tw-exit-translate-x:100%] duration-300">
         <DialogTitle>Transfer</DialogTitle>
         <form onSubmit={submitTransfer} className="max-w-sm space-y-2">
           <div className="flex flex-col gap-3 md:flex-row md:justify-between">

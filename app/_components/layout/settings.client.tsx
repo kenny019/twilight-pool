@@ -129,7 +129,7 @@ const Settings = () => {
           <SettingsIcon className="h-4 w-4 transition-colors hover:text-theme" />
         </button>
       </DialogTrigger>
-      <DialogContent className="left-auto right-0 min-h-dvh max-w-xs translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <DialogContent className="left-auto right-0 min-h-[100dvh] max-h-[100dvh] max-w-xs translate-x-0 rounded-none border-r-0 overflow-y-auto pb-[env(safe-area-inset-bottom)] data-[state=open]:![--tw-enter-scale:1] data-[state=closed]:![--tw-exit-scale:1] data-[state=open]:![--tw-enter-translate-y:0px] data-[state=closed]:![--tw-exit-translate-y:0px] data-[state=open]:![--tw-enter-translate-x:100%] data-[state=closed]:![--tw-exit-translate-x:100%] duration-300">
         <DialogTitle>Settings</DialogTitle>
         <div className="space-y-4">
           <Text className="select-none font-ui text-xs uppercase text-primary-accent">
