@@ -8,12 +8,13 @@ import {
 
 type MockWallet = { walletName: string; marker: string };
 
+// Must match walletDefinitions order in catalog.ts so alignment tests compare like-for-like.
 const mockWallets: MockWallet[] = [
   { walletName: "keplr-extension", marker: "desktop-keplr" },
   { walletName: "keplr-mobile", marker: "mobile-keplr" },
   { walletName: "cosmostation-extension", marker: "desktop-cosmostation" },
-  { walletName: "cosmostation-mobile", marker: "mobile-cosmostation" },
   { walletName: "leap-extension", marker: "desktop-leap" },
+  { walletName: "cosmostation-mobile", marker: "mobile-cosmostation" },
   { walletName: "leap-cosmos-mobile", marker: "mobile-leap" },
   { walletName: "leap-metamask-cosmos-snap", marker: "desktop-metamask" },
 ];
@@ -45,6 +46,7 @@ describe("wallet capability filtering", () => {
   it("returns matching wallet ids for desktop", () => {
     expect(getSupportedWalletIds("desktop")).toEqual([
       "keplr-extension",
+      "keplr-mobile",
       "cosmostation-extension",
       "leap-extension",
       "leap-metamask-cosmos-snap",
@@ -52,8 +54,12 @@ describe("wallet capability filtering", () => {
   });
 
   it("returns matching wallet ids for mobile", () => {
+    // Extensions appear here because their in-app browsers inject window.keplr / window.leap
+    // while navigator.userAgent reports mobile — see walletDefinitions comments.
     expect(getSupportedWalletIds("mobile")).toEqual([
+      "keplr-extension",
       "keplr-mobile",
+      "leap-extension",
       "cosmostation-mobile",
       "leap-cosmos-mobile",
     ]);
