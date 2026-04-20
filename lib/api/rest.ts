@@ -6,6 +6,9 @@ import {
   TwilightApiResponse,
   twilightRegistedBtcAddressStruct,
 } from "../types";
+import type { QueryProposeSweepAddressesAllResponseAmino } from "twilightjs/dist/codegen/nyks/bridge/query";
+import type { MsgProposeSweepAddressAmino } from "twilightjs/dist/codegen/nyks/bridge/tx";
+export type { MsgProposeSweepAddressAmino };
 
 const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
@@ -77,6 +80,29 @@ async function getReserveData() {
     success,
     data,
   };
+}
+
+async function getProposedSweepAddresses(limit: number = 0) {
+  if (IS_MOCK) {
+    const { getMockProposedSweepAddresses } = await import("../mock/state");
+    return { success: true as const, data: getMockProposedSweepAddresses() };
+  }
+
+  const { success, data, error } = await wfetch(
+    new URL(
+      REST_URL +
+        `/twilight-project/nyks/bridge/propose_sweep_addresses_all/${limit}`
+    )
+  )
+    .get()
+    .json<QueryProposeSweepAddressesAllResponseAmino>();
+
+  if (!success) {
+    console.error("getProposedSweepAddresses", error);
+    return { success, error };
+  }
+
+  return { success, data };
 }
 
 // todo: refactor into seperate files
@@ -499,4 +525,5 @@ export {
   getLastDayApy,
   getMarketStats,
   getWithdrawRequests,
+  getProposedSweepAddresses,
 };

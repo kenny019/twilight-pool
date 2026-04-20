@@ -20,8 +20,6 @@ type Props = {
   isConfirmed?: boolean;
 };
 
-// Bitcoin blocks until reserve unlocks - approx 1 day at 10min/block
-const NEXT_UNLOCK_HEIGHT_MODIFIER = 144;
 // Critical blocks warning - don't send deposits within this threshold
 const CRITICAL_BLOCKS_WARNING = 4;
 
@@ -151,8 +149,7 @@ const VerificationStep = ({
   useEffect(() => {
     if (!btcBlockHeight || !selectedReserve) return;
 
-    const unlockHeight =
-      Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+    const unlockHeight = Number(selectedReserve.UnlockHeight);
     if (btcBlockHeight >= unlockHeight && !hasShownExpiryToast.current) {
       hasShownExpiryToast.current = true;
       toast({
@@ -318,9 +315,9 @@ const VerificationStep = ({
                       </div>
                     ) : btcBlockHeight != null ? (
                       (() => {
-                        const unlockHeight =
-                          Number(selectedReserve.UnlockHeight) +
-                          NEXT_UNLOCK_HEIGHT_MODIFIER;
+                        const unlockHeight = Number(
+                          selectedReserve.UnlockHeight
+                        );
                         const blocksRemaining = unlockHeight - btcBlockHeight;
                         const isCritical =
                           blocksRemaining <= CRITICAL_BLOCKS_WARNING &&

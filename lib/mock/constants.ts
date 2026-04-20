@@ -1,5 +1,5 @@
 import type { registeredBtcAddressStruct } from "../types";
-import type { BtcReserveStruct } from "../api/rest";
+import type { BtcReserveStruct, MsgProposeSweepAddressAmino } from "../api/rest";
 import type {
   IndexerDeposit,
   IndexerWithdrawal,
@@ -52,6 +52,54 @@ export const MOCK_BITCOIN_INFO = {
   blockHeight: 840_000,
   feeEstimate: { satPerVbyte: 15, btcPerKb: 0.00015, targetBlocks: 6 },
 };
+
+// pushbytes-3 + LE height + OP_CLTV (0xb1). Prefix bytes are ignored by the decoder.
+const makeMockBtcScript = (height: number): string => {
+  const hex = height.toString(16).padStart(6, "0");
+  const le = hex.match(/.{2}/g)!.reverse().join("");
+  return `deadbeef03${le}b1`;
+};
+
+export const MOCK_PROPOSE_SWEEP_ADDRESSES: MsgProposeSweepAddressAmino[] = [
+  // Reserve 1, round 2: three judges agree (quorum case).
+  {
+    reserveId: "1",
+    roundId: "2",
+    btcAddress: "bc1qmockpropose0reserve0one0round0two0sweep",
+    btcScript: makeMockBtcScript(MOCK_BITCOIN_INFO.blockHeight + 100),
+    judgeAddress: "twilight1judge0a0000000000000000000000000",
+  },
+  {
+    reserveId: "1",
+    roundId: "2",
+    btcAddress: "bc1qmockpropose0reserve0one0round0two0sweep",
+    btcScript: makeMockBtcScript(MOCK_BITCOIN_INFO.blockHeight + 100),
+    judgeAddress: "twilight1judge0b0000000000000000000000000",
+  },
+  {
+    reserveId: "1",
+    roundId: "2",
+    btcAddress: "bc1qmockpropose0reserve0one0round0two0sweep",
+    btcScript: makeMockBtcScript(MOCK_BITCOIN_INFO.blockHeight + 100),
+    judgeAddress: "twilight1judge0c0000000000000000000000000",
+  },
+  // Stale prior round for reserve 1 — should be filtered out by max-roundId selection.
+  {
+    reserveId: "1",
+    roundId: "1",
+    btcAddress: "bc1qstale0reserve0one0round0one0sweep00000",
+    btcScript: makeMockBtcScript(MOCK_BITCOIN_INFO.blockHeight - 50),
+    judgeAddress: "twilight1judge0a0000000000000000000000000",
+  },
+  // Reserve 2, round 5: single judge (common early-round case).
+  {
+    reserveId: "2",
+    roundId: "5",
+    btcAddress: "bc1qmockpropose0reserve0two0round0five0sweep",
+    btcScript: makeMockBtcScript(MOCK_BITCOIN_INFO.blockHeight + 200),
+    judgeAddress: "twilight1judge0a0000000000000000000000000",
+  },
+];
 
 export const MOCK_REGISTERED_ADDRESSES: registeredBtcAddressStruct[] = [
   {

@@ -11,6 +11,7 @@ import {
   MOCK_INDEXER_WITHDRAWALS,
   MOCK_BITCOIN_INFO,
   MOCK_TX_HASH,
+  MOCK_PROPOSE_SWEEP_ADDRESSES,
 } from "./constants";
 
 type MockState = {
@@ -40,6 +41,10 @@ let state: MockState = {
 export function getMockState(): Readonly<MockState> {
   return state;
 }
+
+export const getMockProposedSweepAddresses = () => ({
+  proposeSweepAddressMsgs: MOCK_PROPOSE_SWEEP_ADDRESSES,
+});
 
 export function mockRegisterDeposit(
   btcAddress: string,
