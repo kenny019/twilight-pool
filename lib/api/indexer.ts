@@ -1,33 +1,41 @@
-// TODO: verify response shapes against real indexer
+// Authoritative shapes from `${NEXT_PUBLIC_INDEXER_BASE_URL}/api/docs.json`
+// (Swagger). BASE_URL is host-only; all paths explicitly include `/api/*`.
 
 export type IndexerDeposit = {
-  id: string;
-  btcDepositAddress: string;
-  twilightAddress: string;
-  amount: number;
-  confirmed: boolean;
-  blockHeight: number;
-  createdAt: string;
+  id: number;
   txHash: string;
+  blockHeight: number;
+  reserveAddress: string;
+  depositAmount: string;
+  btcHeight: string;
+  btcHash: string;
+  twilightDepositAddress: string;
+  oracleAddress: string;
+  votes: number;
+  confirmed: boolean;
+  createdAt: string;
 };
 
 export type IndexerWithdrawal = {
-  id: string;
-  withdrawAddress: string;
+  id: number;
+  withdrawIdentifier: string;
   twilightAddress: string;
-  amount: number;
-  reserveId: number;
-  confirmed: boolean;
+  withdrawAddress: string;
+  withdrawReserveId: string;
   blockHeight: number;
+  withdrawAmount: string;
+  isConfirmed: boolean;
   createdAt: string;
-  txHash: string;
 };
 
 export type IndexerAccount = {
-  address: string;
+  account: { address: string; balance: string; txCount: number };
   balances: { denom: string; amount: string }[];
   deposits: IndexerDeposit[];
   withdrawals: IndexerWithdrawal[];
+  clearingAccount: unknown | null;
+  zkosOperations: unknown[];
+  fragmentSigners: unknown[];
 };
 
 export type IndexerPagination = {
@@ -44,6 +52,28 @@ export type BridgeAnalytics = {
   withdrawalVolumeSats: number;
   avgDepositSats: number;
   avgWithdrawalSats: number;
+};
+
+export type BitcoinInfo = {
+  blockHeight: number;
+  feeEstimate: {
+    satPerVbyte: number | null;
+    btcPerKb: number | null;
+    targetBlocks: number;
+  };
+};
+
+export type IndexerTx = {
+  hash: string;
+  blockHeight: number;
+  blockTime: string;
+  type: string;
+  messageTypes: string[];
+  status: "success" | "failed";
+  gasUsed: string;
+  gasWanted: string;
+  memo: string | null;
+  programType: string | null;
 };
 
 export type DepositParams = {
@@ -63,10 +93,29 @@ export type WithdrawalParams = {
   limit?: number;
 };
 
-const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
-const BASE_URL = process.env.NEXT_PUBLIC_INDEXER_BASE_URL ?? "";
-
 type PaginatedResponse<T> = { data: T[]; pagination: IndexerPagination };
+
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
+
+// Host-only base, e.g. `https://indexer.twilight.org`. Tolerate a trailing
+// `/api` for back-compat with older .env files.
+const BASE_URL = (process.env.NEXT_PUBLIC_INDEXER_BASE_URL ?? "")
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
+
+export function getIndexerHttpBase(): string {
+  return BASE_URL;
+}
+
+function buildUrl(path: string, params?: Record<string, unknown>): URL {
+  const url = new URL(`${BASE_URL}${path}`);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+    }
+  }
+  return url;
+}
 
 export async function getIndexerDeposits(
   params?: DepositParams
@@ -80,26 +129,23 @@ export async function getIndexerDeposits(
     };
   }
 
-  const url = new URL(`${BASE_URL}/twilight/deposits`);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined) url.searchParams.set(k, String(v));
-    });
-  }
+  const url = buildUrl("/api/twilight/deposits", params);
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch indexer deposits");
   return res.json();
 }
 
-export async function getIndexerDeposit(id: string): Promise<IndexerDeposit> {
+export async function getIndexerDeposit(id: number | string): Promise<IndexerDeposit> {
   if (IS_MOCK) {
     const { getMockState } = await import("../mock/state");
-    const dep = getMockState().indexerDeposits.find((d) => d.id === id);
+    const dep = getMockState().indexerDeposits.find(
+      (d) => String(d.id) === String(id)
+    );
     if (!dep) throw new Error(`Deposit ${id} not found`);
     return dep;
   }
 
-  const res = await fetch(`${BASE_URL}/twilight/deposits/${id}`);
+  const res = await fetch(buildUrl(`/api/twilight/deposits/${id}`));
   if (!res.ok) throw new Error(`Failed to fetch deposit ${id}`);
   return res.json();
 }
@@ -121,28 +167,25 @@ export async function getIndexerWithdrawals(
     };
   }
 
-  const url = new URL(`${BASE_URL}/twilight/withdrawals`);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined) url.searchParams.set(k, String(v));
-    });
-  }
+  const url = buildUrl("/api/twilight/withdrawals", params);
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch indexer withdrawals");
   return res.json();
 }
 
 export async function getIndexerWithdrawal(
-  id: string
+  id: number | string
 ): Promise<IndexerWithdrawal> {
   if (IS_MOCK) {
     const { getMockState } = await import("../mock/state");
-    const wdr = getMockState().indexerWithdrawals.find((w) => w.id === id);
+    const wdr = getMockState().indexerWithdrawals.find(
+      (w) => String(w.id) === String(id)
+    );
     if (!wdr) throw new Error(`Withdrawal ${id} not found`);
     return wdr;
   }
 
-  const res = await fetch(`${BASE_URL}/twilight/withdrawals/${id}`);
+  const res = await fetch(buildUrl(`/api/twilight/withdrawals/${id}`));
   if (!res.ok) throw new Error(`Failed to fetch withdrawal ${id}`);
   return res.json();
 }
@@ -155,8 +198,19 @@ export async function getIndexerAccount(
     return MOCK_ACCOUNT_DATA;
   }
 
-  const res = await fetch(`${BASE_URL}/accounts/${address}`);
+  const res = await fetch(buildUrl(`/api/accounts/${address}`));
   if (!res.ok) throw new Error(`Failed to fetch account ${address}`);
+  return res.json();
+}
+
+export async function getIndexerTx(hash: string): Promise<IndexerTx> {
+  if (IS_MOCK) {
+    const { MOCK_TX } = await import("../mock/constants");
+    return { ...MOCK_TX, hash };
+  }
+
+  const res = await fetch(buildUrl(`/api/txs/${hash}`));
+  if (!res.ok) throw new Error(`Failed to fetch tx ${hash}`);
   return res.json();
 }
 
@@ -166,15 +220,10 @@ export async function getIndexerBridgeAnalytics(): Promise<BridgeAnalytics> {
     return MOCK_BRIDGE_ANALYTICS;
   }
 
-  const res = await fetch(`${BASE_URL}/stats/bridge-analytics`);
+  const res = await fetch(buildUrl("/api/stats/bridge-analytics"));
   if (!res.ok) throw new Error("Failed to fetch bridge analytics");
   return res.json();
 }
-
-export type BitcoinInfo = {
-  blockHeight: number;
-  feeEstimate: { satPerVbyte: number; btcPerKb: number; targetBlocks: number };
-};
 
 export async function getIndexerBitcoinInfo(): Promise<BitcoinInfo> {
   if (IS_MOCK) {
@@ -182,7 +231,7 @@ export async function getIndexerBitcoinInfo(): Promise<BitcoinInfo> {
     return MOCK_BITCOIN_INFO;
   }
 
-  const res = await fetch(`${BASE_URL}/bitcoin/info`);
+  const res = await fetch(buildUrl("/api/bitcoin/info"));
   if (!res.ok) throw new Error("Failed to fetch bitcoin info");
   return res.json();
 }

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<!--
+  Variant thesis: Data-first dashboard.
+  KPI strip + active-deposit banner at the top; deposit history as the dominant
+  element with per-row expandable timelines. The form is a slim persistent side rail.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Twilight · Deposit · v2 Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:hsl(0 0% 0%);--surface-2:rgba(255,255,255,.02);
+    --ink:hsl(0 0% 100%);--ink-60:rgba(255,255,255,.6);--ink-40:rgba(255,255,255,.4);
+    --ink-10:rgba(255,255,255,.1);--ink-5:rgba(255,255,255,.05);
+    --success:hsl(123 64% 62%);--danger:hsl(357 93% 63%);--warn:hsl(48 96% 58%);
+  }
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .card{position:relative;border:1px solid var(--ink-10);background:var(--surface-2);border-radius:8px}
+  .card::before{content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;box-shadow:inset 0 1px 0 var(--ink-5)}
+  .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-40);font-weight:500}
+  .input{background:rgba(255,255,255,.03);border:1px solid var(--ink-10);border-radius:6px;padding:9px 11px;font-size:13px;color:var(--ink);width:100%}
+  .input:focus{outline:none;border-color:rgba(255,255,255,.25)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--ink-10);background:rgba(255,255,255,.03);color:var(--ink);cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,.06)}
+  .btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--ink-10);color:var(--ink-60)}
+  .pill-success{color:var(--success);border-color:rgba(123,221,138,.25);background:rgba(123,221,138,.06)}
+  .pill-warn{color:var(--warn);border-color:rgba(250,204,21,.25);background:rgba(250,204,21,.06)}
+  .pill-danger{color:var(--danger);border-color:rgba(248,85,85,.25);background:rgba(248,85,85,.06)}
+  .dot{width:6px;height:6px;border-radius:9999px;display:inline-block}
+  .tbl{font-size:13px;width:100%}
+  .tbl th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;color:var(--ink-40);text-align:left;padding:10px 14px;border-bottom:1px solid var(--ink-10)}
+  .tbl th.num{text-align:right}
+  .tbl td{padding:16px 14px;border-bottom:1px solid var(--ink-5);vertical-align:middle}
+  .tbl td.num{text-align:right}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr.expanded td{background:rgba(255,255,255,.03);border-bottom:1px solid transparent}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .pulse{animation:pulse 2s ease-in-out infinite}
+  .meter{height:3px;background:var(--ink-10);border-radius:9999px;overflow:hidden}
+  .meter>span{display:block;height:100%;background:var(--success);border-radius:9999px}
+  .meter.warn>span{background:var(--warn)}
+  .meter.danger>span{background:var(--danger)}
+  .tick{width:8px;height:8px;border-radius:9999px;border:1px solid var(--ink-10);background:var(--bg)}
+  .tick.done{background:var(--success);border-color:var(--success)}
+  .tick.active{background:var(--bg);border-color:var(--ink);box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+  .hline{height:1px;background:var(--ink-10);flex:1}
+  .hline.done{background:var(--success)}
+  ::selection{background:rgba(255,255,255,.2)}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="border-b border-white/10">
+  <div class="max-w-[1440px] mx-auto px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-8">
+      <div class="flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9-9 9z"/></svg>
+        <span class="text-[13px] font-semibold tracking-tight">Twilight</span>
+      </div>
+      <nav class="flex items-center gap-5 text-[13px] text-white/60">
+        <a class="hover:text-white">Trade</a><a class="hover:text-white">Pool</a>
+        <a class="text-white">Wallet</a><a class="hover:text-white">Portfolio</a>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="pill"><span class="dot bg-[hsl(123_64%_62%)]"></span>nyks-mainnet</div>
+      <button class="btn"><span class="mono text-[12px] text-white/60">twilight1q9f…xa6</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1440px] mx-auto px-8 py-8">
+
+  <!-- Page header -->
+  <div class="flex items-end justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-2 text-[12px] text-white/40 mb-1">
+        <span>Wallet</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg><span class="text-white/60">Deposit</span>
+      </div>
+      <h1 class="text-[26px] font-semibold tracking-tight">Deposit Bitcoin</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Block <span class="mono text-white">873,412</span></div>
+      <button class="btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>Refresh</button>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="card p-5">
+      <div class="label mb-2">Total deposited</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.48210</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/40 mt-1">across <span class="mono text-white/60">17</span> transactions</div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">In flight</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.06250</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/60 mt-1"><span class="pill pill-warn text-[10px]">2 pending</span></div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">Twilight balance</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.04821</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/40 mt-1">≈ <span class="mono">$3,264</span></div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">Active reserves</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">3</span><span class="text-[12px] text-white/40">pools</span></div>
+      <div class="text-[12px] text-white/40 mt-1">Next sweep in <span class="mono text-white/60">108 blocks</span></div>
+    </div>
+  </div>
+
+  <!-- Active deposit banner -->
+  <div class="card p-6 mb-6">
+    <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center gap-4">
+        <div>
+          <div class="label mb-1">Active deposit · Reserve #12</div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-[24px] font-semibold mono">0.01250</span>
+            <span class="text-[13px] text-white/40">BTC</span>
+            <span class="text-[13px] text-white/40">· ≈ <span class="mono">$847.20</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="pill pill-warn"><span class="dot bg-[hsl(48_96%_58%)] pulse"></span>Awaiting send</span>
+        <button class="btn">View payment details <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Horizontal timeline -->
+    <div class="flex items-center gap-0 mb-2">
+      <div class="flex flex-col items-start gap-1.5">
+        <span class="tick done"></span>
+        <div class="text-[12px] font-medium">Reserve locked</div>
+        <div class="text-[11px] text-white/40">2 min ago</div>
+      </div>
+      <div class="hline done mx-3 mt-[-28px]"></div>
+      <div class="flex flex-col items-start gap-1.5">
+        <span class="tick active pulse"></span>
+        <div class="text-[12px] font-medium">Awaiting send</div>
+        <div class="text-[11px] text-white/40">Scan QR in wallet</div>
+      </div>
+      <div class="hline mx-3 mt-[-28px]"></div>
+      <div class="flex flex-col items-start gap-1.5">
+        <span class="tick"></span>
+        <div class="text-[12px] text-white/60">Mempool</div>
+        <div class="text-[11px] text-white/40">~60s after send</div>
+      </div>
+      <div class="hline mx-3 mt-[-28px]"></div>
+      <div class="flex flex-col items-start gap-1.5">
+        <span class="tick"></span>
+        <div class="text-[12px] text-white/60">1 / 6 confirmed</div>
+        <div class="text-[11px] text-white/40">~10 min</div>
+      </div>
+      <div class="hline mx-3 mt-[-28px]"></div>
+      <div class="flex flex-col items-start gap-1.5">
+        <span class="tick"></span>
+        <div class="text-[12px] text-white/60">Credited</div>
+        <div class="text-[11px] text-white/40">Available to trade</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-col: history + side form -->
+  <div class="grid grid-cols-12 gap-6">
+
+    <!-- LEFT — big history table with expanded row -->
+    <section class="col-span-12 xl:col-span-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-[15px] font-semibold tracking-tight">All deposits</h2>
+          <p class="text-[12px] text-white/40">Synced from indexer · updated 3s ago</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input class="input !pl-8 !py-1.5 text-[12px] w-56" placeholder="Search txid, reserve, amount"/>
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="rgba(255,255,255,.4)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          </div>
+          <button class="btn">Status <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <button class="btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M5 21h14"/></svg>Export</button>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:28px"></th>
+              <th>Status</th>
+              <th>Amount</th>
+              <th>Reserve</th>
+              <th>Bitcoin txid</th>
+              <th class="num">Conf.</th>
+              <th class="num">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- In-flight, expanded -->
+            <tr class="expanded">
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(90deg)"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-warn"><span class="dot bg-[hsl(48_96%_58%)]"></span>Confirming 2/6</span></td>
+              <td class="mono">0.05000 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#11</td>
+              <td class="mono">a3f9…b2c1 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="num mono">2 / 6</td>
+              <td class="num text-white/60">24m ago</td>
+            </tr>
+            <tr class="expanded">
+              <td colspan="7" class="!py-5 !pl-14 !pr-6">
+                <div class="grid grid-cols-12 gap-6">
+                  <div class="col-span-8">
+                    <div class="label mb-3">Timeline</div>
+                    <div class="flex items-center gap-0">
+                      <div class="flex flex-col items-start gap-1"><span class="tick done"></span><div class="text-[11px]">Sent</div><div class="text-[10px] text-white/40">24m ago</div></div>
+                      <div class="hline done mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick done"></span><div class="text-[11px]">Mempool</div><div class="text-[10px] text-white/40">23m ago</div></div>
+                      <div class="hline done mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick done"></span><div class="text-[11px]">1st conf</div><div class="text-[10px] text-white/40">11m ago</div></div>
+                      <div class="hline mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick active pulse"></span><div class="text-[11px]">Confirming</div><div class="text-[10px] text-white/40">2/6 · ~40m</div></div>
+                      <div class="hline mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick"></span><div class="text-[11px] text-white/60">Credit</div><div class="text-[10px] text-white/40">pending</div></div>
+                    </div>
+                  </div>
+                  <div class="col-span-4 grid grid-cols-2 gap-4 text-[12px]">
+                    <div><div class="label mb-1">From</div><div class="mono text-white/80">bc1q7x8…f4km</div></div>
+                    <div><div class="label mb-1">To reserve</div><div class="mono text-white/80">bc1qrsv11…p3j2</div></div>
+                    <div><div class="label mb-1">Fee</div><div class="mono text-white/80">1,240 sats</div></div>
+                    <div><div class="label mb-1">Broadcast</div><div class="mono text-white/80">Apr 20, 12:14</div></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <!-- Awaiting send -->
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-warn"><span class="dot bg-[hsl(48_96%_58%)] pulse"></span>Awaiting send</span></td>
+              <td class="mono">0.01250 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#12</td>
+              <td class="mono text-white/40">—</td>
+              <td class="num mono text-white/40">0 / 6</td>
+              <td class="num text-white/60">2m ago</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Credited</span></td>
+              <td class="mono">0.12340 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#10</td>
+              <td class="mono">e7d2…9a4b <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="num mono text-white/60">6 / 6</td>
+              <td class="num text-white/60">Apr 18</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Credited</span></td>
+              <td class="mono">0.00500 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#09</td>
+              <td class="mono">14bc…f3e8 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="num mono text-white/60">6 / 6</td>
+              <td class="num text-white/60">Apr 15</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-danger"><span class="dot bg-[hsl(357_93%_63%)]"></span>Reserve expired</span></td>
+              <td class="mono text-white/60">0.00100 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/60">#08</td>
+              <td class="mono text-white/40">Not sent</td>
+              <td class="num mono text-white/40">—</td>
+              <td class="num text-white/60">Apr 12</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Credited</span></td>
+              <td class="mono">0.02500 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#07</td>
+              <td class="mono">5c2a…7891 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="num mono text-white/60">6 / 6</td>
+              <td class="num text-white/60">Apr 09</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 flex items-center justify-between border-t border-white/10 text-[12px] text-white/40">
+          <span>Showing 6 of 17</span>
+          <div class="flex items-center gap-1">
+            <button class="btn !py-1 !px-2">Prev</button>
+            <button class="btn !py-1 !px-2">1</button>
+            <button class="btn !py-1 !px-2 !bg-white/10">2</button>
+            <button class="btn !py-1 !px-2">3</button>
+            <button class="btn !py-1 !px-2">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT — slim form rail -->
+    <aside class="col-span-12 xl:col-span-4 space-y-4">
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-[14px] font-semibold tracking-tight">New deposit</h3>
+          <span class="pill pill-success text-[11px]"><span class="dot bg-[hsl(123_64%_62%)]"></span>Ready</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="label mb-1.5">From</div>
+            <div class="card !bg-white/[0.03] px-3 py-2 flex items-center justify-between">
+              <span class="mono text-[12px]">bc1q7x8vf3hc…q9f4km</span>
+              <span class="text-[11px] text-white/40">registered</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="label mb-1.5">Amount</div>
+            <div class="relative">
+              <input class="input mono text-[15px] pr-24" value="0.01250"/>
+              <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button class="btn !py-1 !px-1.5 text-[10px]">MAX</button>
+                <button class="btn !py-1 !px-1.5 text-[10px]">BTC <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+              </div>
+            </div>
+            <div class="mt-1 text-[11px] text-white/40"><span class="mono">1,250,000</span> sats · ≈ <span class="mono">$847.20</span></div>
+          </div>
+
+          <div>
+            <div class="label mb-1.5">Destination reserve</div>
+            <div class="card !bg-white/[0.03] p-3">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="mono text-[12px] text-white/80">Reserve #12</span>
+                  <span class="pill pill-success text-[10px] !py-0.5">Recommended</span>
+                </div>
+                <button class="text-[11px] text-white/60 hover:text-white">Change</button>
+              </div>
+              <div class="mono text-[11px] text-white/40">bc1qrsv12…x9k4</div>
+              <div class="meter mt-2.5"><span style="width:32%"></span></div>
+              <div class="mt-1.5 text-[10px] text-white/40">Expires in <span class="mono text-white/60">108 blocks</span> · ~18h</div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-full !py-2.5 text-[13px] font-semibold">
+            Show payment package
+          </button>
+          <p class="text-[11px] text-white/40 text-center">QR + payload open in a sheet.</p>
+        </div>
+      </div>
+
+      <!-- Helper -->
+      <div class="card p-5">
+        <div class="label mb-2">Tips</div>
+        <ul class="space-y-2 text-[12px] text-white/60">
+          <li class="flex gap-2"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0 text-white/40"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Only send from your registered address.</li>
+          <li class="flex gap-2"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0 text-white/40"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Send the exact sats shown — rounding fails.</li>
+          <li class="flex gap-2"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0 text-white/40"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Credit at 1 confirmation, typically ~10 min.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

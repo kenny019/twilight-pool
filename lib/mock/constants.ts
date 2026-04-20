@@ -114,39 +114,63 @@ export const MOCK_REGISTERED_ADDRESSES: registeredBtcAddressStruct[] = [
 
 export const MOCK_INDEXER_DEPOSITS: IndexerDeposit[] = [
   {
-    id: "dep-001",
-    btcDepositAddress: MOCK_BTC_DEPOSIT_ADDRESS,
-    twilightAddress: MOCK_TWILIGHT_ADDRESS,
-    amount: 250_000,
-    confirmed: true,
-    blockHeight: 839_990,
-    createdAt: "2025-12-01T10:30:00Z",
+    id: 1,
     txHash: "aabb" + "cc".repeat(30),
+    blockHeight: 839_990,
+    reserveAddress: "bc1qreserve0address0one0for0testing0000tq4aaa",
+    depositAmount: "250000",
+    btcHeight: "840000",
+    btcHash: "0000".repeat(16),
+    twilightDepositAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    oracleAddress: "twilight1oracle0mock0address00000000000",
+    votes: 3,
+    confirmed: true,
+    createdAt: "2025-12-01T10:30:00Z",
   },
 ];
 
 export const MOCK_INDEXER_WITHDRAWALS: IndexerWithdrawal[] = [
   {
-    id: "wdr-001",
-    withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    id: 1,
+    withdrawIdentifier: "1",
     twilightAddress: MOCK_TWILIGHT_ADDRESS,
-    amount: 50_000,
-    reserveId: 1,
-    confirmed: true,
+    withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    withdrawReserveId: "1",
     blockHeight: 839_995,
+    withdrawAmount: "50000",
+    isConfirmed: true,
     createdAt: "2025-12-02T14:00:00Z",
-    txHash: "ddee" + "ff".repeat(30),
   },
 ];
 
+export const MOCK_TX = {
+  hash: MOCK_TX_HASH,
+  blockHeight: 839_990,
+  blockTime: "2025-12-01T10:30:00Z",
+  type: "MsgSend",
+  messageTypes: ["MsgSend"],
+  status: "success" as const,
+  gasUsed: "80000",
+  gasWanted: "100000",
+  memo: null,
+  programType: null,
+};
+
 export const MOCK_ACCOUNT_DATA: IndexerAccount = {
-  address: MOCK_TWILIGHT_ADDRESS,
+  account: {
+    address: MOCK_TWILIGHT_ADDRESS,
+    balance: String(MOCK_SATS_BALANCE),
+    txCount: 2,
+  },
   balances: [
     { denom: "sats", amount: String(MOCK_SATS_BALANCE) },
     { denom: "nyks", amount: String(MOCK_NYKS_BALANCE) },
   ],
   deposits: MOCK_INDEXER_DEPOSITS,
   withdrawals: MOCK_INDEXER_WITHDRAWALS,
+  clearingAccount: null,
+  zkosOperations: [],
+  fragmentSigners: [],
 };
 
 export const MOCK_BRIDGE_ANALYTICS: BridgeAnalytics = {

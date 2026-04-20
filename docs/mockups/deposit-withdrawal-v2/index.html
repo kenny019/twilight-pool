@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Twilight · Deposit & Withdrawal Mockups v2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:hsl(0 0% 0%);--surface-2:rgba(255,255,255,.02);
+    --ink:hsl(0 0% 100%);--ink-60:rgba(255,255,255,.6);--ink-40:rgba(255,255,255,.4);
+    --ink-10:rgba(255,255,255,.1);--ink-5:rgba(255,255,255,.05);
+  }
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  .card{position:relative;border:1px solid var(--ink-10);background:var(--surface-2);border-radius:8px;transition:background 120ms}
+  .card:hover{background:rgba(255,255,255,.04)}
+  .card::before{content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;box-shadow:inset 0 1px 0 var(--ink-5)}
+  .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-40);font-weight:500}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid var(--ink-10);color:var(--ink-60)}
+</style>
+</head>
+<body class="min-h-screen p-10">
+<div class="max-w-[1080px] mx-auto">
+
+  <div class="mb-10">
+    <div class="label mb-2">Docs · Mockups · v2</div>
+    <h1 class="text-[28px] font-semibold tracking-tight">Deposit & Withdrawal · rework mockups</h1>
+    <p class="text-[14px] text-white/60 mt-2 max-w-2xl">Six structural explorations for the deposit and withdrawal flows. Each surface leans on the <span class="text-white">indexer</span> (<code class="text-white/80">lib/api/indexer.ts</code>) so users can track Bitcoin deposit status and withdrawal settlement events in real time.</p>
+  </div>
+
+  <div class="mb-10">
+    <div class="label mb-3">Deposit · /deposit</div>
+    <div class="grid grid-cols-3 gap-4">
+      <a href="deposit-v1-split-timeline.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v1</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">Split · progress-first</div>
+        <p class="text-[12px] text-white/60 mt-1">Compact form left; dominant live timeline right. History table below.</p>
+      </a>
+      <a href="deposit-v2-dashboard.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v2</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">Data-first dashboard</div>
+        <p class="text-[12px] text-white/60 mt-1">KPI strip, active banner, dense history with per-row expandable timelines. Slim form rail.</p>
+      </a>
+      <a href="deposit-v3-guided-mobile.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v3</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">Guided · mobile-first</div>
+        <p class="text-[12px] text-white/60 mt-1">Narrative copy reads state back in plain language. Side-by-side desktop + 375px mobile preview.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="mb-10">
+    <div class="label mb-3">Withdrawal · /withdrawal</div>
+    <div class="grid grid-cols-3 gap-4">
+      <a href="withdrawal-v1-split-tracking.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v1</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">Split · inline validation</div>
+        <p class="text-[12px] text-white/60 mt-1">Form names exactly why the CTA is blocked. Live tracking panel shows request → sign → broadcast → settle.</p>
+      </a>
+      <a href="withdrawal-v2-history-dashboard.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v2</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">History dashboard</div>
+        <p class="text-[12px] text-white/60 mt-1">Dense, filterable request table with per-row expandable timelines. Form is a slim sticky side rail.</p>
+      </a>
+      <a href="withdrawal-v3-sheet-mobile.html" class="card p-5 block">
+        <div class="flex items-center justify-between mb-3">
+          <span class="pill">v3</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/40"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold">Status-first · sheet form</div>
+        <p class="text-[12px] text-white/60 mt-1">Status dominates the page; form lives in a bottom sheet on mobile. List rows replace the table (matrix R3).</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="card p-5 mt-8 text-[12px] text-white/60 space-y-2">
+    <div class="label text-white/40 mb-1">Shared constraints</div>
+    <div>Dark theme, system font stack, 3-size type scale, tabular numerals for all values.</div>
+    <div>Colors limited to palette: white, muted grays, <span class="text-[hsl(123_64%_62%)]">green-medium</span>, <span class="text-[hsl(357_93%_63%)]">red</span>, <span class="text-[hsl(48_96%_58%)]">yellow</span>.</div>
+    <div>Cards use subtle borders + 1px inner highlight instead of heavy shadow. Status communicated via color + text + icon.</div>
+    <div>All mockups assume the indexer is the source of truth for tracking — history and in-flight status panels are indexer-driven.</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -40,9 +40,20 @@ const mockStargateClient = {
             ? btcSatoshiTestAmount
             : Number(btcSatoshiTestAmount?.low ?? btcSatoshiTestAmount);
         mockRegisterDeposit(btcDepositAddress, sats, () => {
-          invalidate("btc-registration", "twilightBtcBalance", "indexer-deposits");
+          invalidate(
+            "btc-registration",
+            "twilightBtcBalance",
+            "indexer-deposits",
+            "indexer-deposits-infinite",
+            "indexer-account"
+          );
         });
-        invalidate("btc-registration", "indexer-deposits");
+        invalidate(
+          "btc-registration",
+          "indexer-deposits",
+          "indexer-deposits-infinite",
+          "indexer-account"
+        );
       } else if (msg.typeUrl.includes("WithdrawBtc") || msg.typeUrl.includes("withdrawBtc")) {
         const { withdrawAmount, reserveId } = msg.value;
         const sats =
@@ -54,7 +65,13 @@ const mockStargateClient = {
             ? reserveId
             : Number(reserveId?.low ?? reserveId);
         mockAddWithdrawRequest(sats, rid);
-        invalidate("withdraw-requests", "twilightBtcBalance", "indexer-withdrawals");
+        invalidate(
+          "withdraw-requests",
+          "twilightBtcBalance",
+          "indexer-withdrawals",
+          "indexer-withdrawals-infinite",
+          "indexer-account"
+        );
       }
     }
 

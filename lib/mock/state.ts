@@ -71,16 +71,20 @@ export function mockRegisterDeposit(
   }
 
   // Add to indexer deposits
-  const depId = `dep-${String(state.nextDepositId++).padStart(3, "0")}`;
+  const depId = state.nextDepositId++;
   state.indexerDeposits.push({
     id: depId,
-    btcDepositAddress: btcAddress,
-    twilightAddress: MOCK_TWILIGHT_ADDRESS,
-    amount: amountSats,
-    confirmed: false,
-    blockHeight: state.blockHeight,
-    createdAt: new Date().toISOString(),
     txHash: MOCK_TX_HASH,
+    blockHeight: state.blockHeight,
+    reserveAddress: "bc1qreserve0address0one0for0testing0000tq4aaa",
+    depositAmount: String(amountSats),
+    btcHeight: String(state.blockHeight),
+    btcHash: "0000".repeat(16),
+    twilightDepositAddress: btcAddress,
+    oracleAddress: "twilight1oracle0mock0address00000000000",
+    votes: 1,
+    confirmed: false,
+    createdAt: new Date().toISOString(),
   });
 
   // Auto-confirm after 5s
@@ -116,16 +120,15 @@ export function mockAddWithdrawRequest(
     CreationTwilightBlockHeight: String(state.blockHeight),
   });
 
-  const wdrId = `wdr-${String(id).padStart(3, "0")}`;
   state.indexerWithdrawals.push({
-    id: wdrId,
-    withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    id,
+    withdrawIdentifier: String(id),
     twilightAddress: MOCK_TWILIGHT_ADDRESS,
-    amount: amountSats,
-    reserveId,
-    confirmed: false,
+    withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    withdrawReserveId: String(reserveId),
     blockHeight: state.blockHeight,
+    withdrawAmount: String(amountSats),
+    isConfirmed: false,
     createdAt: new Date().toISOString(),
-    txHash: MOCK_TX_HASH,
   });
 }

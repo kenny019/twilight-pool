@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<!--
+  Variant thesis: History-dashboard. The withdrawal *record* is the star — a dense,
+  filterable table with per-row expandable timelines. Form is a slim side rail so the
+  user can audit past flows while composing the next one.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Twilight · Withdrawal · v2 History Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:hsl(0 0% 0%);--surface-2:rgba(255,255,255,.02);
+    --ink:hsl(0 0% 100%);--ink-60:rgba(255,255,255,.6);--ink-40:rgba(255,255,255,.4);
+    --ink-10:rgba(255,255,255,.1);--ink-5:rgba(255,255,255,.05);
+    --success:hsl(123 64% 62%);--danger:hsl(357 93% 63%);--warn:hsl(48 96% 58%);
+  }
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .card{position:relative;border:1px solid var(--ink-10);background:var(--surface-2);border-radius:8px}
+  .card::before{content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;box-shadow:inset 0 1px 0 var(--ink-5)}
+  .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-40);font-weight:500}
+  .input{background:rgba(255,255,255,.03);border:1px solid var(--ink-10);border-radius:6px;padding:9px 11px;font-size:13px;color:var(--ink);width:100%}
+  .input:focus{outline:none;border-color:rgba(255,255,255,.25)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--ink-10);background:rgba(255,255,255,.03);color:var(--ink);cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,.06)}
+  .btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .btn-primary:disabled{background:rgba(255,255,255,.08);color:var(--ink-40);border-color:var(--ink-10);cursor:not-allowed}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--ink-10);color:var(--ink-60)}
+  .pill-success{color:var(--success);border-color:rgba(123,221,138,.25);background:rgba(123,221,138,.06)}
+  .pill-warn{color:var(--warn);border-color:rgba(250,204,21,.25);background:rgba(250,204,21,.06)}
+  .pill-danger{color:var(--danger);border-color:rgba(248,85,85,.25);background:rgba(248,85,85,.06)}
+  .dot{width:6px;height:6px;border-radius:9999px;display:inline-block}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .pulse{animation:pulse 2s ease-in-out infinite}
+  .tbl{font-size:13px;width:100%}
+  .tbl th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;color:var(--ink-40);text-align:left;padding:10px 14px;border-bottom:1px solid var(--ink-10)}
+  .tbl th.num{text-align:right}
+  .tbl td{padding:16px 14px;border-bottom:1px solid var(--ink-5);vertical-align:middle}
+  .tbl td.num{text-align:right}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr.exp td{background:rgba(255,255,255,.03);border-bottom:1px solid transparent}
+  .tick{width:8px;height:8px;border-radius:9999px;border:1px solid var(--ink-10);background:var(--bg)}
+  .tick.done{background:var(--success);border-color:var(--success)}
+  .tick.active{background:var(--bg);border-color:var(--ink);box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+  .tick.fail{background:var(--danger);border-color:var(--danger)}
+  .hline{height:1px;background:var(--ink-10);flex:1}
+  .hline.done{background:var(--success)}
+  .hline.fail{background:var(--danger)}
+  .seg{display:inline-flex;background:rgba(255,255,255,.04);border:1px solid var(--ink-10);border-radius:6px;padding:2px;font-size:11px}
+  .seg button{padding:4px 8px;border-radius:4px;color:var(--ink-60)}
+  .seg button.active{background:rgba(255,255,255,.08);color:var(--ink)}
+  ::selection{background:rgba(255,255,255,.2)}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="border-b border-white/10">
+  <div class="max-w-[1440px] mx-auto px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-8">
+      <div class="flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9-9 9z"/></svg>
+        <span class="text-[13px] font-semibold">Twilight</span>
+      </div>
+      <nav class="flex items-center gap-5 text-[13px] text-white/60">
+        <a class="hover:text-white">Trade</a><a class="hover:text-white">Pool</a>
+        <a class="text-white">Wallet</a><a class="hover:text-white">Portfolio</a>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="pill"><span class="dot bg-[hsl(123_64%_62%)]"></span>nyks-mainnet</div>
+      <button class="btn"><span class="mono text-[12px] text-white/60">twilight1q9f…xa6</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1440px] mx-auto px-8 py-8">
+
+  <div class="flex items-end justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-2 text-[12px] text-white/40 mb-1">
+        <span>Wallet</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg><span class="text-white/60">Withdraw</span>
+      </div>
+      <h1 class="text-[26px] font-semibold tracking-tight">Withdraw Bitcoin</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Block <span class="mono text-white">873,412</span></div>
+      <div class="pill">Fee ≈ <span class="mono text-white">24 sat/vB</span></div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="card p-5">
+      <div class="label mb-2">Available</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.04821</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/40 mt-1">≈ <span class="mono">$3,264</span></div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">In flight</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.00500</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/60 mt-1"><span class="pill pill-warn text-[10px]">1 broadcasting</span></div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">Lifetime withdrawn</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">0.37800</span><span class="text-[12px] text-white/40">BTC</span></div>
+      <div class="text-[12px] text-white/40 mt-1">across <span class="mono text-white/60">9</span> requests</div>
+    </div>
+    <div class="card p-5">
+      <div class="label mb-2">Avg settlement</div>
+      <div class="flex items-baseline gap-1"><span class="text-[22px] font-semibold mono">22</span><span class="text-[12px] text-white/40">min</span></div>
+      <div class="text-[12px] text-white/40 mt-1">last 30 days</div>
+    </div>
+  </div>
+
+  <!-- Main grid: history (wide) + form rail -->
+  <div class="grid grid-cols-12 gap-6">
+
+    <!-- LEFT — filterable history -->
+    <section class="col-span-12 xl:col-span-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-[15px] font-semibold tracking-tight">Withdrawal history</h2>
+          <p class="text-[12px] text-white/40">Live from indexer · request + signing + Bitcoin events</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="seg">
+            <button class="active">All</button><button>Active</button><button>Settled</button><button>Failed</button>
+          </div>
+          <div class="relative">
+            <input class="input !pl-8 !py-1.5 text-[12px] w-56" placeholder="Search txid, amount, reserve"/>
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="rgba(255,255,255,.4)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          </div>
+          <button class="btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M5 21h14"/></svg>Export</button>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:28px"></th>
+              <th>Status</th>
+              <th>Amount</th>
+              <th>Reserve</th>
+              <th>BTC txid</th>
+              <th>Request</th>
+              <th class="num">Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- expanded active row -->
+            <tr class="exp">
+              <td><button class="text-white/60"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(90deg)"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-warn"><span class="dot bg-[hsl(48_96%_58%)] pulse"></span>Broadcast · 0/1</span></td>
+              <td class="mono">0.00500 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#10</td>
+              <td class="mono">b7c4…d91f <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="mono text-white/80">WR-284</td>
+              <td class="num text-white/60">6m ago</td>
+            </tr>
+            <tr class="exp">
+              <td colspan="7" class="!py-5 !pl-14 !pr-6">
+                <div class="grid grid-cols-12 gap-6">
+                  <div class="col-span-8">
+                    <div class="label mb-3">Timeline</div>
+                    <div class="flex items-center gap-0">
+                      <div class="flex flex-col items-start gap-1"><span class="tick done"></span><div class="text-[11px]">Submitted</div><div class="text-[10px] text-white/40">6m ago</div></div>
+                      <div class="hline done mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick done"></span><div class="text-[11px]">Signed</div><div class="text-[10px] text-white/40">4m · 7/10</div></div>
+                      <div class="hline done mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick active pulse"></span><div class="text-[11px]">Broadcast</div><div class="text-[10px] text-white/40">mempool</div></div>
+                      <div class="hline mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick"></span><div class="text-[11px] text-white/60">Confirmed</div><div class="text-[10px] text-white/40">0/1</div></div>
+                      <div class="hline mx-3 mt-[-22px]"></div>
+                      <div class="flex flex-col items-start gap-1"><span class="tick"></span><div class="text-[11px] text-white/60">Settled</div><div class="text-[10px] text-white/40">ETA 18m</div></div>
+                    </div>
+                  </div>
+                  <div class="col-span-4 grid grid-cols-2 gap-4 text-[12px]">
+                    <div><div class="label mb-1">Destination</div><div class="mono text-white/80">bc1q7x8…f4km</div></div>
+                    <div><div class="label mb-1">Fee paid</div><div class="mono text-white/80">3,360 sats</div></div>
+                    <div><div class="label mb-1">You'll receive</div><div class="mono text-white/80">0.00466 BTC</div></div>
+                    <div><div class="label mb-1">Signer quorum</div><div class="mono text-white/80">7 of 10</div></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <!-- other rows -->
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-warn"><span class="dot bg-[hsl(48_96%_58%)]"></span>Signing · 4/10</span></td>
+              <td class="mono">0.01200 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#11</td>
+              <td class="mono text-white/40">—</td>
+              <td class="mono text-white/80">WR-283</td>
+              <td class="num text-white/60">12m ago</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Settled</span></td>
+              <td class="mono">0.02000 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#10</td>
+              <td class="mono">f4a1…c772 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="mono text-white/80">WR-281</td>
+              <td class="num text-white/60">Apr 18</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Settled</span></td>
+              <td class="mono">0.00750 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#09</td>
+              <td class="mono">2e98…4bc6 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="mono text-white/80">WR-276</td>
+              <td class="num text-white/60">Apr 15</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-danger"><span class="dot bg-[hsl(357_93%_63%)]"></span>Failed · signer timeout</span></td>
+              <td class="mono text-white/70">0.00100 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/70">#08</td>
+              <td class="mono text-white/40">—</td>
+              <td class="mono text-white/70">WR-270</td>
+              <td class="num text-white/60">Apr 12</td>
+            </tr>
+            <tr>
+              <td><button class="text-white/40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></td>
+              <td><span class="pill pill-success"><span class="dot bg-[hsl(123_64%_62%)]"></span>Settled</span></td>
+              <td class="mono">0.10000 <span class="text-white/40">BTC</span></td>
+              <td class="mono text-white/80">#07</td>
+              <td class="mono">8c02…ee41 <button class="text-white/40 hover:text-white ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></button></td>
+              <td class="mono text-white/80">WR-261</td>
+              <td class="num text-white/60">Apr 06</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 flex items-center justify-between border-t border-white/10 text-[12px] text-white/40">
+          <span>Showing 6 of 9</span>
+          <div class="flex items-center gap-1">
+            <button class="btn !py-1 !px-2">Prev</button>
+            <button class="btn !py-1 !px-2 !bg-white/10">1</button>
+            <button class="btn !py-1 !px-2">2</button>
+            <button class="btn !py-1 !px-2">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT — slim form rail -->
+    <aside class="col-span-12 xl:col-span-4">
+      <div class="card p-5 sticky top-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-[14px] font-semibold tracking-tight">New withdrawal</h3>
+          <span class="pill text-[11px]"><span class="dot bg-[hsl(123_64%_62%)]"></span>Ready</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="label">Amount</span>
+              <button class="text-[11px] text-white/60 hover:text-white">Max <span class="mono">0.04787</span></button>
+            </div>
+            <div class="relative">
+              <input class="input mono text-[16px] pr-20" value="0.01000"/>
+              <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div class="seg"><button class="active">BTC</button><button class="text-[10px]">sat</button></div>
+              </div>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-[11px] text-white/40">
+              <span class="mono">1,000,000 sats</span><span>≈ <span class="mono">$678</span></span>
+            </div>
+          </div>
+
+          <div>
+            <div class="label mb-1.5">To</div>
+            <div class="card !bg-white/[0.03] px-3 py-2">
+              <div class="mono text-[12px]">bc1q7x8vf3hc…q9f4km</div>
+              <div class="text-[10px] text-white/40 mt-0.5">registered · locked</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="label">Reserve</span>
+              <span class="text-[10px] text-white/40">Last used #10</span>
+            </div>
+            <div class="card !bg-white/[0.03] px-3 py-2.5 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="mono text-[12px]">Reserve #10</span>
+                <span class="pill pill-success text-[10px] !py-0.5">Suggested</span>
+              </div>
+              <button class="text-[11px] text-white/60">Change</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="label mb-1.5">Fee rate</div>
+            <div class="seg w-full grid grid-cols-3">
+              <button>Slow</button><button class="active">Standard</button><button>Fast</button>
+            </div>
+            <div class="mt-2 text-[11px] text-white/60 flex items-center justify-between">
+              <span><span class="mono text-white">24</span> sat/vB · ~10 min</span>
+              <span class="mono text-white">3,360 sats</span>
+            </div>
+          </div>
+
+          <div class="card !bg-white/[0.03] p-3 text-[13px] flex items-center justify-between">
+            <span class="text-white/60">You receive</span>
+            <span class="mono font-semibold">0.00966 BTC</span>
+          </div>
+
+          <div class="card !bg-[hsl(123_64%_62%)]/5 !border-[hsl(123_64%_62%)]/25 p-2.5 flex items-start gap-2 text-[12px]">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[hsl(123_64%_62%)] mt-0.5 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+            <span class="text-white/70">All checks passed. Typical settlement in ~22 min.</span>
+          </div>
+
+          <button class="btn btn-primary w-full !py-2.5 text-[13px] font-semibold">Withdraw</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</main>
+</body>
+</html>

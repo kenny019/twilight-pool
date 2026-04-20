@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useMemo } from "react";
-import DepositFlow, { DepositStep } from "@/app/_components/deposit/deposit-flow";
+import React, { useEffect } from "react";
+import DepositFlow from "@/app/_components/deposit/deposit-flow";
+import DepositPageShell from "@/app/_components/deposit/deposit-page-shell";
 import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import useVerifyStatus from "@/lib/hooks/useVerifyStatus";
@@ -9,6 +10,8 @@ import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@/lib/mock/useMockableWallet";
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+const V2_ENABLED = process.env.NEXT_PUBLIC_DEPOSIT_WITHDRAW_V2 === "true";
 
 const Page = () => {
   const MANDATORY_KYC = process.env.NEXT_PUBLIC_MANDATORY_KYC === "true";
@@ -53,6 +56,17 @@ const Page = () => {
         </div>
       </div>
     )
+  }
+
+  if (V2_ENABLED) {
+    return (
+      <DepositPageShell
+        twilightAddress={twilightAddress ?? ""}
+        registeredAddress={registeredBtcResponse.data?.depositAddress ?? ""}
+        depositAmount={registeredBtcResponse.data?.depositAmount ?? 0}
+        isConfirmed={registeredBtcResponse.data?.isConfirmed ?? false}
+      />
+    );
   }
 
   return (
