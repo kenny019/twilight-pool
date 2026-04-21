@@ -1,6 +1,7 @@
 import wfetch from "../http";
 import { registeredBtcAddressStruct } from "../types";
 
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 const REST_URL = process.env.NEXT_PUBLIC_TWILIGHT_API_REST as string;
 
 type GetRegisteredBTCDepositAddressRes = {
@@ -19,6 +20,11 @@ type ApiError = {
 };
 
 async function getAllBTCDepositAddress() {
+  if (IS_MOCK) {
+    const { getMockState } = await import("../mock/state");
+    return getMockState().registeredAddresses;
+  }
+
   const { success, data, error } = await wfetch(
     new URL(
       REST_URL + "twilight-project/nyks/bridge/registered_btc_deposit_addresses"
@@ -36,6 +42,11 @@ async function getAllBTCDepositAddress() {
 }
 
 async function getRegisteredBTCAddress(twilightAddress: string) {
+  if (IS_MOCK) {
+    const { MOCK_BTC_DEPOSIT_ADDRESS } = await import("../mock/constants");
+    return MOCK_BTC_DEPOSIT_ADDRESS;
+  }
+
   try {
     const { success, data, error } = await wfetch(
       new URL(

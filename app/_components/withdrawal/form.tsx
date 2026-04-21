@@ -4,7 +4,7 @@ import { Text } from "@/components/typography";
 import { useToast } from "@/lib/hooks/useToast";
 import BTC, { BTCDenoms } from "@/lib/twilight/denoms";
 import { isUserRejection } from "@/lib/helpers";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
 import Big from "big.js";
 import React, { useRef, useState } from "react";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
@@ -18,7 +18,20 @@ import { useTwilightStore } from "@/lib/providers/store";
 import FeeEstimate from "./fee-estimate";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
 
-const BtcWithdrawalForm = () => {
+type BtcWithdrawalFormProps = {
+  /**
+   * When true, renders without the surrounding card (the v2 sheet owns the
+   * outer chrome). Defaults to false to preserve legacy layout.
+   */
+  hideChrome?: boolean;
+  /** Fired after a successful broadcast so the sheet can close. */
+  onSubmitted?: () => void;
+};
+
+const BtcWithdrawalForm = ({
+  hideChrome = false,
+  onSubmitted,
+}: BtcWithdrawalFormProps = {}) => {
   const { mainWallet } = useWallet();
   const chainWallet = mainWallet?.getChainWallet("nyks");
   const twilightAddress = chainWallet?.address;
@@ -103,6 +116,24 @@ const BtcWithdrawalForm = () => {
         .convert("sats")
         .toNumber();
 
+      if (withdrawSats <= 0) {
+        toast({
+          variant: "error",
+          title: "Invalid amount",
+          description: "Enter an amount greater than zero.",
+        });
+        return;
+      }
+
+      if (withdrawSats > twilightSats) {
+        toast({
+          variant: "error",
+          title: "Insufficient balance",
+          description: `You have ${maxValueString} ${depositDenom} available.`,
+        });
+        return;
+      }
+
       setIsSubmitLoading(true);
 
       const stargateClient = await chainWallet.getSigningStargateClient();
@@ -171,33 +202,38 @@ const BtcWithdrawalForm = () => {
         title: "Success",
         description: "Your withdrawal request has been successfully sent",
       });
+      onSubmitted?.();
     } catch (err) {
+      setIsSubmitLoading(false);
       if (isUserRejection(err)) {
         toast({
           title: "Transaction rejected",
           description: "You declined the transaction in your wallet.",
         });
-        setIsSubmitLoading(false);
         return;
       }
       console.error(err);
-      setIsSubmitLoading(false);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "An error has occurred, try again later.";
       toast({
         variant: "error",
         title: "Error",
-        description: "An error has occurred, try again later.",
+        description: message,
       });
     }
   }
 
-  return (
-    <div className="rounded-lg border bg-background p-6">
-      <form className="space-y-4">
+  const formInner = (
+    <form className="space-y-4">
+      {!hideChrome && (
         <Text heading="h2" className="text-2xl font-medium sm:text-3xl">
           Withdraw Bitcoin
         </Text>
+      )}
 
-        <div className="space-y-1">
+      <div className="space-y-1">
           <Text asChild>
             <label
               className="text-primary-accent"
@@ -298,8 +334,10 @@ const BtcWithdrawalForm = () => {
           )}
         </Button>
       </form>
-    </div>
   );
+
+  if (hideChrome) return formInner;
+  return <div className="rounded-lg border bg-background p-6">{formInner}</div>;
 };
 
 export default BtcWithdrawalForm;

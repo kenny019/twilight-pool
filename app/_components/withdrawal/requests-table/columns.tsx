@@ -2,12 +2,12 @@ import { ColumnDef } from "@tanstack/react-table";
 import { WithdrawRequest } from "@/lib/api/rest";
 import { truncateHash } from "@/lib/helpers";
 import { toast } from "@/lib/hooks/useToast";
-import cn from "@/lib/cn";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import Button from "@/components/button";
+import StatusBadge from "@/components/status-badge";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Clock } from "lucide-react";
 
 export type MergedWithdrawRequest = WithdrawRequest & {
   tx_hash?: string;
@@ -86,17 +86,17 @@ export const withdrawRequestColumns: ColumnDef<MergedWithdrawRequest, any>[] = [
     cell: (row) => {
       const status = row.getValue() as string | undefined;
       if (!status) return <span className="text-primary-accent">-</span>;
-      return (
-        <span
-          className={cn(
-            "px-2 py-1 rounded text-xs font-medium",
-            status === "completed"
-              ? "bg-green-medium/10 text-green-medium"
-              : "bg-gray-500/10 text-gray-500"
-          )}
+      return status === "completed" ? (
+        <StatusBadge
+          variant="success"
+          icon={<CheckCircle2 className="h-3 w-3" />}
         >
-          {status === "completed" ? "Completed" : "Queued"}
-        </span>
+          Completed
+        </StatusBadge>
+      ) : (
+        <StatusBadge variant="muted" icon={<Clock className="h-3 w-3" />}>
+          Queued
+        </StatusBadge>
       );
     },
   },
