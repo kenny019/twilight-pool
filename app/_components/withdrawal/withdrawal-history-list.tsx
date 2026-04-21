@@ -1,20 +1,24 @@
 "use client";
 
-import React from "react";
-import { ArrowUpRight, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import React, { useCallback, useState } from "react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import Button from "@/components/button";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState, TableEmptyRow } from "@/components/empty-state";
 import StatusBadge from "@/components/status-badge";
-import { Text } from "@/components/typography";
 import Link from "next/link";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
+import cn from "@/lib/cn";
 import type { WithdrawalFeedRow } from "@/lib/hooks/useWithdrawalFeed";
 import { truncateHash } from "@/lib/helpers";
 import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-dayjs.extend(relativeTime);
 
 const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER_URL as string;
 
@@ -42,20 +46,16 @@ export default function WithdrawalHistoryList({
   }
 
   if (rows.length === 0) {
-    return (
-      <EmptyState
-        title="No withdrawals yet"
-        description="Completed withdrawals will appear here."
-      />
-    );
+    return <EmptyState title="No withdrawals yet." />;
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <HistoryDesktopTable rows={rows} />
-      <HistoryMobileList rows={rows} />
+    <div className="w-full">
+      <DesktopTable rows={rows} />
+      <MobileList rows={rows} />
       {hasMore && (
-        <div className="flex justify-center pt-2">
+        <div className="flex items-center justify-between pt-3 text-xs text-primary-accent">
+          <span>{rows.length} withdrawals</span>
           <Button
             variant="link"
             onClick={onLoadMore}
@@ -73,57 +73,79 @@ export default function WithdrawalHistoryList({
   );
 }
 
-function HistoryDesktopTable({ rows }: { rows: WithdrawalFeedRow[] }) {
+function DesktopTable({ rows }: { rows: WithdrawalFeedRow[] }) {
   return (
-    <div className="hidden md:block">
-      <table className="w-full text-sm">
+    <div className="hidden overflow-x-auto md:block">
+      <table cellSpacing={0} className="relative w-full min-w-[640px]">
         <thead>
-          <tr className="border-b text-left text-xs text-primary-accent">
-            <th className="py-2 pr-4 font-medium">Amount</th>
-            <th className="py-2 pr-4 font-medium">Destination</th>
-            <th className="py-2 pr-4 font-medium">Reserve</th>
-            <th className="py-2 pr-4 font-medium">Date</th>
-            <th className="py-2 pr-4 font-medium">Status</th>
+          <tr className="border-outline/10 border-b text-xs font-normal text-primary-accent">
+            <th className="px-2 py-2 text-start font-medium">Amount</th>
+            <th className="px-2 py-2 text-start font-medium">Destination</th>
+            <th className="px-2 py-2 text-start font-medium">Reserve</th>
+            <th className="px-2 py-2 text-start font-medium">Date</th>
+            <th className="px-2 py-2 text-end font-medium">Status</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const r = row.indexerRow;
-            const rest = row.restRow;
-            const amountSats = Number(
-              r?.withdrawAmount ?? rest?.withdrawAmount ?? 0
-            );
-            const btc = new BTC("sats", Big(amountSats))
-              .convert("BTC")
-              .toString();
-            const destination = r?.withdrawAddress ?? rest?.withdrawAddress ?? "";
-            const reserveId = r?.withdrawReserveId ?? rest?.withdrawReserveId ?? "";
-            const date = r?.createdAt;
-            return (
-              <tr key={row.key} className="border-b last:border-none">
-                <td className="py-2 pr-4 font-mono">{btc} BTC</td>
-                <td className="py-2 pr-4 font-mono text-xs">
-                  {destination ? truncateHash(destination, 6, 6) : "—"}
-                </td>
-                <td className="py-2 pr-4 text-xs">#{reserveId}</td>
-                <td className="py-2 pr-4 text-xs text-primary-accent">
-                  {date ? dayjs(date).format("MMM D, HH:mm") : "—"}
-                </td>
-                <td className="py-2 pr-4">
-                  <StatusCell state={row.status.state} />
-                </td>
-              </tr>
-            );
-          })}
+          {rows.length === 0 ? (
+            <TableEmptyRow colSpan={5} title="No withdrawals yet." />
+          ) : (
+            rows.map((row) => {
+              const r = row.indexerRow;
+              const rest = row.restRow;
+              const amountSats = Number(
+                r?.withdrawAmount ?? rest?.withdrawAmount ?? 0
+              );
+              const btc = new BTC("sats", Big(amountSats))
+                .convert("BTC")
+                .toString();
+              const destination =
+                r?.withdrawAddress ?? rest?.withdrawAddress ?? "";
+              const reserveId =
+                r?.withdrawReserveId ?? rest?.withdrawReserveId ?? "";
+              const date = r?.createdAt;
+              return (
+                <tr
+                  key={row.key}
+                  className="h-[34px] text-xs transition-colors hover:bg-theme/20"
+                >
+                  <td className="whitespace-nowrap px-2 py-2 font-medium tabular-nums">
+                    {btc} BTC
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 font-mono text-primary-accent">
+                    {destination ? truncateHash(destination, 6, 6) : "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 text-primary-accent">
+                    #{reserveId || "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 text-primary-accent">
+                    {date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 text-end">
+                    <StatusCell state={row.status.state} />
+                  </td>
+                </tr>
+              );
+            })
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
-function HistoryMobileList({ rows }: { rows: WithdrawalFeedRow[] }) {
+function MobileList({ rows }: { rows: WithdrawalFeedRow[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = useCallback((key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }, []);
+
   return (
-    <ul className="flex flex-col gap-1 md:hidden">
+    <div className="md:hidden">
       {rows.map((row) => {
         const r = row.indexerRow;
         const rest = row.restRow;
@@ -134,40 +156,113 @@ function HistoryMobileList({ rows }: { rows: WithdrawalFeedRow[] }) {
         const destination = r?.withdrawAddress ?? rest?.withdrawAddress ?? "";
         const reserveId =
           r?.withdrawReserveId ?? rest?.withdrawReserveId ?? "";
-        const metaParts: string[] = [];
-        if (r?.createdAt) metaParts.push(dayjs(r.createdAt).fromNow());
-        if (destination) metaParts.push(`→ ${truncateHash(destination, 4, 4)}`);
-        if (reserveId) metaParts.push(`#${reserveId}`);
-        if (rest?.txHash) metaParts.push(truncateHash(rest.txHash));
-        const meta = metaParts.join(" · ");
+        const date = r?.createdAt
+          ? dayjs(r.createdAt).format("DD/MM/YYYY HH:mm")
+          : "";
+        const isExpanded = expanded.has(row.key);
+        const hash = rest?.txHash;
+
         return (
-          <li
-            key={row.key}
-            className="flex items-center justify-between gap-3 border-b py-3 last:border-none"
-          >
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <div className="flex items-center gap-2">
-                <Text className="font-mono text-sm">{btc} BTC</Text>
-                {rest?.txHash && (
-                  <Link
-                    href={`${EXPLORER}/txs/${rest.txHash}`}
-                    target="_blank"
-                    aria-label="View on explorer"
-                    className="text-primary-accent/60 hover:text-primary-accent"
-                  >
-                    <ArrowUpRight className="h-3 w-3" />
-                  </Link>
-                )}
-              </div>
-              <Text className="truncate font-mono text-[11px] text-primary-accent">
-                {meta}
-              </Text>
+          <div key={row.key} className="border-border/40 border-b py-3">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm font-medium text-primary">Withdraw</span>
+              <span className="shrink-0 text-sm tabular-nums text-primary">
+                {btc} BTC
+              </span>
             </div>
-            <StatusCell state={row.status.state} />
-          </li>
+
+            <div className="mt-0.5">
+              <span className="text-xs text-primary-accent">{date}</span>
+            </div>
+
+            <div className="mt-1.5 space-y-0.5 text-xs">
+              {destination && (
+                <MetaRow
+                  label="To"
+                  value={truncateHash(destination, 6, 6)}
+                />
+              )}
+              {reserveId && <MetaRow label="Reserve" value={`#${reserveId}`} />}
+            </div>
+
+            {hash && (
+              <>
+                <button
+                  type="button"
+                  className="mt-1 flex min-h-[44px] w-full items-center gap-1 text-xs text-primary-accent/60 transition-colors hover:text-primary-accent"
+                  onClick={() => toggle(row.key)}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                  {isExpanded ? "Hide hash" : "View hash"}
+                </button>
+                {isExpanded && <ExpandedHash hash={hash} className="mt-1" />}
+              </>
+            )}
+
+            <div className="mt-2">
+              <StatusCell state={row.status.state} />
+            </div>
+          </div>
         );
       })}
-    </ul>
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-primary-accent/50">
+        {label}
+      </span>
+      <span className="min-w-0 truncate font-mono text-primary-accent/80">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ExpandedHash({
+  hash,
+  className,
+}: {
+  hash: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "space-y-2 rounded-lg bg-primary/[0.02] px-3 py-2.5 text-xs",
+        className
+      )}
+    >
+      <div>
+        <span className="block text-[10px] uppercase tracking-wide text-primary-accent/60">
+          Hash
+        </span>
+        <div className="mt-0.5 space-y-1">
+          <button
+            type="button"
+            className="font-mono break-all text-left text-primary/80 transition-colors hover:text-primary hover:underline"
+            onClick={() => navigator.clipboard.writeText(hash)}
+          >
+            {hash}
+          </button>
+          <Link
+            href={`${EXPLORER}/txs/${hash}`}
+            target="_blank"
+            className="inline-flex items-center gap-1 text-primary-accent/60 underline-offset-2 hover:text-primary hover:underline"
+          >
+            View on Explorer
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
