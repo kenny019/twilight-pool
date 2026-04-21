@@ -38,7 +38,7 @@ async function getCoinOutputFromUtxo(
     const outputResult = await retry<
       ReturnType<typeof queryUtxoForOutput>,
       string
-    >(queryUtxoForOutput, 30, utxoHex, 1000, (outputObj) =>
+    >(queryUtxoForOutput, 30, utxoHex, 100, (outputObj) =>
       Object.hasOwn(outputObj, "out_type")
     );
 
@@ -77,7 +77,7 @@ async function getUtxoFromAddress(
     const utxoDataResult = await retry<
       ReturnType<typeof queryUtxoForAddress>,
       string
-    >(queryUtxoForAddress, 30, address, 1000, (utxoObj) =>
+    >(queryUtxoForAddress, 30, address, 100, (utxoObj) =>
       Object.hasOwn(utxoObj, "output_index")
     );
 
