@@ -1,6 +1,7 @@
 "use client";
 import Button from "@/components/button";
 import { Input } from "@/components/input";
+import ProgressRing from "@/components/progress-ring";
 import { Text } from "@/components/typography";
 import useBtcBlockHeight from "@/lib/hooks/useBtcBlockHeight";
 import useBtcReserves from "@/lib/hooks/useBtcReserves";
@@ -12,6 +13,7 @@ import QRCode from "qrcode";
 import React, { useEffect, useRef, useState } from "react";
 import BtcReserveSelect from "../btc-reserve-select";
 import CopyField from "./copy-field";
+import { writeReserveSelection } from "@/lib/depositReserveStorage";
 
 type Props = {
   btcDepositAddress: string;
@@ -20,16 +22,10 @@ type Props = {
   isConfirmed?: boolean;
 };
 
-// Bitcoin blocks until reserve unlocks - approx 1 day at 10min/block
-const NEXT_UNLOCK_HEIGHT_MODIFIER = 144;
 // Critical blocks warning - don't send deposits within this threshold
 const CRITICAL_BLOCKS_WARNING = 4;
 
 const SWEEP_CYCLE = 144;
-const RING_SIZE = 80;
-const RING_RADIUS = 34;
-const RING_STROKE = 6;
-const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 function SweepProgress({
   currentBlock,
@@ -40,17 +36,13 @@ function SweepProgress({
   sweepBlock: number;
   blocksRemaining: number;
 }) {
-  const progress = Math.min(
-    Math.max((SWEEP_CYCLE - blocksRemaining) / SWEEP_CYCLE, 0),
-    1
-  );
-  const dashoffset = CIRCUMFERENCE * (1 - progress);
   const isExpired = blocksRemaining <= 0;
   const isCritical = blocksRemaining <= CRITICAL_BLOCKS_WARNING && !isExpired;
-  const isWarning = progress >= 0.5;
-
-  const strokeColor =
-    isExpired || isCritical ? "#ef4444" : isWarning ? "#eab308" : "#22c55e";
+  const elapsed = Math.max(0, SWEEP_CYCLE - blocksRemaining);
+  // Time-progress is presentation, not status — only flip to semantic red at
+  // the critical-blocks threshold (matrix R14: green/yellow/red are reserved
+  // for PnL / risk / system status).
+  const variant = isExpired || isCritical ? "danger" : "theme";
 
   if (isExpired) {
     return (
@@ -62,42 +54,13 @@ function SweepProgress({
 
   return (
     <div className="flex items-center gap-4">
-      <div
-        className="relative shrink-0"
-        style={{ width: RING_SIZE, height: RING_SIZE }}
-      >
-        <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90">
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={RING_STROKE}
-            className="text-primary-accent/20"
-          />
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={RING_STROKE}
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={dashoffset}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 0.5s ease" }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span
-            className="text-sm font-semibold"
-            style={{ color: strokeColor }}
-          >
-            {blocksRemaining}
-          </span>
-        </div>
-      </div>
+      <ProgressRing
+        current={elapsed}
+        total={SWEEP_CYCLE}
+        label={blocksRemaining}
+        variant={variant}
+        ariaLabel={`${blocksRemaining} blocks remaining until sweep`}
+      />
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex items-center gap-2">
           <span className="text-primary-accent">Current Block</span>
@@ -151,8 +114,7 @@ const VerificationStep = ({
   useEffect(() => {
     if (!btcBlockHeight || !selectedReserve) return;
 
-    const unlockHeight =
-      Number(selectedReserve.UnlockHeight) + NEXT_UNLOCK_HEIGHT_MODIFIER;
+    const unlockHeight = Number(selectedReserve.UnlockHeight);
     if (btcBlockHeight >= unlockHeight && !hasShownExpiryToast.current) {
       hasShownExpiryToast.current = true;
       toast({
@@ -169,6 +131,22 @@ const VerificationStep = ({
   useEffect(() => {
     hasShownExpiryToast.current = false;
   }, [selectedBtcReserve]);
+
+  // Persist the chosen reserve along with its unlock height + round so
+  // DepositPageShell can derive `reserve_expired` correctly even after the
+  // live reserve list rolls forward.
+  useEffect(() => {
+    if (!btcDepositAddress || !selectedReserve || !selectedReserveAddress) {
+      return;
+    }
+    const unlockHeight = Number(selectedReserve.UnlockHeight);
+    if (!Number.isFinite(unlockHeight)) return;
+    writeReserveSelection(btcDepositAddress, {
+      address: selectedReserveAddress,
+      unlockHeight,
+      roundId: selectedReserve.RoundId,
+    });
+  }, [btcDepositAddress, selectedReserve, selectedReserveAddress]);
 
   useEffect(() => {
     const generateQRCode = async () => {
@@ -318,9 +296,9 @@ const VerificationStep = ({
                       </div>
                     ) : btcBlockHeight != null ? (
                       (() => {
-                        const unlockHeight =
-                          Number(selectedReserve.UnlockHeight) +
-                          NEXT_UNLOCK_HEIGHT_MODIFIER;
+                        const unlockHeight = Number(
+                          selectedReserve.UnlockHeight
+                        );
                         const blocksRemaining = unlockHeight - btcBlockHeight;
                         const isCritical =
                           blocksRemaining <= CRITICAL_BLOCKS_WARNING &&

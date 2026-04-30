@@ -35,19 +35,37 @@ const SheetOverlay = React.forwardRef<
 ));
 SheetOverlay.displayName = Overlay.displayName;
 
+type SheetSide = "bottom" | "right";
+
+const SIDE_CLASSES: Record<SheetSide, string> = {
+  bottom: cn(
+    "fixed bottom-0 left-0 right-0 flex w-full flex-col gap-4 rounded-t-xl border-t bg-background px-6 py-4",
+    "max-h-[85dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]",
+    "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
+  ),
+  right: cn(
+    "fixed top-0 right-0 bottom-0 flex h-[100dvh] w-full max-w-[560px] flex-col gap-4 border-l bg-background px-6 py-4",
+    "overflow-y-auto pb-[env(safe-area-inset-bottom)]",
+    "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+  ),
+};
+
+type SheetContentProps = React.ComponentPropsWithoutRef<typeof Content> & {
+  side?: SheetSide;
+};
+
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof Content>,
-  React.ComponentPropsWithoutRef<typeof Content>
->(({ className, children, ...props }, ref) => (
+  SheetContentProps
+>(({ className, children, side = "bottom", ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <Content
       ref={ref}
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 flex w-full flex-col gap-4 rounded-t-xl border-t bg-background px-6 py-4",
-        "max-h-[85dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]",
+        "z-50",
+        SIDE_CLASSES[side],
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "duration-300",
         className

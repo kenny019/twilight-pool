@@ -1,5 +1,18 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
+// Mock-mode safety: a production build with NEXT_PUBLIC_MOCK_MODE=true would
+// ship the mock state in place of real indexer/REST data. Fail fast so a
+// stray env var can never hit prod. Use NEXT_PHASE so the guard only fires
+// for `next build`, not `next lint` / `next dev`.
+if (
+  process.env.NEXT_PHASE === "phase-production-build" &&
+  process.env.NEXT_PUBLIC_MOCK_MODE === "true"
+) {
+  throw new Error(
+    "NEXT_PUBLIC_MOCK_MODE=true is forbidden in production builds"
+  );
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {

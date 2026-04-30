@@ -2,8 +2,10 @@
 import BtcWithdrawalForm from "@/app/_components/withdrawal/form";
 import WithdrawRequestsTable from "@/app/_components/withdrawal/requests-table";
 import WithdrawalInfo from "@/app/_components/withdrawal/withdrawal-info";
+import WithdrawalPageShell from "@/app/_components/withdrawal/withdrawal-page-shell";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
-import { useWallet } from "@cosmos-kit/react-lite";
+import { useWallet } from "@/lib/mock/useMockableWallet";
+import { V2_ENABLED } from "@/lib/featureFlags";
 import React from "react";
 
 const Page = () => {
@@ -11,6 +13,10 @@ const Page = () => {
   const { mainWallet } = useWallet();
   const chainWallet = mainWallet?.getChainWallet("nyks");
   const twilightAddress = chainWallet?.address;
+
+  if (V2_ENABLED) {
+    return <WithdrawalPageShell twilightAddress={twilightAddress ?? ""} />;
+  }
 
   return (
     <div className="flex h-full w-full flex-col px-4 md:px-0">

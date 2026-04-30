@@ -1,5 +1,13 @@
 # Twilight Pool — Visual Modernization Execution Brief
 
+> **NOTE — v1.2 outdated.** A full v1.3 audit + rewrite is in progress in a
+> parallel doc-only PR. The V2 status-first deposit/withdrawal shells (gated
+> by `NEXT_PUBLIC_DEPOSIT_WITHDRAW_V2`) ship under the matrix update tracked
+> in `docs/responsive-pattern-matrix.md` and reference primitives
+> (`StatusBadge`, `ProgressRing`, `InfoDisclosure`, extended `Stepper`,
+> `Sheet` with `side="right"`) that are not yet documented here. Until v1.3
+> lands, treat the body below as historical context, not a current spec.
+
 **Version:** 1.2  
 **Status:** Governance-Compliant and Execution-Ready  
 **Objective:** Improve visual consistency, mobile usability, and perceived product polish while strictly adhering to AGENTS.md, CLAUDE.md, .cursorrules, the Responsive Pattern Matrix, and Implementation Guardrails.

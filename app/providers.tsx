@@ -39,6 +39,13 @@ const queryClient = new QueryClient({
   },
 });
 
+// In mock mode, give the mock wallet access to the query client for cache invalidation
+if (process.env.NEXT_PUBLIC_MOCK_MODE === "true") {
+  import("@/lib/mock/wallet").then(({ setMockQueryClient }) =>
+    setMockQueryClient(queryClient)
+  );
+}
+
 // Wallet list without environment filtering — filtering happens inside the
 // component so it runs on the client (navigator is undefined during SSR).
 const _allWallets = [
