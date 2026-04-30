@@ -1,12 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/button";
 import InfoDisclosure from "@/components/info-disclosure";
 import { Text } from "@/components/typography";
 import { Plus } from "lucide-react";
 import { useDepositFeed } from "@/lib/hooks/useDepositFeed";
+import {
+  readReserveSelection,
+  type ReserveSelection,
+} from "@/lib/depositReserveStorage";
 import type { PendingDeposit, ReserveMeta } from "@/lib/derivedStatus";
 import ActiveDepositCard from "./active-deposit-card";
 import DepositHistoryList from "./deposit-history-list";
@@ -28,16 +32,42 @@ export default function DepositPageShell({
 }: Props) {
   const hasPending = !!registeredAddress && !isConfirmed && depositAmount > 0;
 
-  const ephemeral: PendingDeposit | null = hasPending
-    ? {
-        btcDepositAddress: registeredAddress,
-        reserveAddress: "",
-        amountSats: depositAmount,
-        createdAt: new Date().toISOString(),
-      }
-    : null;
+  // Capture once on first mount of a pending deposit so re-renders don't
+  // produce a fresh `createdAt` (which would invalidate every memo downstream).
+  const [createdAt] = useState(() => new Date().toISOString());
 
-  const reserveMeta: ReserveMeta | null = null;
+  // Hydrate the user's chosen reserve from storage. VerificationStep writes
+  // the snapshot (address + unlock height + round) when the user picks a
+  // reserve to send BTC to. We trust the snapshot rather than re-deriving
+  // from the live reserve list, which can roll forward and either bump or
+  // drop the user's reserve.
+  const [reserveSelection, setReserveSelection] =
+    useState<ReserveSelection | null>(null);
+  useEffect(() => {
+    if (!registeredAddress) return;
+    setReserveSelection(readReserveSelection(registeredAddress));
+  }, [registeredAddress]);
+
+  const ephemeral = useMemo<PendingDeposit | null>(
+    () =>
+      hasPending
+        ? {
+            btcDepositAddress: registeredAddress,
+            reserveAddress: reserveSelection?.address ?? "",
+            amountSats: depositAmount,
+            createdAt,
+          }
+        : null,
+    [hasPending, registeredAddress, depositAmount, createdAt, reserveSelection]
+  );
+
+  const reserveMeta: ReserveMeta | null = useMemo(
+    () =>
+      reserveSelection
+        ? { unlockHeight: reserveSelection.unlockHeight }
+        : null,
+    [reserveSelection]
+  );
 
   const { active, history, hasMore, loadMore, isLoadingMore, isLoading } =
     useDepositFeed({
@@ -79,7 +109,7 @@ export default function DepositPageShell({
           initialAmountSats={depositAmount}
           isConfirmed={isConfirmed}
           trigger={
-            <Button className="flex items-center gap-2 bg-primary text-background hover:bg-primary/90">
+            <Button variant="primary">
               <Plus className="h-4 w-4" />
               New deposit
             </Button>

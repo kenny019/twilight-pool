@@ -6,34 +6,31 @@ export type StatusBadgeVariant =
   | "pending"
   | "active"
   | "success"
-  | "warn"
   | "danger";
 
 export interface StatusBadgeProps {
   variant: StatusBadgeVariant;
   icon?: React.ReactNode;
-  /** Show a leading pulsing dot. Defaults to true for `active`/`warn`. */
+  /** Show a leading pulsing dot. Defaults to true for `active`. */
   pulse?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
 const VARIANT_CLASS: Record<StatusBadgeVariant, string> = {
-  muted: "bg-gray-500/10 text-gray-400",
+  muted: "bg-primary-accent/10 text-primary-accent/60",
   pending: "bg-primary-accent/10 text-primary-accent",
   active: "bg-theme/10 text-theme",
   success: "bg-green-medium/10 text-green-medium",
-  warn: "bg-yellow-500/10 text-yellow-500",
-  danger: "bg-red-500/10 text-red-500",
+  danger: "bg-red/10 text-red",
 };
 
 const DOT_CLASS: Record<StatusBadgeVariant, string> = {
-  muted: "bg-gray-400",
+  muted: "bg-primary-accent/60",
   pending: "bg-primary-accent",
   active: "bg-theme",
   success: "bg-green-medium",
-  warn: "bg-yellow-500",
-  danger: "bg-red-500",
+  danger: "bg-red",
 };
 
 export function StatusBadge({
@@ -43,7 +40,7 @@ export function StatusBadge({
   className,
   children,
 }: StatusBadgeProps) {
-  const shouldPulse = pulse ?? (variant === "active" || variant === "warn");
+  const shouldPulse = pulse ?? variant === "active";
   return (
     <span
       className={cn(

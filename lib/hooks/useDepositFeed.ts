@@ -16,10 +16,9 @@ import {
 } from "../derivedStatus";
 import useBtcBlockHeight from "./useBtcBlockHeight";
 import { useIndexerStream } from "./useIndexerStream";
+import { V2_ENABLED } from "../featureFlags";
 
 const PAGE_SIZE = 20;
-const V2_ENABLED =
-  process.env.NEXT_PUBLIC_DEPOSIT_WITHDRAW_V2 === "true";
 
 export type DepositFeedRow = {
   key: string;

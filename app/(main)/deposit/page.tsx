@@ -10,8 +10,7 @@ import { WalletStatus } from "@cosmos-kit/core";
 import { useWallet } from "@/lib/mock/useMockableWallet";
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-const V2_ENABLED = process.env.NEXT_PUBLIC_DEPOSIT_WITHDRAW_V2 === "true";
+import { V2_ENABLED } from "@/lib/featureFlags";
 
 const Page = () => {
   const MANDATORY_KYC = process.env.NEXT_PUBLIC_MANDATORY_KYC === "true";

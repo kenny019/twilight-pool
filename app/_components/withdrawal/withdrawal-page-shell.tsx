@@ -43,7 +43,7 @@ export default function WithdrawalPageShell({ twilightAddress }: Props) {
         </div>
         <WithdrawalSheet
           trigger={
-            <Button className="flex items-center gap-2 bg-primary text-background hover:bg-primary/90">
+            <Button variant="primary">
               <Plus className="h-4 w-4" />
               New withdrawal
             </Button>

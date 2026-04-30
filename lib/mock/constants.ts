@@ -18,6 +18,9 @@ export const MOCK_BTC_DEPOSIT_ADDRESS =
 export const MOCK_TX_HASH =
   "A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2";
 
+export const MOCK_FAILED_TX_HASH =
+  "FA11EDFA11EDFA11EDFA11EDFA11EDFA11EDFA11EDFA11EDFA11EDFA11EDFA11";
+
 export const MOCK_SATS_BALANCE = 500_000;
 export const MOCK_NYKS_BALANCE = 100;
 
@@ -141,7 +144,29 @@ export const MOCK_INDEXER_WITHDRAWALS: IndexerWithdrawal[] = [
     isConfirmed: true,
     createdAt: "2025-12-02T14:00:00Z",
   },
+  // Failed-state mock — exercises the `failed` branch of the withdrawal
+  // status derivation. The matching REST row in MOCK_FAILED_REST_WITHDRAWAL
+  // carries MOCK_FAILED_TX_HASH so getIndexerTx returns status "failed".
+  {
+    id: 2,
+    withdrawIdentifier: "2",
+    twilightAddress: MOCK_TWILIGHT_ADDRESS,
+    withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    withdrawReserveId: "1",
+    blockHeight: 839_996,
+    withdrawAmount: "25000",
+    isConfirmed: false,
+    createdAt: "2025-12-02T15:00:00Z",
+  },
 ];
+
+export const MOCK_FAILED_REST_WITHDRAWAL = {
+  withdrawIdentifier: 2,
+  withdrawAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+  withdrawReserveId: "1",
+  withdrawAmount: "25000",
+  txHash: MOCK_FAILED_TX_HASH,
+};
 
 export const MOCK_TX = {
   hash: MOCK_TX_HASH,

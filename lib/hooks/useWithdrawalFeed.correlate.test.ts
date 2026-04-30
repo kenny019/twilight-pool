@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { correlate } from "./useWithdrawalFeed";
+import { correlate } from "./withdrawalCorrelation";
 import type { IndexerWithdrawal } from "../api/indexer";
 import type { WithdrawalRestRow } from "../derivedStatus";
 

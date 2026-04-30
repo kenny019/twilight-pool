@@ -37,10 +37,25 @@ export function useIndexerStream({
     const unsubscribe = client.subscribe((event) =>
       handleEvent(event, twilightAddress, queryClient)
     );
+    const unsubscribeReconnect = client.onReconnect(() => {
+      // We may have missed events while disconnected. The account query has
+      // staleTime: Infinity (correct under steady state) and the history
+      // queries dedupe; refetching here re-syncs both.
+      queryClient.invalidateQueries({
+        queryKey: ["indexer-account", twilightAddress],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["indexer-deposits-infinite", twilightAddress],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["indexer-withdrawals-infinite", twilightAddress],
+      });
+    });
     client.connect();
 
     return () => {
       unsubscribe();
+      unsubscribeReconnect();
       client.close();
     };
   }, [enabled, twilightAddress, queryClient]);
@@ -85,9 +100,18 @@ function mergeInfiniteFirstPage<T extends { id: number }>(
     { queryKey },
     (prev) => {
       if (!prev) return prev;
+      // Strip a duplicate id from any later page first so an incoming event
+      // for a row already shown after Load-More doesn't render twice.
+      const cleanedPages = prev.pages.map((page, idx) => {
+        if (idx === 0) return page;
+        const filtered = page.data.filter((r) => r.id !== row.id);
+        if (filtered.length === page.data.length) return page;
+        return { ...page, data: filtered };
+      });
+
       return {
         ...prev,
-        pages: prev.pages.map((page, idx) => {
+        pages: cleanedPages.map((page, idx) => {
           if (idx !== 0) return page;
           const existingIdx = page.data.findIndex((r) => r.id === row.id);
           const next =

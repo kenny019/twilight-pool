@@ -35,7 +35,7 @@ export type WithdrawalRestRow = {
   withdrawAddress: string;
   withdrawReserveId: string;
   withdrawAmount: string | number;
-  creationTwilightBlockHeight?: string | number;
+  /** Cosmos transaction hash, attached on the client from the local store. */
   txHash?: string;
 };
 

@@ -13,6 +13,7 @@ import QRCode from "qrcode";
 import React, { useEffect, useRef, useState } from "react";
 import BtcReserveSelect from "../btc-reserve-select";
 import CopyField from "./copy-field";
+import { writeReserveSelection } from "@/lib/depositReserveStorage";
 
 type Props = {
   btcDepositAddress: string;
@@ -38,11 +39,10 @@ function SweepProgress({
   const isExpired = blocksRemaining <= 0;
   const isCritical = blocksRemaining <= CRITICAL_BLOCKS_WARNING && !isExpired;
   const elapsed = Math.max(0, SWEEP_CYCLE - blocksRemaining);
-  const variant = isExpired || isCritical
-    ? "danger"
-    : elapsed / SWEEP_CYCLE >= 0.5
-    ? "warn"
-    : "success";
+  // Time-progress is presentation, not status — only flip to semantic red at
+  // the critical-blocks threshold (matrix R14: green/yellow/red are reserved
+  // for PnL / risk / system status).
+  const variant = isExpired || isCritical ? "danger" : "theme";
 
   if (isExpired) {
     return (
@@ -131,6 +131,22 @@ const VerificationStep = ({
   useEffect(() => {
     hasShownExpiryToast.current = false;
   }, [selectedBtcReserve]);
+
+  // Persist the chosen reserve along with its unlock height + round so
+  // DepositPageShell can derive `reserve_expired` correctly even after the
+  // live reserve list rolls forward.
+  useEffect(() => {
+    if (!btcDepositAddress || !selectedReserve || !selectedReserveAddress) {
+      return;
+    }
+    const unlockHeight = Number(selectedReserve.UnlockHeight);
+    if (!Number.isFinite(unlockHeight)) return;
+    writeReserveSelection(btcDepositAddress, {
+      address: selectedReserveAddress,
+      unlockHeight,
+      roundId: selectedReserve.RoundId,
+    });
+  }, [btcDepositAddress, selectedReserve, selectedReserveAddress]);
 
   useEffect(() => {
     const generateQRCode = async () => {

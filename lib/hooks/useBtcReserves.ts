@@ -8,7 +8,7 @@ import { decodeUnlockHeightFromBtcScript } from "@/lib/utils/btcScript";
 
 // Majority-vote (btcAddress, btcScript) within a single round; tie-break deterministically
 // by lex-min judgeAddress so multiple judges at the same round collapse to one entry.
-function pickConsensus(
+export function pickConsensus(
   msgs: MsgProposeSweepAddressAmino[]
 ): MsgProposeSweepAddressAmino {
   const groups = new Map<string, MsgProposeSweepAddressAmino[]>();

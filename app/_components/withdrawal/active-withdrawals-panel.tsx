@@ -3,10 +3,13 @@
 import React from "react";
 import { ArrowUpRight } from "lucide-react";
 import StatusBadge from "@/components/status-badge";
-import StatusTimeline, {
-  type StatusTimelineStep,
-} from "@/components/status-timeline";
+import Stepper, { type StepperStep } from "@/components/stepper";
 import { Text } from "@/components/typography";
+import {
+  confirmationsMeta,
+  passiveStepState,
+} from "@/lib/passiveStepState";
+import type { WithdrawalStatusState } from "@/lib/derivedStatus";
 import Link from "next/link";
 import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
@@ -68,7 +71,7 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
 
   if (state === "failed") {
     return (
-      <div className="flex flex-col gap-3 rounded-lg border border-red-500/30 bg-red-500/5 p-5">
+      <div className="flex flex-col gap-3 rounded-xl border border-red/30 bg-red/5 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex flex-col gap-1 min-w-0">
             <Text className="text-[11px] font-medium uppercase tracking-wider text-primary-accent/70">
@@ -83,22 +86,22 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
           </div>
           <StatusBadge variant="danger">Failed</StatusBadge>
         </div>
-        <Text className="text-xs text-red-500/80">
+        <Text className="text-xs text-red/80">
           The originating transaction failed. Open a new withdrawal to retry.
         </Text>
       </div>
     );
   }
 
-  const steps: StatusTimelineStep[] = STEP_ORDER.map((id) => {
-    const stepState = stepStateFor(id, state);
+  const steps: StepperStep[] = STEP_ORDER.map((id) => {
+    const stepState = passiveStepState(id, state, STEP_ORDER, "settled");
     const timestamp =
-      id === "requested" && createdAt && stepState !== "pending"
+      id === "requested" && createdAt && stepState !== "upcoming"
         ? dayjs(createdAt).fromNow()
         : undefined;
     const meta =
       id === "confirming" && state === "confirming"
-        ? confirmMeta(row.status.confirmations, row.status.etaMinutes)
+        ? confirmationsMeta(row.status.confirmations, row.status.etaMinutes, 1)
         : undefined;
     return { id, label: STEP_LABELS[id], state: stepState, timestamp, meta };
   });
@@ -106,7 +109,7 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
   const headline = renderHeadline(state, btc, row.status.etaMinutes);
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-background p-5">
+    <div className="flex flex-col gap-4 rounded-xl border bg-background/90 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1 min-w-0">
           <Text className="text-[11px] font-medium uppercase tracking-wider text-primary-accent/70">
@@ -122,7 +125,12 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
         </StatusBadge>
       </div>
 
-      <StatusTimeline steps={steps} orientation="horizontal" />
+      <Stepper
+        steps={steps}
+        currentStep={0}
+        orientation="horizontal"
+        connectorWidth="w-12"
+      />
 
       <div className="flex flex-wrap items-center gap-3 border-t border-primary-accent/10 pt-3 text-[11px] text-primary-accent">
         {txHash && (
@@ -191,37 +199,23 @@ function renderHeadline(
   );
 }
 
-function stepStateFor(
-  id: string,
-  current: string
-): StatusTimelineStep["state"] {
-  const idx = STEP_ORDER.indexOf(id as (typeof STEP_ORDER)[number]);
-  const cur = STEP_ORDER.indexOf(current as (typeof STEP_ORDER)[number]);
-  if (cur < 0) return "pending";
-  if (idx < cur) return "done";
-  if (idx === cur) return current === "settled" ? "done" : "active";
-  return "pending";
-}
-
 function badgeVariantFor(
-  state: string
+  state: WithdrawalStatusState
 ): React.ComponentProps<typeof StatusBadge>["variant"] {
   switch (state) {
     case "settled":
       return "success";
     case "confirming":
     case "broadcast":
-      return "warn";
+      return "active";
     case "requested":
       return "pending";
     case "failed":
       return "danger";
-    default:
-      return "muted";
   }
 }
 
-function statusLabel(state: string) {
+function statusLabel(state: WithdrawalStatusState): string {
   switch (state) {
     case "settled":
       return "Settled";
@@ -233,15 +227,5 @@ function statusLabel(state: string) {
       return "Requested";
     case "failed":
       return "Failed";
-    default:
-      return state;
   }
-}
-
-function confirmMeta(confirmations?: number, etaMinutes?: number) {
-  const conf =
-    typeof confirmations === "number" ? `${confirmations} / 1 conf` : "";
-  const eta =
-    typeof etaMinutes === "number" && etaMinutes > 0 ? `~${etaMinutes}m` : "";
-  return [conf, eta].filter(Boolean).join(" · ");
 }

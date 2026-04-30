@@ -17,14 +17,15 @@ import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { useTwilightStore } from "@/lib/providers/store";
 import FeeEstimate from "./fee-estimate";
 import { assertCosmosTxSuccess } from "@/lib/utils/cosmosTx";
+import { V2_ENABLED } from "@/lib/featureFlags";
 
 type BtcWithdrawalFormProps = {
   /**
-   * When true, renders without the surrounding card (the v2 sheet owns the
-   * outer chrome). Defaults to false to preserve legacy layout.
+   * V2 only. When true, renders without the surrounding card (the v2 sheet
+   * owns the outer chrome). Defaults to false to preserve legacy layout.
    */
   hideChrome?: boolean;
-  /** Fired after a successful broadcast so the sheet can close. */
+  /** V2 only. Fired after a successful broadcast so the sheet can close. */
   onSubmitted?: () => void;
 };
 
@@ -76,9 +77,13 @@ const BtcWithdrawalForm = ({
           .toString()
       : "0.00000000";
 
-  async function submitWithdrawal() {
+  async function submitWithdrawalV2() {
+    // Race-safe: lock the button before any validation, so a fast double-click
+    // can't slip a second submit in between the balance check and the broadcast.
+    setIsSubmitLoading(true);
     try {
       if (!depositRef.current?.value) {
+        setIsSubmitLoading(false);
         toast({
           variant: "error",
           title: "Error",
@@ -88,6 +93,7 @@ const BtcWithdrawalForm = ({
       }
 
       if (selectedReserveId === undefined) {
+        setIsSubmitLoading(false);
         toast({
           variant: "error",
           title: "Error",
@@ -97,6 +103,7 @@ const BtcWithdrawalForm = ({
       }
 
       if (!mainWallet) {
+        setIsSubmitLoading(false);
         console.error("no mainWallet");
         return toast({
           title: "No wallet",
@@ -107,7 +114,10 @@ const BtcWithdrawalForm = ({
 
       const withdrawAddress = registeredBtcData?.depositAddress;
 
-      if (!chainWallet || !withdrawAddress || !twilightAddress) return;
+      if (!chainWallet || !withdrawAddress || !twilightAddress) {
+        setIsSubmitLoading(false);
+        return;
+      }
 
       const withdrawSats = new BTC(
         depositDenom as BTCDenoms,
@@ -117,6 +127,7 @@ const BtcWithdrawalForm = ({
         .toNumber();
 
       if (withdrawSats <= 0) {
+        setIsSubmitLoading(false);
         toast({
           variant: "error",
           title: "Invalid amount",
@@ -126,6 +137,7 @@ const BtcWithdrawalForm = ({
       }
 
       if (withdrawSats > twilightSats) {
+        setIsSubmitLoading(false);
         toast({
           variant: "error",
           title: "Insufficient balance",
@@ -133,8 +145,6 @@ const BtcWithdrawalForm = ({
         });
         return;
       }
-
-      setIsSubmitLoading(true);
 
       const stargateClient = await chainWallet.getSigningStargateClient();
 
@@ -147,8 +157,6 @@ const BtcWithdrawalForm = ({
         withdrawAddress: withdrawAddress,
         withdrawAmount: Long.fromNumber(withdrawSats),
       });
-
-      setIsSubmitLoading(false);
 
       const gasPrice = GasPrice.fromString("1nyks");
       const gasEstimation = await stargateClient.simulate(
@@ -224,6 +232,137 @@ const BtcWithdrawalForm = ({
       });
     }
   }
+
+  async function submitWithdrawalLegacy() {
+    try {
+      if (!depositRef.current?.value) {
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Invalid BTC amount",
+        });
+        return;
+      }
+
+      if (selectedReserveId === undefined) {
+        toast({
+          variant: "error",
+          title: "Error",
+          description: "Please select a reserve",
+        });
+        return;
+      }
+
+      if (!mainWallet) {
+        console.error("no mainWallet");
+        return toast({
+          title: "No wallet",
+          description: "Please connect your wallet before registration",
+          variant: "error",
+        });
+      }
+
+      const withdrawAddress = registeredBtcData?.depositAddress;
+
+      if (!chainWallet || !withdrawAddress || !twilightAddress) return;
+
+      const withdrawSats = new BTC(
+        depositDenom as BTCDenoms,
+        Big(depositRef.current.value)
+      )
+        .convert("sats")
+        .toNumber();
+
+      setIsSubmitLoading(true);
+
+      const stargateClient = await chainWallet.getSigningStargateClient();
+
+      const { withdrawBtcRequest } =
+        twilightproject.nyks.bridge.MessageComposer.withTypeUrl;
+
+      const msg = withdrawBtcRequest({
+        reserveId: Long.fromNumber(selectedReserveId),
+        twilightAddress,
+        withdrawAddress: withdrawAddress,
+        withdrawAmount: Long.fromNumber(withdrawSats),
+      });
+
+      setIsSubmitLoading(false);
+
+      const gasPrice = GasPrice.fromString("1nyks");
+      const gasEstimation = await stargateClient.simulate(
+        twilightAddress,
+        [msg],
+        ""
+      );
+
+      const fee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+
+      toast({
+        title: "Withdraw submitted",
+        description: "Please wait while your Bitcoin is being withdrawn...",
+      });
+
+      const res = assertCosmosTxSuccess(
+        await stargateClient.signAndBroadcast(
+          twilightAddress,
+          [msg],
+          // fee
+          100
+        ),
+        "BTC withdrawal request"
+      );
+
+      setIsSubmitLoading(false);
+      console.log("response", res);
+
+      addWithdrawal({
+        tx_hash: res.transactionHash,
+        created_at: Date.now(),
+        status: "queued",
+        amount: withdrawSats,
+        withdrawAddress,
+        reserveId: selectedReserveId,
+      });
+
+      addTransactionHistory({
+        date: new Date(),
+        from: twilightAddress,
+        fromTag: "Funding",
+        to: withdrawAddress,
+        toTag: "BTC Withdrawal",
+        tx_hash: res.transactionHash,
+        type: "Withdraw",
+        value: withdrawSats,
+        funding_sats_snapshot: twilightSats,
+      });
+
+      toast({
+        title: "Success",
+        description: "Your withdrawal request has been successfully sent",
+      });
+    } catch (err) {
+      if (isUserRejection(err)) {
+        toast({
+          title: "Transaction rejected",
+          description: "You declined the transaction in your wallet.",
+        });
+        setIsSubmitLoading(false);
+        return;
+      }
+      console.error(err);
+      setIsSubmitLoading(false);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "An error has occurred, try again later.",
+      });
+    }
+  }
+
+  const submitWithdrawal = V2_ENABLED
+    ? submitWithdrawalV2
+    : submitWithdrawalLegacy;
 
   const formInner = (
     <form className="space-y-4">

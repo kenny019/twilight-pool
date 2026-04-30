@@ -5,9 +5,8 @@ import WithdrawalInfo from "@/app/_components/withdrawal/withdrawal-info";
 import WithdrawalPageShell from "@/app/_components/withdrawal/withdrawal-page-shell";
 import useRedirectUnconnected from "@/lib/hooks/useRedirectUnconnected";
 import { useWallet } from "@/lib/mock/useMockableWallet";
+import { V2_ENABLED } from "@/lib/featureFlags";
 import React from "react";
-
-const V2_ENABLED = process.env.NEXT_PUBLIC_DEPOSIT_WITHDRAW_V2 === "true";
 
 const Page = () => {
   useRedirectUnconnected();

@@ -12,6 +12,7 @@ export type IndexerEvent =
   | { type: "block:new"; payload: { blockHeight: number } };
 
 type Listener = (event: IndexerEvent) => void;
+type ReconnectListener = () => void;
 
 type Options = {
   channels?: IndexerChannel[];
@@ -35,9 +36,12 @@ export class IndexerWsClient {
   private backoff: { initial: number; max: number };
   private ws: WebSocket | null = null;
   private listeners = new Set<Listener>();
+  private reconnectListeners = new Set<ReconnectListener>();
   private retryDelay: number;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private closedByUser = false;
+  // Tracks whether `onopen` represents a re-connection (vs the first one).
+  private hasOpenedOnce = false;
 
   constructor(options: Options = {}) {
     this.url = toWsUrl(getIndexerHttpBase());
@@ -64,6 +68,10 @@ export class IndexerWsClient {
       this.channels.forEach((channel) => {
         this.ws?.send(JSON.stringify({ action: "subscribe", channel }));
       });
+      if (this.hasOpenedOnce) {
+        this.reconnectListeners.forEach((l) => l());
+      }
+      this.hasOpenedOnce = true;
     };
 
     this.ws.onmessage = (ev) => {
@@ -103,14 +111,30 @@ export class IndexerWsClient {
     };
   }
 
+  /**
+   * Called every time the socket re-opens after the initial connection.
+   * Useful for invalidating caches that may have missed events while
+   * disconnected.
+   */
+  onReconnect(listener: ReconnectListener): () => void {
+    this.reconnectListeners.add(listener);
+    return () => {
+      this.reconnectListeners.delete(listener);
+    };
+  }
+
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return;
-    const delay = this.retryDelay;
+    // Apply jitter so a fleet of clients doesn't thunder back at the same
+    // instant when the indexer recovers from an outage. Range is
+    // [0.5*delay, 1.5*delay).
+    const base = this.retryDelay;
+    const jittered = Math.round(base * (0.5 + Math.random()));
     this.retryDelay = Math.min(this.retryDelay * 2, this.backoff.max);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
-    }, delay);
+    }, jittered);
   }
 }
 
@@ -143,3 +167,5 @@ function parseMessage(raw: unknown): IndexerEvent | null {
   }
   return null;
 }
+
+export { parseMessage };

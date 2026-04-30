@@ -203,13 +203,21 @@ export async function getIndexerAccount(
   return res.json();
 }
 
-export async function getIndexerTx(hash: string): Promise<IndexerTx> {
+export async function getIndexerTx(hash: string): Promise<IndexerTx | null> {
   if (IS_MOCK) {
-    const { MOCK_TX } = await import("../mock/constants");
+    const { MOCK_TX, MOCK_FAILED_TX_HASH } = await import(
+      "../mock/constants"
+    );
+    if (hash === MOCK_FAILED_TX_HASH) {
+      return { ...MOCK_TX, hash, status: "failed" };
+    }
     return { ...MOCK_TX, hash };
   }
 
   const res = await fetch(buildUrl(`/api/txs/${hash}`));
+  // 404 means the tx hasn't been indexed yet — treat as `pending` upstream by
+  // returning null. Other errors throw so callers can surface them.
+  if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch tx ${hash}`);
   return res.json();
 }
