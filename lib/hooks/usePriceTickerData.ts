@@ -92,7 +92,7 @@ export default function usePriceTickerData(currentPrice: number) {
     const fr = marketStatsQuery.data?.funding_rate;
     if (!fr) return { timestamp: "", rate: "" };
     return {
-      rate: (fr.funding_rate / 100).toFixed(5),
+      rate: fr.funding_rate.toFixed(4),
       timestamp: fr.funding_rate_timestamp,
     };
   }, [marketStatsQuery.data]);

@@ -83,8 +83,7 @@ const TickerWrapper = () => {
   }, [marketStats.data]);
 
   const estimatedFundingRateLabel = useMemo(() => {
-    const estimatedFundingRatePercent = estimatedFundingRate / 100;
-    return `${estimatedFundingRatePercent >= 0 ? "+" : ""}${estimatedFundingRatePercent.toFixed(5)}%`;
+    return `${estimatedFundingRate >= 0 ? "+" : ""}${estimatedFundingRate.toFixed(4)}%`;
   }, [estimatedFundingRate]);
 
   const fundingDirectionLabel = useMemo(() => {
