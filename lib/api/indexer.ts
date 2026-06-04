@@ -42,7 +42,7 @@ export type IndexerPagination = {
   total: number;
   page: number;
   limit: number;
-  pages: number;
+  totalPages: number;
 };
 
 export type BridgeAnalytics = {
@@ -98,8 +98,13 @@ type PaginatedResponse<T> = { data: T[]; pagination: IndexerPagination };
 const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 
 // Host-only base, e.g. `https://indexer.twilight.org`. Tolerate a trailing
-// `/api` for back-compat with older .env files.
-const BASE_URL = (process.env.NEXT_PUBLIC_INDEXER_BASE_URL ?? "")
+// `/api` for back-compat with older .env files. Falls back to the canonical
+// indexer host when the env var is unset/empty: an empty base makes every
+// `buildUrl()` call do `new URL("/api/...")`, which throws `Invalid URL` and
+// silently empties deposit/withdrawal history while balances (read from the
+// Cosmos LCD) still update.
+const DEFAULT_BASE_URL = "https://indexer.twilight.org";
+const BASE_URL = (process.env.NEXT_PUBLIC_INDEXER_BASE_URL?.trim() || DEFAULT_BASE_URL)
   .replace(/\/+$/, "")
   .replace(/\/api$/, "");
 
@@ -125,7 +130,7 @@ export async function getIndexerDeposits(
     const deposits = getMockState().indexerDeposits;
     return {
       data: deposits,
-      pagination: { total: deposits.length, page: 1, limit: 20, pages: 1 },
+      pagination: { total: deposits.length, page: 1, limit: 20, totalPages: 1 },
     };
   }
 
@@ -162,7 +167,7 @@ export async function getIndexerWithdrawals(
         total: withdrawals.length,
         page: 1,
         limit: 20,
-        pages: 1,
+        totalPages: 1,
       },
     };
   }

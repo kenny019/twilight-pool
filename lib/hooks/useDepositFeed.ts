@@ -60,8 +60,8 @@ export function useDepositFeed({
         limit: PAGE_SIZE,
       }),
     getNextPageParam: (lastPage) => {
-      const { page, pages } = lastPage.pagination;
-      return page < pages ? page + 1 : undefined;
+      const { page, totalPages } = lastPage.pagination;
+      return page < totalPages ? page + 1 : undefined;
     },
     enabled: !!twilightAddress,
     staleTime: 60_000,
