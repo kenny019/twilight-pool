@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import Stepper from "@/components/stepper";
 import { Text } from "@/components/typography";
 import RegistrationStep from "./registration-step";
 import VerificationStep from "./verification-step";
+import { writeDepositIntent } from "@/lib/depositIntentStorage";
 
 type SheetStep = "register" | "verify";
 
@@ -23,6 +24,9 @@ type Props = {
    * (e.g. the active card's "Choose reserve" CTA) and react on close. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Skip the register step on open — a deposit (chain-pending or
+   * client-side intent) is already in flight. */
+  startAtVerify?: boolean;
 };
 
 const STEPS = [
@@ -37,17 +41,39 @@ export default function DepositSheet({
   isConfirmed = false,
   open,
   onOpenChange,
+  startAtVerify,
 }: Props) {
   const hasPending = !!initialAddress && !isConfirmed && initialAmountSats > 0;
-  const [step, setStep] = useState<SheetStep>(hasPending ? "verify" : "register");
+  const initialVerify = startAtVerify ?? hasPending;
+  const [step, setStep] = useState<SheetStep>(initialVerify ? "verify" : "register");
   const [btcAddress, setBtcAddress] = useState<string>(initialAddress);
   const [btcAmount, setBtcAmount] = useState<number>(initialAmountSats);
+
+  // The deposit in flight can change while the sheet is closed (intent
+  // written, registration confirmed), so re-derive step and prefill from
+  // props each time the sheet opens.
+  useEffect(() => {
+    if (!open) return;
+    setStep(initialVerify ? "verify" : "register");
+    setBtcAddress(initialAddress);
+    setBtcAmount(initialAmountSats);
+  }, [open, initialVerify, initialAddress, initialAmountSats]);
 
   const stepNumber = step === "register" ? 1 : 2;
 
   const handleRegistered = (address: string, amount: string) => {
     setBtcAddress(address);
     setBtcAmount(Number(amount));
+    // Repeat deposits (registration already confirmed) skip the chain
+    // broadcast, so nothing on-chain marks this deposit as in-flight.
+    // Persist a client-side intent that DepositPageShell derives the
+    // awaiting-send card from.
+    if (isConfirmed) {
+      writeDepositIntent(address, {
+        amountSats: Number(amount),
+        createdAt: new Date().toISOString(),
+      });
+    }
     setStep("verify");
   };
 

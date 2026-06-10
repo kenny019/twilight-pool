@@ -9,7 +9,7 @@
 // `unlockHeight` to a fresher value (masking the expiry) or lose it
 // entirely (preventing reserve_expired from ever firing).
 
-const PREFIX = "twilight:deposit:reserveSelection:";
+import { createKeyedStorage } from "./keyedStorage";
 
 export type ReserveSelection = {
   address: string;
@@ -19,65 +19,28 @@ export type ReserveSelection = {
   roundId: string;
 };
 
-function key(btcDepositAddress: string): string {
-  return `${PREFIX}${btcDepositAddress}`;
-}
-
-export function readReserveSelection(
-  btcDepositAddress: string
-): ReserveSelection | null {
-  if (typeof window === "undefined" || !btcDepositAddress) return null;
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(key(btcDepositAddress));
-  } catch {
-    return null;
-  }
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<ReserveSelection>;
+const storage = createKeyedStorage<ReserveSelection>(
+  "twilight:deposit:reserveSelection:",
+  (parsed) => {
+    // Legacy plain-string entries fail this shape check, so we surface no
+    // selection; the user reopening VerificationStep rewrites the new format.
+    const p = parsed as Partial<ReserveSelection>;
     if (
-      typeof parsed.address === "string" &&
-      typeof parsed.unlockHeight === "number" &&
-      Number.isFinite(parsed.unlockHeight) &&
-      typeof parsed.roundId === "string"
+      typeof p.address === "string" &&
+      typeof p.unlockHeight === "number" &&
+      Number.isFinite(p.unlockHeight) &&
+      typeof p.roundId === "string"
     ) {
       return {
-        address: parsed.address,
-        unlockHeight: parsed.unlockHeight,
-        roundId: parsed.roundId,
+        address: p.address,
+        unlockHeight: p.unlockHeight,
+        roundId: p.roundId,
       };
     }
     return null;
-  } catch {
-    // Legacy plain-string entries: we can't trust the unlock height, so
-    // surface no selection. The user reopening VerificationStep rewrites
-    // it in the new format.
-    return null;
   }
-}
+);
 
-export function writeReserveSelection(
-  btcDepositAddress: string,
-  selection: ReserveSelection
-): void {
-  if (typeof window === "undefined" || !btcDepositAddress) return;
-  try {
-    window.localStorage.setItem(
-      key(btcDepositAddress),
-      JSON.stringify(selection)
-    );
-  } catch {
-    // localStorage unavailable — degrade gracefully
-  }
-}
-
-export function clearReserveSelection(btcDepositAddress: string): void {
-  if (typeof window === "undefined" || !btcDepositAddress) return;
-  try {
-    window.localStorage.removeItem(key(btcDepositAddress));
-  } catch {
-    // ignore
-  }
-}
+export const readReserveSelection = storage.read;
+export const writeReserveSelection = storage.write;
+export const clearReserveSelection = storage.clear;

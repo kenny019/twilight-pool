@@ -33,13 +33,33 @@ type Options = {
   reserveMeta?: ReserveMeta | null;
   // Disable the WS subscription (e.g. legacy flag off).
   enableStream?: boolean;
+  /** For intent-backed ephemerals: credited rows only match (suppress the
+   * ephemeral) when created at/after this ISO timestamp, so an old deposit
+   * of the same amount doesn't swallow a fresh intent. Unset → match any
+   * row, preserving the chain-registration behavior. */
+  ephemeralMatchedAfter?: string | null;
 };
+
+/** Does this indexer row represent the same deposit as the ephemeral row? */
+export function ephemeralMatchesIndexerRow(
+  row: IndexerDeposit,
+  ephemeral: PendingDeposit,
+  matchedAfter?: string | null
+): boolean {
+  if (row.twilightDepositAddress !== ephemeral.btcDepositAddress) return false;
+  if (Number(row.depositAmount) !== ephemeral.amountSats) return false;
+  // An in-flight (unconfirmed) row is always this deposit; a credited row
+  // only counts when it postdates the recency cutoff.
+  if (!matchedAfter || !row.confirmed) return true;
+  return new Date(row.createdAt).getTime() >= new Date(matchedAfter).getTime();
+}
 
 export function useDepositFeed({
   twilightAddress,
   ephemeral = null,
   reserveMeta = null,
   enableStream = V2_ENABLED,
+  ephemeralMatchedAfter = null,
 }: Options) {
   const accountQuery = useQuery({
     queryKey: ["indexer-account", twilightAddress],
@@ -78,10 +98,11 @@ export function useDepositFeed({
     return accountQuery.data?.deposits ?? [];
   }, [historyQuery.data, accountQuery.data]);
 
-  const { active, history } = useMemo(() => {
+  const { active, history, ephemeralMatched } = useMemo(() => {
     const blockHeight = currentBtcBlock ?? 0;
     const activeRows: DepositFeedRow[] = [];
     const historyRows: DepositFeedRow[] = [];
+    let matched = false;
 
     for (const row of indexerRows) {
       const status = deriveDepositStatus(row, null, blockHeight, null);
@@ -97,12 +118,10 @@ export function useDepositFeed({
     }
 
     if (ephemeral) {
-      const hasMatchingRow = indexerRows.some(
-        (r) =>
-          r.twilightDepositAddress === ephemeral.btcDepositAddress &&
-          Number(r.depositAmount) === ephemeral.amountSats
+      matched = indexerRows.some((r) =>
+        ephemeralMatchesIndexerRow(r, ephemeral, ephemeralMatchedAfter)
       );
-      if (!hasMatchingRow) {
+      if (!matched) {
         const status = deriveDepositStatus(
           null,
           ephemeral,
@@ -120,12 +139,15 @@ export function useDepositFeed({
       }
     }
 
-    return { active: activeRows, history: historyRows };
-  }, [indexerRows, ephemeral, reserveMeta, currentBtcBlock]);
+    return { active: activeRows, history: historyRows, ephemeralMatched: matched };
+  }, [indexerRows, ephemeral, reserveMeta, currentBtcBlock, ephemeralMatchedAfter]);
 
   return {
     active,
     history,
+    /** True when an indexer row covers the ephemeral deposit — callers can
+     * retire any client-side pending record. */
+    ephemeralMatched,
     isLoading: accountQuery.isPending && historyQuery.isPending,
     error: historyQuery.error ?? accountQuery.error ?? null,
     hasMore: !!historyQuery.hasNextPage,

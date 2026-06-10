@@ -33,9 +33,16 @@ type Props = {
   row: DepositFeedRow;
   /** Opens the deposit sheet on the reserve-selection step. */
   onChooseReserve?: () => void;
+  /** Retires a client-side deposit intent — only passed for intent-backed
+   * rows, which have no on-chain record to expire on their own. */
+  onDismiss?: () => void;
 };
 
-export default function ActiveDepositCard({ row, onChooseReserve }: Props) {
+export default function ActiveDepositCard({
+  row,
+  onChooseReserve,
+  onDismiss,
+}: Props) {
   const { status, indexerRow, ephemeral } = row;
   const amountSats = indexerRow
     ? Number(indexerRow.depositAmount)
@@ -56,6 +63,7 @@ export default function ActiveDepositCard({ row, onChooseReserve }: Props) {
         <Text className="text-xs text-primary-accent">
           Open a new deposit — a fresh reserve will be selected.
         </Text>
+        {onDismiss && <DismissButton onDismiss={onDismiss} />}
       </div>
     );
   }
@@ -128,7 +136,21 @@ export default function ActiveDepositCard({ row, onChooseReserve }: Props) {
         currentStep={0}
         orientation="vertical"
       />
+
+      {isAwaitingSend && onDismiss && <DismissButton onDismiss={onDismiss} />}
     </div>
+  );
+}
+
+function DismissButton({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onDismiss}
+      className="self-start text-[11px] text-primary-accent/60 underline-offset-2 transition-colors hover:text-primary-accent hover:underline"
+    >
+      Not sending? Dismiss this deposit
+    </button>
   );
 }
 

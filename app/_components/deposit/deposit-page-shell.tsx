@@ -11,6 +11,11 @@ import {
   readReserveSelection,
   type ReserveSelection,
 } from "@/lib/depositReserveStorage";
+import {
+  clearDepositIntent,
+  readDepositIntent,
+  type DepositIntent,
+} from "@/lib/depositIntentStorage";
 import type { PendingDeposit, ReserveMeta } from "@/lib/derivedStatus";
 import ActiveDepositCard from "./active-deposit-card";
 import DepositHistoryList from "./deposit-history-list";
@@ -43,11 +48,16 @@ export default function DepositPageShell({
   // drop the user's reserve.
   const [reserveSelection, setReserveSelection] =
     useState<ReserveSelection | null>(null);
-  const syncReserveSelection = useCallback(() => {
+  // Repeat deposits have no on-chain pending marker (the registration is
+  // already confirmed), so the awaiting-send card is derived from this
+  // client-side intent written by DepositSheet.
+  const [intent, setIntent] = useState<DepositIntent | null>(null);
+  const syncDepositDrafts = useCallback(() => {
     if (!registeredAddress) return;
     setReserveSelection(readReserveSelection(registeredAddress));
+    setIntent(readDepositIntent(registeredAddress));
   }, [registeredAddress]);
-  useEffect(syncReserveSelection, [syncReserveSelection]);
+  useEffect(syncDepositDrafts, [syncDepositDrafts]);
 
   // VerificationStep (inside the sheet) writes the selection after this
   // shell has mounted, so re-read storage when the sheet closes — otherwise
@@ -55,22 +65,35 @@ export default function DepositPageShell({
   const [sheetOpen, setSheetOpen] = useState(false);
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
-    if (!open) syncReserveSelection();
+    if (!open) syncDepositDrafts();
   };
   const handleChooseReserve = () => setSheetOpen(true);
+  const handleDismissIntent = useCallback(() => {
+    clearDepositIntent(registeredAddress);
+    setIntent(null);
+  }, [registeredAddress]);
 
-  const ephemeral = useMemo<PendingDeposit | null>(
-    () =>
-      hasPending
-        ? {
-            btcDepositAddress: registeredAddress,
-            reserveAddress: reserveSelection?.address ?? "",
-            amountSats: depositAmount,
-            createdAt,
-          }
-        : null,
-    [hasPending, registeredAddress, depositAmount, createdAt, reserveSelection]
-  );
+  const ephemeral = useMemo<PendingDeposit | null>(() => {
+    // Chain-pending registrations take precedence; otherwise fall back to
+    // the client-side intent, which carries the same shape of data.
+    const source = hasPending
+      ? { amountSats: depositAmount, createdAt }
+      : intent;
+    if (!source) return null;
+    return {
+      btcDepositAddress: registeredAddress,
+      reserveAddress: reserveSelection?.address ?? "",
+      amountSats: source.amountSats,
+      createdAt: source.createdAt,
+    };
+  }, [
+    hasPending,
+    registeredAddress,
+    depositAmount,
+    createdAt,
+    reserveSelection,
+    intent,
+  ]);
 
   const reserveMeta: ReserveMeta | null = useMemo(
     () =>
@@ -80,12 +103,26 @@ export default function DepositPageShell({
     [reserveSelection]
   );
 
-  const { active, history, hasMore, loadMore, isLoadingMore, isLoading } =
-    useDepositFeed({
-      twilightAddress,
-      ephemeral,
-      reserveMeta,
-    });
+  const {
+    active,
+    history,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+    isLoading,
+    ephemeralMatched,
+  } = useDepositFeed({
+    twilightAddress,
+    ephemeral,
+    reserveMeta,
+    ephemeralMatchedAfter: hasPending ? null : intent?.createdAt ?? null,
+  });
+
+  // The indexer now covers this deposit — retire the client-side intent so
+  // it can't resurface (e.g. when pagination drops the matching row).
+  useEffect(() => {
+    if (!hasPending && intent && ephemeralMatched) handleDismissIntent();
+  }, [hasPending, intent, ephemeralMatched, handleDismissIntent]);
 
   const queryClient = useQueryClient();
 
@@ -117,8 +154,11 @@ export default function DepositPageShell({
         </div>
         <DepositSheet
           initialAddress={registeredAddress}
-          initialAmountSats={depositAmount}
+          initialAmountSats={
+            !hasPending && intent ? intent.amountSats : depositAmount
+          }
           isConfirmed={isConfirmed}
+          startAtVerify={hasPending || !!intent}
           open={sheetOpen}
           onOpenChange={handleSheetOpenChange}
           trigger={
@@ -145,6 +185,11 @@ export default function DepositPageShell({
                 key={row.key}
                 row={row}
                 onChooseReserve={handleChooseReserve}
+                onDismiss={
+                  !hasPending && intent && row.ephemeral
+                    ? handleDismissIntent
+                    : undefined
+                }
               />
             ))}
           </div>
