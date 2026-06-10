@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
+import Button from "@/components/button";
 import StatusBadge from "@/components/status-badge";
+import CopyField from "./copy-field";
 import Stepper, { type StepperStep } from "@/components/stepper";
 import { Text } from "@/components/typography";
 import {
@@ -29,9 +31,11 @@ const STEP_LABELS: Record<string, string> = {
 
 type Props = {
   row: DepositFeedRow;
+  /** Opens the deposit sheet on the reserve-selection step. */
+  onChooseReserve?: () => void;
 };
 
-export default function ActiveDepositCard({ row }: Props) {
+export default function ActiveDepositCard({ row, onChooseReserve }: Props) {
   const { status, indexerRow, ephemeral } = row;
   const amountSats = indexerRow
     ? Number(indexerRow.depositAmount)
@@ -69,7 +73,8 @@ export default function ActiveDepositCard({ row }: Props) {
     return { id, label: STEP_LABELS[id], state, timestamp, meta };
   });
 
-  const headline = renderHeadline(status.state, btcAmount);
+  const isAwaitingSend = status.state === "awaiting_send";
+  const headline = renderHeadline(status.state, btcAmount, reserveAddress);
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border bg-background/90 p-5 shadow-sm">
@@ -85,7 +90,31 @@ export default function ActiveDepositCard({ row }: Props) {
         </StatusBadge>
       </div>
 
-      {reserveAddress && (
+      {isAwaitingSend && reserveAddress && (
+        <div className="flex flex-col gap-1.5">
+          <Text className="text-xs text-primary-accent">Reserve address</Text>
+          <CopyField value={reserveAddress} label="reserve address" />
+        </div>
+      )}
+
+      {isAwaitingSend && !reserveAddress && (
+        <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-3">
+          <div className="flex items-center gap-2 text-xs text-primary-accent">
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              No reserve selected yet — choose a reserve to get the address to
+              send to.
+            </span>
+          </div>
+          {onChooseReserve && (
+            <Button variant="ui" size="small" onClick={onChooseReserve}>
+              Choose reserve
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!isAwaitingSend && reserveAddress && (
         <div className="flex items-center gap-2 text-[11px] font-mono text-primary-accent">
           <span className="rounded border border-primary-accent/15 px-1.5 py-0.5">
             Reserve
@@ -103,12 +132,18 @@ export default function ActiveDepositCard({ row }: Props) {
   );
 }
 
-function renderHeadline(state: string, btcAmount: string) {
+function renderHeadline(
+  state: string,
+  btcAmount: string,
+  reserveAddress?: string
+) {
   if (state === "awaiting_send") {
     return (
       <Text heading="h3" className="text-xl font-semibold leading-snug sm:text-2xl">
-        Send <span className="font-mono">{btcAmount} BTC</span> to the reserve
-        address below.
+        Send <span className="font-mono">{btcAmount} BTC</span>{" "}
+        {reserveAddress
+          ? "to the reserve address below."
+          : "to a Twilight reserve."}
       </Text>
     );
   }

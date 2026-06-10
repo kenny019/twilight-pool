@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/button";
 import InfoDisclosure from "@/components/info-disclosure";
@@ -43,10 +43,21 @@ export default function DepositPageShell({
   // drop the user's reserve.
   const [reserveSelection, setReserveSelection] =
     useState<ReserveSelection | null>(null);
-  useEffect(() => {
+  const syncReserveSelection = useCallback(() => {
     if (!registeredAddress) return;
     setReserveSelection(readReserveSelection(registeredAddress));
   }, [registeredAddress]);
+  useEffect(syncReserveSelection, [syncReserveSelection]);
+
+  // VerificationStep (inside the sheet) writes the selection after this
+  // shell has mounted, so re-read storage when the sheet closes — otherwise
+  // the active card never learns the reserve address until a full reload.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open);
+    if (!open) syncReserveSelection();
+  };
+  const handleChooseReserve = () => setSheetOpen(true);
 
   const ephemeral = useMemo<PendingDeposit | null>(
     () =>
@@ -108,6 +119,8 @@ export default function DepositPageShell({
           initialAddress={registeredAddress}
           initialAmountSats={depositAmount}
           isConfirmed={isConfirmed}
+          open={sheetOpen}
+          onOpenChange={handleSheetOpenChange}
           trigger={
             <Button variant="primary">
               <Plus className="h-4 w-4" />
@@ -128,7 +141,11 @@ export default function DepositPageShell({
         ) : (
           <div className="flex flex-col gap-3">
             {active.map((row) => (
-              <ActiveDepositCard key={row.key} row={row} />
+              <ActiveDepositCard
+                key={row.key}
+                row={row}
+                onChooseReserve={handleChooseReserve}
+              />
             ))}
           </div>
         )}

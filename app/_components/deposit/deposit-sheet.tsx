@@ -19,6 +19,10 @@ type Props = {
   initialAddress?: string;
   initialAmountSats?: number;
   isConfirmed?: boolean;
+  /** Controlled open state — lets the page open the sheet from elsewhere
+   * (e.g. the active card's "Choose reserve" CTA) and react on close. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const STEPS = [
@@ -31,6 +35,8 @@ export default function DepositSheet({
   initialAddress = "",
   initialAmountSats = 0,
   isConfirmed = false,
+  open,
+  onOpenChange,
 }: Props) {
   const hasPending = !!initialAddress && !isConfirmed && initialAmountSats > 0;
   const [step, setStep] = useState<SheetStep>(hasPending ? "verify" : "register");
@@ -46,7 +52,7 @@ export default function DepositSheet({
   };
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent side="right">
         <SheetTitle className="sr-only">New deposit</SheetTitle>
