@@ -11,6 +11,7 @@ import { useWithdrawalFeed } from "@/lib/hooks/useWithdrawalFeed";
 import useGetRegisteredBTCAddress from "@/lib/hooks/useGetRegisteredBtcAddress";
 import useGetTwilightBTCBalance from "@/lib/hooks/useGetTwilightBtcBalance";
 import { truncateHash } from "@/lib/helpers";
+import { CopyableValue } from "@/app/_components/shared/history-row";
 import ActiveWithdrawalsPanel from "./active-withdrawals-panel";
 import WithdrawalHistoryList from "./withdrawal-history-list";
 import WithdrawalSheet from "./withdrawal-sheet";
@@ -63,7 +64,12 @@ export default function WithdrawalPageShell({ twilightAddress }: Props) {
         </div>
         {registered?.depositAddress && (
           <Text className="mt-1 font-mono text-[11px] text-primary-accent">
-            Payout address {truncateHash(registered.depositAddress, 8, 8)}
+            Payout address{" "}
+            <CopyableValue
+              value={registered.depositAddress}
+              display={truncateHash(registered.depositAddress, 8, 8)}
+              label="Payout address"
+            />
           </Text>
         )}
       </section>

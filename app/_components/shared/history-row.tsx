@@ -4,10 +4,50 @@ import React from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import cn from "@/lib/cn";
+import { toast } from "@/lib/hooks/useToast";
 
 const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER_URL as string;
 
-export function MetaRow({ label, value }: { label: string; value: string }) {
+/** Truncated display that copies the FULL value to the clipboard on click —
+ * matrix "Copyable Transaction / Address Blocks": the full value must stay
+ * accessible even when the display is truncated. */
+export function CopyableValue({
+  value,
+  display,
+  label = "Address",
+  className,
+}: {
+  value: string;
+  display: string;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title={value}
+      aria-label={`Copy ${label.toLowerCase()}`}
+      onClick={() => {
+        navigator.clipboard.writeText(value);
+        toast({ title: "Copied", description: `${label} copied to clipboard` });
+      }}
+      className={cn(
+        "cursor-pointer text-left font-mono hover:underline",
+        className
+      )}
+    >
+      {display}
+    </button>
+  );
+}
+
+export function MetaRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-primary-accent/50">

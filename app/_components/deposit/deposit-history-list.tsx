@@ -17,7 +17,11 @@ import Big from "big.js";
 import type { DepositFeedRow } from "@/lib/hooks/useDepositFeed";
 import { truncateHash } from "@/lib/helpers";
 import dayjs from "dayjs";
-import { ExpandedHash, MetaRow } from "@/app/_components/shared/history-row";
+import {
+  CopyableValue,
+  ExpandedHash,
+  MetaRow,
+} from "@/app/_components/shared/history-row";
 
 const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER_URL as string;
 
@@ -91,7 +95,15 @@ export default function DepositHistoryList({
                       {btc} BTC
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 font-mono text-primary-accent">
-                      {r ? truncateHash(r.reserveAddress, 6, 6) : "—"}
+                      {r ? (
+                        <CopyableValue
+                          value={r.reserveAddress}
+                          display={truncateHash(r.reserveAddress, 6, 6)}
+                          label="Reserve address"
+                        />
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-primary-accent">
                       {r ? dayjs(r.createdAt).format("DD/MM/YYYY HH:mm") : "—"}
@@ -155,7 +167,13 @@ export default function DepositHistoryList({
                 {r?.reserveAddress && (
                   <MetaRow
                     label="Reserve"
-                    value={truncateHash(r.reserveAddress, 6, 6)}
+                    value={
+                      <CopyableValue
+                        value={r.reserveAddress}
+                        display={truncateHash(r.reserveAddress, 6, 6)}
+                        label="Reserve address"
+                      />
+                    }
                   />
                 )}
               </div>

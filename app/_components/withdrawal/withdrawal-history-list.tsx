@@ -17,7 +17,11 @@ import Big from "big.js";
 import type { WithdrawalFeedRow } from "@/lib/hooks/useWithdrawalFeed";
 import { truncateHash } from "@/lib/helpers";
 import dayjs from "dayjs";
-import { ExpandedHash, MetaRow } from "@/app/_components/shared/history-row";
+import {
+  CopyableValue,
+  ExpandedHash,
+  MetaRow,
+} from "@/app/_components/shared/history-row";
 
 type Props = {
   rows: WithdrawalFeedRow[];
@@ -96,7 +100,15 @@ export default function WithdrawalHistoryList({
                       {btc} BTC
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 font-mono text-primary-accent">
-                      {destination ? truncateHash(destination, 6, 6) : "—"}
+                      {destination ? (
+                        <CopyableValue
+                          value={destination}
+                          display={truncateHash(destination, 6, 6)}
+                          label="Destination address"
+                        />
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-primary-accent">
                       #{reserveId || "—"}
@@ -147,7 +159,16 @@ export default function WithdrawalHistoryList({
 
               <div className="mt-1.5 space-y-0.5 text-xs">
                 {destination && (
-                  <MetaRow label="To" value={truncateHash(destination, 6, 6)} />
+                  <MetaRow
+                    label="To"
+                    value={
+                      <CopyableValue
+                        value={destination}
+                        display={truncateHash(destination, 6, 6)}
+                        label="Destination address"
+                      />
+                    }
+                  />
                 )}
                 {reserveId && <MetaRow label="Reserve" value={`#${reserveId}`} />}
               </div>

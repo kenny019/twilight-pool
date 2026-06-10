@@ -15,6 +15,7 @@ import BTC from "@/lib/twilight/denoms";
 import Big from "big.js";
 import type { WithdrawalFeedRow } from "@/lib/hooks/useWithdrawalFeed";
 import { truncateHash } from "@/lib/helpers";
+import { CopyableValue } from "@/app/_components/shared/history-row";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -81,7 +82,17 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
               <span className="font-mono">{btc} BTC</span>
             </Text>
             <Text className="text-xs text-primary-accent">
-              To {truncateHash(destination, 6, 6)} · Reserve #{reserveId}
+              To{" "}
+              {destination ? (
+                <CopyableValue
+                  value={destination}
+                  display={truncateHash(destination, 6, 6)}
+                  label="Destination address"
+                />
+              ) : (
+                "—"
+              )}{" "}
+              · Reserve #{reserveId}
             </Text>
           </div>
           <StatusBadge variant="danger">Failed</StatusBadge>
@@ -117,7 +128,17 @@ function ActiveWithdrawalCard({ row }: { row: WithdrawalFeedRow }) {
           </Text>
           {headline}
           <Text className="text-xs text-primary-accent">
-            To {truncateHash(destination, 6, 6)} · Reserve #{reserveId}
+            To{" "}
+            {destination ? (
+              <CopyableValue
+                value={destination}
+                display={truncateHash(destination, 6, 6)}
+                label="Destination address"
+              />
+            ) : (
+              "—"
+            )}{" "}
+            · Reserve #{reserveId}
           </Text>
         </div>
         <StatusBadge variant={badgeVariantFor(state)}>
