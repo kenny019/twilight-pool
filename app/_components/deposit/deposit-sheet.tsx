@@ -12,6 +12,7 @@ import { Text } from "@/components/typography";
 import RegistrationStep from "./registration-step";
 import VerificationStep from "./verification-step";
 import { writeDepositIntent } from "@/lib/depositIntentStorage";
+import { clearReserveSelection } from "@/lib/depositReserveStorage";
 
 type SheetStep = "register" | "verify";
 
@@ -64,6 +65,10 @@ export default function DepositSheet({
   const handleRegistered = (address: string, amount: string) => {
     setBtcAddress(address);
     setBtcAmount(Number(amount));
+    // A new deposit starts with no reserve chosen — drop any selection left
+    // over from a previous deposit so the card can't direct the user to a
+    // stale (possibly near-sweep) reserve address.
+    clearReserveSelection(address);
     // Repeat deposits (registration already confirmed) skip the chain
     // broadcast, so nothing on-chain marks this deposit as in-flight.
     // Persist a client-side intent that DepositPageShell derives the
