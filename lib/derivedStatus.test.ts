@@ -173,6 +173,40 @@ describe("deriveWithdrawalStatus", () => {
     ).toEqual({ state: "requested" });
   });
 
+  it("settled: chain-confirmed REST row without indexer row", () => {
+    expect(
+      deriveWithdrawalStatus(
+        { ...restRow, isConfirmed: true },
+        null,
+        "success",
+        900_000
+      )
+    ).toEqual({ state: "settled" });
+  });
+
+  it("settled: chain-confirmed REST row overrides lagging unconfirmed indexer row", () => {
+    const row = makeWithdrawal({ blockHeight: 899_998, isConfirmed: false });
+    expect(
+      deriveWithdrawalStatus(
+        { ...restRow, isConfirmed: true },
+        row,
+        "success",
+        900_000
+      )
+    ).toEqual({ state: "settled" });
+  });
+
+  it("chain-confirmed REST row overrides failed tx status", () => {
+    expect(
+      deriveWithdrawalStatus(
+        { ...restRow, isConfirmed: true },
+        null,
+        "failed",
+        900_000
+      )
+    ).toEqual({ state: "settled" });
+  });
+
   it("requested: REST row with no tx status", () => {
     expect(
       deriveWithdrawalStatus(restRow, null, null, 900_000)

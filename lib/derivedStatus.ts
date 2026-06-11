@@ -35,6 +35,9 @@ export type WithdrawalRestRow = {
   withdrawAddress: string;
   withdrawReserveId: string;
   withdrawAmount: string | number;
+  /** Chain-side settlement flag — fallback when the indexer lags or has no
+   * row for this withdrawal. */
+  isConfirmed?: boolean;
   /** Cosmos transaction hash, attached on the client from the local store. */
   txHash?: string;
 };
@@ -114,14 +117,24 @@ export function deriveWithdrawalStatus(
 ): DerivedStatus<WithdrawalStatusState> | null {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  if (requestTxStatus === "failed" && !indexerRow?.isConfirmed) {
+  // A settled withdrawal (on either source) can't have a failed request tx.
+  if (
+    requestTxStatus === "failed" &&
+    !indexerRow?.isConfirmed &&
+    !restRow?.isConfirmed
+  ) {
     return { state: "failed" };
   }
 
+  // Either source marking the withdrawal settled wins: the chain flips the
+  // request's isConfirmed at payout, and the indexer can lag behind it (or
+  // miss the withdrawal entirely) — without this the card would sit at
+  // "requested"/"confirming" forever.
+  if (indexerRow?.isConfirmed || restRow?.isConfirmed) {
+    return { state: "settled" };
+  }
+
   if (indexerRow) {
-    if (indexerRow.isConfirmed) {
-      return { state: "settled" };
-    }
     const blockHeight = parseIntSafe(indexerRow.blockHeight);
     if (blockHeight <= 0) {
       return { state: "broadcast" };
