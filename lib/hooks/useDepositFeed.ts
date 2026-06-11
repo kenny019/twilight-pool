@@ -40,14 +40,24 @@ type Options = {
   ephemeralMatchedAfter?: string | null;
 };
 
-/** Does this indexer row represent the same deposit as the ephemeral row? */
+/** Does this indexer row represent the same deposit as the ephemeral row?
+ * Despite the name, the indexer's `twilightDepositAddress` is the
+ * depositor's twilight account address (twilight1…), not their registered
+ * BTC address — so we match on the owning account, then amount + recency. */
 export function ephemeralMatchesIndexerRow(
   row: IndexerDeposit,
   ephemeral: PendingDeposit,
+  twilightAddress: string,
   matchedAfter?: string | null
 ): boolean {
-  if (row.twilightDepositAddress !== ephemeral.btcDepositAddress) return false;
+  if (!twilightAddress || row.twilightDepositAddress !== twilightAddress)
+    return false;
   if (Number(row.depositAmount) !== ephemeral.amountSats) return false;
+  // When the user picked a reserve, a same-amount row sent to a different
+  // reserve is a different deposit — don't let it swallow this one. Unset
+  // (no selection yet) → amount + recency carry the match.
+  if (ephemeral.reserveAddress && row.reserveAddress !== ephemeral.reserveAddress)
+    return false;
   // An in-flight (unconfirmed) row is always this deposit; a credited row
   // only counts when it postdates the recency cutoff.
   if (!matchedAfter || !row.confirmed) return true;
@@ -118,8 +128,9 @@ export function useDepositFeed({
     }
 
     if (ephemeral) {
+      const account = twilightAddress ?? "";
       matched = indexerRows.some((r) =>
-        ephemeralMatchesIndexerRow(r, ephemeral, ephemeralMatchedAfter)
+        ephemeralMatchesIndexerRow(r, ephemeral, account, ephemeralMatchedAfter)
       );
       if (!matched) {
         const status = deriveDepositStatus(
@@ -140,7 +151,14 @@ export function useDepositFeed({
     }
 
     return { active: activeRows, history: historyRows, ephemeralMatched: matched };
-  }, [indexerRows, ephemeral, reserveMeta, currentBtcBlock, ephemeralMatchedAfter]);
+  }, [
+    indexerRows,
+    ephemeral,
+    reserveMeta,
+    currentBtcBlock,
+    ephemeralMatchedAfter,
+    twilightAddress,
+  ]);
 
   return {
     active,

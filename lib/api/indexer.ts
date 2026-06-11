@@ -9,6 +9,8 @@ export type IndexerDeposit = {
   depositAmount: string;
   btcHeight: string;
   btcHash: string;
+  /** The depositor's twilight account address (twilight1…) — NOT their
+   * registered BTC address, despite the name. */
   twilightDepositAddress: string;
   oracleAddress: string;
   votes: number;

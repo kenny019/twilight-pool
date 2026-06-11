@@ -80,7 +80,7 @@ export function mockRegisterDeposit(
     depositAmount: String(amountSats),
     btcHeight: String(state.blockHeight),
     btcHash: "0000".repeat(16),
-    twilightDepositAddress: btcAddress,
+    twilightDepositAddress: MOCK_TWILIGHT_ADDRESS,
     oracleAddress: "twilight1oracle0mock0address00000000000",
     votes: 1,
     confirmed: false,

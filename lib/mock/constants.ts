@@ -124,7 +124,9 @@ export const MOCK_INDEXER_DEPOSITS: IndexerDeposit[] = [
     depositAmount: "250000",
     btcHeight: "840000",
     btcHash: "0000".repeat(16),
-    twilightDepositAddress: MOCK_BTC_DEPOSIT_ADDRESS,
+    // The indexer's `twilightDepositAddress` is the depositor's twilight
+    // account address, not the registered BTC address.
+    twilightDepositAddress: MOCK_TWILIGHT_ADDRESS,
     oracleAddress: "twilight1oracle0mock0address00000000000",
     votes: 3,
     confirmed: true,
