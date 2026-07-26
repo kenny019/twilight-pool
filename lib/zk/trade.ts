@@ -74,7 +74,7 @@ export async function settleOrder(
         queryTransactionHashes,
         30,
         trade.accountAddress,
-        1000,
+        100,
         transactionHashCondition
       );
 
@@ -165,7 +165,7 @@ export async function settleOrder(
         queryTransactionHashes,
         30,
         trade.accountAddress,
-        1000,
+        100,
         transactionHashCondition,
         transactionHashFailCondition
       );
@@ -293,7 +293,7 @@ export async function settleOrderSltp(
         queryTransactionHashes,
         30,
         trade.accountAddress,
-        1000,
+        100,
         transactionHashCondition
       );
 

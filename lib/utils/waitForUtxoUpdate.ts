@@ -2,9 +2,9 @@ import { queryUtxoForAddress } from "@/lib/api/zkos";
 import { UtxoData } from "@/lib/types";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
-const DEFAULT_POLL_INTERVAL_MS = 1_000;
-/** Minimum wait before returning success. Relayer/chain UTXO availability ~5–6s. */
-const DEFAULT_MIN_WAIT_MS = 5_000;
+const DEFAULT_POLL_INTERVAL_MS = 200;
+/** Minimum wait before returning success. Relayer/chain UTXO availability ~2–6s. */
+const DEFAULT_MIN_WAIT_MS = 1_500;
 
 type WaitResult =
   | { success: true }
